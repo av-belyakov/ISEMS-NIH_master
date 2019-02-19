@@ -1,0 +1,34 @@
+{
+    "isServer": true,
+    "isServer_comments": "запускать приложение как сервер (true), как клиент (false)",
+    "authenticationToken": "a60cb0aa61613d4983086c0a12207",
+    "authenticationToken_comments": "идентификационный токен",
+    "serverHTTP": {
+        "host": "127.0.0.1",
+        "port": 13113
+    },
+    "serverHTTP_comments": "если значение 'isServer' = false значение параметра ServerHTTP не учитываются",
+    "pathCertFile": "keys/moth_cert.pem",
+    "pathCertFile_comments": "ОТНОСИТЕЛЬНЫЙ путь до файла с сертификатом",
+    "pathKeyFile": "keys/moth_private_key.pem",
+    "pathKeyFile_comments": "ОТНОСИТЕЛЬНЫЙ путь до файла с приватным ключем",
+    "timeReconnectClient": 10000,
+    "timeReconnectClient_comments": "актуально только в режиме isServer = false, тогда с заданным интервалом времени будут попытки соединения с адресами slave",
+    "connectionDB": {
+        "socket": false,
+        "host": "127.0.0.1",
+        "port": 37017,
+        "user": "module_ISEMS-NIH",
+        "password": "tkovomfh&ff93",
+        "nameDB": "isems-nih",
+        "unixSocketPath": "../../../../tmp/mongodb.sock"
+    },
+    "settingsDBConnection_comments": "настройки для доступа к БД",
+    "directoryLongTermStorageDownloadedFiles": {
+        "raw": "/home/ISEMS_NIH_master_RAW",
+        "object": "/home/ISEMS_NIH_master_OBJECT"
+    },
+    "directoryLongTermStorageDownloadedFiles_comments": "директория для долговременного хранения скаченных файлов",
+    "pathLogFiles": "/var/log",
+    "pathLogFiles_comments": "место расположение лог-файла приложения"
+}
