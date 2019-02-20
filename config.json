@@ -1,5 +1,4 @@
 {
-    "isServer": true,
     "isServer_comments": "запускать приложение как сервер (true), как клиент (false)",
     "authenticationToken": "a60cb0aa61613d4983086c0a12207",
     "authenticationToken_comments": "идентификационный токен",
@@ -29,6 +28,6 @@
         "object": "/home/ISEMS_NIH_master_OBJECT"
     },
     "directoryLongTermStorageDownloadedFiles_comments": "директория для долговременного хранения скаченных файлов",
-    "pathLogFiles": "/var/log",
+    "pathLogFiles": "log",
     "pathLogFiles_comments": "место расположение лог-файла приложения"
 }

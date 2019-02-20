@@ -18,8 +18,7 @@ import (
 	"github.com/mongodb/mongo-go-driver/mongo/readpref"
 
 	"ISEMS-NIH_master/configure"
-	"ISEMS-NIH_master/handlermessageapi"
-	"ISEMS-NIH_master/handlerrequestdb"
+	"ISEMS-NIH_master/coreapp"
 	"ISEMS-NIH_master/savemessageapp"
 )
 
@@ -146,8 +145,6 @@ func init() {
 		os.Exit(1)
 	}
 
-	ism.MongoConnect.Connect = mongoConnect
-
 	//получаем номер версии приложения
 	if err = getVersionApp(&appConfig); err != nil {
 		_ = saveMessageApp.LogMessage("err", "it is impossible to obtain the version number of the application")
@@ -157,33 +154,17 @@ func init() {
 	chanMessageToAPI := make(chan configure.MessageAPI)   //к API
 	chanMessageFromAPI := make(chan configure.MessageAPI) //из API
 
+	ism.ChannelCollection.ChanMessageToAPI = chanMessageToAPI
+	ism.ChannelCollection.ChanMessageFromAPI = chanMessageFromAPI
+
 	//инициализация модуля для взаимодействия с API (обработчик внешних запросов)
-	go handlermessageapi.ProcessingMessageAPI(chanMessageFromAPI, &ism, chanMessageToAPI)
-
-	/* ____ ЗАПИСЬ ТЕСТОВОЙ КОЛЛЕКЦИИ ____ */
-	qcs := handlerrequestdb.QueryCollectionSources{
-		NameDB:         appConfig.ConnectionDB.NameDB,
-		CollectionName: "sources_list",
-		ConnectDB:      ism.MongoConnect.Connect,
-	}
-
-	res, err := qcs.InsertListSource()
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	isSeccess := "NO"
-	if res {
-		isSeccess = "YES"
-	}
-
-	fmt.Println("\vInser data is ", isSeccess)
-	/* __________________________________ */
+	go moduleapiapp.ProcessingMessageAPI(&appConfig, &ism)
 }
 
 func main() {
-	fmt.Println("!!! START func main !!!")
-
+	fmt.Println("!!! START func main !!!\n")
 	fmt.Printf("%T%v\n", appConfig, appConfig)
 
+	//запуск ядра приложения
+	coreapp.CoreApp(&appConfig, &ism, &mongoConnect)
 }

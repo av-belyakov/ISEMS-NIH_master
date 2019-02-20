@@ -8,4 +8,5 @@ package configure
 type InformationAboutSource struct {
 	ID        int
 	IP, Token string
+	AsServer  bool
 }

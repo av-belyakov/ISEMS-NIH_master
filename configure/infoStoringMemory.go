@@ -20,62 +20,137 @@ type ChanReguestDatabase struct {
 type ChanResponseDatabase struct {
 }
 
-//MessageAPI параметры для взаимодействия с API
+//MessageAPI набор параметров для взаимодействия с модулем API
 type MessageAPI struct {
 	MsgID, MsgType string
 	MsgDate        int
 }
 
-/*
-//ChanMessageToAPI запросы к API
-type ChanMessageToAPI struct {
-	MessageAPI
+//MessageTypeInfoStatusSource статус сенсора (ИНФОРМАЦИОННОЕ)
+type MessageTypeInfoStatusSource struct {
+	SourceID         string //идентификатор источника в виде текста
+	ConnectionStatus string //connect/disconnet
+	ConnectionTime   int    //Unix time
 }
 
-//ChanMessageFromAPI запросы от API
-type ChanMessageFromAPI struct {
-	MessageAPI
+//informationFilterProcess информация об обработанных файлах
+type informationFilterProcess struct {
+	AllCountFilesSearch  int //количество найденных файлов
+	AllSizeFilesSearch   int //общий размер найденных файлов
+	CountFilesProcessing int //количество обработанных файлов
+	CountFilesSearch     int //количество файлов найданных под заданные параметры
+	SizeFilesSearch      int //общий размер файлов удовлетворяющих заданным параметрам
 }
-*/
-//mongoConnection параметры соединения с БД
-type mongoConnection struct {
-	Connect *mongo.Client
-	CTX     context.Context
+
+//MessageTypeInfoFiltering ход выполнения фильтрации (ИНФОРМАЦИОННОЕ)
+type MessageTypeInfoFiltering struct {
+	TaskIndex     string //ID задачи
+	ProcessStatus string //статус процесса ready, start, execute, complete, stop
+	Info          informationFilterProcess
+}
+
+//fileInformation информация о найденном файле
+type fileInformation struct {
+	FileHash       string //хеш сумма
+	FileSize       int    //размер
+	FileCreateTime int    //дата создания в формате Unix
+}
+
+//MessageTypeInfoFilteringSearchListFiles список файлов найденных в результате фильтрации (ИНФОРМАЦИОННОЕ)
+type MessageTypeInfoFilteringSearchListFiles struct {
+	TaskIndex string                     //ID задачи
+	ListFiles map[string]fileInformation //ключ имя файла
+}
+
+//MessageTypeInfoDownload ход выполнения скачивания файлов (ИНФОРМАЦИОННОЕ)
+type MessageTypeInfoDownload struct {
+	TaskIndex     string //ID задачи
+	ProcessStatus string //статус процесса ready, execute, execute_complited
+	InfoFile      fileInformation
+}
+
+//MessageTypeErrorMessage информация об ошибках
+type MessageTypeErrorMessage struct {
+	LocationError string //sensor/module_ni
+	MsgError      error
+	Description   string //возможно дополнительное описание
+}
+
+//параметры фильтрации файлов
+type parametersFilterFiles struct {
+	DateTimeStart, DateTimeEnd int
+	ListIP, ListNetwork        string
+}
+
+//MessageTypeCommandFiltering команды связанные с задачами по фильтрации (ИСПОЛНИТЕЛЬНЫЕ)
+type MessageTypeCommandFiltering struct {
+	TaskIndex     string //ID задачи
+	ProcessStatus string //статус процесса start, stop
+	Info          parametersFilterFiles
+}
+
+//parametersDownloadFiles информация о скачиваемых файлов
+type parametersDownloadFiles struct {
+	DownloadDirectoryFiles     string   //директория где хранятся файлы на сенсоре
+	DownloadSelectedFiles      bool     //скачивать выбранные файлы или все
+	CountDownloadSelectedFiles int      //общее число файлов
+	NumberMessageParts         [2]int   //число частей сообщения
+	ListDownloadSelectedFiles  []string //список файлов выбранных для скачивания
+}
+
+//MessageTypeCommandStartDownload сообщение при старте задачи
+type MessageTypeCommandStartDownload struct {
+	TaskIndex     string //ID задачи
+	ProcessStatus string //статус процесса start
+	Info          parametersDownloadFiles
+}
+
+//MessageTypeCommandDownload команды связанные с задачами по скачиванию файлов (ИСПОЛНИТЕЛЬНЫЕ)
+type MessageTypeCommandDownload struct {
+	TaskIndex     string //ID задачи
+	ProcessStatus string //статус процесса ready, waiting_for_transfer, execute_success'/'execute_failure
+}
+
+//MessageNetworkInteraction набор параметров для взаимодействия с модулем Network Interaction
+type MessageNetworkInteraction struct {
+	MsgType string //тип сообщения (команда/информационное)
+	SubType string //подтип сообщения, если команда filtering/download,
+	/*
+	   если информационное
+	   - change_sensor_status
+	   - info_filtering
+	   - info_filtering_search_list_files
+	   - info_download
+	   - error_message
+	*/
+	Message interface{} //сообщение в любом виде, используется контролируемое приведение типа
 }
 
 //channelCollection набор каналов
 type channelCollection struct {
-	ChanMessageToAPI   MessageAPI
-	ChanMessageFromAPI MessageAPI
+	ChannelToModuleAPI                  chan MessageAPI
+	ChannelFromModuleAPI                chan MessageAPI
+	ChannelToModuleNetworkInteraction   chan MessageNetworkInteraction
+	ChannelFromModuleNetworkInteraction chan MessageNetworkInteraction
+}
+
+//statusSource описание состояния источника
+type statusSource struct {
+	ConnectionStatus  string //connect/disconnet
+	IP                string
+	DateLastConnected int //Unix time
+	Token             string
+	ToServer          bool //false - как клиент, true - как сервер
 }
 
 //InformationStoringMemory часто используемые параметры
 type InformationStoringMemory struct {
-	MongoConnect      mongoConnection
+	ListSources       map[string]statusSource //key - ID источника в виде строки
 	ChannelCollection channelCollection
 }
 
-/*
-QuerySelect выполняет запросы к БД
-id: <ID элемента> (может быть object, number, string или undefined),
-     *                            isMany: <true/false/undefined>,
-     *                            query: <object / undefined>,
-     *                            select: <object / string / undefined>,
-     *                            options: <object / undefined>
-*/
-/*func (connect *mongoConnection.Connect) QuerySelect() {
-	fmt.Println("FUNC querySelect")
+//MongoDBConnect содержит дискриптор соединения с БД
+type MongoDBConnect struct {
+	Connect *mongo.Client
+	CTX     context.Context
 }
-
-func (connect *mongoConnection.Connect) QueryCreate() {
-	fmt.Println("FUNC queryCreate")
-}
-
-func (connect *mongoConnection.Connect) QueryUpdate() {
-	fmt.Println("FUNC queryUpdate")
-}
-
-func (connect *mongoConnection.Connect) QueryDelete() {
-	fmt.Println("FUNC queryDelete")
-
-}*/

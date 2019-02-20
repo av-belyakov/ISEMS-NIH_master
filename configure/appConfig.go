@@ -33,7 +33,6 @@ type settingsDirectoryStoreFiles struct {
 type AppConfig struct {
 	VersionApp                              string
 	RootDir                                 string
-	IsServer                                bool                        `json:"isServer"`
 	AuthenticationToken                     string                      `json:"authenticationToken"`
 	ServerHTTP                              settingsServerHTTP          `json:"serverHTTP"`
 	PathCertFile                            string                      `json:"pathCertFile"`
