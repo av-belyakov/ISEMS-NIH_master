@@ -4,13 +4,13 @@
     "authenticationToken_comments": "идентификационный токен",
     "serverHTTP": {
         "host": "127.0.0.1",
-        "port": 13113
+        "port": 13313
     },
     "serverHTTP_comments": "если значение 'isServer' = false значение параметра ServerHTTP не учитываются",
     "pathCertFile": "keys/moth_cert.pem",
     "pathCertFile_comments": "ОТНОСИТЕЛЬНЫЙ путь до файла с сертификатом",
-    "pathKeyFile": "keys/moth_private_key.pem",
-    "pathKeyFile_comments": "ОТНОСИТЕЛЬНЫЙ путь до файла с приватным ключем",
+    "pathPrivateKeyFile": "keys/moth_private_key.pem",
+    "pathPrivateKeyFile_comments": "ОТНОСИТЕЛЬНЫЙ путь до файла с приватным ключем",
     "timeReconnectClient": 10000,
     "timeReconnectClient_comments": "актуально только в режиме isServer = false, тогда с заданным интервалом времени будут попытки соединения с адресами slave",
     "connectionDB": {

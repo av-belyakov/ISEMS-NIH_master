@@ -26,8 +26,6 @@ func MainNetworkInteraction(appConf *configure.AppConfig, ism *configure.Informa
 	//запуск модуля wssClientNI
 	go WssClientNetworkInteraction(appConf.TimeReconnectClient, ism)
 
-	//обработка данных получаемых через каналы
-	/*	select {
-
-		}*/
+	//запуск маршрутизатора запросов получаемых с источников
+	go Routing(ism)
 }

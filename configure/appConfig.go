@@ -36,7 +36,7 @@ type AppConfig struct {
 	AuthenticationToken                     string                      `json:"authenticationToken"`
 	ServerHTTP                              settingsServerHTTP          `json:"serverHTTP"`
 	PathCertFile                            string                      `json:"pathCertFile"`
-	PathKeyFile                             string                      `json:"pathKeyFile"`
+	PathPrivateKeyFile                      string                      `json:"pathKeyFile"`
 	TimeReconnectClient                     int                         `json:"timeRecconnectClient"`
 	ConnectionDB                            settingsConnectionDB        `json:"connectionDB"`
 	DirectoryLongTermStorageDownloadedFiles settingsDirectoryStoreFiles `json:"directoryLongTermStorageDownloadedFiles"`

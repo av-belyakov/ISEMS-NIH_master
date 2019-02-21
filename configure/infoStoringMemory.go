@@ -3,22 +3,20 @@ package configure
 /*
 * Описание типа для хранения в памяти часто используемых параметров
 *
-* Версия 0.1, дата релиза 18.02.2019
+* Версия 0.11, дата релиза 21.02.2019
 * */
 
 import (
 	"context"
+	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/mongodb/mongo-go-driver/mongo"
 )
 
-//ChanReguestDatabase содержит запросы для модуля обеспечивающего доступ к БД
-type ChanReguestDatabase struct {
-}
-
-//ChanResponseDatabase содержит ответы от модуля обеспечивающего доступ к БД
-type ChanResponseDatabase struct {
-}
+/*
+--- ВЗАИМОДЕЙСТВИЕ С МОДУЛЕМ API ---
+*/
 
 //MessageAPI набор параметров для взаимодействия с модулем API
 type MessageAPI struct {
@@ -26,11 +24,45 @@ type MessageAPI struct {
 	MsgDate        int
 }
 
+/*
+--- ВЗАИМОДЕЙСТВИЕ С МОДУЛЕМ NetworkInteraction ---
+		(СЕРВИСНЫЕ СООБЩЕНИЯ)
+*/
+
 //MessageTypeInfoStatusSource статус сенсора (ИНФОРМАЦИОННОЕ)
 type MessageTypeInfoStatusSource struct {
 	SourceID         string //идентификатор источника в виде текста
 	ConnectionStatus string //connect/disconnet
-	ConnectionTime   int    //Unix time
+	ConnectionTime   int64  //Unix time
+}
+
+//ServiceMessageInfoStatusSource сервисное сообщение о статусе источников
+type ServiceMessageInfoStatusSource struct {
+	Type       string //get_list/change_list/send_list
+	SourceList []MessageTypeInfoStatusSource
+}
+
+/*
+--- ВЗАИМОДЕЙСТВИЕ С МОДУЛЕМ NetworkInteraction ---
+		(СООБЩЕНИЯ ОБЩЕГО НАЗНАЧЕНИЯ)
+*/
+
+//Memory содержит информацию об используемой ПО
+type telemetryMemory struct {
+	Total int
+	Used  int
+	Free  int
+}
+
+//MessageTelemetryData информация о технических параметрах источника
+type MessageTelemetryData struct {
+	IPAddress          string
+	CurrentDateTime    int64
+	DiskSpace          []map[string]string
+	TimeInterval       map[string]map[string]int
+	RandomAccessMemory telemetryMemory
+	LoadCPU            float64
+	LoadNetwork        map[string]map[string]int
 }
 
 //informationFilterProcess информация об обработанных файлах
@@ -126,27 +158,128 @@ type MessageNetworkInteraction struct {
 	Message interface{} //сообщение в любом виде, используется контролируемое приведение типа
 }
 
+/*
+--- НАБОР КАНАЛОВ ---
+*/
+
 //channelCollection набор каналов
 type channelCollection struct {
-	ChannelToModuleAPI                  chan MessageAPI
-	ChannelFromModuleAPI                chan MessageAPI
-	ChannelToModuleNetworkInteraction   chan MessageNetworkInteraction
-	ChannelFromModuleNetworkInteraction chan MessageNetworkInteraction
+	ChannelToModuleAPI    chan MessageAPI
+	ChannelFromModuleAPI  chan MessageAPI
+	ChannelToMNICommon    chan MessageNetworkInteraction
+	ChannelFromMNICommon  chan MessageNetworkInteraction
+	ChannelToMNIService   chan ServiceMessageInfoStatusSource
+	ChannelFromMNIService chan ServiceMessageInfoStatusSource
 }
 
-//statusSource описание состояния источника
-type statusSource struct {
-	ConnectionStatus  string //connect/disconnet
-	IP                string
-	DateLastConnected int //Unix time
-	Token             string
-	ToServer          bool //false - как клиент, true - как сервер
+//ChanReguestDatabase содержит запросы для модуля обеспечивающего доступ к БД
+type ChanReguestDatabase struct {
 }
+
+//ChanResponseDatabase содержит ответы от модуля обеспечивающего доступ к БД
+type ChanResponseDatabase struct {
+}
+
+/*
+--- ДОЛГОВРЕМЕННОЕ ХРАНЕНИЕ ВРЕМЕННЫХ ФАЙЛОВ ---
+*/
+
+//ParametersSource описание состояния источника
+type ParametersSource struct {
+	ConnectionStatus  bool //true/false
+	ID                string
+	DateLastConnected int64 //Unix time
+	Token             string
+	AccessIsAllowed   bool              //разрешен ли доступ, по умолчанию false (при проверке токена ставится true если он верен)
+	ToServer          bool              //false - как клиент, true - как сервер
+	CurrentTasks      map[string]string // задачи для данного источника,
+	//key - ID задачи, value - ее тип 'in queuq' или 'in process'
+	LinkWsConnection *websocket.Conn
+}
+
+//SourcesList список источников
+type SourcesList map[string]ParametersSource
 
 //InformationStoringMemory часто используемые параметры
 type InformationStoringMemory struct {
-	ListSources       map[string]statusSource //key - ID источника в виде строки
+	SourcesList       //key - ip источника в виде строки
 	ChannelCollection channelCollection
+}
+
+//SearchSourceToken поиск id источника по его токену и ip
+func (ism *InformationStoringMemory) SearchSourceToken(host, token string) (string, bool) {
+	for sourceIP, settings := range ism.SourcesList {
+		if sourceIP == host && settings.Token == token {
+			//разрешаем соединение с данным источником
+			settings := ism.SourcesList[host]
+			settings.AccessIsAllowed = true
+			ism.SourcesList[host] = settings
+
+			return settings.ID, true
+		}
+	}
+
+	return "", false
+}
+
+//GetSourceSetting получить все настройки источника по его ip
+func (ism *InformationStoringMemory) GetSourceSetting(host string) (ParametersSource, bool) {
+	for ip, settings := range ism.SourcesList {
+		if ip == host {
+			return settings, true
+		}
+	}
+
+	return ParametersSource{}, false
+}
+
+//ChangeSourceConnectionStatus изменить состояние источника
+func (ism *InformationStoringMemory) ChangeSourceConnectionStatus(host string) bool {
+	if _, isExist := ism.SourcesList[host]; isExist {
+		sourceSetting := ism.SourcesList[host]
+		sourceSetting.ConnectionStatus = !sourceSetting.ConnectionStatus
+		if !sourceSetting.ConnectionStatus {
+			//статус источника = false (тоесть disconnect) удаляем линк соединения по websocket
+			sourceSetting.LinkWsConnection = nil
+			sourceSetting.AccessIsAllowed = false
+		} else {
+			//статус источника = true, добавить время последнего соединения
+			sourceSetting.DateLastConnected = time.Now().Unix()
+		}
+
+		ism.SourcesList[host] = sourceSetting
+
+		return true
+	}
+
+	return false
+}
+
+//AddLinkWebsocketConnect добавить линк соединения по websocket
+func (ism *InformationStoringMemory) AddLinkWebsocketConnect(host string, lwsc *websocket.Conn) {
+	if _, isExist := ism.SourcesList[host]; isExist {
+		sourceSetting := ism.SourcesList[host]
+		sourceSetting.LinkWsConnection = lwsc
+		ism.SourcesList[host] = sourceSetting
+	}
+}
+
+//GetLinkWebsocketConnect получить линк соединения по websocket
+func (ism *InformationStoringMemory) GetLinkWebsocketConnect(host string) (*websocket.Conn, bool) {
+	if _, isExist := ism.SourcesList[host]; isExist {
+		return ism.SourcesList[host].LinkWsConnection, true
+	}
+
+	return nil, false
+}
+
+//GetAccessIsAllowed возвращает значение подтверждающее или откланяющее права доступа источника
+func (ism *InformationStoringMemory) GetAccessIsAllowed(host string) bool {
+	if _, isExist := ism.SourcesList[host]; isExist {
+		return ism.SourcesList[host].AccessIsAllowed
+	}
+
+	return false
 }
 
 //MongoDBConnect содержит дискриптор соединения с БД

@@ -15,5 +15,5 @@ import (
 
 //WssClientNetworkInteraction обрабатывает запросы с источников
 func WssClientNetworkInteraction(timeReconnect int, ism *configure.InformationStoringMemory) {
-	fmt.Println("START WSS SERVER...")
+	fmt.Println("START WSS CLIENT...")
 }

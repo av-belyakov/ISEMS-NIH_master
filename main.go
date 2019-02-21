@@ -23,6 +23,7 @@ import (
 )
 
 var appConfig configure.AppConfig
+var mongoDBConnect configure.MongoDBConnect
 var ism configure.InformationStoringMemory
 
 //ReadConfig читает конфигурационный файл и сохраняет данные в appConfig
@@ -117,7 +118,7 @@ func init() {
 	ctx, cancel := context.WithTimeout(context.Background(), 1000*time.Second)
 	defer cancel()
 
-	ism.MongoConnect.CTX = ctx
+	mongoDBConnect.CTX = ctx
 
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
@@ -133,7 +134,7 @@ func init() {
 
 	appConfig.RootDir = dir + "/"
 
-	appConfig.PathKeyFile = appConfig.RootDir + appConfig.PathKeyFile
+	appConfig.PathPrivateKeyFile = appConfig.RootDir + appConfig.PathPrivateKeyFile
 	appConfig.PathCertFile = appConfig.RootDir + appConfig.PathCertFile
 
 	//соединяемся с БД
@@ -145,20 +146,26 @@ func init() {
 		os.Exit(1)
 	}
 
+	mongoDBConnect.Connect = mongoConnect
+
 	//получаем номер версии приложения
 	if err = getVersionApp(&appConfig); err != nil {
 		_ = saveMessageApp.LogMessage("err", "it is impossible to obtain the version number of the application")
 	}
 
 	//инициализируем каналы для взаимодействия с API
-	chanMessageToAPI := make(chan configure.MessageAPI)   //к API
-	chanMessageFromAPI := make(chan configure.MessageAPI) //из API
+	ism.ChannelCollection.ChannelToModuleAPI = make(chan configure.MessageAPI)
+	ism.ChannelCollection.ChannelFromModuleAPI = make(chan configure.MessageAPI)
 
-	ism.ChannelCollection.ChanMessageToAPI = chanMessageToAPI
-	ism.ChannelCollection.ChanMessageFromAPI = chanMessageFromAPI
+	//инициализируем каналы ОБЩЕГО назначения для взаимодействия с модулем сетевого взаимодействия
+	ism.ChannelCollection.ChannelToMNICommon = make(chan configure.MessageNetworkInteraction)
+	ism.ChannelCollection.ChannelFromMNICommon = make(chan configure.MessageNetworkInteraction)
 
-	//инициализация модуля для взаимодействия с API (обработчик внешних запросов)
-	go moduleapiapp.ProcessingMessageAPI(&appConfig, &ism)
+	//инициализируем СЕРВИСНЫЕ каналы для взаимодействия с модулем сетевого взаимодействия
+	ism.ChannelCollection.ChannelToMNIService = make(chan configure.ServiceMessageInfoStatusSource)
+	ism.ChannelCollection.ChannelFromMNIService = make(chan configure.ServiceMessageInfoStatusSource)
+
+	fmt.Println("ENd func init")
 }
 
 func main() {
@@ -166,5 +173,7 @@ func main() {
 	fmt.Printf("%T%v\n", appConfig, appConfig)
 
 	//запуск ядра приложения
-	coreapp.CoreApp(&appConfig, &ism, &mongoConnect)
+	coreapp.CoreApp(&appConfig, &ism, &mongoDBConnect)
+
+	fmt.Println("!!! END func main !!!")
 }
