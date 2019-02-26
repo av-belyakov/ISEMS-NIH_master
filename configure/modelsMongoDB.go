@@ -6,7 +6,7 @@ package configure
 
 //InformationAboutSource информация об источнике в коллекции 'sources_list'
 type InformationAboutSource struct {
-	ID        int
-	IP, Token string
-	AsServer  bool
+	ID, MaxCountProcessFiltering int
+	IP, Token                    string
+	AsServer                     bool
 }

@@ -7,7 +7,7 @@ import (
 )
 
 //MainAppAPI обработчик запросов поступающих через API
-func MainAppAPI(appConfig *configure.AppConfig, ism *configure.InformationStoringMemory) {
+func MainAppAPI(cOut chan<- configure.MessageAPI, appConfig *configure.AppConfig, ism *configure.InformationStoringMemory, cIn <-chan configure.MessageAPI) {
 	fmt.Println("START module MainAppAPI")
 	/*
 	   if message := <-*ism.ChannelCollection.ChanMessageToAPI {

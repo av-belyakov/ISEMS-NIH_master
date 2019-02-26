@@ -14,32 +14,28 @@ import (
 )
 
 //Routing маршрутизирует данные поступающие в ядро из каналов
-func Routing(appConf *configure.AppConfig, ism *configure.InformationStoringMemory) {
+func Routing(appConf *configure.AppConfig, ism *configure.InformationStoringMemory, channelCollection *configure.ChannelCollection) {
 	fmt.Println("START 'Route' module core app")
 
 	for {
 		select {
-		case data := <-ism.ChannelCollection.ChannelFromModuleAPI:
+		case data := <-channelCollection.ChannelFromModuleAPI:
 			fmt.Println("MESSAGE FROM channel 'ChannelFromModuleAPI'")
 
 			fmt.Println(data)
 
-		case data := <-ism.ChannelCollection.ChannelFromMNICommon:
+		case data := <-channelCollection.ChannelFromMNICommon:
 			fmt.Println("MESSAGE FROM channel 'ChannelFromMNICommon'")
 
 			fmt.Println(data)
 
-		case data := <-ism.ChannelCollection.ChannelFromMNIService:
+		case data := <-channelCollection.ChannelFromMNIService:
 			fmt.Println("MESSAGE FROM channel 'ChannelFromMNIService'")
 
 			fmt.Println(data)
 
-			if data.Type == "get_list" {
-
-				fmt.Println("/***************************************")
-				fmt.Println("ДЛЯ СТАРТА HTTPS СЕРВЕРА НЕОБХОДИМ СПИСОК ИСТОЧНИКОВ")
-				fmt.Println("***************************************/")
-
+			if data.Type == "change_sources" {
+				fmt.Println("SEND MESSAGE TO Module API")
 			}
 		}
 	}

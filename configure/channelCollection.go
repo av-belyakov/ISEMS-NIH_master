@@ -8,7 +8,15 @@ type ChannelCollection struct {
 	ChannelFromMNICommon  chan MessageNetworkInteraction
 	ChannelToMNIService   chan ServiceMessageInfoStatusSource
 	ChannelFromMNIService chan ServiceMessageInfoStatusSource
+	Cwt                   chan MsgWsTransmission
+
 	//ChannelChangeSourceList chan struct{} //информирует об изменении списка источников
+}
+
+//MsgWsTransmission содержит информацию для передачи подключенному источнику
+type MsgWsTransmission struct {
+	DestinationHost string
+	Data            []byte
 }
 
 //ChanReguestDatabase содержит запросы для модуля обеспечивающего доступ к БД
@@ -36,14 +44,14 @@ type MessageAPI struct {
 
 //MessageTypeInfoStatusSource статус сенсора (ИНФОРМАЦИОННОЕ)
 type MessageTypeInfoStatusSource struct {
-	SourceID         string //идентификатор источника в виде текста
+	IP               string //ip адрес источника
 	ConnectionStatus string //connect/disconnet
 	ConnectionTime   int64  //Unix time
 }
 
 //ServiceMessageInfoStatusSource сервисное сообщение о статусе источников
 type ServiceMessageInfoStatusSource struct {
-	Type       string //get_list/change_list/send_list
+	Type       string //change_sources
 	SourceList []MessageTypeInfoStatusSource
 }
 

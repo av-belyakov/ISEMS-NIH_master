@@ -109,17 +109,12 @@ func (qcs *QueryCollectionSources) InsertData(list []interface{}) (bool, error) 
 func (qcs *QueryCollectionSources) InsertListSource() (bool, error) {
 	fmt.Println("START func InserListSourcesTMPFinaly...")
 
-	type infoMsg struct {
-		ID        int
-		IP, Token string
-	}
-
 	listSources := []interface{}{
-		infoMsg{9, "127.0.0.1", "fmdif3o444fdf344k0fiif"},
-		infoMsg{10, "192.168.0.10", "fmdif3o444fdf344k0fiif"},
-		infoMsg{11, "192.168.0.11", "ttrr9gr9r9e9f9fadx94"},
-		infoMsg{12, "192.168.0.12", "2n3n3iixcxcc3444xfg0222"},
-		infoMsg{13, "192.168.0.13", "osdsoc9c933cc9cn939f9f33"},
+		configure.InformationAboutSource{9, 3, "127.0.0.1", "fmdif3o444fdf344k0fiif", true},
+		configure.InformationAboutSource{10, 3, "192.168.0.10", "fmdif3o444fdf344k0fiif", true},
+		configure.InformationAboutSource{11, 3, "192.168.0.11", "ttrr9gr9r9e9f9fadx94", false},
+		configure.InformationAboutSource{12, 3, "192.168.0.12", "2n3n3iixcxcc3444xfg0222", false},
+		configure.InformationAboutSource{13, 3, "192.168.0.13", "osdsoc9c933cc9cn939f9f33", false},
 	}
 
 	funcInserMany := func(collection *mongo.Collection, insertListSource []interface{}) (bool, error) {
@@ -145,7 +140,7 @@ func (qcs *QueryCollectionSources) InsertListSource() (bool, error) {
 
 	//получаем все ID источников
 	for cur.Next(context.TODO()) {
-		var im infoMsg
+		var im configure.InformationAboutSource
 		err := cur.Decode(&im)
 		if err != nil {
 			fmt.Println(err)
@@ -169,7 +164,7 @@ func (qcs *QueryCollectionSources) InsertListSource() (bool, error) {
 	//готовим insertListSources
 	for _, value := range listSources {
 		//контролируемое привидение типов и получаем срез id
-		if im, ok := value.(infoMsg); ok {
+		if im, ok := value.(configure.InformationAboutSource); ok {
 
 			fmt.Println(sort.SearchInts(listSourcesID, im.ID))
 
@@ -181,7 +176,7 @@ func (qcs *QueryCollectionSources) InsertListSource() (bool, error) {
 			}
 
 			if sort.SearchInts(listSourcesID, im.ID) == -1 {
-				insertListSource = append(insertListSource, infoMsg{im.ID, im.IP, im.Token})
+				insertListSource = append(insertListSource, configure.InformationAboutSource{im.ID, im.MaxCountProcessFiltering, im.IP, im.Token, im.AsServer})
 			}
 		}
 	}

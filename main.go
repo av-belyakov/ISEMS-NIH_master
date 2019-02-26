@@ -25,6 +25,7 @@ import (
 var appConfig configure.AppConfig
 var mongoDBConnect configure.MongoDBConnect
 var ism configure.InformationStoringMemory
+var channelCollection configure.ChannelCollection
 
 //ReadConfig читает конфигурационный файл и сохраняет данные в appConfig
 func readConfigApp(fileName string, appc *configure.AppConfig) error {
@@ -134,8 +135,8 @@ func init() {
 
 	appConfig.RootDir = dir + "/"
 
-	appConfig.PathPrivateKeyFile = appConfig.RootDir + appConfig.PathPrivateKeyFile
 	appConfig.PathCertFile = appConfig.RootDir + appConfig.PathCertFile
+	appConfig.PathPrivateKeyFile = appConfig.RootDir + appConfig.PathPrivateKeyFile
 
 	//соединяемся с БД
 	mongoConnect, err := connectToDB(ctx, &appConfig)
@@ -153,17 +154,26 @@ func init() {
 		_ = saveMessageApp.LogMessage("err", "it is impossible to obtain the version number of the application")
 	}
 
+	//инициируем хранилище информации об источнике
+	ism.SourcesListSetting = configure.ServiceSettings{}
+
+	//инициируем хранилище дескрипторов соединений с источниками
+	ism.SourcesListConnection = configure.WssConnection{}
+
 	//инициализируем каналы для взаимодействия с API
-	ism.ChannelCollection.ChannelToModuleAPI = make(chan configure.MessageAPI)
-	ism.ChannelCollection.ChannelFromModuleAPI = make(chan configure.MessageAPI)
+	channelCollection.ChannelToModuleAPI = make(chan configure.MessageAPI)
+	channelCollection.ChannelFromModuleAPI = make(chan configure.MessageAPI)
 
 	//инициализируем каналы ОБЩЕГО назначения для взаимодействия с модулем сетевого взаимодействия
-	ism.ChannelCollection.ChannelToMNICommon = make(chan configure.MessageNetworkInteraction)
-	ism.ChannelCollection.ChannelFromMNICommon = make(chan configure.MessageNetworkInteraction)
+	channelCollection.ChannelToMNICommon = make(chan configure.MessageNetworkInteraction)
+	channelCollection.ChannelFromMNICommon = make(chan configure.MessageNetworkInteraction)
 
 	//инициализируем СЕРВИСНЫЕ каналы для взаимодействия с модулем сетевого взаимодействия
-	ism.ChannelCollection.ChannelToMNIService = make(chan configure.ServiceMessageInfoStatusSource)
-	ism.ChannelCollection.ChannelFromMNIService = make(chan configure.ServiceMessageInfoStatusSource)
+	channelCollection.ChannelToMNIService = make(chan configure.ServiceMessageInfoStatusSource)
+	channelCollection.ChannelFromMNIService = make(chan configure.ServiceMessageInfoStatusSource)
+
+	//инициализируем канал для передачи данных через websocket соединение
+	channelCollection.Cwt = make(chan configure.MsgWsTransmission)
 
 	fmt.Println("ENd func init")
 }
@@ -173,7 +183,7 @@ func main() {
 	fmt.Printf("%T%v\n", appConfig, appConfig)
 
 	//запуск ядра приложения
-	coreapp.CoreApp(&appConfig, &ism, &mongoDBConnect)
+	coreapp.CoreApp(&appConfig, &mongoDBConnect, &ism, &channelCollection)
 
 	fmt.Println("!!! END func main !!!")
 }

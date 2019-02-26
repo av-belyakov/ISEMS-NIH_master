@@ -14,6 +14,6 @@ import (
 )
 
 //WssClientNetworkInteraction обрабатывает запросы с источников
-func WssClientNetworkInteraction(timeReconnect int, ism *configure.InformationStoringMemory) {
+func WssClientNetworkInteraction(cOut chan<- map[string]string, timeReconnect int, ism *configure.InformationStoringMemory, cIn <-chan struct{}) {
 	fmt.Println("START WSS CLIENT...")
 }

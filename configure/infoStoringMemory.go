@@ -3,251 +3,99 @@ package configure
 /*
 * Описание типа для хранения в памяти часто используемых параметров
 *
-* Версия 0.11, дата релиза 21.02.2019
+* Версия 0.12, дата релиза 26.02.2019
 * */
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/mongodb/mongo-go-driver/mongo"
 )
 
-/*
---- ВЗАИМОДЕЙСТВИЕ С МОДУЛЕМ API ---
-*/
-
-//MessageAPI набор параметров для взаимодействия с модулем API
-type MessageAPI struct {
-	MsgID, MsgType string
-	MsgDate        int
-}
-
-/*
---- ВЗАИМОДЕЙСТВИЕ С МОДУЛЕМ NetworkInteraction ---
-		(СЕРВИСНЫЕ СООБЩЕНИЯ)
-*/
-
-//MessageTypeInfoStatusSource статус сенсора (ИНФОРМАЦИОННОЕ)
-type MessageTypeInfoStatusSource struct {
-	SourceID         string //идентификатор источника в виде текста
-	ConnectionStatus string //connect/disconnet
-	ConnectionTime   int64  //Unix time
-}
-
-//ServiceMessageInfoStatusSource сервисное сообщение о статусе источников
-type ServiceMessageInfoStatusSource struct {
-	Type       string //get_list/change_list/send_list
-	SourceList []MessageTypeInfoStatusSource
-}
-
-/*
---- ВЗАИМОДЕЙСТВИЕ С МОДУЛЕМ NetworkInteraction ---
-		(СООБЩЕНИЯ ОБЩЕГО НАЗНАЧЕНИЯ)
-*/
-
-//Memory содержит информацию об используемой ПО
-type telemetryMemory struct {
-	Total int
-	Used  int
-	Free  int
-}
-
-//MessageTelemetryData информация о технических параметрах источника
-type MessageTelemetryData struct {
-	IPAddress          string
-	CurrentDateTime    int64
-	DiskSpace          []map[string]string
-	TimeInterval       map[string]map[string]int
-	RandomAccessMemory telemetryMemory
-	LoadCPU            float64
-	LoadNetwork        map[string]map[string]int
-}
-
-//informationFilterProcess информация об обработанных файлах
-type informationFilterProcess struct {
-	AllCountFilesSearch  int //количество найденных файлов
-	AllSizeFilesSearch   int //общий размер найденных файлов
-	CountFilesProcessing int //количество обработанных файлов
-	CountFilesSearch     int //количество файлов найданных под заданные параметры
-	SizeFilesSearch      int //общий размер файлов удовлетворяющих заданным параметрам
-}
-
-//MessageTypeInfoFiltering ход выполнения фильтрации (ИНФОРМАЦИОННОЕ)
-type MessageTypeInfoFiltering struct {
-	TaskIndex     string //ID задачи
-	ProcessStatus string //статус процесса ready, start, execute, complete, stop
-	Info          informationFilterProcess
-}
-
-//fileInformation информация о найденном файле
-type fileInformation struct {
-	FileHash       string //хеш сумма
-	FileSize       int    //размер
-	FileCreateTime int    //дата создания в формате Unix
-}
-
-//MessageTypeInfoFilteringSearchListFiles список файлов найденных в результате фильтрации (ИНФОРМАЦИОННОЕ)
-type MessageTypeInfoFilteringSearchListFiles struct {
-	TaskIndex string                     //ID задачи
-	ListFiles map[string]fileInformation //ключ имя файла
-}
-
-//MessageTypeInfoDownload ход выполнения скачивания файлов (ИНФОРМАЦИОННОЕ)
-type MessageTypeInfoDownload struct {
-	TaskIndex     string //ID задачи
-	ProcessStatus string //статус процесса ready, execute, execute_complited
-	InfoFile      fileInformation
-}
-
-//MessageTypeErrorMessage информация об ошибках
-type MessageTypeErrorMessage struct {
-	LocationError string //sensor/module_ni
-	MsgError      error
-	Description   string //возможно дополнительное описание
-}
-
-//параметры фильтрации файлов
-type parametersFilterFiles struct {
-	DateTimeStart, DateTimeEnd int
-	ListIP, ListNetwork        string
-}
-
-//MessageTypeCommandFiltering команды связанные с задачами по фильтрации (ИСПОЛНИТЕЛЬНЫЕ)
-type MessageTypeCommandFiltering struct {
-	TaskIndex     string //ID задачи
-	ProcessStatus string //статус процесса start, stop
-	Info          parametersFilterFiles
-}
-
-//parametersDownloadFiles информация о скачиваемых файлов
-type parametersDownloadFiles struct {
-	DownloadDirectoryFiles     string   //директория где хранятся файлы на сенсоре
-	DownloadSelectedFiles      bool     //скачивать выбранные файлы или все
-	CountDownloadSelectedFiles int      //общее число файлов
-	NumberMessageParts         [2]int   //число частей сообщения
-	ListDownloadSelectedFiles  []string //список файлов выбранных для скачивания
-}
-
-//MessageTypeCommandStartDownload сообщение при старте задачи
-type MessageTypeCommandStartDownload struct {
-	TaskIndex     string //ID задачи
-	ProcessStatus string //статус процесса start
-	Info          parametersDownloadFiles
-}
-
-//MessageTypeCommandDownload команды связанные с задачами по скачиванию файлов (ИСПОЛНИТЕЛЬНЫЕ)
-type MessageTypeCommandDownload struct {
-	TaskIndex     string //ID задачи
-	ProcessStatus string //статус процесса ready, waiting_for_transfer, execute_success'/'execute_failure
-}
-
-//MessageNetworkInteraction набор параметров для взаимодействия с модулем Network Interaction
-type MessageNetworkInteraction struct {
-	MsgType string //тип сообщения (команда/информационное)
-	SubType string //подтип сообщения, если команда filtering/download,
-	/*
-	   если информационное
-	   - change_sensor_status
-	   - info_filtering
-	   - info_filtering_search_list_files
-	   - info_download
-	   - error_message
-	*/
-	Message interface{} //сообщение в любом виде, используется контролируемое приведение типа
-}
-
-/*
---- НАБОР КАНАЛОВ ---
-*/
-
-//channelCollection набор каналов
-type channelCollection struct {
-	ChannelToModuleAPI    chan MessageAPI
-	ChannelFromModuleAPI  chan MessageAPI
-	ChannelToMNICommon    chan MessageNetworkInteraction
-	ChannelFromMNICommon  chan MessageNetworkInteraction
-	ChannelToMNIService   chan ServiceMessageInfoStatusSource
-	ChannelFromMNIService chan ServiceMessageInfoStatusSource
-}
-
-//ChanReguestDatabase содержит запросы для модуля обеспечивающего доступ к БД
-type ChanReguestDatabase struct {
-}
-
-//ChanResponseDatabase содержит ответы от модуля обеспечивающего доступ к БД
-type ChanResponseDatabase struct {
+//MongoDBConnect содержит дискриптор соединения с БД
+type MongoDBConnect struct {
+	Connect *mongo.Client
+	CTX     context.Context
 }
 
 /*
 --- ДОЛГОВРЕМЕННОЕ ХРАНЕНИЕ ВРЕМЕННЫХ ФАЙЛОВ ---
 */
 
-//ParametersSource описание состояния источника
-type ParametersSource struct {
+//ServiceSettings настройки влияющие на обработку данных на стороне источника
+type ServiceSettings struct {
 	ConnectionStatus  bool //true/false
 	ID                string
 	DateLastConnected int64 //Unix time
 	Token             string
 	AccessIsAllowed   bool              //разрешен ли доступ, по умолчанию false (при проверке токена ставится true если он верен)
-	ToServer          bool              //false - как клиент, true - как сервер
+	AsServer          bool              //false - как клиент, true - как сервер
 	CurrentTasks      map[string]string // задачи для данного источника,
 	//key - ID задачи, value - ее тип 'in queuq' или 'in process'
-	LinkWsConnection *websocket.Conn
+	MaxCountProcessFilter int
 }
 
-//SourcesList список источников
-type SourcesList map[string]ParametersSource
+//WssConnection дескриптор соединения по протоколу websocket
+type WssConnection struct {
+	Link *websocket.Conn
+	mu   sync.Mutex
+}
+
+//SourcesListSetting настройки источников
+type SourcesListSetting map[string]ServiceSettings
+
+//SourcesListConnection дескрипторы соединения с источниками по протоколу websocket
+type SourcesListConnection map[string]WssConnection
 
 //InformationStoringMemory часто используемые параметры
 type InformationStoringMemory struct {
-	SourcesList       //key - ip источника в виде строки
-	ChannelCollection channelCollection
+	SourcesListSetting
+	SourcesListConnection
+}
+
+//AddSourceSettings добавить настройки источника
+func (ism *InformationStoringMemory) AddSourceSettings(host string, settings ServiceSettings) {
+	ism.SourcesListSetting[host] = settings
 }
 
 //SearchSourceToken поиск id источника по его токену и ip
 func (ism *InformationStoringMemory) SearchSourceToken(host, token string) (string, bool) {
-	for sourceIP, settings := range ism.SourcesList {
-		if sourceIP == host && settings.Token == token {
+	if s, ok := ism.SourcesListSetting[host]; ok {
+		if s.Token == token {
 			//разрешаем соединение с данным источником
-			settings := ism.SourcesList[host]
-			settings.AccessIsAllowed = true
-			ism.SourcesList[host] = settings
+			s.AccessIsAllowed = true
 
-			return settings.ID, true
+			return s.ID, true
 		}
+
 	}
 
 	return "", false
 }
 
 //GetSourceSetting получить все настройки источника по его ip
-func (ism *InformationStoringMemory) GetSourceSetting(host string) (ParametersSource, bool) {
-	for ip, settings := range ism.SourcesList {
-		if ip == host {
-			return settings, true
-		}
+func (ism *InformationStoringMemory) GetSourceSetting(host string) (ServiceSettings, bool) {
+	if s, ok := ism.SourcesListSetting[host]; ok {
+		return s, true
 	}
 
-	return ParametersSource{}, false
+	return ServiceSettings{}, false
 }
 
 //ChangeSourceConnectionStatus изменить состояние источника
 func (ism *InformationStoringMemory) ChangeSourceConnectionStatus(host string) bool {
-	if _, isExist := ism.SourcesList[host]; isExist {
-		sourceSetting := ism.SourcesList[host]
-		sourceSetting.ConnectionStatus = !sourceSetting.ConnectionStatus
-		if !sourceSetting.ConnectionStatus {
-			//статус источника = false (тоесть disconnect) удаляем линк соединения по websocket
-			sourceSetting.LinkWsConnection = nil
-			sourceSetting.AccessIsAllowed = false
-		} else {
-			//статус источника = true, добавить время последнего соединения
-			sourceSetting.DateLastConnected = time.Now().Unix()
-		}
+	if s, ok := ism.SourcesListSetting[host]; ok {
+		s.ConnectionStatus = !s.ConnectionStatus
 
-		ism.SourcesList[host] = sourceSetting
+		if s.ConnectionStatus {
+			s.DateLastConnected = time.Now().Unix()
+		} else {
+			s.AccessIsAllowed = false
+		}
+		ism.SourcesListSetting[host] = s
 
 		return true
 	}
@@ -255,35 +103,45 @@ func (ism *InformationStoringMemory) ChangeSourceConnectionStatus(host string) b
 	return false
 }
 
-//AddLinkWebsocketConnect добавить линк соединения по websocket
-func (ism *InformationStoringMemory) AddLinkWebsocketConnect(host string, lwsc *websocket.Conn) {
-	if _, isExist := ism.SourcesList[host]; isExist {
-		sourceSetting := ism.SourcesList[host]
-		sourceSetting.LinkWsConnection = lwsc
-		ism.SourcesList[host] = sourceSetting
-	}
-}
-
-//GetLinkWebsocketConnect получить линк соединения по websocket
-func (ism *InformationStoringMemory) GetLinkWebsocketConnect(host string) (*websocket.Conn, bool) {
-	if _, isExist := ism.SourcesList[host]; isExist {
-		return ism.SourcesList[host].LinkWsConnection, true
-	}
-
-	return nil, false
-}
-
-//GetAccessIsAllowed возвращает значение подтверждающее или откланяющее права доступа источника
+//GetAccessIsAllowed возвращает значение подтверждающее или отклоняющее права доступа источника
 func (ism *InformationStoringMemory) GetAccessIsAllowed(host string) bool {
-	if _, isExist := ism.SourcesList[host]; isExist {
-		return ism.SourcesList[host].AccessIsAllowed
+	if s, ok := ism.SourcesListSetting[host]; ok {
+		return s.AccessIsAllowed
 	}
 
 	return false
 }
 
-//MongoDBConnect содержит дискриптор соединения с БД
-type MongoDBConnect struct {
-	Connect *mongo.Client
-	CTX     context.Context
+//SendWsMessage используется для отправки сообщений через протокол websocket (применяется Mutex)
+func (wssc *WssConnection) SendWsMessage(t int, v []byte) error {
+	wssc.mu.Lock()
+	defer wssc.mu.Unlock()
+
+	return wssc.Link.WriteMessage(t, v)
+}
+
+//AddLinkWebsocketConnect добавить линк соединения по websocket
+func (ism *InformationStoringMemory) AddLinkWebsocketConnect(host string, lwsc *websocket.Conn) {
+	ism.SourcesListConnection[host] = WssConnection{
+		Link: lwsc,
+	}
+}
+
+//DelLinkWebsocketConnection удаление дескриптора соединения при отключении источника
+func (ism *InformationStoringMemory) DelLinkWebsocketConnection(host string) {
+	delete(ism.SourcesListConnection, host)
+	/*if _, ok := ism.SourcesListConnection[host]; ok {
+		ism.SourcesListConnection[host] = WssConnection{
+			Link: nil,
+		}
+	}*/
+}
+
+//GetLinkWebsocketConnect получить линк соединения по websocket
+func (ism *InformationStoringMemory) GetLinkWebsocketConnect(host string) (*WssConnection, bool) {
+	if conn, ok := ism.SourcesListConnection[host]; ok {
+		return &conn, true
+	}
+
+	return nil, false
 }

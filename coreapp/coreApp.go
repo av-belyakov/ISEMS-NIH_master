@@ -15,18 +15,18 @@ import (
 )
 
 //CoreApp запускает все обработчики уровня ядра
-func CoreApp(appConf *configure.AppConfig, ism *configure.InformationStoringMemory, linkConnection *configure.MongoDBConnect) {
+func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConnect, ism *configure.InformationStoringMemory, chanColl *configure.ChannelCollection) {
 	fmt.Println("START module 'CoreAppMain'...")
 
 	//запуск подпрограммы для взаимодействия с БД
-	go DatabaseInteraction(appConf.ConnectionDB.NameDB, ism, linkConnection)
+	go DatabaseInteraction(appConf.ConnectionDB.NameDB, linkConnection, ism)
 
 	//инициализация модуля для взаимодействия с API (обработчик внешних запросов)
-	go moduleapiapp.MainAppAPI(appConf, ism)
+	go moduleapiapp.MainAppAPI(chanColl.ChannelFromModuleAPI, appConf, ism, chanColl.ChannelToModuleAPI)
 
 	//инициализация модуля сетевого взаимодействия (взаимодействие с сенсорами)
-	go modulenetworkinteractionapp.MainNetworkInteraction(appConf, ism)
+	go modulenetworkinteractionapp.MainNetworkInteraction(appConf, ism, chanColl)
 
 	//запуск подпрограммы для маршрутизации запросов внутри приложения
-	Routing(appConf, ism)
+	Routing(appConf, ism, chanColl)
 }

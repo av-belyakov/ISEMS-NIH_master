@@ -30,7 +30,8 @@ type SettingsHTTPServer struct {
 
 //SettingsWssServer параметры для взаимодействия с wssServer
 type SettingsWssServer struct {
-	StorMem *configure.InformationStoringMemory
+	StorMem                   *configure.InformationStoringMemory
+	MsgChangeSourceConnection chan<- map[string]string
 }
 
 //HandlerRequest обработчик HTTPS запросов
@@ -61,8 +62,9 @@ func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWrit
 	}
 
 	remoteAddr := strings.Split(req.RemoteAddr, ":")[0]
-
+	//если токен валидный изменяем состояние AccessIsAllowed в true
 	_, validToken := settingsHTTPServer.StorMem.SearchSourceToken(remoteAddr, stringToken)
+
 	if (len(stringToken) == 0) || !validToken {
 		w.Header().Set("Content-Length", strconv.Itoa(utf8.RuneCount(bodyHTTPResponseError)))
 
@@ -83,6 +85,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	remoteIP := strings.Split(req.RemoteAddr, ":")[0]
 	_, ipIsExist := sws.StorMem.GetSourceSetting(remoteIP)
 
+	//проверяем разрешено ли данному ip соединение с сервером wss
 	if !ipIsExist || !sws.StorMem.GetAccessIsAllowed(remoteIP) {
 		w.WriteHeader(401)
 		_ = saveMessageApp.LogMessage("error", "access for the user with ipaddress "+req.RemoteAddr+" is prohibited")
@@ -105,25 +108,26 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
+
 	defer func() {
-
-		//		chanEndGoroutin <- struct{}{}
-
 		//закрытие канала связи с источником
 		c.Close()
 
 		//изменяем состояние соединения для данного источника
 		_ = sws.StorMem.ChangeSourceConnectionStatus(remoteIP)
+		//удаляем линк соединения
+		sws.StorMem.DelLinkWebsocketConnection(remoteIP)
+
 		_ = saveMessageApp.LogMessage("info", "disconnect for IP address "+remoteIP)
 
-		/*		if _, ok := acc.Addresses[remoteIP]; !ok {
-				fmt.Println(ok, "--- --- ---- IPADDRESS ", remoteIP, "NOT FOUND, WEBSOCKET DISCONNECT")
-			}*/
+		//при разрыве соединения отправляем модулю routing сообщение об изменении статуса источников
+		sws.MsgChangeSourceConnection <- map[string]string{
+			"wssModule":    "server",
+			"sourceIP":     remoteIP,
+			"sourceStatus": "disconnect",
+		}
 
-		//при разрыве соединения удаляем задачу по скачиванию файлов
-		//dfi.DelTaskDownloadFiles(remoteIP)
-
-		fmt.Println("websocket disconnect whis ip", remoteIP)
+		_ = saveMessageApp.LogMessage("info", "websocket disconnect whis ip "+remoteIP)
 	}()
 
 	//изменяем состояние соединения для данного источника
@@ -132,87 +136,47 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	//добавляем линк соединения по websocket
 	sws.StorMem.AddLinkWebsocketConnect(remoteIP, c)
 
-	/*	go func(acc *configure.AccessClientsConfigure) {
-		DONE:
-			for {
-				select {
-				case messageText := <-acc.ChanWebsocketTranssmition:
-					if _, isExist := acc.Addresses[remoteIP]; isExist {
-						if err := acc.Addresses[remoteIP].SendWsMessage(1, messageText); err != nil {
-							_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-						}
-					}
-				case messageBinary := <-acc.ChanWebsocketTranssmitionBinary:
-					if _, isExist := acc.Addresses[remoteIP]; isExist {
-						if err := acc.Addresses[remoteIP].SendWsMessage(2, messageBinary); err != nil {
-							_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-						}
-					}
-				case <-chanEndGoroutin:
-
-					chanStopSendInfoTranssmition <- struct{}{}
-
-					break DONE
-				}
-			}
-
-			//		fmt.Println("_!!!_ COUNT GOROUTINE:", runtime.NumGoroutine())
-		}(&acc)*/
+	//отправляем модулю routing сообщение об изменении статуса источника
+	sws.MsgChangeSourceConnection <- map[string]string{
+		"wssModule":    "server",
+		"sourceIP":     remoteIP,
+		"sourceStatus": "connect",
+	}
 
 	if e := recover(); e != nil {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(e))
 	}
-
-	//	routes.RouteWebSocketRequest(remoteIP, &acc, &ift, &dfi, &mc, chanStopSendInfoTranssmition)
 }
 
 //WssServerNetworkInteraction запуск сервера для обработки запросов с источников
-func WssServerNetworkInteraction(appConf *configure.AppConfig, ism *configure.InformationStoringMemory) {
+func WssServerNetworkInteraction(cOut chan<- map[string]string, appConf *configure.AppConfig, ism *configure.InformationStoringMemory) {
 	fmt.Println("START WSS SERVER...")
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
-	fmt.Println("*** Send request for LIST SOURCES ***")
+	port := strconv.Itoa(appConf.ServerHTTP.Port)
 
-	//запрос на получение списка источников
-	ism.ChannelCollection.ChannelFromMNIService <- configure.ServiceMessageInfoStatusSource{Type: "get_list"}
-
-	for msg := range ism.ChannelCollection.ChannelToMNIService {
-		fmt.Println("*** GET SOURCE LIST ***", msg)
-
-		if msg.Type == "send_list" {
-			settingsHTTPServer := SettingsHTTPServer{
-				Host:    appConf.ServerHTTP.Host,
-				Port:    string(appConf.ServerHTTP.Port),
-				StorMem: ism,
-			}
-
-			settingsWssServer := SettingsWssServer{
-				StorMem: ism,
-			}
-
-			/* инициализируем HTTPS сервер */
-			log.Println("The HTTPS server is running on ip address " + appConf.ServerHTTP.Host + ", port " + string(appConf.ServerHTTP.Port) + "\n")
-
-			http.HandleFunc("/", settingsHTTPServer.HandlerRequest)
-			http.HandleFunc("/wss", settingsWssServer.ServerWss)
-
-			port := string(appConf.ServerHTTP.Port)
-			if err := http.ListenAndServeTLS(appConf.ServerHTTP.Host+":"+port, appConf.PathCertFile, appConf.PathPrivateKeyFile, nil); err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-				log.Println(err)
-				os.Exit(1)
-			}
-		}
+	settingsHTTPServer := SettingsHTTPServer{
+		Host:    appConf.ServerHTTP.Host,
+		Port:    port,
+		StorMem: ism,
 	}
 
-	/*
-		select {
-		case msg := <- ism.ChannelCollection.ChannelToMNIService:
-			fmt.Println("*** GET SOURCE LIST ***")
+	settingsWssServer := SettingsWssServer{
+		StorMem:                   ism,
+		MsgChangeSourceConnection: cOut,
+	}
 
+	/* инициализируем HTTPS сервер */
+	log.Println("The HTTPS server is running on ip address " + appConf.ServerHTTP.Host + ", port " + port + "\n")
 
-			}
-	*/
+	http.HandleFunc("/", settingsHTTPServer.HandlerRequest)
+	http.HandleFunc("/wss", settingsWssServer.ServerWss)
+
+	if err := http.ListenAndServeTLS(appConf.ServerHTTP.Host+":"+port, appConf.PathCertFile, appConf.PathPrivateKeyFile, nil); err != nil {
+		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+		log.Println(err)
+		os.Exit(1)
+	}
 }
