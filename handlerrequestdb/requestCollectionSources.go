@@ -3,7 +3,6 @@ package handlerrequestdb
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/mongo"
@@ -19,7 +18,7 @@ type QueryCollectionSources struct {
 }
 
 //InserListSourcesTMP тестовая вставка
-func (qcs *QueryCollectionSources) InserListSourcesTMP(list []interface{}) (bool, error) {
+func (qcs *QueryCollectionSources) InserListSourcesTMP(list []configure.InformationAboutSource) (bool, error) {
 	//получаем список источников
 	listSources, err := qcs.FindAll()
 	if err != nil {
@@ -31,6 +30,15 @@ func (qcs *QueryCollectionSources) InserListSourcesTMP(list []interface{}) (bool
 	fmt.Println(listSources)
 
 	if len(listSources) == 0 {
+
+		fmt.Println("InSerT DatA")
+		/*
+			insertData := []interface{}{}
+			insertData = append(insertData, list)
+
+			fmt.Printf("----- %T %v -----", insertData, insertData)
+		*/
+		testList := []map[string]int{}
 		return qcs.InsertData(list)
 	}
 
@@ -39,21 +47,17 @@ func (qcs *QueryCollectionSources) InserListSourcesTMP(list []interface{}) (bool
 
 	listSourcesInsert := []interface{}{}
 	for _, itemAddList := range list {
-		if sourceAddList, ok := itemAddList.(configure.InformationAboutSource); ok {
-			isExist := false
+		var isExist bool
 
-			for _, itemFindList := range listSources {
-				if sourceFindList, ok := itemFindList.(configure.InformationAboutSource); ok {
-					if sourceFindList.ID == sourceAddList.ID {
-						isExist = true
-						break
-					}
-				}
+		for _, itemFindList := range listSources {
+			if itemFindList.ID == itemAddList.ID {
+				isExist = true
+				break
 			}
+		}
 
-			if !isExist {
-				listSourcesInsert = append(listSourcesInsert, sourceAddList)
-			}
+		if !isExist {
+			listSourcesInsert = append(listSourcesInsert, itemAddList)
 		}
 	}
 
@@ -63,7 +67,7 @@ func (qcs *QueryCollectionSources) InserListSourcesTMP(list []interface{}) (bool
 }
 
 //FindAll найти всю информацию об источниках
-func (qcs *QueryCollectionSources) FindAll() ([]interface{}, error) {
+func (qcs *QueryCollectionSources) FindAll() ([]configure.InformationAboutSource, error) {
 	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
 	options := options.Find()
 
@@ -72,7 +76,7 @@ func (qcs *QueryCollectionSources) FindAll() ([]interface{}, error) {
 		return nil, err
 	}
 
-	listSources := []interface{}{}
+	listSources := []configure.InformationAboutSource{} //[]interface{}{}
 	//получаем все ID источников
 	for cur.Next(context.TODO()) {
 		var model configure.InformationAboutSource
@@ -106,7 +110,7 @@ func (qcs *QueryCollectionSources) InsertData(list []interface{}) (bool, error) 
 }
 
 //InsertListSource добавляет список источников !!! ТЕСТ !!!
-func (qcs *QueryCollectionSources) InsertListSource() (bool, error) {
+/*func (qcs *QueryCollectionSources) InsertListSource() (bool, error) {
 	fmt.Println("START func InserListSourcesTMPFinaly...")
 
 	listSources := []interface{}{
@@ -130,7 +134,8 @@ func (qcs *QueryCollectionSources) InsertListSource() (bool, error) {
 	//ищем все источники
 	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
 	options := options.Find()
-	cur, err := collection.Find(context.TODO(), bson.D{{}} /*bson.D{{"ip", "192.168.0.10"}}*/, options)
+	cur, err := collection.Find(context.TODO(), bson.D{{}} , options)
+	//bson.D{{"ip", "192.168.0.10"}}, options)
 	if err != nil {
 		fmt.Println("ERROR FIND", err)
 	}
@@ -193,7 +198,7 @@ func (qcs *QueryCollectionSources) InsertListSource() (bool, error) {
 }
 
 //InserListSourcesTMPFinaly вставляем список источников ДЛЯ ТЕСТА
-/*func InserListSourcesTMPFinaly(ism *configure.InformationStoringMemory, appConfig *configure.AppConfig) (bool, error) {
+func InserListSourcesTMPFinaly(ism *configure.InformationStoringMemory, appConfig *configure.AppConfig) (bool, error) {
 	fmt.Println("START func InserListSourcesTMPFinaly...")
 
 	type infoMsg struct {

@@ -8,7 +8,6 @@ package configure
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -25,27 +24,33 @@ type MongoDBConnect struct {
 --- ДОЛГОВРЕМЕННОЕ ХРАНЕНИЕ ВРЕМЕННЫХ ФАЙЛОВ ---
 */
 
-//ServiceSettings настройки влияющие на обработку данных на стороне источника
-type ServiceSettings struct {
+//SourceSetting параметры источника
+type SourceSetting struct {
 	ConnectionStatus  bool //true/false
-	ID                string
+	ID                int
 	DateLastConnected int64 //Unix time
 	Token             string
 	AccessIsAllowed   bool              //разрешен ли доступ, по умолчанию false (при проверке токена ставится true если он верен)
 	AsServer          bool              //false - как клиент, true - как сервер
 	CurrentTasks      map[string]string // задачи для данного источника,
 	//key - ID задачи, value - ее тип 'in queuq' или 'in process'
-	MaxCountProcessFilter int
+	Settings SourceServiceSettings
+}
+
+//SourceServiceSettings настройки влияющие на обработку данных на стороне источника
+type SourceServiceSettings struct {
+	EnableTelemetry          bool
+	MaxCountProcessFiltering int
 }
 
 //WssConnection дескриптор соединения по протоколу websocket
 type WssConnection struct {
 	Link *websocket.Conn
-	mu   sync.Mutex
+	//mu   sync.Mutex
 }
 
 //SourcesListSetting настройки источников
-type SourcesListSetting map[string]ServiceSettings
+type SourcesListSetting map[string]SourceSetting
 
 //SourcesListConnection дескрипторы соединения с источниками по протоколу websocket
 type SourcesListConnection map[string]WssConnection
@@ -57,12 +62,12 @@ type InformationStoringMemory struct {
 }
 
 //AddSourceSettings добавить настройки источника
-func (ism *InformationStoringMemory) AddSourceSettings(host string, settings ServiceSettings) {
+func (ism *InformationStoringMemory) AddSourceSettings(host string, settings SourceSetting) {
 	ism.SourcesListSetting[host] = settings
 }
 
 //SearchSourceToken поиск id источника по его токену и ip
-func (ism *InformationStoringMemory) SearchSourceToken(host, token string) (string, bool) {
+func (ism *InformationStoringMemory) SearchSourceToken(host, token string) (int, bool) {
 	if s, ok := ism.SourcesListSetting[host]; ok {
 		if s.Token == token {
 			//разрешаем соединение с данным источником
@@ -73,16 +78,16 @@ func (ism *InformationStoringMemory) SearchSourceToken(host, token string) (stri
 
 	}
 
-	return "", false
+	return 0, false
 }
 
 //GetSourceSetting получить все настройки источника по его ip
-func (ism *InformationStoringMemory) GetSourceSetting(host string) (ServiceSettings, bool) {
+func (ism *InformationStoringMemory) GetSourceSetting(host string) (SourceSetting, bool) {
 	if s, ok := ism.SourcesListSetting[host]; ok {
 		return s, true
 	}
 
-	return ServiceSettings{}, false
+	return SourceSetting{}, false
 }
 
 //ChangeSourceConnectionStatus изменить состояние источника
@@ -114,8 +119,8 @@ func (ism *InformationStoringMemory) GetAccessIsAllowed(host string) bool {
 
 //SendWsMessage используется для отправки сообщений через протокол websocket (применяется Mutex)
 func (wssc *WssConnection) SendWsMessage(t int, v []byte) error {
-	wssc.mu.Lock()
-	defer wssc.mu.Unlock()
+	/*wssc.mu.Lock()
+	defer wssc.mu.Unlock()*/
 
 	return wssc.Link.WriteMessage(t, v)
 }

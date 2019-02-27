@@ -14,6 +14,15 @@ import (
 )
 
 //WssClientNetworkInteraction обрабатывает запросы с источников
-func WssClientNetworkInteraction(cOut chan<- map[string]string, timeReconnect int, ism *configure.InformationStoringMemory, cIn <-chan struct{}) {
+func WssClientNetworkInteraction(cOut chan<- [2]string, timeReconnect int, ism *configure.InformationStoringMemory, cIn <-chan [2]string) {
 	fmt.Println("START WSS CLIENT...")
+
+	/*
+		в cOut chan<- [2]string отправляем сообщения о установленных или
+		разорванных соединениях
+
+		из cIn <-chan [2]string получаем информацию о добавленных, удаленных
+		или измененных параметрах для источников что бы отключить, переподключится
+		или добавить источник в список систочников с которыми необходимо выполнить соединение
+	*/
 }

@@ -7,8 +7,12 @@ import (
 )
 
 //MainAppAPI обработчик запросов поступающих через API
-func MainAppAPI(cOut chan<- configure.MessageAPI, appConfig *configure.AppConfig, ism *configure.InformationStoringMemory, cIn <-chan configure.MessageAPI) {
+func MainAppAPI(appConfig *configure.AppConfig, ism *configure.InformationStoringMemory) (chanOut, chanIn chan configure.MsgBetweenCoreAndAPI) {
 	fmt.Println("START module MainAppAPI")
+
+	chanOut = make(chan configure.MsgBetweenCoreAndAPI)
+	chanIn = make(chan configure.MsgBetweenCoreAndAPI)
+
 	/*
 	   if message := <-*ism.ChannelCollection.ChanMessageToAPI {
 	   	*ism.ChannelCollection.ChanMessageFromAPI<- configure.MessageAPI{
@@ -19,4 +23,6 @@ func MainAppAPI(cOut chan<- configure.MessageAPI, appConfig *configure.AppConfig
 	   }
 	   	fmt.Println("MESSAGE TO API:", <-*ism.ChannelCollection.ChanMessageToAPI)
 	*/
+
+	return chanOut, chanIn
 }

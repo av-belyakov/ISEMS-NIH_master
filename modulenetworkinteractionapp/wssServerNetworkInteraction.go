@@ -31,7 +31,7 @@ type SettingsHTTPServer struct {
 //SettingsWssServer параметры для взаимодействия с wssServer
 type SettingsWssServer struct {
 	StorMem                   *configure.InformationStoringMemory
-	MsgChangeSourceConnection chan<- map[string]string
+	MsgChangeSourceConnection chan<- [2]string
 }
 
 //HandlerRequest обработчик HTTPS запросов
@@ -121,11 +121,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 		_ = saveMessageApp.LogMessage("info", "disconnect for IP address "+remoteIP)
 
 		//при разрыве соединения отправляем модулю routing сообщение об изменении статуса источников
-		sws.MsgChangeSourceConnection <- map[string]string{
-			"wssModule":    "server",
-			"sourceIP":     remoteIP,
-			"sourceStatus": "disconnect",
-		}
+		sws.MsgChangeSourceConnection <- [2]string{remoteIP, "disconnect"}
 
 		_ = saveMessageApp.LogMessage("info", "websocket disconnect whis ip "+remoteIP)
 	}()
@@ -137,11 +133,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	sws.StorMem.AddLinkWebsocketConnect(remoteIP, c)
 
 	//отправляем модулю routing сообщение об изменении статуса источника
-	sws.MsgChangeSourceConnection <- map[string]string{
-		"wssModule":    "server",
-		"sourceIP":     remoteIP,
-		"sourceStatus": "connect",
-	}
+	sws.MsgChangeSourceConnection <- [2]string{remoteIP, "connect"}
 
 	if e := recover(); e != nil {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(e))
@@ -149,7 +141,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 }
 
 //WssServerNetworkInteraction запуск сервера для обработки запросов с источников
-func WssServerNetworkInteraction(cOut chan<- map[string]string, appConf *configure.AppConfig, ism *configure.InformationStoringMemory) {
+func WssServerNetworkInteraction(cOut chan<- [2]string, appConf *configure.AppConfig, ism *configure.InformationStoringMemory) {
 	fmt.Println("START WSS SERVER...")
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()

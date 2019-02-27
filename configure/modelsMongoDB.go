@@ -6,7 +6,15 @@ package configure
 
 //InformationAboutSource информация об источнике в коллекции 'sources_list'
 type InformationAboutSource struct {
-	ID, MaxCountProcessFiltering int
-	IP, Token                    string
-	AsServer                     bool
+	ID            int
+	IP            string
+	Token         string
+	AsServer      bool
+	SourceSetting InfoServiceSettings
+}
+
+//InfoServiceSettings содержит настройки источника
+type InfoServiceSettings struct {
+	EnableTelemetry          bool
+	MaxCountProcessFiltering int
 }

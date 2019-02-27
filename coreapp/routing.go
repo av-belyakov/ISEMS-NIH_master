@@ -14,29 +14,25 @@ import (
 )
 
 //Routing маршрутизирует данные поступающие в ядро из каналов
-func Routing(appConf *configure.AppConfig, ism *configure.InformationStoringMemory, channelCollection *configure.ChannelCollection) {
+func Routing(appConf *configure.AppConfig, ism *configure.InformationStoringMemory, cc *configure.ChannelCollectionCoreApp) {
 	fmt.Println("START 'Route' module core app")
 
 	for {
 		select {
-		case data := <-channelCollection.ChannelFromModuleAPI:
-			fmt.Println("MESSAGE FROM channel 'ChannelFromModuleAPI'")
-
+		case data := <-cc.InCoreChanDB:
+			fmt.Println("MESSAGE FROM module DBInteraction")
+			//использовать канал cc.OutCoreChanDB для ответа
 			fmt.Println(data)
 
-		case data := <-channelCollection.ChannelFromMNICommon:
-			fmt.Println("MESSAGE FROM channel 'ChannelFromMNICommon'")
-
+		case data := <-cc.InCoreChanAPI:
+			fmt.Println("MESSAGE FROM module API")
+			//использовать канал cc.OutCoreChanAPI для ответа
 			fmt.Println(data)
 
-		case data := <-channelCollection.ChannelFromMNIService:
-			fmt.Println("MESSAGE FROM channel 'ChannelFromMNIService'")
-
+		case data := <-cc.InCoreChanNI:
+			fmt.Println("MESSAGE FROM module NetworkInteraction")
+			//использовать канал cc.OutCoreChanNI для ответа
 			fmt.Println(data)
-
-			if data.Type == "change_sources" {
-				fmt.Println("SEND MESSAGE TO Module API")
-			}
 		}
 	}
 }

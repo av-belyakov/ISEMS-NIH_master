@@ -25,7 +25,6 @@ import (
 var appConfig configure.AppConfig
 var mongoDBConnect configure.MongoDBConnect
 var ism configure.InformationStoringMemory
-var channelCollection configure.ChannelCollection
 
 //ReadConfig читает конфигурационный файл и сохраняет данные в appConfig
 func readConfigApp(fileName string, appc *configure.AppConfig) error {
@@ -155,25 +154,10 @@ func init() {
 	}
 
 	//инициируем хранилище информации об источнике
-	ism.SourcesListSetting = configure.ServiceSettings{}
+	ism.SourcesListSetting = configure.SourcesListSetting{}
 
 	//инициируем хранилище дескрипторов соединений с источниками
-	ism.SourcesListConnection = configure.WssConnection{}
-
-	//инициализируем каналы для взаимодействия с API
-	channelCollection.ChannelToModuleAPI = make(chan configure.MessageAPI)
-	channelCollection.ChannelFromModuleAPI = make(chan configure.MessageAPI)
-
-	//инициализируем каналы ОБЩЕГО назначения для взаимодействия с модулем сетевого взаимодействия
-	channelCollection.ChannelToMNICommon = make(chan configure.MessageNetworkInteraction)
-	channelCollection.ChannelFromMNICommon = make(chan configure.MessageNetworkInteraction)
-
-	//инициализируем СЕРВИСНЫЕ каналы для взаимодействия с модулем сетевого взаимодействия
-	channelCollection.ChannelToMNIService = make(chan configure.ServiceMessageInfoStatusSource)
-	channelCollection.ChannelFromMNIService = make(chan configure.ServiceMessageInfoStatusSource)
-
-	//инициализируем канал для передачи данных через websocket соединение
-	channelCollection.Cwt = make(chan configure.MsgWsTransmission)
+	ism.SourcesListConnection = configure.SourcesListConnection{}
 
 	fmt.Println("ENd func init")
 }
@@ -183,7 +167,7 @@ func main() {
 	fmt.Printf("%T%v\n", appConfig, appConfig)
 
 	//запуск ядра приложения
-	coreapp.CoreApp(&appConfig, &mongoDBConnect, &ism, &channelCollection)
+	coreapp.CoreApp(&appConfig, &mongoDBConnect, &ism)
 
 	fmt.Println("!!! END func main !!!")
 }
