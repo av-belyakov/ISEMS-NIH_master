@@ -10,8 +10,15 @@ import (
 func MainAppAPI(appConfig *configure.AppConfig, ism *configure.InformationStoringMemory) (chanOut, chanIn chan configure.MsgBetweenCoreAndAPI) {
 	fmt.Println("START module MainAppAPI")
 
-	chanOut = make(chan configure.MsgBetweenCoreAndAPI)
-	chanIn = make(chan configure.MsgBetweenCoreAndAPI)
+	chanOut = make(chan configure.MsgBetweenCoreAndAPI, 10)
+	chanIn = make(chan configure.MsgBetweenCoreAndAPI, 10)
+
+	/*
+		СОЗДАНИЕ СЕРВЕРА WSS ДЛЯ ПОДКЛЮЧЕНИЙ КЛИЕНТОВ
+	*/
+
+	//запуск маршрутизатора сообщений от ядра
+	go RouteCoreMessage(chanIn, chanOut)
 
 	/*
 	   if message := <-*ism.ChannelCollection.ChanMessageToAPI {

@@ -163,8 +163,7 @@ func init() {
 }
 
 func main() {
-	fmt.Println("!!! START func main !!!\n")
-	fmt.Printf("%T%v\n", appConfig, appConfig)
+	fmt.Println("!!! START func main !!!")
 
 	//запуск ядра приложения
 	coreapp.CoreApp(&appConfig, &mongoDBConnect, &ism)

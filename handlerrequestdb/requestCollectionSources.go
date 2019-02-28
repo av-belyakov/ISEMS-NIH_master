@@ -29,23 +29,18 @@ func (qcs *QueryCollectionSources) InserListSourcesTMP(list []configure.Informat
 
 	fmt.Println(listSources)
 
+	insertData := make([]interface{}, 0, len(list))
+
 	if len(listSources) == 0 {
+		for _, v := range list {
+			insertData = append(insertData, v)
+		}
 
-		fmt.Println("InSerT DatA")
-		/*
-			insertData := []interface{}{}
-			insertData = append(insertData, list)
-
-			fmt.Printf("----- %T %v -----", insertData, insertData)
-		*/
-		testList := []map[string]int{}
-		return qcs.InsertData(list)
+		return qcs.InsertData(insertData)
 	}
 
 	fmt.Println("--- Требуются доп. вычисления, поиск уикальных значений")
-	fmt.Println(listSources)
 
-	listSourcesInsert := []interface{}{}
 	for _, itemAddList := range list {
 		var isExist bool
 
@@ -57,13 +52,13 @@ func (qcs *QueryCollectionSources) InserListSourcesTMP(list []configure.Informat
 		}
 
 		if !isExist {
-			listSourcesInsert = append(listSourcesInsert, itemAddList)
+			insertData = append(insertData, itemAddList)
 		}
 	}
 
-	fmt.Println("listSourceInser = ", listSourcesInsert)
+	fmt.Println("listSourceInser = ", insertData)
 
-	return qcs.InsertData(listSourcesInsert)
+	return qcs.InsertData(insertData)
 }
 
 //FindAll найти всю информацию об источниках

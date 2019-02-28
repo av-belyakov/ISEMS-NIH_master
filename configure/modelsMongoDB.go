@@ -6,15 +6,15 @@ package configure
 
 //InformationAboutSource информация об источнике в коллекции 'sources_list'
 type InformationAboutSource struct {
-	ID            int
-	IP            string
-	Token         string
-	AsServer      bool
-	SourceSetting InfoServiceSettings
+	ID            int                 `json:"id" bson:"id"`
+	IP            string              `json:"ip" bson:"ip"`
+	Token         string              `json:"token" bson:"token"`
+	AsServer      bool                `json:"as_server" bson:"as_server"`
+	SourceSetting InfoServiceSettings `json:"source_setting" bson:"source_setting"`
 }
 
 //InfoServiceSettings содержит настройки источника
 type InfoServiceSettings struct {
-	EnableTelemetry          bool
-	MaxCountProcessFiltering int
+	EnableTelemetry          bool `json:"enable_telemetry" bson:"enable_telemetry"`
+	MaxCountProcessFiltering int  `json:"max_count_process_filtering" bson:"max_count_process_filtering"`
 }

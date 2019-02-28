@@ -16,11 +16,14 @@ import (
 )
 
 //DatabaseInteraction обрабатывает запросы БД
-func DatabaseInteraction(nameDB string, linkConnection *configure.MongoDBConnect, ism *configure.InformationStoringMemory) (chanOutput, chanInput chan configure.MsgBetweenCoreAndDB) {
+func DatabaseInteraction(nameDB string, linkConnection *configure.MongoDBConnect, ism *configure.InformationStoringMemory) (chanOut, chanIn chan configure.MsgBetweenCoreAndDB) {
 	fmt.Println("START module 'CoreAppDBInteraction'...")
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
+
+	chanOut = make(chan configure.MsgBetweenCoreAndDB)
+	chanIn = make(chan configure.MsgBetweenCoreAndDB)
 
 	qcs := handlerrequestdb.QueryCollectionSources{
 		NameDB:         nameDB,
@@ -37,12 +40,9 @@ func DatabaseInteraction(nameDB string, linkConnection *configure.MongoDBConnect
 		_ = saveMessageApp.LogMessage("err", fmt.Sprint(err))
 	}
 
-	fmt.Println("--- sources list ---")
-	fmt.Println(sourcesList)
-
-	//записиываем настройки источников в память
+	//записываем настройки источников в память
 	for _, source := range sourcesList {
-		fmt.Printf("%v", source)
+		fmt.Printf("%v\n", source)
 
 		/*ism.AddSourceSettings(source.IP, configure.SourceSetting{
 			ID:       source.ID,
@@ -56,15 +56,15 @@ func DatabaseInteraction(nameDB string, linkConnection *configure.MongoDBConnect
 
 	//обработка запросов к БД приходящих из CoreApp
 	go func() {
-		for msg := range chanInput {
+		for msg := range chanIn {
 			fmt.Println("resived message from CoreApp to BD")
-			fmt.Println(msg)
+			//fmt.Println(msg)
 
-			go wrapperFunc(chanOutput, msg)
+			go wrapperFunc(chanOut, msg)
 		}
 	}()
 
-	return chanOutput, chanInput
+	return chanOut, chanIn
 }
 
 func wrapperFunc(chanOut chan<- configure.MsgBetweenCoreAndDB, msg configure.MsgBetweenCoreAndDB) {
@@ -81,8 +81,6 @@ func recordTestSourceList(nameDB string, qcs *handlerrequestdb.QueryCollectionSo
 		{13, "192.168.0.13", "osdsoc9c933cc9cn939f9f33", false, configure.InfoServiceSettings{false, 3}},
 		{14, "192.168.0.14", "hgdfffffff9333ffodffodofff0", false, configure.InfoServiceSettings{false, 3}},
 	}
-
-	fmt.Printf("%T%v\n", listSources, listSources)
 
 	res, err := qcs.InserListSourcesTMP(listSources)
 	if err != nil {

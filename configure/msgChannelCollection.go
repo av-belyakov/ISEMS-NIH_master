@@ -34,10 +34,27 @@ type MsgBetweenCoreAndNI struct {
 
 //MsgBetweenCoreAndAPI используется для взаимодействия между ядром приложения и модулем API приложения
 //по каналам с данной структурой передаются следующие виды сообщений:
-//
+// MsgGenerator - from API/from Core
+// MsgType:
+//  - information
+//  - command
+// DataType:
+//  - change_status_source (info)
+//  - source_telemetry (info)
+//  - filtering (info)
+//  - download (info)
+//  - information_search_results (info)
+//  - error_notification (info)
+//  - source_control (command)
+//  - filtering (command)
+//  - download (command)
+//  - information_search (command)
 type MsgBetweenCoreAndAPI struct {
-	MsgID, MsgType, SourceID string
-	Date                     []byte
+	MsgGenerator    string
+	MsgType         string
+	DataType        string
+	IDClientAPI     string
+	AdvancedOptions interface{}
 }
 
 //MsgBetweenCoreAndDB используется для взаимодействия между ядром и модулем взаимодействия с БД
