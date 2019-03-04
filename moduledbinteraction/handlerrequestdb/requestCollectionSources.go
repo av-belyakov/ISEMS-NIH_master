@@ -176,7 +176,7 @@ func (qcs *QueryCollectionSources) InsertData(list []interface{}) (bool, error) 
 			}
 
 			if sort.SearchInts(listSourcesID, im.ID) == -1 {
-				insertListSource = append(insertListSource, configure.InformationAboutSource{im.ID, im.MaxCountProcessFiltering, im.IP, im.Token, im.AsServer})
+				insertListSource = append(insertListSource, configure.InformationAboutSource{im.ID, im.MaxCountProcessfiltration, im.IP, im.Token, im.AsServer})
 			}
 		}
 	}
