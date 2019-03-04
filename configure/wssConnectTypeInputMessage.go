@@ -41,87 +41,87 @@ type InfoProcessingFile struct {
 	StatusProcessed   bool   `json:"statusProcessed"`
 }
 
-//MessageTypeFilteringStopInfo сообщение при ОСТАНОВ выполнения фильтрации
-type MessageTypeFilteringStopInfo struct {
+//MessageTypefiltrationStopInfo сообщение при ОСТАНОВ выполнения фильтрации
+type MessageTypefiltrationStopInfo struct {
 	FilterInfoPattern
 }
 
-//MessageTypeFilteringCompleteInfoFirstPart детальная информация при ЗАВЕРШЕНИИ выполнения фильтрации (первая часть)
-type MessageTypeFilteringCompleteInfoFirstPart struct {
+//MessageTypefiltrationCompleteInfoFirstPart детальная информация при ЗАВЕРШЕНИИ выполнения фильтрации (первая часть)
+type MessageTypefiltrationCompleteInfoFirstPart struct {
 	FilterInfoPattern
 	FilterCountPattern
 	NumberMessageParts [2]int `json:"numberMessageParts"`
 }
 
-//MessageTypeFilteringCompleteInfoSecondPart информация при ЗАВЕРШЕНИИ выполнения фильтрации (вторая часть)
-type MessageTypeFilteringCompleteInfoSecondPart struct {
+//MessageTypefiltrationCompleteInfoSecondPart информация при ЗАВЕРШЕНИИ выполнения фильтрации (вторая часть)
+type MessageTypefiltrationCompleteInfoSecondPart struct {
 	FilterInfoPattern
 	NumberMessageParts            [2]int           `json:"numberMessageParts"`
-	ListFilesFoundDuringFiltering []FoundFilesInfo `json:"listFilesFoundDuringFiltering"`
+	ListFilesFoundDuringfiltration []FoundFilesInfo `json:"listFilesFoundDuringfiltration"`
 }
 
-//MessageTypeFilteringStartInfoFirstPart детальная информаци, первый фрагмент (без имен файлов)
-type MessageTypeFilteringStartInfoFirstPart struct {
+//MessageTypefiltrationStartInfoFirstPart детальная информаци, первый фрагмент (без имен файлов)
+type MessageTypefiltrationStartInfoFirstPart struct {
 	FilterInfoPattern
-	DirectoryFiltering      string         `json:"directoryFiltering"`
-	CountDirectoryFiltering int            `json:"countDirectoryFiltering"`
+	Directoryfiltration      string         `json:"directoryfiltration"`
+	CountDirectoryfiltration int            `json:"countDirectoryfiltration"`
 	CountFullCycle          int            `json:"countFullCycle"`
-	CountFilesFiltering     int            `json:"countFilesFiltering"`
+	CountFilesfiltration     int            `json:"countFilesfiltration"`
 	CountMaxFilesSize       int64          `json:"countMaxFilesSize"`
 	UseIndexes              bool           `json:"useIndexes"`
 	NumberMessageParts      [2]int         `json:"numberMessageParts"`
 	ListCountFilesFilter    map[string]int `json:"listCountFilesFilter"`
 }
 
-//MessageTypeFilteringStartInfoSecondPart детальная информация с именами файлов
-type MessageTypeFilteringStartInfoSecondPart struct {
+//MessageTypefiltrationStartInfoSecondPart детальная информация с именами файлов
+type MessageTypefiltrationStartInfoSecondPart struct {
 	FilterInfoPattern
 	UseIndexes         bool                `json:"useIndexes"`
 	NumberMessageParts [2]int              `json:"numberMessageParts"`
 	ListFilesFilter    map[string][]string `json:"listFilesFilter"`
 }
 
-//MessageTypeFilteringExecuteOrUnexecuteInfo детальная информация при выполнении или не выполнении фильтрации
-type MessageTypeFilteringExecuteOrUnexecuteInfo struct {
+//MessageTypefiltrationExecuteOrUnexecuteInfo детальная информация при выполнении или не выполнении фильтрации
+type MessageTypefiltrationExecuteOrUnexecuteInfo struct {
 	FilterInfoPattern
 	FilterCountPattern
 	InfoProcessingFile `json:"infoProcessingFile"`
 }
 
-//MessageTypeFilteringStartFirstPart при начале фильтрации (первая часть)
-type MessageTypeFilteringStartFirstPart struct {
+//MessageTypefiltrationStartFirstPart при начале фильтрации (первая часть)
+type MessageTypefiltrationStartFirstPart struct {
 	MessageType string                                 `json:"messageType"`
-	Info        MessageTypeFilteringStartInfoFirstPart `json:"info"`
+	Info        MessageTypefiltrationStartInfoFirstPart `json:"info"`
 }
 
-//MessageTypeFilteringStartSecondPart при начале фильтрации (первая часть)
-type MessageTypeFilteringStartSecondPart struct {
+//MessageTypefiltrationStartSecondPart при начале фильтрации (первая часть)
+type MessageTypefiltrationStartSecondPart struct {
 	MessageType string                                  `json:"messageType"`
-	Info        MessageTypeFilteringStartInfoSecondPart `json:"info"`
+	Info        MessageTypefiltrationStartInfoSecondPart `json:"info"`
 }
 
-//MessageTypeFilteringStop отправляется для подтверждения остановки фильтрации
-type MessageTypeFilteringStop struct {
+//MessageTypefiltrationStop отправляется для подтверждения остановки фильтрации
+type MessageTypefiltrationStop struct {
 	MessageType string                       `json:"messageType"`
-	Info        MessageTypeFilteringStopInfo `json:"info"`
+	Info        MessageTypefiltrationStopInfo `json:"info"`
 }
 
-//MessageTypeFilteringCompleteFirstPart отправляется при завершении фильтрации
-type MessageTypeFilteringCompleteFirstPart struct {
+//MessageTypefiltrationCompleteFirstPart отправляется при завершении фильтрации
+type MessageTypefiltrationCompleteFirstPart struct {
 	MessageType string                                    `json:"messageType"`
-	Info        MessageTypeFilteringCompleteInfoFirstPart `json:"info"`
+	Info        MessageTypefiltrationCompleteInfoFirstPart `json:"info"`
 }
 
-//MessageTypeFilteringCompleteSecondPart отправляется при завершении фильтрации
-type MessageTypeFilteringCompleteSecondPart struct {
+//MessageTypefiltrationCompleteSecondPart отправляется при завершении фильтрации
+type MessageTypefiltrationCompleteSecondPart struct {
 	MessageType string                                     `json:"messageType"`
-	Info        MessageTypeFilteringCompleteInfoSecondPart `json:"info"`
+	Info        MessageTypefiltrationCompleteInfoSecondPart `json:"info"`
 }
 
-//MessageTypeFilteringExecutedOrUnexecuted при выполнении или не выполнении фильтрации
-type MessageTypeFilteringExecutedOrUnexecuted struct {
+//MessageTypefiltrationExecutedOrUnexecuted при выполнении или не выполнении фильтрации
+type MessageTypefiltrationExecutedOrUnexecuted struct {
 	MessageType string                                     `json:"messageType"`
-	Info        MessageTypeFilteringExecuteOrUnexecuteInfo `json:"info"`
+	Info        MessageTypefiltrationExecuteOrUnexecuteInfo `json:"info"`
 }
 
 //MessageTypeDownloadFilesInfoReadyOrCompleted содержит информацию передоваемую при сообщениях о готовности или завершении передачи

@@ -15,40 +15,61 @@ type MsgWsTransmission struct {
 
 // MsgBetweenCoreAndNI используется для взаимодействия между ядром приложения и модулем сет. взаимодействия
 // по каналам с данной структурой передаются следующие виды сообщений:
-// 1. информационные (information):
-//  - изменение статуса источника TypeRequiredAction (change_status_source)
-//  - получение данных телеметрии об источнике TypeRequiredAction (source_telemetry)
-//  - ход выполнения ФИЛЬТРАЦИИ TypeRequiredAction (filtering)
-//  - ход выполнения СКАЧИВАНИЯ файлов TypeRequiredAction (download)
-//  - информация об ошибках соединения TypeRequiredAction (error_message)
-// 2. команда (instraction):
-//  - управление источником TypeRequiredAction(add_source, delete_source, change_setting_source)
-//  - управление фильтрацией сет. трафика TypeRequiredAction (filtering_start, filtering_stop)
-//  - управление скачиванием файлов TypeRequiredAction (download_start, download_stop, download_resume)
-type MsgBetweenCoreAndNI struct {
-	SourceID           string //ID источника с котором связанно действие
-	MsgType            string //команда/информационное
-	TypeRequiredAction string
-	Data               []byte
-}
-
-//MsgBetweenCoreAndAPI используется для взаимодействия между ядром приложения и модулем API приложения
-//по каналам с данной структурой передаются следующие виды сообщений:
-// MsgGenerator - from API/from Core
 // MsgType:
 //  - information
 //  - command
 // DataType:
 //  - change_status_source (info)
 //  - source_telemetry (info)
-//  - filtering (info)
+//  - filtration (info)
 //  - download (info)
 //  - information_search_results (info)
 //  - error_notification (info)
 //  - source_control (command)
-//  - filtering (command)
+//  - filtration (command)
 //  - download (command)
 //  - information_search (command)
+// IDClientAPI - уникальный идентификатор клиента API
+//
+//1. информационные (information):
+//  - изменение статуса источника TypeRequiredAction (change_status_source)
+//  - получение данных телеметрии об источнике TypeRequiredAction (source_telemetry)
+//  - ход выполнения ФИЛЬТРАЦИИ TypeRequiredAction (filtration)
+//  - ход выполнения СКАЧИВАНИЯ файлов TypeRequiredAction (download)
+//  - информация об ошибках соединения TypeRequiredAction (error_message)
+// 2. команда (instraction):
+//  - управление источником TypeRequiredAction(add_source, delete_source, change_setting_source)
+//  - управление фильтрацией сет. трафика TypeRequiredAction (filtration_start, filtration_stop)
+//  - управление скачиванием файлов TypeRequiredAction (download_start, download_stop, download_resume)
+type MsgBetweenCoreAndNI struct {
+	SourceID        string
+	MsgType         string
+	DataType        string
+	IDClientAPI     string
+	AdvancedOptions interface{}
+
+	TypeRequiredAction string
+	Data               []byte
+}
+
+//MsgBetweenCoreAndAPI используется для взаимодействия между ядром приложения и модулем API приложения
+//по каналам с данной структурой передаются следующие виды сообщений:
+// MsgGenerator - API module/Core module
+// MsgType:
+//  - information
+//  - command
+// DataType:
+//  - change_status_source (info)
+//  - source_telemetry (info)
+//  - filtration (info)
+//  - download (info)
+//  - information_search_results (info)
+//  - error_notification (info)
+//  - source_control (command)
+//  - filtration (command)
+//  - download (command)
+//  - information_search (command)
+// IDClientAPI - уникальный идентификатор клиента API
 type MsgBetweenCoreAndAPI struct {
 	MsgGenerator    string
 	MsgType         string
@@ -59,10 +80,38 @@ type MsgBetweenCoreAndAPI struct {
 
 //MsgBetweenCoreAndDB используется для взаимодействия между ядром и модулем взаимодействия с БД
 //по каналам с данной структурой передаются следующие виды сообщений:
-//
+// MsgGenerator - DB module/Core module (источник сообщения)
+// MsgRecipient - API module/NI module/DB module/Core module (получатель сообщения)
+// MsgDirection - request/response (направление, запрос или ответ)
+// DataType:
+//  - sources_list
+//  - change_status_source
+//  - source_telemetry
+//  - filtration
+//  - download
+//  - information_search_results
+//  - error_notification
+//  - source_control
+//  - information_search
+// IDClientAPI - уникальный идентификатор клиента API
 type MsgBetweenCoreAndDB struct {
-	MsgID, CollectionName string
-	Date                  interface{}
+	MsgGenerator    string
+	MsgRecipient    string
+	MsgDirection    string
+	DataType        string
+	IDClientAPI     string
+	AdvancedOptions interface{}
+}
+
+//AdvancedOptions взависимости от типов сообщений
+
+//ErrorNotification содержит информацию об ошибке
+// SourceReport - DB module/NI module/API module
+// ErrorBody - тело ошибки (stack trace)
+// HumanDescriptionError - сообщение для пользователя
+type ErrorNotification struct {
+	SourceReport, HumanDescriptionError string
+	ErrorBody                           error
 }
 
 /* РАССМОТРЕТЬ ПОЗЖЕ */
@@ -116,8 +165,8 @@ type informationFilterProcess struct {
 	SizeFilesSearch      int //общий размер файлов удовлетворяющих заданным параметрам
 }
 
-//MessageTypeInfoFiltering ход выполнения фильтрации (ИНФОРМАЦИОННОЕ)
-type MessageTypeInfoFiltering struct {
+//MessageTypeInfofiltration ход выполнения фильтрации (ИНФОРМАЦИОННОЕ)
+type MessageTypeInfofiltration struct {
 	TaskIndex     string //ID задачи
 	ProcessStatus string //статус процесса ready, start, execute, complete, stop
 	Info          informationFilterProcess
@@ -130,8 +179,8 @@ type fileInformation struct {
 	FileCreateTime int    //дата создания в формате Unix
 }
 
-//MessageTypeInfoFilteringSearchListFiles список файлов найденных в результате фильтрации (ИНФОРМАЦИОННОЕ)
-type MessageTypeInfoFilteringSearchListFiles struct {
+//MessageTypeInfofiltrationSearchListFiles список файлов найденных в результате фильтрации (ИНФОРМАЦИОННОЕ)
+type MessageTypeInfofiltrationSearchListFiles struct {
 	TaskIndex string                     //ID задачи
 	ListFiles map[string]fileInformation //ключ имя файла
 }
@@ -156,8 +205,8 @@ type parametersFilterFiles struct {
 	ListIP, ListNetwork        string
 }
 
-//MessageTypeCommandFiltering команды связанные с задачами по фильтрации (ИСПОЛНИТЕЛЬНЫЕ)
-type MessageTypeCommandFiltering struct {
+//MessageTypeCommandfiltration команды связанные с задачами по фильтрации (ИСПОЛНИТЕЛЬНЫЕ)
+type MessageTypeCommandfiltration struct {
 	TaskIndex     string //ID задачи
 	ProcessStatus string //статус процесса start, stop
 	Info          parametersFilterFiles
@@ -188,12 +237,12 @@ type MessageTypeCommandDownload struct {
 //MessageNetworkInteraction набор параметров для взаимодействия с модулем Network Interaction
 type MessageNetworkInteraction struct {
 	MsgType string //тип сообщения (команда/информационное)
-	SubType string //подтип сообщения, если команда filtering/download,
+	SubType string //подтип сообщения, если команда filtration/download,
 	/*
 	   если информационное
 	   - change_sensor_status
-	   - info_filtering
-	   - info_filtering_search_list_files
+	   - info_filtration
+	   - info_filtration_search_list_files
 	   - info_download
 	   - error_message
 */

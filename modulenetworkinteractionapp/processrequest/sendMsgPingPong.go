@@ -14,7 +14,7 @@ func SendMsgPingPong(msgType string, countProsessFilter int) ([]byte, error) {
 	msgPing := configure.MsgTypePingPong{
 		MsgType: msgType,
 		Info: configure.DetailInfoMsgPingPong{
-			MaxCountProcessFiltering: countProsessFilter,
+			MaxCountProcessfiltration: countProsessFilter,
 		},
 	}
 

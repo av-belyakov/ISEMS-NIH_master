@@ -40,7 +40,7 @@ type SourceSetting struct {
 //SourceServiceSettings настройки влияющие на обработку данных на стороне источника
 type SourceServiceSettings struct {
 	EnableTelemetry          bool
-	MaxCountProcessFiltering int
+	MaxCountProcessfiltration int
 }
 
 //WssConnection дескриптор соединения по протоколу websocket
@@ -49,26 +49,26 @@ type WssConnection struct {
 	//mu   sync.Mutex
 }
 
-//SourcesListSetting настройки источников
-type SourcesListSetting map[string]SourceSetting
+//sourcesListSetting настройки источников
+type sourcesListSetting map[string]SourceSetting
 
-//SourcesListConnection дескрипторы соединения с источниками по протоколу websocket
-type SourcesListConnection map[string]WssConnection
+//sourcesListConnection дескрипторы соединения с источниками по протоколу websocket
+type sourcesListConnection map[string]WssConnection
 
 //InformationStoringMemory часто используемые параметры
 type InformationStoringMemory struct {
-	SourcesListSetting
-	SourcesListConnection
+	sourcesListSetting
+	sourcesListConnection
 }
 
 //AddSourceSettings добавить настройки источника
 func (ism *InformationStoringMemory) AddSourceSettings(host string, settings SourceSetting) {
-	ism.SourcesListSetting[host] = settings
+	ism.sourcesListSetting[host] = settings
 }
 
 //SearchSourceToken поиск id источника по его токену и ip
 func (ism *InformationStoringMemory) SearchSourceToken(host, token string) (int, bool) {
-	if s, ok := ism.SourcesListSetting[host]; ok {
+	if s, ok := ism.sourcesListSetting[host]; ok {
 		if s.Token == token {
 			//разрешаем соединение с данным источником
 			s.AccessIsAllowed = true
@@ -83,7 +83,7 @@ func (ism *InformationStoringMemory) SearchSourceToken(host, token string) (int,
 
 //GetSourceSetting получить все настройки источника по его ip
 func (ism *InformationStoringMemory) GetSourceSetting(host string) (SourceSetting, bool) {
-	if s, ok := ism.SourcesListSetting[host]; ok {
+	if s, ok := ism.sourcesListSetting[host]; ok {
 		return s, true
 	}
 
@@ -92,7 +92,7 @@ func (ism *InformationStoringMemory) GetSourceSetting(host string) (SourceSettin
 
 //ChangeSourceConnectionStatus изменить состояние источника
 func (ism *InformationStoringMemory) ChangeSourceConnectionStatus(host string) bool {
-	if s, ok := ism.SourcesListSetting[host]; ok {
+	if s, ok := ism.sourcesListSetting[host]; ok {
 		s.ConnectionStatus = !s.ConnectionStatus
 
 		if s.ConnectionStatus {
@@ -100,7 +100,7 @@ func (ism *InformationStoringMemory) ChangeSourceConnectionStatus(host string) b
 		} else {
 			s.AccessIsAllowed = false
 		}
-		ism.SourcesListSetting[host] = s
+		ism.sourcesListSetting[host] = s
 
 		return true
 	}
@@ -110,7 +110,7 @@ func (ism *InformationStoringMemory) ChangeSourceConnectionStatus(host string) b
 
 //GetAccessIsAllowed возвращает значение подтверждающее или отклоняющее права доступа источника
 func (ism *InformationStoringMemory) GetAccessIsAllowed(host string) bool {
-	if s, ok := ism.SourcesListSetting[host]; ok {
+	if s, ok := ism.sourcesListSetting[host]; ok {
 		return s.AccessIsAllowed
 	}
 
@@ -125,16 +125,21 @@ func (wssc *WssConnection) SendWsMessage(t int, v []byte) error {
 	return wssc.Link.WriteMessage(t, v)
 }
 
+//GetSourcesListConnection получить список всех соединений
+func (ism *InformationStoringMemory) GetSourcesListConnection() map[string]WssConnection {
+	return ism.sourcesListConnection
+}
+
 //AddLinkWebsocketConnect добавить линк соединения по websocket
 func (ism *InformationStoringMemory) AddLinkWebsocketConnect(host string, lwsc *websocket.Conn) {
-	ism.SourcesListConnection[host] = WssConnection{
+	ism.sourcesListConnection[host] = WssConnection{
 		Link: lwsc,
 	}
 }
 
 //DelLinkWebsocketConnection удаление дескриптора соединения при отключении источника
 func (ism *InformationStoringMemory) DelLinkWebsocketConnection(host string) {
-	delete(ism.SourcesListConnection, host)
+	delete(ism.sourcesListConnection, host)
 	/*if _, ok := ism.SourcesListConnection[host]; ok {
 		ism.SourcesListConnection[host] = WssConnection{
 			Link: nil,
@@ -144,7 +149,7 @@ func (ism *InformationStoringMemory) DelLinkWebsocketConnection(host string) {
 
 //GetLinkWebsocketConnect получить линк соединения по websocket
 func (ism *InformationStoringMemory) GetLinkWebsocketConnect(host string) (*WssConnection, bool) {
-	if conn, ok := ism.SourcesListConnection[host]; ok {
+	if conn, ok := ism.sourcesListConnection[host]; ok {
 		return &conn, true
 	}
 

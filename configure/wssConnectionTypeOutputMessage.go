@@ -8,7 +8,7 @@ package configure
 
 //DetailInfoMsgPingPong подробная информация
 type DetailInfoMsgPingPong struct {
-	MaxCountProcessFiltering int `json:"maxCountProcessFiltering"`
+	MaxCountProcessfiltration int `json:"maxCountProcessfiltration"`
 }
 
 //MsgTypePingPong сообщение типа ping

@@ -9,12 +9,12 @@ package configure
 /*
 //  - change_status_source (info)
 //  - source_telemetry (info)
-//  - filtering (info)
+//  - filtration (info)
 //  - download (info)
 //  - information_search_results (info)
 //  - error_notification (info)
 //  - source_control (command)
-//  - filtering (command)
+//  - filtration (command)
 //  - download (command)
 //  - information_search (command)
 */
@@ -35,9 +35,9 @@ type MsgInfoChangeStatusSource struct {
 type MsgInfoSourceTelemetry struct {
 }
 
-//MsgInfoFiltering информация о фильтрации
+//MsgInfofiltration информация о фильтрации
 //
-type MsgInfoFiltering struct {
+type MsgInfofiltration struct {
 }
 
 //MsgInfoDownload информация о скачивании файлов
@@ -83,12 +83,12 @@ type SourceCharacteristicForConnection struct {
 	IP, Token string
 }
 
-//MsgCommandFiltering команды по фильтрации:
+//MsgCommandfiltration команды по фильтрации:
 //  - начать фильтрацию
 //  - обработка задачи
 //  - остановить фильтрацию
 //  - фильтрация начата/отклонена/остановленна
-type MsgCommandFiltering struct {
+type MsgCommandfiltration struct {
 }
 
 //MsgCommandDownload команды по скачиванию файлов

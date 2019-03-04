@@ -17,7 +17,7 @@ import (
 
 //RouteCoreRequest маршрутизирует запросы от CoreApp и обрабатывает сообщения от wss модулей
 func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, ism *configure.InformationStoringMemory, chanOutCore <-chan configure.MsgBetweenCoreAndNI, chanColl map[string]chan [2]string) {
-	fmt.Println("START 'Routing' module network interaction...")
+	fmt.Println("START module 'RouteCoreRequest' (network interaction)...")
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
@@ -26,7 +26,7 @@ func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, ism *configure.Inf
 		"information": map[string]int{
 			"change_status_source": 1,
 			"source_telemetry":     2,
-			"filtering":            3,
+			"filtration":            3,
 			"download":             4,
 			"error_message":        5,
 		},
@@ -34,8 +34,8 @@ func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, ism *configure.Inf
 			"add_source":            1,
 			"delete_source":         2,
 			"change_setting_source": 3,
-			"filtering_start":       4,
-			"filtering_stop":        5,
+			"filtration_start":       4,
+			"filtration_stop":        5,
 			"download_start":        6,
 			"download_stop":         7,
 			"download_resume":       8,
@@ -63,7 +63,7 @@ func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, ism *configure.Inf
 
 			if action == "connect" {
 				sourceSettings, _ := ism.GetSourceSetting(sourceIP)
-				formatJSON, err := processrequest.SendMsgPingPong("ping", sourceSettings.Settings.MaxCountProcessFiltering)
+				formatJSON, err := processrequest.SendMsgPingPong("ping", sourceSettings.Settings.MaxCountProcessfiltration)
 				if err != nil {
 					_ = saveMessageApp.LogMessage("err", fmt.Sprint(err))
 				}
@@ -100,8 +100,8 @@ func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, ism *configure.Inf
 					"add_source":            1,
 					"delete_source":         2,
 					"change_setting_source": 3,
-					"filtering_start":       4,
-					"filtering_stop":        5,
+					"filtration_start":       4,
+					"filtration_stop":        5,
 					"download_start":        6,
 					"download_stop":         7,
 					"download_resume":
@@ -114,6 +114,8 @@ func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, ism *configure.Inf
 
 //RouteWssConnectionResponse маршрутизирует сообщения от источников
 func RouteWssConnectionResponse(cwt chan<- configure.MsgWsTransmission, chanInCore chan<- configure.MsgBetweenCoreAndNI, ism *configure.InformationStoringMemory) {
+	fmt.Println("START module 'RouteWssConnectionResponse' (network interaction)...")
+
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
@@ -124,7 +126,9 @@ func RouteWssConnectionResponse(cwt chan<- configure.MsgWsTransmission, chanInCo
 
 	var messageType MessageType
 
-	for _, c := range ism.SourcesListConnection {
+	sourcesListConnection := ism.GetSourcesListConnection()
+
+	for _, c := range sourcesListConnection {
 
 		sourceIP := c.Link.RemoteAddr().String()
 
@@ -140,7 +144,7 @@ func RouteWssConnectionResponse(cwt chan<- configure.MsgWsTransmission, chanInCo
 		switch messageType.Type {
 		case "ping":
 			sourceSettings, _ := ism.GetSourceSetting(sourceIP)
-			formatJSON, err := processrequest.SendMsgPingPong("pong", sourceSettings.Settings.MaxCountProcessFiltering)
+			formatJSON, err := processrequest.SendMsgPingPong("pong", sourceSettings.Settings.MaxCountProcessfiltration)
 			if err != nil {
 				_ = saveMessageApp.LogMessage("err", fmt.Sprint(err))
 			}
@@ -154,7 +158,7 @@ func RouteWssConnectionResponse(cwt chan<- configure.MsgWsTransmission, chanInCo
 			/* Нужно отправить сообщение в RouteCore о том что связь установленна */
 		case "source_telemetry":
 
-		case "filtering":
+		case "filtration":
 
 		case "download files":
 

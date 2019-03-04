@@ -15,7 +15,7 @@ import (
 
 //RouteCoreMessage маршрутизатор сообщений от ядра приложения
 func RouteCoreMessage(chanToCore chan<- configure.MsgBetweenCoreAndAPI, chanFromCore <-chan configure.MsgBetweenCoreAndAPI) {
-	fmt.Println("START route API Core request...")
+	fmt.Println("START module 'RouteCoreMessage' (API)...")
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
@@ -23,16 +23,16 @@ func RouteCoreMessage(chanToCore chan<- configure.MsgBetweenCoreAndAPI, chanFrom
 	fmt.Printf("%v\n", chanFromCore)
 
 	for msg := range chanFromCore {
-		fmt.Println("++++ ROUTEAPIApp resived MSG from CoreApp")
+		fmt.Println("++++ ROUTE APIApp resived MSG from CoreApp")
 		fmt.Printf("%T %v\n", msg, msg)
 
-		if msg.MsgGenerator == "from API" {
+		if msg.MsgGenerator == "Core module" {
 			if msg.MsgType == "command" {
 				switch msg.DataType {
 				case "source_control":
 					message, ok := msg.AdvancedOptions.(configure.MsgCommandSourceControl)
 					if !ok {
-						_ = saveMessageApp.LogMessage("error", "an incorrect command is accepted from CoreApp")
+						_ = saveMessageApp.LogMessage("error", "an incorrect command is accepted from CoreApp (module API route)")
 						break
 					}
 
@@ -43,9 +43,9 @@ func RouteCoreMessage(chanToCore chan<- configure.MsgBetweenCoreAndAPI, chanFrom
 
 						fmt.Println("--- ModuleAPIApp, resived request to SOURCE LIST", "send...")
 
-						/* ТЕСТОВАЯ ОТПРАВКА */
+						// --- ТЕСТОВЫЙ ОТВЕТ ---
 						chanToCore <- configure.MsgBetweenCoreAndAPI{
-							MsgGenerator: "from Core",
+							MsgGenerator: "API module",
 							MsgType:      "information",
 							DataType:     "change_status_source",
 							IDClientAPI:  "du68whfh733hjf9393",
@@ -61,6 +61,7 @@ func RouteCoreMessage(chanToCore chan<- configure.MsgBetweenCoreAndAPI, chanFrom
 								},
 							},
 						}
+						//------------------------
 					}
 				}
 

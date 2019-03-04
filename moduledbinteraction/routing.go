@@ -56,8 +56,21 @@ func RouteRequest(chanIn chan<- configure.MsgBetweenCoreAndDB, nameDB string, li
 	//при старте запрашиваем список источников с которыми устанавливаются подключения
 	go getSourcesList(chanIn, qcs)
 
+	//handlersRequest := map[string]
+
 	for msg := range chanOut {
 		fmt.Println("resived request to DB")
 		fmt.Printf("%v", msg)
+
+		/* ОБРАБОТКА ЗАПРОСОВ К БД ПОЛУЧАЕМЫХ от CoreRoute */
+
+		//типы запросов
+		//	- sources_list (sources_list collection)
+		//  - change_status_source (sources_list collection)
+		//  - source_telemetry (source_telemetry collection)
+		//  - filtration (filtartion collection)
+		//  - download (download collection)
+		//  - error_notification (error_notification collection)
+		//  - information_search (all collections)
 	}
 }

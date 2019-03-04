@@ -8,7 +8,7 @@ import (
 
 //MainAppAPI обработчик запросов поступающих через API
 func MainAppAPI(appConfig *configure.AppConfig, ism *configure.InformationStoringMemory) (chanOut, chanIn chan configure.MsgBetweenCoreAndAPI) {
-	fmt.Println("START module MainAppAPI")
+	fmt.Println("START module 'MainAppAPI'...")
 
 	chanOut = make(chan configure.MsgBetweenCoreAndAPI, 10)
 	chanIn = make(chan configure.MsgBetweenCoreAndAPI, 10)

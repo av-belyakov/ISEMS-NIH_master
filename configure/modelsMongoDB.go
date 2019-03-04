@@ -16,5 +16,5 @@ type InformationAboutSource struct {
 //InfoServiceSettings содержит настройки источника
 type InfoServiceSettings struct {
 	EnableTelemetry          bool `json:"enable_telemetry" bson:"enable_telemetry"`
-	MaxCountProcessFiltering int  `json:"max_count_process_filtering" bson:"max_count_process_filtering"`
+	MaxCountProcessfiltration int  `json:"max_count_process_filtration" bson:"max_count_process_filtration"`
 }

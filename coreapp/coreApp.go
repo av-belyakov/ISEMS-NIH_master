@@ -11,6 +11,7 @@ import (
 
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/moduleapiapp"
+	"ISEMS-NIH_master/moduledbinteraction"
 	"ISEMS-NIH_master/modulenetworkinteractionapp"
 )
 
@@ -19,7 +20,7 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	fmt.Println("START module 'CoreAppMain'...")
 
 	//запуск подпрограммы для взаимодействия с БД
-	chanOutCoreDB, chanInCoreDB := DatabaseInteraction(appConf.ConnectionDB.NameDB, linkConnection, ism)
+	chanOutCoreDB, chanInCoreDB := moduledbinteraction.MainDBInteraction(appConf.ConnectionDB.NameDB, linkConnection, ism)
 
 	//инициализация модуля для взаимодействия с API (обработчик внешних запросов)
 	chanOutCoreAPI, chanInCoreAPI := moduleapiapp.MainAppAPI(appConf, ism)
