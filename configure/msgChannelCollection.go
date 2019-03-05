@@ -84,21 +84,26 @@ type MsgBetweenCoreAndAPI struct {
 // MsgRecipient - API module/NI module/DB module/Core module (получатель сообщения)
 // MsgDirection - request/response (направление, запрос или ответ)
 // DataType:
-//  - sources_list
-//  - change_status_source
+//  - sources_control
 //  - source_telemetry
 //  - filtration
 //  - download
 //  - information_search_results
 //  - error_notification
-//  - source_control
 //  - information_search
+// Insturction:
+//  - insert
+//  - find
+//  - find_all
+//  - update
+//  - delete
 // IDClientAPI - уникальный идентификатор клиента API
 type MsgBetweenCoreAndDB struct {
 	MsgGenerator    string
 	MsgRecipient    string
 	MsgDirection    string
 	DataType        string
+	Instruction     string
 	IDClientAPI     string
 	AdvancedOptions interface{}
 }

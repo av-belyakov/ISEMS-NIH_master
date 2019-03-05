@@ -12,7 +12,7 @@ import (
 	"ISEMS-NIH_master/configure"
 )
 
-//HandlerStatusSourceFromAPI обработчик сообщений об изменении информации по источникам
+//HandlerStatusSourceFromAPI обработчик для добавления нового списка источников
 func HandlerStatusSourceFromAPI(chanToDB chan<- configure.MsgBetweenCoreAndDB, idClientAPI string, advancedOptions interface{}) error {
 	msg, ok := advancedOptions.(configure.MsgInfoChangeStatusSource)
 	if !ok {
@@ -25,21 +25,16 @@ func HandlerStatusSourceFromAPI(chanToDB chan<- configure.MsgBetweenCoreAndDB, i
 		MsgGenerator:    "Core module",
 		MsgRecipient:    "DB module",
 		MsgDirection:    "request",
+		DataType:        "sources_control",
 		IDClientAPI:     idClientAPI,
 		AdvancedOptions: advancedOptions,
 	}
 
-	//передается ПОЛНЫЙ список источников
 	if msg.SourceListIsExist {
-		sendMsg.DataType = "sources_list"
-
-		chanToDB <- sendMsg
-
-		return nil
+		sendMsg.Instruction = "insert"
 	}
 
-	//передается только список источников данные о которых были изменены
-	sendMsg.DataType = "change_status_source"
+	chanToDB <- sendMsg
 
 	return nil
 }

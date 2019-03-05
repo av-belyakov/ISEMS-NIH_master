@@ -153,11 +153,8 @@ func init() {
 		_ = saveMessageApp.LogMessage("err", "it is impossible to obtain the version number of the application")
 	}
 
-	//инициируем хранилище информации об источнике
-	ism.SourcesListSetting = configure.SourcesListSetting{}
-
-	//инициируем хранилище дескрипторов соединений с источниками
-	ism.SourcesListConnection = configure.SourcesListConnection{}
+	//инициируем хранилище информации об источниках и дескрипторов соединений с источниками
+	ism = ism.InitializeRepository()
 
 	fmt.Println("ENd func init")
 }

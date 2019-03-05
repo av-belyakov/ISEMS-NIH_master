@@ -23,7 +23,9 @@ func Routing(appConf *configure.AppConfig, ism *configure.InformationStoringMemo
 	saveMessageApp := savemessageapp.New()
 
 	//при старте приложения запрашиваем у API новый список источников
-	cc.OutCoreChanAPI <- configure.MsgBetweenCoreAndAPI{
+	//временно оставляем, но новый список запрашивается в модуле API
+	//при успешном подключении клиента к wss серверу
+	/*cc.OutCoreChanAPI <- configure.MsgBetweenCoreAndAPI{
 		MsgGenerator: "Core module",
 		MsgType:      "command",
 		DataType:     "source_control",
@@ -31,7 +33,7 @@ func Routing(appConf *configure.AppConfig, ism *configure.InformationStoringMemo
 		AdvancedOptions: configure.MsgCommandSourceControl{
 			ListRequest: true,
 		},
-	}
+	}*/
 
 	fmt.Println("ROUTE CoreApp sending data to channel")
 

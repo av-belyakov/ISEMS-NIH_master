@@ -17,52 +17,50 @@ type QueryCollectionSources struct {
 	ConnectDB              *mongo.Client
 }
 
-//InserListSourcesTMP тестовая вставка
-func (qcs *QueryCollectionSources) InserListSourcesTMP(list []configure.InformationAboutSource) (bool, error) {
-	//получаем список источников
-	listSources, err := qcs.FindAll()
+//GetAllSourcesList получить весь список источников
+func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
+	msgResult := configure.MsgBetweenCoreAndDB{
+		MsgGenerator: req.MsgRecipient,
+		MsgRecipient: req.MsgGenerator,
+		MsgDirection: "response",
+	}
+
+	sourcesList, err := qcs.findAll()
 	if err != nil {
-		fmt.Println(err)
-
-		return false, err
-	}
-
-	fmt.Println(listSources)
-
-	insertData := make([]interface{}, 0, len(list))
-
-	if len(listSources) == 0 {
-		for _, v := range list {
-			insertData = append(insertData, v)
+		msgResult.DataType = "error_notification"
+		msgResult.AdvancedOptions = configure.ErrorNotification{
+			SourceReport: "DB module",
+			ErrorBody:    err,
 		}
 
-		return qcs.InsertData(insertData)
+		chanIn <- msgResult
+
+		return
 	}
 
-	fmt.Println("--- Требуются доп. вычисления, поиск уикальных значений")
+	fmt.Println("request from DB processed success")
+	fmt.Printf("%v", sourcesList)
 
-	for _, itemAddList := range list {
-		var isExist bool
+	msgResult.DataType = "sources_list"
+	msgResult.AdvancedOptions = sourcesList
 
-		for _, itemFindList := range listSources {
-			if itemFindList.ID == itemAddList.ID {
-				isExist = true
-				break
-			}
-		}
-
-		if !isExist {
-			insertData = append(insertData, itemAddList)
-		}
-	}
-
-	fmt.Println("listSourceInser = ", insertData)
-
-	return qcs.InsertData(insertData)
+	//отправка списка источников маршрутизатору ядра приложения
+	chanIn <- msgResult
 }
 
-//FindAll найти всю информацию об источниках
-func (qcs *QueryCollectionSources) FindAll() ([]configure.InformationAboutSource, error) {
+//AddSourceToSourcesList добавить новые источники
+func AddSourceToSourcesList(chanIn chan<- configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
+
+}
+
+//UpdateSourceToSourcesList обновить информацию об источниках
+func UpdateSourceToSourcesList() {}
+
+//DelSourceToSourcesList удалить источники
+func DelSourceToSourcesList() {}
+
+//findAll найти всю информацию по всем источникам
+func (qcs *QueryCollectionSources) findAll() ([]configure.InformationAboutSource, error) {
 	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
 	options := options.Find()
 
@@ -93,7 +91,7 @@ func (qcs *QueryCollectionSources) FindAll() ([]configure.InformationAboutSource
 }
 
 //InsertData добавляет все данные
-func (qcs *QueryCollectionSources) InsertData(list []interface{}) (bool, error) {
+func (qcs *QueryCollectionSources) insertData(list []interface{}) (bool, error) {
 	fmt.Println("===== INSERT DATA ======")
 	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
 	_, err := collection.InsertMany(context.TODO(), list)
@@ -102,6 +100,50 @@ func (qcs *QueryCollectionSources) InsertData(list []interface{}) (bool, error) 
 	}
 
 	return true, nil
+}
+
+//InserListSources добавить информацию об источниках которых нет в БД или параметры по которым отличаются
+func (qcs *QueryCollectionSources) InserListSources(list []configure.InformationAboutSource) (bool, error) {
+	//получаем список источников
+	listSources, err := qcs.findAll()
+	if err != nil {
+		fmt.Println(err)
+
+		return false, err
+	}
+
+	fmt.Println(listSources)
+
+	insertData := make([]interface{}, 0, len(list))
+
+	if len(listSources) == 0 {
+		for _, v := range list {
+			insertData = append(insertData, v)
+		}
+
+		return qcs.insertData(insertData)
+	}
+
+	fmt.Println("--- Требуются доп. вычисления, поиск уикальных значений")
+
+	for _, itemAddList := range list {
+		var isExist bool
+
+		for _, itemFindList := range listSources {
+			if itemFindList.ID == itemAddList.ID {
+				isExist = true
+				break
+			}
+		}
+
+		if !isExist {
+			insertData = append(insertData, itemAddList)
+		}
+	}
+
+	fmt.Println("listSourceInser = ", insertData)
+
+	return qcs.insertData(insertData)
 }
 
 //InsertListSource добавляет список источников !!! ТЕСТ !!!

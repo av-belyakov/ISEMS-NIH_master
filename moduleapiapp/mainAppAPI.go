@@ -14,8 +14,32 @@ func MainAppAPI(appConfig *configure.AppConfig, ism *configure.InformationStorin
 	chanIn = make(chan configure.MsgBetweenCoreAndAPI, 10)
 
 	/*
-		СОЗДАНИЕ СЕРВЕРА WSS ДЛЯ ПОДКЛЮЧЕНИЙ КЛИЕНТОВ
+			СОЗДАНИЕ СЕРВЕРА WSS ДЛЯ ПОДКЛЮЧЕНИЙ КЛИЕНТОВ
+
+			при подключении клиента запрашиваем у него новый список источников
+		------------------------------------------------------------------------
 	*/
+
+	/* ПОКА ПРОСТО ТЕСТОВОЕ СООБЩЕНИЕ С НОВЫМ СПИСКОМ ИСТОЧНИКОВ */
+	// --- ТЕСТОВЫЙ ОТВЕТ ---
+	chanIn <- configure.MsgBetweenCoreAndAPI{
+		MsgGenerator: "API module",
+		MsgType:      "information",
+		DataType:     "change_status_source",
+		IDClientAPI:  "du68whfh733hjf9393",
+		AdvancedOptions: configure.MsgInfoChangeStatusSource{
+			SourceListIsExist: true,
+			SourceList: []configure.MainOperatingParametersSource{
+				{9, "127.0.0.1", "fmdif3o444fdf344k0fiif", false, configure.SourceDetailedInformation{}},
+				{10, "192.168.0.10", "fmdif3o444fdf344k0fiif", false, configure.SourceDetailedInformation{}},
+				{11, "192.168.0.11", "ttrr9gr9r9e9f9fadx94", false, configure.SourceDetailedInformation{}},
+				{12, "192.168.0.12", "2n3n3iixcxcc3444xfg0222", false, configure.SourceDetailedInformation{}},
+				{13, "192.168.0.13", "osdsoc9c933cc9cn939f9f33", true, configure.SourceDetailedInformation{}},
+				{14, "192.168.0.14", "hgdfffffff9333ffodffodofff0", true, configure.SourceDetailedInformation{}},
+			},
+		},
+	}
+	//------------------------
 
 	//запуск маршрутизатора сообщений от ядра
 	go RouteCoreMessage(chanIn, chanOut)

@@ -3,7 +3,7 @@ package configure
 /*
 * Коллекция типов сообщений
 *
-* Версия 0.1, дата релиза 28.02.2019
+* Версия 0.1, дата релиза 05.03.2019
 * */
 
 /*
@@ -25,10 +25,8 @@ package configure
 //  - передача нового списка источников
 //  - изменение состояния источника
 type MsgInfoChangeStatusSource struct {
-	SourceListIsExist                bool
-	SourceID                         int
-	OldStatusSource, NewStatusSource string
-	SourceList                       []SourceCharacteristicForConnection
+	SourceListIsExist bool
+	SourceList        []MainOperatingParametersSource
 }
 
 //MsgInfoSourceTelemetry данные по телеметрии
@@ -74,13 +72,21 @@ type SourceParameter struct {
 	ToReconnectSource bool   //true переподключить источник
 	OccurredEvent     string //произошедшие события (добавлен, удален, настройки изменены)
 	//add, delete, update
-	NewCharacteristic SourceCharacteristicForConnection
+	NewCharacteristic MainOperatingParametersSource
 }
 
-//SourceCharacteristicForConnection параметры для подключения источника
-type SourceCharacteristicForConnection struct {
+//MainOperatingParametersSource параметры для подключения источника
+type MainOperatingParametersSource struct {
 	ID        int
 	IP, Token string
+	AsServer  bool
+	Options   SourceDetailedInformation
+}
+
+//SourceDetailedInformation детальная информация по настройке источника
+type SourceDetailedInformation struct {
+	EnableTelemetry          bool //true - включить
+	MaxCountProcessFiltering int
 }
 
 //MsgCommandfiltration команды по фильтрации:

@@ -39,7 +39,7 @@ type SourceSetting struct {
 
 //SourceServiceSettings настройки влияющие на обработку данных на стороне источника
 type SourceServiceSettings struct {
-	EnableTelemetry          bool
+	EnableTelemetry           bool
 	MaxCountProcessfiltration int
 }
 
@@ -59,6 +59,14 @@ type sourcesListConnection map[string]WssConnection
 type InformationStoringMemory struct {
 	sourcesListSetting
 	sourcesListConnection
+}
+
+//InitializeRepository инициализация хранилища
+func (ism InformationStoringMemory) InitializeRepository() InformationStoringMemory {
+	ism.sourcesListSetting = sourcesListSetting{}
+	ism.sourcesListConnection = sourcesListConnection{}
+
+	return ism
 }
 
 //AddSourceSettings добавить настройки источника
