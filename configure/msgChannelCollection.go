@@ -58,24 +58,27 @@ type MsgBetweenCoreAndNI struct {
 // MsgType:
 //  - information
 //  - command
-// DataType:
-//  - change_status_source (info)
-//  - source_telemetry (info)
-//  - filtration (info)
-//  - download (info)
-//  - information_search_results (info)
-//  - error_notification (info)
-//  - source_control (command)
-//  - filtration (command)
-//  - download (command)
-//  - information_search (command)
+// MsgSection:
+//  - 'source control'
+//  - 'filtration control'
+//  - 'download control'
+//  - 'information search control'
+//  - 'source telemetry info'
+//  - 'error notification'
+//  - 'message notification'
 // IDClientAPI - уникальный идентификатор клиента API
 type MsgBetweenCoreAndAPI struct {
-	MsgGenerator    string
-	MsgType         string
-	DataType        string
-	IDClientAPI     string
-	AdvancedOptions interface{}
+	/*	MsgGenerator    string
+		MsgType         string
+		MsgSection      string
+		IDClientAPI     string
+			AdvancedOptions interface{}
+	*/
+
+	MsgGenerator string
+	MsgRecipient string
+	IDClientAPI  string
+	MsgJSON      []byte
 }
 
 //MsgBetweenCoreAndDB используется для взаимодействия между ядром и модулем взаимодействия с БД
@@ -83,10 +86,10 @@ type MsgBetweenCoreAndAPI struct {
 // MsgGenerator - DB module/Core module (источник сообщения)
 // MsgRecipient - API module/NI module/DB module/Core module (получатель сообщения)
 // MsgDirection - request/response (направление, запрос или ответ)
-// DataType:
-//  - sources_control
-//  - source_telemetry
-//  - filtration
+// MsgSection:
+//  - 'sources control'
+//  - 'source telemetry'
+//  - 'filtration
 //  - download
 //  - information_search_results
 //  - error_notification
@@ -108,7 +111,7 @@ type MsgBetweenCoreAndDB struct {
 	AdvancedOptions interface{}
 }
 
-//AdvancedOptions взависимости от типов сообщений
+// --- AdvancedOptions взависимости от типов сообщений ---
 
 //ErrorNotification содержит информацию об ошибке
 // SourceReport - DB module/NI module/API module
@@ -117,6 +120,18 @@ type MsgBetweenCoreAndDB struct {
 type ErrorNotification struct {
 	SourceReport, HumanDescriptionError string
 	ErrorBody                           error
+}
+
+//MessageNotification содержит информационное сообщение о выполненном действии
+// SourceReport - DB module/NI module/API module
+// Section - раздел к которому относится действие
+// TypeActionPerformed - тип выполненного действия
+// HumanDescriptionError - сообщение для пользователя
+type MessageNotification struct {
+	SourceReport                 string
+	Section                      string
+	TypeActionPerformed          string
+	HumanDescriptionNotification string
 }
 
 /* РАССМОТРЕТЬ ПОЗЖЕ */

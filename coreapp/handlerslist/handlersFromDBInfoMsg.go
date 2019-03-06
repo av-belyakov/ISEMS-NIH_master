@@ -13,8 +13,8 @@ import (
 	"fmt"
 )
 
-//HandlerSourcesListFromDB обработчик сообщения 'sources_list'
-func HandlerSourcesListFromDB(chanOutAPI chan<- configure.MsgBetweenCoreAndAPI, chanOutNI chan<- configure.MsgBetweenCoreAndNI, msgFromDB configure.MsgBetweenCoreAndDB) error {
+//HandlerSourcesControlFromDB обработчик сообщения 'sources_list'
+func HandlerSourcesControlFromDB(chanOutAPI chan<- configure.MsgBetweenCoreAndAPI, chanOutNI chan<- configure.MsgBetweenCoreAndNI, msgFromDB configure.MsgBetweenCoreAndDB) error {
 
 	return nil
 }
@@ -61,7 +61,7 @@ func HandlerErrorNotificationFromDB(chanOutAPI chan<- configure.MsgBetweenCoreAn
 		chanOutAPI <- configure.MsgBetweenCoreAndAPI{
 			MsgGenerator: "Core module",
 			MsgType:      "information",
-			DataType:     "error_notification",
+			MsgSection:   "error notification",
 			IDClientAPI:  msgFromDB.IDClientAPI,
 			AdvancedOptions: configure.ErrorNotification{
 				SourceReport:          errorMsg.SourceReport,

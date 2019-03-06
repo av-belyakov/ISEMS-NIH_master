@@ -2,6 +2,7 @@ package handlerrequestdb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/mongodb/mongo-go-driver/bson"
@@ -46,6 +47,143 @@ func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- configure.Msg
 
 	//отправка списка источников маршрутизатору ядра приложения
 	chanIn <- msgResult
+}
+
+//InserListSources добавить информацию об источниках которых нет в БД или параметры по которым отличаются
+/*func (qcs *QueryCollectionSources) InserListSources(list []configure.InformationAboutSource) (bool, error) {
+//получаем список источников
+	listSources, err := qcs.findAll()
+	if err != nil {
+		fmt.Println(err)
+
+		return false, err
+	}
+
+	fmt.Println(listSources)
+
+	insertData := make([]interface{}, 0, len(list))
+
+	if len(listSources) == 0 {
+		for _, v := range list {
+			insertData = append(insertData, v)
+		}
+
+		return qcs.insertData(insertData)
+	}
+
+	fmt.Println("--- Требуются доп. вычисления, поиск уикальных значений")
+
+	for _, itemAddList := range list {
+		var isExist bool
+
+		for _, itemFindList := range listSources {
+			if itemFindList.ID == itemAddList.ID {
+				isExist = true
+				break
+			}
+		}
+
+		if !isExist {
+			insertData = append(insertData, itemAddList)
+		}
+	}
+
+	fmt.Println("listSourceInser = ", insertData)
+
+	return qcs.insertData(insertData)
+}
+
+configure.MsgBetweenCoreAndAPI{
+		MsgGenerator: "API module",
+		MsgType:      "information",
+		DataType:     "change_status_source",
+		IDClientAPI:  "du68whfh733hjf9393",
+		AdvancedOptions: configure.MsgInfoChangeStatusSource{
+			SourceListIsExist: true,
+			SourceList: []configure.MainOperatingParametersSource{
+				{9, "127.0.0.1", "fmdif3o444fdf344k0fiif", false, configure.SourceDetailedInformation{}},
+				{10, "192.168.0.10", "fmdif3o444fdf344k0fiif", false, configure.SourceDetailedInformation{}},
+				{11, "192.168.0.11", "ttrr9gr9r9e9f9fadx94", false, configure.SourceDetailedInformation{}},
+				{12, "192.168.0.12", "2n3n3iixcxcc3444xfg0222", false, configure.SourceDetailedInformation{}},
+				{13, "192.168.0.13", "osdsoc9c933cc9cn939f9f33", true, configure.SourceDetailedInformation{}},
+				{14, "192.168.0.14", "hgdfffffff9333ffodffodofff0", true, configure.SourceDetailedInformation{}},
+			},
+		},
+	}
+*/
+func (qcs *QueryCollectionSources) InserListSources(chanIn chan<- configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
+	msgRes := configure.MsgBetweenCoreAndDB{
+		MsgGenerator: req.MsgRecipient,
+		MsgRecipient: req.MsgGenerator,
+		MsgDirection: "response",
+		DataType:     "source_control",
+		IDClientAPI:  req.IDClientAPI,
+	}
+
+	//получаем список источников
+	listSources, err := qcs.findAll()
+	if err != nil {
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: "an error occurred while processing request get the list of sources",
+			ErrorBody:             err,
+		}
+
+		chanIn <- msgRes
+	}
+
+	ao, ok := req.AdvancedOptions.(configure.MsgInfoChangeStatusSource)
+	if !ok {
+		errMsg := "incorrect list of sources received"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: errMsg,
+			ErrorBody:             errors.New(errMsg),
+		}
+
+		chanIn <- msgRes
+	}
+
+	if !ao.SourceListIsExist {
+		return
+	}
+
+	fmt.Printf("--- source list %v", listSources)
+
+
+	list := ao.SourceList
+
+	insertData := make([]interface{}, 0, len(list))
+
+	//если список источников в БД пуст, добавляем все что есть
+	if len(listSources) == 0 {
+		for _, v := range list {
+			insertData = append(insertData, v)
+		}
+
+		//return qcs.insertData(insertData)
+	}
+
+	fmt.Println("--- Требуются доп. вычисления, поиск уикальных значений")
+
+	for _, itemAddList := range list {
+		var isExist bool
+
+		for _, itemFindList := range listSources {
+			if itemFindList.ID == itemAddList.ID {
+				isExist = true
+				break
+			}
+		}
+
+		if !isExist {
+			insertData = append(insertData, itemAddList)
+		}
+	}
+
+	fmt.Println("listSourceInser = ", insertData)
+
+	//return qcs.insertData(insertData)
 }
 
 //AddSourceToSourcesList добавить новые источники
@@ -100,50 +238,6 @@ func (qcs *QueryCollectionSources) insertData(list []interface{}) (bool, error) 
 	}
 
 	return true, nil
-}
-
-//InserListSources добавить информацию об источниках которых нет в БД или параметры по которым отличаются
-func (qcs *QueryCollectionSources) InserListSources(list []configure.InformationAboutSource) (bool, error) {
-	//получаем список источников
-	listSources, err := qcs.findAll()
-	if err != nil {
-		fmt.Println(err)
-
-		return false, err
-	}
-
-	fmt.Println(listSources)
-
-	insertData := make([]interface{}, 0, len(list))
-
-	if len(listSources) == 0 {
-		for _, v := range list {
-			insertData = append(insertData, v)
-		}
-
-		return qcs.insertData(insertData)
-	}
-
-	fmt.Println("--- Требуются доп. вычисления, поиск уикальных значений")
-
-	for _, itemAddList := range list {
-		var isExist bool
-
-		for _, itemFindList := range listSources {
-			if itemFindList.ID == itemAddList.ID {
-				isExist = true
-				break
-			}
-		}
-
-		if !isExist {
-			insertData = append(insertData, itemAddList)
-		}
-	}
-
-	fmt.Println("listSourceInser = ", insertData)
-
-	return qcs.insertData(insertData)
 }
 
 //InsertListSource добавляет список источников !!! ТЕСТ !!!

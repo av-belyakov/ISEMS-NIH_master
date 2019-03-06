@@ -39,35 +39,34 @@ func Routing(appConf *configure.AppConfig, ism *configure.InformationStoringMemo
 
 	//обработчики для инфрмационных сообщений от модуля API
 	handlersInfoMsgFromAPI := map[string]func(chan<- configure.MsgBetweenCoreAndDB, string, interface{}) error{
-		"change_status_source": handlerslist.HandlerStatusSourceFromAPI,
+		"source control": handlerslist.HandlerStatusSourceFromAPI,
 	}
 
 	//обработчики для команд от модуля API
 	handlersCommandMsgFromAPI := map[string]func(chan<- configure.MsgBetweenCoreAndDB, string, interface{}) error{
-		"source_control":     handlerslist.HandlerSourceControlFromAPI,
+		"source control":     handlerslist.HandlerSourceControlFromAPI,
 		"filtration":         handlerslist.HandlerFiltrationFromAPI,
 		"download":           handlerslist.HandlerDownloadFromAPI,
-		"information_search": handlerslist.HandlerInformationSearchFromAPI,
+		"information search": handlerslist.HandlerInformationSearchFromAPI,
 	}
 
 	//обработчики для информационных сообщений от модуля взаимодействия с БД
 	handlersInfoMsgFromDB := map[string]func(chan<- configure.MsgBetweenCoreAndAPI, chan<- configure.MsgBetweenCoreAndNI, configure.MsgBetweenCoreAndDB) error{
-		"sources_list":               handlerslist.HandlerSourcesListFromDB,
-		"change_status_source":       handlerslist.HandlerChangeStatusSourceFromDB,
-		"source_telemetry":           handlerslist.HandlerSourceTelemetryFromDB,
+		"sources control":            handlerslist.HandlerSourcesControlFromDB,
+		"source telemetry":           handlerslist.HandlerSourceTelemetryFromDB,
 		"filtration":                 handlerslist.HandlerFiltrationFromDB,
 		"download":                   handlerslist.HandlerDownloadFromDB,
-		"information_search_results": handlerslist.HandlerMsgInfoSearchResultsFromDB,
-		"error_notification":         handlerslist.HandlerErrorNotificationFromDB,
+		"information search results": handlerslist.HandlerMsgInfoSearchResultsFromDB,
+		"error notification":         handlerslist.HandlerErrorNotificationFromDB,
 	}
 
 	//обработчики для информационных сообщений от модуля сетевого взаимодействия Network Interaction
 	handlersInfoMsgIN := map[string]func(string, interface{}) error{
-		"change_status_source": handlerslist.HandlerChangeStatusSourceFromNI,
-		"source_telemetry":     handlerslist.HandlerSourceTelemetryFromNI,
+		"change status source": handlerslist.HandlerChangeStatusSourceFromNI,
+		"source telemetry":     handlerslist.HandlerSourceTelemetryFromNI,
 		"filtration":           handlerslist.HandlerFiltrationFromNI,
 		"download":             handlerslist.HandlerDownloadFromNI,
-		"error_notification":   handlerslist.HandlerErrorNotificationFromNI,
+		"error notification":   handlerslist.HandlerErrorNotificationFromNI,
 	}
 
 	for {

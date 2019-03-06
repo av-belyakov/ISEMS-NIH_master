@@ -24,8 +24,21 @@ func MainAppAPI(appConfig *configure.AppConfig, ism *configure.InformationStorin
 	// --- ТЕСТОВЫЙ ОТВЕТ ---
 	chanIn <- configure.MsgBetweenCoreAndAPI{
 		MsgGenerator: "API module",
-		MsgType:      "information",
-		DataType:     "change_status_source",
+		MsgRecipient: "Core module",
+		IDClientAPI:  "du68whfh733hjf9393",
+MsgJSON: 
+
+
+
+/*		
+ПОДГОТОВИТЬ ТЕСТОВЫЙ JSON КОТОРЫЙ ДОБАВЛЯЕТСЯ В MsgJSON
+
+
+ОТПРАВЛЯТЬ СООБЩЕНИЕ С ПРЕКЛКПЛЕННОМ К НЕМУ JSON данными полученными 
+от клиента API
+
+MsgType:      "information",
+		MsgSection:   "source control",
 		IDClientAPI:  "du68whfh733hjf9393",
 		AdvancedOptions: configure.MsgInfoChangeStatusSource{
 			SourceListIsExist: true,
@@ -38,7 +51,7 @@ func MainAppAPI(appConfig *configure.AppConfig, ism *configure.InformationStorin
 				{14, "192.168.0.14", "hgdfffffff9333ffodffodofff0", true, configure.SourceDetailedInformation{}},
 			},
 		},
-	}
+	}*/
 	//------------------------
 
 	//запуск маршрутизатора сообщений от ядра

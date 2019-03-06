@@ -3,6 +3,7 @@ package moduledbinteraction
 import (
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/moduledbinteraction/handlerrequestdb"
+	"fmt"
 
 	"github.com/mongodb/mongo-go-driver/mongo"
 )
@@ -22,6 +23,8 @@ type WrappersRouteRequest struct {
 
 //WrapperFuncSourceControl обработка запросов об источниках
 func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetweenCoreAndDB) {
+	fmt.Printf("%v", msg)
+
 	qcs := handlerrequestdb.QueryCollectionSources{
 		NameDB:         wr.NameDB,
 		CollectionName: "sources_list",
@@ -32,7 +35,7 @@ func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetwe
 		qcs.GetAllSourcesList(wr.ChanIn, msg)
 	}
 	if msg.Instruction == "insert" {
-
+		qcs.InserListSources(wr.ChanIn, msg)
 	}
 	if msg.Instruction == "update" {
 
