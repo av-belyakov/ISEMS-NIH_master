@@ -25,7 +25,6 @@ func HandlerStatusSourceFromAPI(chanToDB chan<- configure.MsgBetweenCoreAndDB, i
 		MsgGenerator:    "Core module",
 		MsgRecipient:    "DB module",
 		MsgDirection:    "request",
-		MsgSection:      "source control",
 		IDClientAPI:     idClientAPI,
 		AdvancedOptions: advancedOptions,
 	}

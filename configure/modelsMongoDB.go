@@ -1,7 +1,7 @@
 package configure
 
 /*
-* Описание типов хранящихся в БД
+* Описание типов коллекций хранящихся в БД
 * */
 
 //InformationAboutSource информация об источнике в коллекции 'sources_list'
@@ -16,6 +16,7 @@ type InformationAboutSource struct {
 
 //InfoServiceSettings содержит настройки источника
 type InfoServiceSettings struct {
-	EnableTelemetry           bool `json:"enable_telemetry" bson:"enable_telemetry"`
-	MaxCountProcessfiltration int  `json:"max_count_process_filtration" bson:"max_count_process_filtration"`
+	EnableTelemetry           bool     `json:"enable_telemetry" bson:"enable_telemetry"`
+	MaxCountProcessfiltration int      `json:"max_count_process_filtration" bson:"max_count_process_filtration"`
+	StorageFolders            []string `json:"storage_folders" bson:"storage_folders"`
 }

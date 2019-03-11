@@ -73,12 +73,21 @@ type SourceListCommandToAPI struct {
 	Argument   SourceArguments `json:"argument"`
 }
 
+//SourceSettings настройки источника
+type SourceSettings struct {
+	EnableTelemetry          bool     `json:"enableTelemetry"`
+	MaxCountProcessFiltering int8     `json:"MaxCountProcessFiltering"` //<число 1-10>,
+	StorageFolders           []string `json:"storageFolders"`
+}
+
 //SourceArguments параметры источников
 //  - IP: ip адрес источника
 //  - Token: уникальный идентификатор источника
+//  - Settings: настройки источника
 type SourceArguments struct {
-	IP    string `json:"ip"`
-	Token string `json:"token"`
+	IP       string         `json:"ip"`
+	Token    string         `json:"token"`
+	Settings SourceSettings `json:"settings"`
 }
 
 //FiltrationControlMsgTypeInfo информационные сообщения о ходе фильтрации

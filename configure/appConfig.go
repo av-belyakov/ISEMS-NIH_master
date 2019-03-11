@@ -6,10 +6,14 @@ package configure
 * Версия 0.1, дата релиза 18.02.2019
 * */
 
+//
+
 //settingsServerHTTP хранит настройки HTTP сервера
 type settingsServerHTTP struct {
-	Host string `json:"host"`
-	Port int    `josn:"port"`
+	Host               string `json:"host"`
+	Port               int    `json:"port"`
+	PathCertFile       string `json:"pathCertFile"`
+	PathPrivateKeyFile string `json:"pathPrivateKeyFile"`
 }
 
 //settingsDBConnection хранит настройки для подключения к БД
@@ -33,8 +37,9 @@ type settingsDirectoryStoreFiles struct {
 type AppConfig struct {
 	VersionApp                              string
 	RootDir                                 string
-	AuthenticationToken                     string                      `json:"authenticationToken"`
-	ServerHTTP                              settingsServerHTTP          `json:"serverHTTP"`
+	ServerHTTPS                             settingsServerHTTP          `json:"serverHTTPS"`
+	AuthenticationTokenClientAPI            string                      `json:"authenticationTokenClientAPI"`
+	ServerAPI                               settingsServerHTTP          `json:"serverAPI"`
 	PathCertFile                            string                      `json:"pathCertFile"`
 	PathPrivateKeyFile                      string                      `json:"pathPrivateKeyFile"`
 	TimeReconnectClient                     int                         `json:"timeRecconnectClient"`

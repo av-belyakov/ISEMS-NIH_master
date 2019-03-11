@@ -8,6 +8,7 @@ package coreapp
 * */
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"ISEMS-NIH_master/configure"
@@ -93,6 +94,23 @@ func Routing(appConf *configure.AppConfig, ism *configure.InformationStoringMemo
 
 			//CHANNEL FROM API
 		case data := <-cc.InCoreChanAPI:
+
+			fmt.Println("resived message from API module ", data)
+
+			if data.MsgGenerator == "API module" && data.MsgRecipient == "Core module" {
+				/*
+					сделать учет запросов по ID клиенту?
+
+					развернуть JSON
+				*/
+
+				var msgAPI configure.MsgType
+
+				if err = json.Unmarshal(message, &msgAPI); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				}
+			}
+
 			if data.MsgType == "information" {
 				fmt.Println("resived message type 'information' from API module")
 

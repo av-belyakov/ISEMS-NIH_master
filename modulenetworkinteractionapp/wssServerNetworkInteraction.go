@@ -146,10 +146,10 @@ func WssServerNetworkInteraction(cOut chan<- [2]string, appConf *configure.AppCo
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
-	port := strconv.Itoa(appConf.ServerHTTP.Port)
+	port := strconv.Itoa(appConf.ServerHTTPS.Port)
 
 	settingsHTTPServer := SettingsHTTPServer{
-		Host:    appConf.ServerHTTP.Host,
+		Host:    appConf.ServerHTTPS.Host,
 		Port:    port,
 		StorMem: ism,
 	}
@@ -160,12 +160,12 @@ func WssServerNetworkInteraction(cOut chan<- [2]string, appConf *configure.AppCo
 	}
 
 	/* инициализируем HTTPS сервер */
-	log.Println("The HTTPS server is running on ip address " + appConf.ServerHTTP.Host + ", port " + port + "\n")
+	log.Println("The HTTPS server is running on ip address " + appConf.ServerHTTPS.Host + ", port " + port + "\n")
 
 	http.HandleFunc("/", settingsHTTPServer.HandlerRequest)
 	http.HandleFunc("/wss", settingsWssServer.ServerWss)
 
-	if err := http.ListenAndServeTLS(appConf.ServerHTTP.Host+":"+port, appConf.PathCertFile, appConf.PathPrivateKeyFile, nil); err != nil {
+	if err := http.ListenAndServeTLS(appConf.ServerHTTPS.Host+":"+port, appConf.ServerHTTPS.PathCertFile, appConf.ServerHTTPS.PathPrivateKeyFile, nil); err != nil {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 		log.Println(err)

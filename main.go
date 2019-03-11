@@ -134,8 +134,13 @@ func init() {
 
 	appConfig.RootDir = dir + "/"
 
-	appConfig.PathCertFile = appConfig.RootDir + appConfig.PathCertFile
-	appConfig.PathPrivateKeyFile = appConfig.RootDir + appConfig.PathPrivateKeyFile
+	//для сервера API
+	appConfig.ServerAPI.PathCertFile = appConfig.RootDir + appConfig.ServerAPI.PathCertFile
+	appConfig.ServerAPI.PathPrivateKeyFile = appConfig.RootDir + appConfig.ServerAPI.PathPrivateKeyFile
+
+	//для сервера обеспечивающего подключение источников
+	appConfig.ServerHTTPS.PathCertFile = appConfig.RootDir + appConfig.ServerHTTPS.PathCertFile
+	appConfig.ServerHTTPS.PathPrivateKeyFile = appConfig.RootDir + appConfig.ServerHTTPS.PathPrivateKeyFile
 
 	//соединяемся с БД
 	mongoConnect, err := connectToDB(ctx, &appConfig)
@@ -154,7 +159,7 @@ func init() {
 	}
 
 	//инициируем хранилище информации об источниках и дескрипторов соединений с источниками
-	ism = ism.InitializeRepository()
+	ism = ism.NewRepository()
 
 	fmt.Println("ENd func init")
 }

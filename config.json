@@ -1,16 +1,23 @@
 {
-    "isServer_comments": "запускать приложение как сервер (true), как клиент (false)",
-    "authenticationToken": "a60cb0aa61613d4983086c0a12207",
-    "authenticationToken_comments": "идентификационный токен",
-    "serverHTTP": {
+    "authenticationTokenClientAPI": "a60cb0aa61613d4983086c0a12207",
+    "authenticationTokenClientAPI_comments": "идентификационный токен для подключения клиентов API",
+    "serverAPI": {
         "host": "127.0.0.1",
-        "port": 13313
+        "port": 13314,
+        "pathCertFile": "keys/isems_nih_master_api_cert.pem",
+        "pathCertFile_comments": "ОТНОСИТЕЛЬНЫЙ путь до файла с сертификатом",
+        "pathPrivateKeyFile": "keys/isems_nih_master_api_private_key.pem",
+        "pathPrivateKeyFile_comments": "ОТНОСИТЕЛЬНЫЙ путь до файла с приватным ключем"
     },
-    "serverHTTP_comments": "если значение 'isServer' = false значение параметра ServerHTTP не учитываются",
-    "pathCertFile": "keys/isems_nih_master_cert.pem",
-    "pathCertFile_comments": "ОТНОСИТЕЛЬНЫЙ путь до файла с сертификатом",
-    "pathPrivateKeyFile": "keys/isems_nih_master_private_key.pem",
-    "pathPrivateKeyFile_comments": "ОТНОСИТЕЛЬНЫЙ путь до файла с приватным ключем",
+    "serverHTTPS": {
+        "host": "127.0.0.1",
+        "port": 13313,
+        "pathCertFile": "keys/isems_nih_master_cert.pem",
+        "pathCertFile_comments": "ОТНОСИТЕЛЬНЫЙ путь до файла с сертификатом",
+        "pathPrivateKeyFile": "keys/isems_nih_master_private_key.pem",
+        "pathPrivateKeyFile_comments": "ОТНОСИТЕЛЬНЫЙ путь до файла с приватным ключем"
+    },
+    "serverHTTPS_comments": "параметры для запуска сервера к которому подключаются сенсора",
     "timeReconnectClient": 10000,
     "timeReconnectClient_comments": "актуально только в режиме isServer = false, тогда с заданным интервалом времени будут попытки соединения с адресами slave",
     "connectionDB": {

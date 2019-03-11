@@ -61,12 +61,12 @@ type InformationStoringMemory struct {
 	sourcesListConnection
 }
 
-//InitializeRepository инициализация хранилища
-func (ism InformationStoringMemory) InitializeRepository() InformationStoringMemory {
+//NewRepository инициализация хранилища
+func (ism InformationStoringMemory) NewRepository() *InformationStoringMemory {
 	ism.sourcesListSetting = sourcesListSetting{}
 	ism.sourcesListConnection = sourcesListConnection{}
 
-	return ism
+	return &ism
 }
 
 //AddSourceSettings добавить настройки источника
