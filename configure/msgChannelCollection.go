@@ -14,42 +14,28 @@ type MsgWsTransmission struct {
 }
 
 // MsgBetweenCoreAndNI используется для взаимодействия между ядром приложения и модулем сет. взаимодействия
-// по каналам с данной структурой передаются следующие виды сообщений:
-// MsgType:
-//  - information
-//  - command
-// DataType:
-//  - change_status_source (info)
-//  - source_telemetry (info)
-//  - filtration (info)
-//  - download (info)
-//  - information_search_results (info)
-//  - error_notification (info)
-//  - source_control (command)
-//  - filtration (command)
-//  - download (command)
-//  - information_search (command)
-// IDClientAPI - уникальный идентификатор клиента API
-//
-//1. информационные (information):
-//  - изменение статуса источника TypeRequiredAction (change_status_source)
-//  - получение данных телеметрии об источнике TypeRequiredAction (source_telemetry)
-//  - ход выполнения ФИЛЬТРАЦИИ TypeRequiredAction (filtration)
-//  - ход выполнения СКАЧИВАНИЯ файлов TypeRequiredAction (download)
-//  - информация об ошибках соединения TypeRequiredAction (error_message)
-// 2. команда (instraction):
-//  - управление источником TypeRequiredAction(add_source, delete_source, change_setting_source)
-//  - управление фильтрацией сет. трафика TypeRequiredAction (filtration_start, filtration_stop)
-//  - управление скачиванием файлов TypeRequiredAction (download_start, download_stop, download_resume)
+// Section:
+//  - 'sources_control'
+//  - 'filtration_control'
+//  - 'download_control'
+// Command:
+//  - для source_control:
+//		* 'load list'
+//		* 'add'
+//		* 'del'
+// 		* 'update'
+//		* 'reconnect'
+//  - для filtration_control:
+//		* 'start'
+//		* 'stop'
+//		* ''
+//  - для download_control:
+//		* 'start'
+//		* 'stop'
 type MsgBetweenCoreAndNI struct {
-	SourceID        string
-	MsgType         string
-	DataType        string
-	IDClientAPI     string
+	Section         string
+	Command         string
 	AdvancedOptions interface{}
-
-	TypeRequiredAction string
-	Data               []byte
 }
 
 //MsgBetweenCoreAndAPI используется для взаимодействия между ядром приложения и модулем API приложения
@@ -68,13 +54,6 @@ type MsgBetweenCoreAndNI struct {
 //  - 'message notification'
 // IDClientAPI - уникальный идентификатор клиента API
 type MsgBetweenCoreAndAPI struct {
-	/*	MsgGenerator    string
-		MsgType         string
-		MsgSection      string
-		IDClientAPI     string
-			AdvancedOptions interface{}
-	*/
-
 	MsgGenerator string
 	MsgRecipient string
 	IDClientAPI  string
@@ -87,25 +66,29 @@ type MsgBetweenCoreAndAPI struct {
 // MsgRecipient - API module/NI module/DB module/Core module (получатель сообщения)
 // MsgDirection - request/response (направление, запрос или ответ)
 // MsgSection:
-//  - 'sources control'
-//  - 'source telemetry'
-//  - 'filtration
-//  - download
-//  - information_search_results
-//  - error_notification
-//  - information_search
+//  - 'sources_control'
+//  - 'source_telemetry'
+//  - 'filtration'
+//  - 'download'
+//  - 'information_search_results'
+//  - 'error_notification'
+//  - 'information_search'
 // Insturction:
 //  - insert
 //  - find
 //  - find_all
 //  - update
 //  - delete
+// Command:
+//  - 'load_source_list'
+//  - 'add sources'
+//  - ''
 // IDClientAPI - уникальный идентификатор клиента API
 type MsgBetweenCoreAndDB struct {
 	MsgGenerator    string
 	MsgRecipient    string
 	MsgDirection    string
-	DataType        string
+	MsgSection      string
 	Instruction     string
 	IDClientAPI     string
 	AdvancedOptions interface{}

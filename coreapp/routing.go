@@ -8,66 +8,26 @@ package coreapp
 * */
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/coreapp/handlerslist"
-	"ISEMS-NIH_master/savemessageapp"
 )
 
 //Routing маршрутизирует данные поступающие в ядро из каналов
-func Routing(appConf *configure.AppConfig, ism *configure.InformationStoringMemory, cc *configure.ChannelCollectionCoreApp) {
+func Routing(appConf *configure.AppConfig, cc *configure.ChannelCollectionCoreApp) {
 	fmt.Println("START ROUTE module 'CoreApp'...")
 
 	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
+	//saveMessageApp := savemessageapp.New()
 
-	//при старте приложения запрашиваем у API новый список источников
-	//временно оставляем, но новый список запрашивается в модуле API
-	//при успешном подключении клиента к wss серверу
-	/*cc.OutCoreChanAPI <- configure.MsgBetweenCoreAndAPI{
-		MsgGenerator: "Core module",
-		MsgType:      "command",
-		DataType:     "source_control",
-		IDClientAPI:  "",
-		AdvancedOptions: configure.MsgCommandSourceControl{
-			ListRequest: true,
-		},
-	}*/
-
-	fmt.Println("ROUTE CoreApp sending data to channel")
-
-	//обработчики для инфрмационных сообщений от модуля API
-	handlersInfoMsgFromAPI := map[string]func(chan<- configure.MsgBetweenCoreAndDB, string, interface{}) error{
-		"source control": handlerslist.HandlerStatusSourceFromAPI,
-	}
-
-	//обработчики для команд от модуля API
-	handlersCommandMsgFromAPI := map[string]func(chan<- configure.MsgBetweenCoreAndDB, string, interface{}) error{
-		"source control":     handlerslist.HandlerSourceControlFromAPI,
-		"filtration":         handlerslist.HandlerFiltrationFromAPI,
-		"download":           handlerslist.HandlerDownloadFromAPI,
-		"information search": handlerslist.HandlerInformationSearchFromAPI,
-	}
-
-	//обработчики для информационных сообщений от модуля взаимодействия с БД
-	handlersInfoMsgFromDB := map[string]func(chan<- configure.MsgBetweenCoreAndAPI, chan<- configure.MsgBetweenCoreAndNI, configure.MsgBetweenCoreAndDB) error{
-		"sources control":            handlerslist.HandlerSourcesControlFromDB,
-		"source telemetry":           handlerslist.HandlerSourceTelemetryFromDB,
-		"filtration":                 handlerslist.HandlerFiltrationFromDB,
-		"download":                   handlerslist.HandlerDownloadFromDB,
-		"information search results": handlerslist.HandlerMsgInfoSearchResultsFromDB,
-		"error notification":         handlerslist.HandlerErrorNotificationFromDB,
-	}
-
-	//обработчики для информационных сообщений от модуля сетевого взаимодействия Network Interaction
-	handlersInfoMsgIN := map[string]func(string, interface{}) error{
-		"change status source": handlerslist.HandlerChangeStatusSourceFromNI,
-		"source telemetry":     handlerslist.HandlerSourceTelemetryFromNI,
-		"filtration":           handlerslist.HandlerFiltrationFromNI,
-		"download":             handlerslist.HandlerDownloadFromNI,
-		"error notification":   handlerslist.HandlerErrorNotificationFromNI,
+	//при старте приложения запрашиваем у БД список источников
+	cc.OutCoreChanDB <- configure.MsgBetweenCoreAndDB{
+		MsgGenerator: "NI module",
+		MsgRecipient: "DB module",
+		MsgDirection: "request",
+		MsgSection:   "sources_control",
+		Instruction:  "find_all",
 	}
 
 	for {
@@ -75,74 +35,70 @@ func Routing(appConf *configure.AppConfig, ism *configure.InformationStoringMemo
 		//CHANNEL FROM DATABASE
 		case data := <-cc.InCoreChanDB:
 			fmt.Println("MESSAGE FROM module DBInteraction")
-			//использовать канал cc.OutCoreChanDB для ответа
-			fmt.Println(data)
 
-			handler, ok := handlersInfoMsgFromDB[data.DataType]
-			if !ok {
-				_ = saveMessageApp.LogMessage("error", "from the API passed an invalid data type (module Core route)")
-			}
+			handlerslist.HandlerMsgFromDB(cc.OutCoreChanAPI, &data, cc.OutCoreChanNI)
 
-			if err := handler(cc.OutCoreChanAPI, cc.OutCoreChanNI, data); err != nil {
-				_ = saveMessageApp.LogMessage("err", fmt.Sprint(err))
-			}
-
-			//
-			// получаем список источников для подключения и
-			// записываем в память
-			//
-
-			//CHANNEL FROM API
+		//CHANNEL FROM API
 		case data := <-cc.InCoreChanAPI:
 
-			fmt.Println("resived message from API module ", data)
+			fmt.Println("MESSAGE FROM module API")
+			fmt.Println(data)
 
-			if data.MsgGenerator == "API module" && data.MsgRecipient == "Core module" {
-				/*
-					сделать учет запросов по ID клиенту?
+		/*if data.MsgGenerator == "API module" && data.MsgRecipient == "Core module" {
+			var msgc configure.MsgCommon
 
-					развернуть JSON
-				*/
+			m := "получен некорректный формат JSON сообщения"
+			if err := json.Unmarshal(data.MsgJSON, &msgc); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-				var msgAPI configure.MsgType
-
-				if err = json.Unmarshal(message, &msgAPI); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-				}
+				common.SendNotificationToClientAPI(cc.OutCoreChanAPI, "danger", m, data.IDClientAPI)
 			}
 
-			if data.MsgType == "information" {
+			handlerslist.HandlerMsgFromAPI(cc.OutCoreChanDB, data.IDClientAPI, data.MsgGenerator, &msgc, cc.OutCoreChanNI)
+
+			/*if msgc.MsgType == "information" {
 				fmt.Println("resived message type 'information' from API module")
 
-				handler, ok := handlersInfoMsgFromAPI[data.DataType]
+				handler, ok := handlersInfoMsgFromAPI[msgc.MsgSection]
 				if !ok {
 					_ = saveMessageApp.LogMessage("error", "from the API passed an invalid data type (module Core route)")
+
+					common.SendNotificationToClientAPI(cc.OutCoreChanAPI, "danger", m, data.IDClientAPI)
 				}
 
-				if err := handler(cc.OutCoreChanDB, data.IDClientAPI, data.AdvancedOptions); err != nil {
-					_ = saveMessageApp.LogMessage("err", fmt.Sprint(err))
+				if err := handler(cc.OutCoreChanDB, data.IDClientAPI, msgc.MsgInsturction, msgc.MsgOptions); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+					common.SendNotificationToClientAPI(cc.OutCoreChanAPI, "danger", m, data.IDClientAPI)
 				}
 			}
 
-			if data.MsgType == "command" {
+			if msgc.MsgType == "command" {
 				fmt.Println("resived message type COMMAND from API module")
 
-				handler, ok := handlersCommandMsgFromAPI[data.DataType]
+				handler, ok := handlersCommandMsgFromAPI[msgc.MsgSection]
 				if !ok {
 					_ = saveMessageApp.LogMessage("error", "from the API passed an invalid data type (module Core route)")
+
+					common.SendNotificationToClientAPI(cc.OutCoreChanAPI, "danger", m, data.IDClientAPI)
 				}
 
-				if err := handler(cc.OutCoreChanDB, data.IDClientAPI, data.AdvancedOptions); err != nil {
-					_ = saveMessageApp.LogMessage("err", fmt.Sprint(err))
+				if err := handler(cc.OutCoreChanDB, data.IDClientAPI, msgc.MsgInsturction, msgc.MsgOptions); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+					common.SendNotificationToClientAPI(cc.OutCoreChanAPI, "danger", m, data.IDClientAPI)
 				}
 
 			}
-
-			fmt.Println("ДАЛЕЕ НУЖНО ОБРАБОТАТЬ И ПЕРЕДАТь через канал модулю БД")
-
+		}*/
+		//CHANNEL FROM NETWORK INTERACTION
 		case data := <-cc.InCoreChanNI:
-			//CHANNEL FROM NETWORK INTERACTION
-			if data.MsgType == "command" {
+
+			fmt.Println("MESSAGE FROM module NetworkInteraction")
+			//использовать канал cc.OutCoreChanNI для ответа
+			fmt.Println(data)
+
+			/*if data.MsgType == "command" {
 				fmt.Println("resived message type 'command' from module NI")
 			}
 			if data.MsgType == "information" {
@@ -154,12 +110,9 @@ func Routing(appConf *configure.AppConfig, ism *configure.InformationStoringMemo
 				}
 
 				if err := handler(data.IDClientAPI, data.AdvancedOptions); err != nil {
-					_ = saveMessageApp.LogMessage("err", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 				}
-			}
-			fmt.Println("MESSAGE FROM module NetworkInteraction")
-			//использовать канал cc.OutCoreChanNI для ответа
-			fmt.Println(data)
+			}*/
 		}
 	}
 }

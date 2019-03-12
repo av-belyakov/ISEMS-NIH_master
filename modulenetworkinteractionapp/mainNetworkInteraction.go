@@ -18,7 +18,7 @@ import (
 )
 
 //MainNetworkInteraction осуществляет общее управление
-func MainNetworkInteraction(appConf *configure.AppConfig, ism *configure.InformationStoringMemory) (chanOutCore, chanInCore chan configure.MsgBetweenCoreAndNI) {
+func MainNetworkInteraction(appConf *configure.AppConfig) (chanOutCore, chanInCore chan configure.MsgBetweenCoreAndNI) {
 	fmt.Println("START module 'MainNetworkInteraction'...")
 
 	//инициализируем функцию конструктор для записи лог-файлов
@@ -38,21 +38,24 @@ func MainNetworkInteraction(appConf *configure.AppConfig, ism *configure.Informa
 		"outWssModuleClient": make(chan [2]string),
 	}
 
+	//инициализируем хранилище для источников
+	isl := configure.NewRepositoryISL()
+
 	//маршрутизат запросов получаемых от CoreApp
-	go RouteCoreRequest(cwt, ism, chanOutCore, chansStatSource)
+	go RouteCoreRequest(cwt, isl, chanOutCore, chansStatSource)
 	//маршрутизат запросов получаемых Wss
-	go RouteWssConnectionResponse(cwt, chanInCore, ism)
+	go RouteWssConnectionResponse(cwt, chanInCore, isl)
 
 	//запуск модуля wssServerNI
-	go WssServerNetworkInteraction(chansStatSource["outWssModuleServer"], appConf, ism)
+	go WssServerNetworkInteraction(chansStatSource["outWssModuleServer"], appConf, isl)
 
 	//запуск модуля wssClientNI
-	go WssClientNetworkInteraction(chansStatSource["outWssModuleClient"], appConf.TimeReconnectClient, ism, chansStatSource["inWssModule"])
+	go WssClientNetworkInteraction(chansStatSource["outWssModuleClient"], appConf.TimeReconnectClient, isl, chansStatSource["inWssModule"])
 
 	go func() {
 		for msg := range cwt {
 			sourceIP, data := msg.DestinationHost, msg.Data
-			if conn, ok := ism.GetLinkWebsocketConnect(sourceIP); ok {
+			if conn, ok := isl.GetLinkWebsocketConnect(sourceIP); ok {
 				if err := conn.SendWsMessage(1, data); err != nil {
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 				}

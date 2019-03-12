@@ -4,7 +4,7 @@ package configure
 * Описание сообщений типа JSON передоваемых между API и клиентами
 * */
 
-//MsgType общее сообщение
+//MsgCommon общее сообщение
 // MsgType:
 //  - 'information'
 //  - 'command'
@@ -13,17 +13,30 @@ package configure
 //  - 'filtration control'
 //  - 'download control'
 //  - 'information search control'
+//  - 'user notification'
 // MsgInsturction:
 //  - 'get new source list' API->
 //  - 'change status source' API->
 //  - 'confirm the action' API->
 //  - 'send new source list' API<-
 //  - 'performing an action' API<-
-type MsgType struct {
+//  - 'send notification' API<-
+type MsgCommon struct {
 	MsgType        string `json:"msgType"`
 	MsgSection     string `json:"msgSection"`
 	MsgInsturction string `json:"msgInsturction"`
 	MsgOptions     []byte `json:"msgOptions"`
+}
+
+//NotificationParameters детальное описание сообщения
+type NotificationParameters struct {
+	Type        string `json:"type"`
+	Description string `json:"description"`
+}
+
+//UserNotification сообщение пользователю
+type UserNotification struct {
+	Notification NotificationParameters `json:"notification"`
 }
 
 //SourceControlMsgTypeInfoFromAPI подробно по источникам API->

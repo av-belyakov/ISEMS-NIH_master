@@ -28,7 +28,7 @@ func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- configure.Msg
 
 	sourcesList, err := qcs.findAll()
 	if err != nil {
-		msgResult.DataType = "error_notification"
+		msgResult.MsgSection = "error_notification"
 		msgResult.AdvancedOptions = configure.ErrorNotification{
 			SourceReport: "DB module",
 			ErrorBody:    err,
@@ -39,10 +39,7 @@ func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- configure.Msg
 		return
 	}
 
-	fmt.Println("request from DB processed success")
-	fmt.Printf("%v", sourcesList)
-
-	msgResult.DataType = "sources_list"
+	msgResult.MsgSection = "sources_list"
 	msgResult.AdvancedOptions = sourcesList
 
 	//отправка списка источников маршрутизатору ядра приложения
@@ -116,7 +113,7 @@ func (qcs *QueryCollectionSources) InserListSources(chanIn chan<- configure.MsgB
 		MsgGenerator: req.MsgRecipient,
 		MsgRecipient: req.MsgGenerator,
 		MsgDirection: "response",
-		DataType:     "source_control",
+		MsgSection:   "source_control",
 		IDClientAPI:  req.IDClientAPI,
 	}
 
@@ -149,7 +146,6 @@ func (qcs *QueryCollectionSources) InserListSources(chanIn chan<- configure.MsgB
 	}
 
 	fmt.Printf("--- source list %v", listSources)
-
 
 	list := ao.SourceList
 

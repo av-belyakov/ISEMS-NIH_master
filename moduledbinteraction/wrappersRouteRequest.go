@@ -23,7 +23,7 @@ type WrappersRouteRequest struct {
 
 //WrapperFuncSourceControl обработка запросов об источниках
 func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetweenCoreAndDB) {
-	fmt.Printf("%v", msg)
+	fmt.Printf("func 'WrapperFuncSourceControl'\n %v\n", msg)
 
 	qcs := handlerrequestdb.QueryCollectionSources{
 		NameDB:         wr.NameDB,

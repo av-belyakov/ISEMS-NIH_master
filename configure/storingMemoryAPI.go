@@ -40,11 +40,12 @@ type StoringMemoryAPI struct {
 	clientSettings map[string]*ClientSettings
 }
 
-//NewRepository создаем новый репозиторий
-func (smapi *StoringMemoryAPI) NewRepository() *StoringMemoryAPI {
+//NewRepositorySMAPI создание нового репозитория
+func NewRepositorySMAPI() *StoringMemoryAPI {
+	smapi := StoringMemoryAPI{}
 	smapi.clientSettings = map[string]*ClientSettings{}
 
-	return smapi
+	return &smapi
 }
 
 //AddNewClient добавляет нового клиента

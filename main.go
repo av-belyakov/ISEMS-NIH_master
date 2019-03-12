@@ -24,7 +24,6 @@ import (
 
 var appConfig configure.AppConfig
 var mongoDBConnect configure.MongoDBConnect
-var ism configure.InformationStoringMemory
 
 //ReadConfig читает конфигурационный файл и сохраняет данные в appConfig
 func readConfigApp(fileName string, appc *configure.AppConfig) error {
@@ -145,7 +144,7 @@ func init() {
 	//соединяемся с БД
 	mongoConnect, err := connectToDB(ctx, &appConfig)
 	if err != nil {
-		_ = saveMessageApp.LogMessage("err", fmt.Sprint(err))
+		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 		fmt.Println("Database connection error", err)
 		os.Exit(1)
@@ -155,20 +154,17 @@ func init() {
 
 	//получаем номер версии приложения
 	if err = getVersionApp(&appConfig); err != nil {
-		_ = saveMessageApp.LogMessage("err", "it is impossible to obtain the version number of the application")
+		_ = saveMessageApp.LogMessage("error", "it is impossible to obtain the version number of the application")
 	}
 
-	//инициируем хранилище информации об источниках и дескрипторов соединений с источниками
-	ism = ism.NewRepository()
-
-	fmt.Println("ENd func init")
+	fmt.Println("END func init")
 }
 
 func main() {
 	fmt.Println("!!! START func main !!!")
 
 	//запуск ядра приложения
-	coreapp.CoreApp(&appConfig, &mongoDBConnect, &ism)
+	coreapp.CoreApp(&appConfig, &mongoDBConnect)
 
 	fmt.Println("!!! END func main !!!")
 }

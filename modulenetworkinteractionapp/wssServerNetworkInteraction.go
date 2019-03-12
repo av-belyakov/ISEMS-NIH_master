@@ -25,12 +25,12 @@ import (
 //SettingsHTTPServer параметры необходимые при взаимодействии с HTTP сервером
 type SettingsHTTPServer struct {
 	Host, Port, Token string
-	StorMem           *configure.InformationStoringMemory
+	SourceList        *configure.InformationSourcesList
 }
 
 //SettingsWssServer параметры для взаимодействия с wssServer
 type SettingsWssServer struct {
-	StorMem                   *configure.InformationStoringMemory
+	SourceList                *configure.InformationSourcesList
 	MsgChangeSourceConnection chan<- [2]string
 }
 
@@ -63,7 +63,7 @@ func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWrit
 
 	remoteAddr := strings.Split(req.RemoteAddr, ":")[0]
 	//если токен валидный изменяем состояние AccessIsAllowed в true
-	_, validToken := settingsHTTPServer.StorMem.SearchSourceToken(remoteAddr, stringToken)
+	_, validToken := settingsHTTPServer.SourceList.SearchSourceToken(remoteAddr, stringToken)
 
 	if (len(stringToken) == 0) || !validToken {
 		w.Header().Set("Content-Length", strconv.Itoa(utf8.RuneCount(bodyHTTPResponseError)))
@@ -83,10 +83,10 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	saveMessageApp := savemessageapp.New()
 
 	remoteIP := strings.Split(req.RemoteAddr, ":")[0]
-	_, ipIsExist := sws.StorMem.GetSourceSetting(remoteIP)
+	_, ipIsExist := sws.SourceList.GetSourceSetting(remoteIP)
 
 	//проверяем разрешено ли данному ip соединение с сервером wss
-	if !ipIsExist || !sws.StorMem.GetAccessIsAllowed(remoteIP) {
+	if !ipIsExist || !sws.SourceList.GetAccessIsAllowed(remoteIP) {
 		w.WriteHeader(401)
 		_ = saveMessageApp.LogMessage("error", "access for the user with ipaddress "+req.RemoteAddr+" is prohibited")
 		return
@@ -114,9 +114,9 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 		c.Close()
 
 		//изменяем состояние соединения для данного источника
-		_ = sws.StorMem.ChangeSourceConnectionStatus(remoteIP)
+		_ = sws.SourceList.ChangeSourceConnectionStatus(remoteIP)
 		//удаляем линк соединения
-		sws.StorMem.DelLinkWebsocketConnection(remoteIP)
+		sws.SourceList.DelLinkWebsocketConnection(remoteIP)
 
 		_ = saveMessageApp.LogMessage("info", "disconnect for IP address "+remoteIP)
 
@@ -127,10 +127,10 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	}()
 
 	//изменяем состояние соединения для данного источника
-	_ = sws.StorMem.ChangeSourceConnectionStatus(remoteIP)
+	_ = sws.SourceList.ChangeSourceConnectionStatus(remoteIP)
 
 	//добавляем линк соединения по websocket
-	sws.StorMem.AddLinkWebsocketConnect(remoteIP, c)
+	sws.SourceList.AddLinkWebsocketConnect(remoteIP, c)
 
 	//отправляем модулю routing сообщение об изменении статуса источника
 	sws.MsgChangeSourceConnection <- [2]string{remoteIP, "connect"}
@@ -141,26 +141,25 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 }
 
 //WssServerNetworkInteraction запуск сервера для обработки запросов с источников
-func WssServerNetworkInteraction(cOut chan<- [2]string, appConf *configure.AppConfig, ism *configure.InformationStoringMemory) {
-	fmt.Println("START WSS SERVER...")
+func WssServerNetworkInteraction(cOut chan<- [2]string, appConf *configure.AppConfig, isl *configure.InformationSourcesList) {
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
 	port := strconv.Itoa(appConf.ServerHTTPS.Port)
 
 	settingsHTTPServer := SettingsHTTPServer{
-		Host:    appConf.ServerHTTPS.Host,
-		Port:    port,
-		StorMem: ism,
+		Host:       appConf.ServerHTTPS.Host,
+		Port:       port,
+		SourceList: isl,
 	}
 
 	settingsWssServer := SettingsWssServer{
-		StorMem:                   ism,
+		SourceList:                isl,
 		MsgChangeSourceConnection: cOut,
 	}
 
 	/* инициализируем HTTPS сервер */
-	log.Println("The HTTPS server is running on ip address " + appConf.ServerHTTPS.Host + ", port " + port + "\n")
+	log.Println("\tThe HTTPS server Network Integration is running on ip address " + appConf.ServerHTTPS.Host + ", port " + port + "\n")
 
 	http.HandleFunc("/", settingsHTTPServer.HandlerRequest)
 	http.HandleFunc("/wss", settingsWssServer.ServerWss)

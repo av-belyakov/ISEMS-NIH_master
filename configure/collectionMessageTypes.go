@@ -85,6 +85,7 @@ type MainOperatingParametersSource struct {
 
 //SourceDetailedInformation детальная информация по настройке источника
 type SourceDetailedInformation struct {
+	StorageFolders           []string
 	EnableTelemetry          bool //true - включить
 	MaxCountProcessFiltering int
 }

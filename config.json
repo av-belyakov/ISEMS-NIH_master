@@ -35,6 +35,6 @@
         "object": "/home/ISEMS_NIH_master_OBJECT"
     },
     "directoryLongTermStorageDownloadedFiles_comments": "директория для долговременного хранения скаченных файлов",
-    "pathLogFiles": "log",
+    "pathLogFiles": "/var/log/",
     "pathLogFiles_comments": "место расположение лог-файла приложения"
 }
