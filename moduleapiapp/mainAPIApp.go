@@ -3,10 +3,12 @@ package moduleapiapp
 /*
 * Модуль прикладного программного интерфейса (API)
 *
-* Версия 0.2, дата релиза 11.03.2019
+* Версия 0.21, дата релиза 12.03.2019
 * */
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -31,10 +33,35 @@ type channels struct {
 }
 
 var chn channels
-var storingMemoryAPI configure.StoringMemoryAPI
+var storingMemoryAPI *configure.StoringMemoryAPI
+
+//запрос на получение списка источников
+func sendMsgGetSourceList(clientID string) error {
+	errMsg := "unable to send message no customer information available"
+
+	clientSettings, ok := storingMemoryAPI.GetClientSettings(clientID)
+	if !ok {
+		return errors.New(errMsg)
+	}
+
+	msgjson, err := json.Marshal(configure.MsgCommon{
+		MsgType:        "command",
+		MsgSection:     "source control",
+		MsgInsturction: "get new source list",
+	})
+	if err != nil {
+		return err
+	}
+
+	clientSettings.SendWsMessage(1, msgjson)
+
+	return nil
+}
 
 //HandlerRequest обработчик HTTPS запроса к "/"
 func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter, req *http.Request) {
+	fmt.Println("RESIVED http request '/'")
+
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
@@ -72,11 +99,13 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 		//добавляем нового пользователя которому разрешен доступ
 		_ = storingMemoryAPI.AddNewClient(remoteAddr)
 
-		http.Redirect(w, req, "https://"+settingsServerAPI.IP+":"+settingsServerAPI.Port+"/wss", 301)
+		http.Redirect(w, req, "https://"+settingsServerAPI.IP+":"+settingsServerAPI.Port+"/api_wss", 301)
 	}
 }
 
 func serverWss(w http.ResponseWriter, req *http.Request) {
+	fmt.Println("START server wss")
+
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
@@ -121,6 +150,9 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 
 	storingMemoryAPI.SaveWssClientConnection(clientID, c)
 
+	//отправляем запрос на получение списка источников
+	sendMsgGetSourceList(clientID)
+
 	//обработка ответов получаемых от ядра приложения
 	go func() {
 		for msg := range chn.ChanOut {
@@ -139,7 +171,7 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
-	//передача сообщений в ядро
+	//маршрутизация сообщений приходящих от клиентов API
 	go func() {
 		for {
 			_, message, err := c.ReadMessage()
@@ -147,6 +179,8 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 				_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
 				break
 			}
+
+			fmt.Println("resived message from API client")
 
 			chn.ChanIn <- configure.MsgBetweenCoreAndAPI{
 				MsgGenerator: "API module",
@@ -168,16 +202,11 @@ func init() {
 		ChanIn:  make(chan configure.MsgBetweenCoreAndAPI, 10),
 	}
 
-	defer func() {
-		close(chn.ChanIn)
-		close(chn.ChanOut)
-	}()
-
-	storingMemoryAPI.NewRepository()
+	storingMemoryAPI = configure.NewRepositorySMAPI()
 }
 
-//MainAppAPI обработчик запросов поступающих через API
-func MainAppAPI(appConfig *configure.AppConfig, ism *configure.InformationStoringMemory) (chanOut, chanIn chan configure.MsgBetweenCoreAndAPI) {
+//MainAPIApp обработчик запросов поступающих через API
+func MainAPIApp(appConfig *configure.AppConfig) (chanOut, chanIn chan configure.MsgBetweenCoreAndAPI) {
 	fmt.Println("START module 'MainAppAPI'...")
 
 	settingsServerAPI := settingsServerAPI{
@@ -186,59 +215,18 @@ func MainAppAPI(appConfig *configure.AppConfig, ism *configure.InformationStorin
 		Token: appConfig.AuthenticationTokenClientAPI,
 	}
 
-	//создаем сервер wss для подключения клиентов
-	http.HandleFunc("/", settingsServerAPI.HandlerRequest)
-	http.HandleFunc("/wss", serverWss)
+	go func() {
+		//создаем сервер wss для подключения клиентов
+		http.HandleFunc("/api", settingsServerAPI.HandlerRequest)
+		http.HandleFunc("/api_wss", serverWss)
 
-	err := http.ListenAndServeTLS(settingsServerAPI.IP+":"+settingsServerAPI.Port, appConfig.ServerAPI.PathCertFile, appConfig.ServerAPI.PathPrivateKeyFile, nil)
-	if err != nil {
-		log.Println(err)
-		os.Exit(1)
-	}
-
-	/* ПОКА ПРОСТО ТЕСТОВОЕ СООБЩЕНИЕ С НОВЫМ СПИСКОМ ИСТОЧНИКОВ */
-	// --- ТЕСТОВЫЙ ОТВЕТ ---
-	/*	chanIn <- configure.MsgBetweenCoreAndAPI{
-				MsgGenerator: "API module",
-				MsgRecipient: "Core module",
-				IDClientAPI:  "du68whfh733hjf9393",
-		MsgJSON:
-	*/
-
-	/*
-	   ПОДГОТОВИТЬ ТЕСТОВЫЙ JSON КОТОРЫЙ ДОБАВЛЯЕТСЯ В MsgJSON
-
-
-	   ОТПРАВЛЯТЬ СООБЩЕНИЕ С ПРЕКЛКПЛЕННОМ К НЕМУ JSON данными полученными
-	   от клиента API
-
-	   MsgType:      "information",
-	   		MsgSection:   "source control",
-	   		IDClientAPI:  "du68whfh733hjf9393",
-	   		AdvancedOptions: configure.MsgInfoChangeStatusSource{
-	   			SourceListIsExist: true,
-	   			SourceList: []configure.MainOperatingParametersSource{
-	   				{9, "127.0.0.1", "fmdif3o444fdf344k0fiif", false, configure.SourceDetailedInformation{}},
-	   				{10, "192.168.0.10", "fmdif3o444fdf344k0fiif", false, configure.SourceDetailedInformation{}},
-	   				{11, "192.168.0.11", "ttrr9gr9r9e9f9fadx94", false, configure.SourceDetailedInformation{}},
-	   				{12, "192.168.0.12", "2n3n3iixcxcc3444xfg0222", false, configure.SourceDetailedInformation{}},
-	   				{13, "192.168.0.13", "osdsoc9c933cc9cn939f9f33", true, configure.SourceDetailedInformation{}},
-	   				{14, "192.168.0.14", "hgdfffffff9333ffodffodofff0", true, configure.SourceDetailedInformation{}},
-	   			},
-	   		},
-	   	}*/
-	//------------------------
-
-	/*
-	   if message := <-*ism.ChannelCollection.ChanMessageToAPI {
-	   	*ism.ChannelCollection.ChanMessageFromAPI<- configure.MessageAPI{
-	   		MsgID: "2",
-	   		MsgType: "response",
-	   		MsgDate: 838283,
-	   	}
-	   }
-	   	fmt.Println("MESSAGE TO API:", <-*ism.ChannelCollection.ChanMessageToAPI)
-	*/
+		err := http.ListenAndServeTLS(settingsServerAPI.IP+":"+settingsServerAPI.Port, appConfig.ServerAPI.PathCertFile, appConfig.ServerAPI.PathPrivateKeyFile, nil)
+		if err != nil {
+			log.Println(err)
+			os.Exit(1)
+		}
+	}()
+	log.Println("\tAPI server successfully started at", settingsServerAPI.IP+":"+settingsServerAPI.Port)
 
 	return chn.ChanOut, chn.ChanIn
 }
