@@ -1,19 +1,12 @@
 package configure
 
-/*
-* Описание типа в котором хранятся параметры для клиентов подключенных к API
-* */
-
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"errors"
-	"io"
-	"strconv"
 	"sync"
-	"time"
 
 	"github.com/gorilla/websocket"
+
+	"ISEMS-NIH_master/common"
 )
 
 //ClientSettings параметры подключения клиента
@@ -50,11 +43,8 @@ func NewRepositorySMAPI() *StoringMemoryAPI {
 
 //AddNewClient добавляет нового клиента
 func (smapi *StoringMemoryAPI) AddNewClient(clientIP string) string {
-	currentTime := time.Now().Unix()
-	h := md5.New()
-	io.WriteString(h, clientIP+"_"+strconv.FormatInt(currentTime, 10))
+	hsum := common.GetUniqIDFormatMD5(clientIP)
 
-	hsum := hex.EncodeToString(h.Sum(nil))
 	smapi.clientSettings[hsum] = &ClientSettings{
 		IP:        clientIP,
 		IsAllowed: true,
@@ -71,7 +61,7 @@ func (smapi *StoringMemoryAPI) SearchClientForIP(ip string) (string, *ClientSett
 		}
 	}
 
-	return "", &ClientSettings{}, false
+	return "", nil, false
 }
 
 //GetClientSettings получить все настройки клиента
@@ -114,4 +104,103 @@ func (smapi *StoringMemoryAPI) searchID(id string) error {
 	}
 
 	return nil
+}
+
+//DescriptionTaskParameters описание параметров задачи
+type DescriptionTaskParameters struct{}
+
+//TaskDescription описание задачи
+// ClientID - уникальный идентификатор клиента
+// TaskSection - секция к которой относится задача
+// TaskType - тип выполняемой задачи
+// ModuleThatSetTask - модуль от которого поступила задача
+// ModuleResponsibleImplementation - модуль который должен выполнить обработку
+// TimeUpdate - время последнего обновления в формате Unix
+// TaskParameter - дополнительные параметры
+type TaskDescription struct {
+	ClientID                        string
+	TaskType                        string
+	ModuleThatSetTask               string
+	ModuleResponsibleImplementation string
+	TimeUpdate                      int64
+	TaskParameter                   DescriptionTaskParameters
+}
+
+//StoringMemoryTask описание типа в котором храняться описание и ID выполняемых задач
+// ключом отображения является уникальный идентификатор задачи
+type StoringMemoryTask struct {
+	tasks map[string]*TaskDescription
+}
+
+//NewRepositorySMT создание нового рапозитория для хранения выполняемых задач
+func NewRepositorySMT() *StoringMemoryTask {
+	smt := StoringMemoryTask{}
+	smt.tasks = map[string]*TaskDescription{}
+
+	return &smt
+}
+
+//AddStoringMemoryTask добавить задачу
+// если задачи с заданным ID нет, то в ответ TRUE, если есть то задача не
+// изменяется, а в ответ приходит FALSE
+func (smt *StoringMemoryTask) AddStoringMemoryTask(td TaskDescription) (string, bool) {
+	taskID := common.GetUniqIDFormatMD5(td.ClientID)
+
+	if _, ok := smt.GetStoringMemoryTask(taskID); !ok {
+		return "", false
+	}
+
+	smt.tasks[taskID] = &td
+
+	return taskID, true
+}
+
+//DelStoringMemoryTask удалить задачу
+func (smt *StoringMemoryTask) DelStoringMemoryTask(taskID string) {
+	delete(smt.tasks, taskID)
+}
+
+//GetStoringMemoryTask получить информацию о задаче по ее ID
+func (smt StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescription, bool) {
+	if _, ok := smt.tasks[taskID]; ok {
+		return smt.tasks[taskID], ok
+	}
+
+	return nil, false
+}
+
+//GetAllStoringMemoryTask получить все ID задач для выбранного клиента
+func (smt StoringMemoryTask) GetAllStoringMemoryTask(clientID string) []string {
+	foundTask := make([]string, 0, len(smt.tasks))
+
+	for tid, v := range smt.tasks {
+		if clientID == v.ClientID {
+			foundTask = append(foundTask, tid)
+		}
+	}
+
+	return foundTask
+}
+
+//TimeUpdateStoringMemoryTask обновить значение таймера в задачи
+func (smt *StoringMemoryTask) TimeUpdateStoringMemoryTask(taskID string, time int64) bool {
+	if _, ok := smt.GetStoringMemoryTask(taskID); !ok {
+		return false
+	}
+
+	smt.tasks[taskID].TimeUpdate = time
+
+	return true
+}
+
+//CounterCheckTimeUpdateStoringMemoryTask счетчик проверяющий время обнавления
+// задачи и отправляющий, через канал, ID задачи которая устарела
+func (smt StoringMemoryTask) CounterCheckTimeUpdateStoringMemoryTask() chan string {
+	chanOut := make(chan string)
+
+	/*
+		!!! НЕ ДОПИСАН !!!
+	*/
+
+	return chanOut
 }

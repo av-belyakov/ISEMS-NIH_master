@@ -4,22 +4,24 @@ package coreapp
 * Ядро приложения
 * Маршрутизация сообщений получаемых через каналы
 *
-* Версия 0.2, дата релиза 04.03.2019
+* Версия 0.3, дата релиза 13.03.2019
 * */
 
 import (
 	"fmt"
 
+	"ISEMS-NIH_master/common/notifications"
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/coreapp/handlerslist"
+	"ISEMS-NIH_master/savemessageapp"
 )
 
 //Routing маршрутизирует данные поступающие в ядро из каналов
-func Routing(appConf *configure.AppConfig, cc *configure.ChannelCollectionCoreApp) {
+func Routing(appConf *configure.AppConfig, cc *configure.ChannelCollectionCoreApp, smt *configure.StoringMemoryTask) {
 	fmt.Println("START ROUTE module 'CoreApp'...")
 
 	//инициализируем функцию конструктор для записи лог-файлов
-	//saveMessageApp := savemessageapp.New()
+	saveMessageApp := savemessageapp.New()
 
 	//при старте приложения запрашиваем у БД список источников
 	cc.OutCoreChanDB <- configure.MsgBetweenCoreAndDB{
@@ -42,7 +44,12 @@ func Routing(appConf *configure.AppConfig, cc *configure.ChannelCollectionCoreAp
 		case data := <-cc.InCoreChanAPI:
 
 			fmt.Println("MESSAGE FROM module API")
-			fmt.Println(data)
+
+			if errMsg, err := handlerslist.HandlerMsgFromAPI(cc.OutCoreChanNI, &data, smt, cc.OutCoreChanDB); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+				notifications.SendNotificationToClientAPI(cc.OutCoreChanAPI, "danger", errMsg, data.IDClientAPI)
+			}
 
 		/*if data.MsgGenerator == "API module" && data.MsgRecipient == "Core module" {
 			var msgc configure.MsgCommon

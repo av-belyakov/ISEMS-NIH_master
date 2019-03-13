@@ -1,5 +1,11 @@
 package handlers
 
+/*
+* Обработчик запросов от ядра приложения
+*
+* Версия 0.1, дата релиза 13.03.2019
+* */
+
 import (
 	"fmt"
 
@@ -7,7 +13,7 @@ import (
 )
 
 //HandlerMsgFromCore обработчик сообщений от ядра приложения
-func HandlerMsgFromCore(cwt chan<- configure.MsgWsTransmission, isl *configure.InformationSourcesList, msg configure.MsgBetweenCoreAndNI) {
+func HandlerMsgFromCore(cwt chan<- configure.MsgWsTransmission, isl *configure.InformationSourcesList, msg configure.MsgBetweenCoreAndNI, chanInCore chan<- configure.MsgBetweenCoreAndNI) {
 	fmt.Println("START func HandlerMsgFromCore...")
 
 	//инициализируем функцию конструктор для записи лог-файлов
@@ -15,16 +21,29 @@ func HandlerMsgFromCore(cwt chan<- configure.MsgWsTransmission, isl *configure.I
 
 	switch msg.Section {
 	case "sources_control":
-		if msg.Command == "load list" {
+		if msg.Command == "create list" {
 			if sl, ok := msg.AdvancedOptions.([]configure.InformationAboutSource); ok {
-				loadSources(isl, sl)
+				createSourceList(isl, sl)
 
-				fmt.Println("create source list for memory success")
+				fmt.Println("create source list for memory success (OUT DATABASE)")
 				fmt.Printf("\n%T%v\n", isl, isl)
 			}
 		}
 
-		if msg.Command == "add" {
+		if msg.Command == "load list" {
+			if sl, ok := msg.AdvancedOptions.(configure.SourceControlMsgTypeFromAPI); ok {
+
+				updateSourceList(chanInCore, isl, sl)
+
+				fmt.Println("create source list for memory success (OUT API MODULE)")
+				fmt.Printf("\n%T%v\n", isl, isl)
+			}
+		}
+
+		if msg.Command == "update list" {
+
+		}
+		/*if msg.Command == "add" {
 
 		}
 
@@ -38,7 +57,7 @@ func HandlerMsgFromCore(cwt chan<- configure.MsgWsTransmission, isl *configure.I
 
 		if msg.Command == "reconnect" {
 
-		}
+		}*/
 
 	case "filtration_control":
 		if msg.Command == "start" {
@@ -61,7 +80,8 @@ func HandlerMsgFromCore(cwt chan<- configure.MsgWsTransmission, isl *configure.I
 	}
 }
 
-func loadSources(isl *configure.InformationSourcesList, list []configure.InformationAboutSource) {
+//createSourceList создает новый список источников на основе полученного из БД
+func createSourceList(isl *configure.InformationSourcesList, list []configure.InformationAboutSource) {
 	for _, source := range list {
 		isl.AddSourceSettings(source.IP, configure.SourceSetting{
 			ID:       source.ID,
@@ -70,4 +90,15 @@ func loadSources(isl *configure.InformationSourcesList, list []configure.Informa
 			Settings: source.SourceSetting,
 		})
 	}
+}
+
+//updateSourceList при получении от клиента API обновляет информацию по источникам
+func updateSourceList(chanInCore chan<- configure.MsgBetweenCoreAndNI, isl *configure.InformationSourcesList, l configure.SourceControlMsgTypeFromAPI) {
+	fmt.Printf("\n function 'updateSourceList' list sources from client API %v", l)
+	fmt.Println("Дальше нужно делать после тестов")
+}
+
+//performActionSelectedSources выполняет действия только с заданными источниками
+func performActionSelectedSources() {
+
 }

@@ -17,7 +17,7 @@ import (
 )
 
 //RouteCoreRequest маршрутизирует запросы от CoreApp и обрабатывает сообщения от wss модулей
-func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, isl *configure.InformationSourcesList, chanOutCore <-chan configure.MsgBetweenCoreAndNI, chanColl map[string]chan [2]string) {
+func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, chanInCore chan<- configure.MsgBetweenCoreAndNI, isl *configure.InformationSourcesList, chanColl map[string]chan [2]string, chanOutCore <-chan configure.MsgBetweenCoreAndNI) {
 	fmt.Println("START module 'RouteCoreRequest' (network interaction)...")
 
 	//инициализируем функцию конструктор для записи лог-файлов
@@ -94,13 +94,13 @@ func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, isl *configure.Inf
 			fmt.Println("RESIVED data FROM CoreApp!!!")
 			fmt.Printf("%v\n", msg)
 
-			handlers.HandlerMsgFromCore(cwt, isl, msg)
+			handlers.HandlerMsgFromCore(cwt, isl, msg, chanInCore)
 		}
 	}
 }
 
 //RouteWssConnectionResponse маршрутизирует сообщения от источников
-func RouteWssConnectionResponse(cwt chan<- configure.MsgWsTransmission, chanInCore chan<- configure.MsgBetweenCoreAndNI, isl *configure.InformationSourcesList) {
+func RouteWssConnectionResponse(cwt chan<- configure.MsgWsTransmission, isl *configure.InformationSourcesList, chanInCore chan<- configure.MsgBetweenCoreAndNI) {
 	fmt.Println("START module 'RouteWssConnectionResponse' (network interaction)...")
 
 	//инициализируем функцию конструктор для записи лог-файлов

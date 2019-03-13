@@ -42,9 +42,9 @@ func MainNetworkInteraction(appConf *configure.AppConfig) (chanOutCore, chanInCo
 	isl := configure.NewRepositoryISL()
 
 	//маршрутизат запросов получаемых от CoreApp
-	go RouteCoreRequest(cwt, isl, chanOutCore, chansStatSource)
+	go RouteCoreRequest(cwt, chanInCore, isl, chansStatSource, chanOutCore)
 	//маршрутизат запросов получаемых Wss
-	go RouteWssConnectionResponse(cwt, chanInCore, isl)
+	go RouteWssConnectionResponse(cwt, isl, chanInCore)
 
 	//запуск модуля wssServerNI
 	go WssServerNetworkInteraction(chansStatSource["outWssModuleServer"], appConf, isl)

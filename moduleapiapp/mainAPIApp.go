@@ -60,7 +60,7 @@ func sendMsgGetSourceList(clientID string) error {
 
 //HandlerRequest обработчик HTTPS запроса к "/"
 func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter, req *http.Request) {
-	fmt.Println("RESIVED http request '/'")
+	fmt.Println("RESIVED http request '/api'")
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
@@ -137,8 +137,11 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 		storingMemoryAPI.DelClientAPI(clientID)
 
 		_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
+
+		log.Println("Client API whis ip", remoteIP, "is disconnect")
 	}
-	defer func() {
+
+	/*defer func() {
 		c.Close()
 
 		//удаляем информацию о клиенте
@@ -146,11 +149,11 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 		_ = saveMessageApp.LogMessage("info", "Server API - disconnect for IP address "+remoteIP)
 
 		fmt.Println("Client API whis ip", remoteIP, "is disconnect")
-	}()
+	}()*/
 
 	storingMemoryAPI.SaveWssClientConnection(clientID, c)
 
-	//отправляем запрос на получение списка источников
+	//при подключении клиента отправляем запрос на получение списка источников
 	sendMsgGetSourceList(clientID)
 
 	//обработка ответов получаемых от ядра приложения
@@ -176,7 +179,13 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 		for {
 			_, message, err := c.ReadMessage()
 			if err != nil {
+				c.Close()
+
+				//удаляем информацию о клиенте
+				storingMemoryAPI.DelClientAPI(clientID)
 				_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
+
+				log.Println("Client API whis ip", remoteIP, "is disconnect")
 				break
 			}
 

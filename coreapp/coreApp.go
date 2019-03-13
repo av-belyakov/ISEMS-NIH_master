@@ -19,6 +19,9 @@ import (
 func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConnect) {
 	fmt.Println("START module 'CoreAppMain'...")
 
+	//инициализация хранилища для учета выполняемых задач
+	smt := configure.NewRepositorySMT()
+
 	//запуск подпрограммы для взаимодействия с БД
 	chanOutCoreDB, chanInCoreDB := moduledbinteraction.MainDBInteraction(appConf.ConnectionDB.NameDB, linkConnection)
 
@@ -38,5 +41,5 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	}
 
 	//запуск подпрограммы для маршрутизации запросов внутри приложения
-	Routing(appConf, &chanColl)
+	Routing(appConf, &chanColl, smt)
 }

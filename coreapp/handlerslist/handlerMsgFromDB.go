@@ -35,7 +35,7 @@ func HandlerMsgFromDB(chanToAPI chan<- configure.MsgBetweenCoreAndAPI, res *conf
 			case "sources_list":
 				chanToNI <- configure.MsgBetweenCoreAndNI{
 					Section:         "sources_control",
-					Command:         "load list",
+					Command:         "create list",
 					AdvancedOptions: res.AdvancedOptions,
 				}
 

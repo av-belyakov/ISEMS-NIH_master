@@ -14,6 +14,7 @@ type MsgWsTransmission struct {
 }
 
 // MsgBetweenCoreAndNI используется для взаимодействия между ядром приложения и модулем сет. взаимодействия
+// TaskID - ID задачи
 // Section:
 //  - 'sources_control'
 //  - 'filtration_control'
@@ -21,10 +22,9 @@ type MsgWsTransmission struct {
 // Command:
 //  - для source_control:
 //		* 'load list'
-//		* 'add'
-//		* 'del'
-// 		* 'update'
-//		* 'reconnect'
+// 		* 'update list' (для каждого источника свое возможно действие например,
+//			один источник нужно добавить 'add', другой удалить 'del', а третий
+// 			перезапустить 'reconnect')
 //  - для filtration_control:
 //		* 'start'
 //		* 'stop'
@@ -33,6 +33,7 @@ type MsgWsTransmission struct {
 //		* 'start'
 //		* 'stop'
 type MsgBetweenCoreAndNI struct {
+	TaskID          string
 	Section         string
 	Command         string
 	AdvancedOptions interface{}

@@ -1,4 +1,4 @@
-package notification
+package notifications
 
 import (
 	"encoding/json"
@@ -8,18 +8,16 @@ import (
 
 //SendNotificationToClientAPI отправить сообщение клиенту API
 func SendNotificationToClientAPI(c chan<- configure.MsgBetweenCoreAndAPI, msgType, msgDescription, clientID string) {
-	msg, _ := json.Marshal(configure.UserNotification{
-		Notification: configure.NotificationParameters{
-			Type:        msgType,
-			Description: msgDescription,
-		},
-	})
-
 	msgjson, _ := json.Marshal(&configure.MsgCommon{
 		MsgType:        "information",
 		MsgSection:     "user notification",
 		MsgInsturction: "send notification",
-		MsgOptions:     msg,
+		MsgOptions: configure.UserNotification{
+			Notification: configure.NotificationParameters{
+				Type:        msgType,
+				Description: msgDescription,
+			},
+		},
 	})
 
 	//отправляем ошибку
