@@ -4,6 +4,12 @@ package configure
 * Описание сообщений типа JSON передоваемых между API и клиентами
 * */
 
+//MsgCommonTask общее сообщение которое должно содержать ID задачи
+/*type MsgCommonTask struct {
+	TaskID string `json:"taskID"`
+	MsgCommon
+}*/
+
 //MsgCommon общее сообщение
 // MsgType:
 //  - 'information'
@@ -25,18 +31,31 @@ type MsgCommon struct {
 	MsgType        string `json:"msgType"`
 	MsgSection     string `json:"msgSection"`
 	MsgInsturction string `json:"msgInsturction"`
-	MsgOptions     interface{}/*[]byte*/ `json:"msgOptions"`
+	ClientTaskID   string `json:"taskID"`
+	//MsgOptions     interface{} `json:"msgOptions"`
+}
+
+//MsgNotification информационное сообщение
+type MsgNotification struct {
+	MsgCommon
+	MsgOptions UserNotification `json:"msgOptions"`
 }
 
 //NotificationParameters детальное описание сообщения
 type NotificationParameters struct {
-	Type        string `json:"type"`
-	Description string `json:"description"`
+	Type        string   `json:"type"`
+	Description string   `json:"description"`
+	Sources     []string `json:"sources"`
 }
 
 //UserNotification сообщение пользователю
 type UserNotification struct {
 	Notification NotificationParameters `json:"notification"`
+}
+
+//SourceControlMsgOptions опции настройки источников
+type SourceControlMsgOptions struct {
+	MsgOptions SourceControlMsgTypeFromAPI `json:"msgOptions"`
 }
 
 //SourceControlMsgTypeFromAPI подробно по источникам API->
@@ -81,6 +100,7 @@ type SourceListFromAPI struct {
 	ID         int             `json:"id"`
 	ActionType string          `json:"actionType"`
 	Argument   SourceArguments `json:"argument"`
+	//map[string]SourceArguments `json:"argument"`
 }
 
 //SourceArguments параметры источников

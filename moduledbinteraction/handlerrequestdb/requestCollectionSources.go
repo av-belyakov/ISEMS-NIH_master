@@ -39,7 +39,7 @@ func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- configure.Msg
 		return
 	}
 
-	msgResult.MsgSection = "sources_list"
+	msgResult.MsgSection = "source list"
 	msgResult.AdvancedOptions = sourcesList
 
 	//отправка списка источников маршрутизатору ядра приложения
@@ -113,7 +113,7 @@ func (qcs *QueryCollectionSources) InserListSources(chanIn chan<- configure.MsgB
 		MsgGenerator: req.MsgRecipient,
 		MsgRecipient: req.MsgGenerator,
 		MsgDirection: "response",
-		MsgSection:   "source_control",
+		MsgSection:   "source control",
 		IDClientAPI:  req.IDClientAPI,
 	}
 

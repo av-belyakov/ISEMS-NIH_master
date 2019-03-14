@@ -146,7 +146,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 func (smt *StoringMemoryTask) AddStoringMemoryTask(td TaskDescription) (string, bool) {
 	taskID := common.GetUniqIDFormatMD5(td.ClientID)
 
-	if _, ok := smt.GetStoringMemoryTask(taskID); !ok {
+	if _, ok := smt.GetStoringMemoryTask(taskID); ok {
 		return "", false
 	}
 

@@ -45,59 +45,13 @@ func Routing(appConf *configure.AppConfig, cc *configure.ChannelCollectionCoreAp
 
 			fmt.Println("MESSAGE FROM module API")
 
-			if errMsg, err := handlerslist.HandlerMsgFromAPI(cc.OutCoreChanNI, &data, smt, cc.OutCoreChanDB); err != nil {
+			if taskID, ns, err := handlerslist.HandlerMsgFromAPI(cc.OutCoreChanNI, &data, smt, cc.OutCoreChanDB); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-				notifications.SendNotificationToClientAPI(cc.OutCoreChanAPI, "danger", errMsg, data.IDClientAPI)
+				//это сообщение для клиента только когда есть какие либо ошибки в функции HandlerMsgFromAPI
+				notifications.SendNotificationToClientAPI(cc.OutCoreChanAPI, ns, taskID, data.IDClientAPI)
 			}
 
-		/*if data.MsgGenerator == "API module" && data.MsgRecipient == "Core module" {
-			var msgc configure.MsgCommon
-
-			m := "получен некорректный формат JSON сообщения"
-			if err := json.Unmarshal(data.MsgJSON, &msgc); err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-				common.SendNotificationToClientAPI(cc.OutCoreChanAPI, "danger", m, data.IDClientAPI)
-			}
-
-			handlerslist.HandlerMsgFromAPI(cc.OutCoreChanDB, data.IDClientAPI, data.MsgGenerator, &msgc, cc.OutCoreChanNI)
-
-			/*if msgc.MsgType == "information" {
-				fmt.Println("resived message type 'information' from API module")
-
-				handler, ok := handlersInfoMsgFromAPI[msgc.MsgSection]
-				if !ok {
-					_ = saveMessageApp.LogMessage("error", "from the API passed an invalid data type (module Core route)")
-
-					common.SendNotificationToClientAPI(cc.OutCoreChanAPI, "danger", m, data.IDClientAPI)
-				}
-
-				if err := handler(cc.OutCoreChanDB, data.IDClientAPI, msgc.MsgInsturction, msgc.MsgOptions); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-					common.SendNotificationToClientAPI(cc.OutCoreChanAPI, "danger", m, data.IDClientAPI)
-				}
-			}
-
-			if msgc.MsgType == "command" {
-				fmt.Println("resived message type COMMAND from API module")
-
-				handler, ok := handlersCommandMsgFromAPI[msgc.MsgSection]
-				if !ok {
-					_ = saveMessageApp.LogMessage("error", "from the API passed an invalid data type (module Core route)")
-
-					common.SendNotificationToClientAPI(cc.OutCoreChanAPI, "danger", m, data.IDClientAPI)
-				}
-
-				if err := handler(cc.OutCoreChanDB, data.IDClientAPI, msgc.MsgInsturction, msgc.MsgOptions); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-					common.SendNotificationToClientAPI(cc.OutCoreChanAPI, "danger", m, data.IDClientAPI)
-				}
-
-			}
-		}*/
 		//CHANNEL FROM NETWORK INTERACTION
 		case data := <-cc.InCoreChanNI:
 

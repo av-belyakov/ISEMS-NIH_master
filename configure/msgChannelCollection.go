@@ -58,7 +58,7 @@ type MsgBetweenCoreAndAPI struct {
 	MsgGenerator string
 	MsgRecipient string
 	IDClientAPI  string
-	MsgJSON      []byte
+	MsgJSON      interface{} //[]byte
 }
 
 //MsgBetweenCoreAndDB используется для взаимодействия между ядром и модулем взаимодействия с БД

@@ -6,19 +6,30 @@ import (
 	"ISEMS-NIH_master/configure"
 )
 
+//NotificationSettingsToClientAPI параметры сообщения отправляемые клиенту API
+type NotificationSettingsToClientAPI struct {
+	MsgType, MsgDescription string
+	Sources                 []string
+}
+
 //SendNotificationToClientAPI отправить сообщение клиенту API
-func SendNotificationToClientAPI(c chan<- configure.MsgBetweenCoreAndAPI, msgType, msgDescription, clientID string) {
-	msgjson, _ := json.Marshal(&configure.MsgCommon{
-		MsgType:        "information",
-		MsgSection:     "user notification",
-		MsgInsturction: "send notification",
+func SendNotificationToClientAPI(c chan<- configure.MsgBetweenCoreAndAPI, ns NotificationSettingsToClientAPI, taskID, clientID string) {
+	notify := configure.MsgNotification{
 		MsgOptions: configure.UserNotification{
 			Notification: configure.NotificationParameters{
-				Type:        msgType,
-				Description: msgDescription,
+				Type:        ns.MsgType,
+				Description: ns.MsgDescription,
+				Sources:     ns.Sources,
 			},
 		},
-	})
+	}
+
+	notify.MsgType = "information"
+	notify.MsgSection = "user notification"
+	notify.MsgInsturction = "send notification"
+	notify.ClientTaskID = taskID
+
+	msgjson, _ := json.Marshal(&notify)
 
 	//отправляем ошибку
 	c <- configure.MsgBetweenCoreAndAPI{

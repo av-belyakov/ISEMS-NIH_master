@@ -23,26 +23,6 @@ func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, chanInCore chan<- 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
-	/*messageHandler := map[string]map[string]int{
-		"information": map[string]int{
-			"change_status_source": 1,
-			"source_telemetry":     2,
-			"filtration":            3,
-			"download":             4,
-			"error_message":        5,
-		},
-		"instraction": map[string]int{
-			"add_source":            1,
-			"delete_source":         2,
-			"change_setting_source": 3,
-			"filtration_start":       4,
-			"filtration_stop":        5,
-			"download_start":        6,
-			"download_stop":         7,
-			"download_resume":       8,
-		},
-	}*/
-
 	//обработка данных получаемых через каналы
 	for {
 		select {
@@ -91,9 +71,6 @@ func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, chanInCore chan<- 
 
 			//обработка сообщения от ядра
 		case msg := <-chanOutCore:
-			fmt.Println("RESIVED data FROM CoreApp!!!")
-			fmt.Printf("%v\n", msg)
-
 			handlers.HandlerMsgFromCore(cwt, isl, msg, chanInCore)
 		}
 	}

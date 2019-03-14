@@ -15,31 +15,31 @@ func HandlerMsgFromDB(chanToAPI chan<- configure.MsgBetweenCoreAndAPI, res *conf
 	if res.MsgGenerator == "DB module" {
 		if res.MsgRecipient == "API module" {
 			switch res.MsgSection {
-			case "sources_control":
+			case "source control":
 
-			case "source_telemetry":
+			case "source telemetry":
 
 			case "filtration":
 
 			case "download":
 
-			case "information_search_results":
+			case "information search results":
 
-			case "error_notification":
+			case "error notification":
 
 			}
 		}
 
 		if res.MsgRecipient == "NI module" {
 			switch res.MsgSection {
-			case "sources_list":
+			case "source list":
 				chanToNI <- configure.MsgBetweenCoreAndNI{
-					Section:         "sources_control",
+					Section:         "source control",
 					Command:         "create list",
 					AdvancedOptions: res.AdvancedOptions,
 				}
 
-			case "sources_control":
+			case "source control":
 
 			case "filtration":
 

@@ -15,7 +15,7 @@ import (
 
 //WssClientNetworkInteraction обрабатывает запросы с источников
 func WssClientNetworkInteraction(cOut chan<- [2]string, timeReconnect int, ism *configure.InformationSourcesList, cIn <-chan [2]string) {
-	log.Println("\tThe client Network Integration is running")
+	log.Println("\tThe HTTPS client Network Integration is running")
 
 	/*
 		в cOut chan<- [2]string отправляем сообщения о установленных или

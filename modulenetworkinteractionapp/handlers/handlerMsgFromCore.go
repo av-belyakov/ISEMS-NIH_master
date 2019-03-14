@@ -20,24 +20,39 @@ func HandlerMsgFromCore(cwt chan<- configure.MsgWsTransmission, isl *configure.I
 	//saveMessageApp := savemessageapp.New()
 
 	switch msg.Section {
-	case "sources_control":
+	case "source control":
 		if msg.Command == "create list" {
+
+			fmt.Println("CREATE LIST")
+
 			if sl, ok := msg.AdvancedOptions.([]configure.InformationAboutSource); ok {
+
 				createSourceList(isl, sl)
 
 				fmt.Println("create source list for memory success (OUT DATABASE)")
-				fmt.Printf("\n%T%v\n", isl, isl)
 			}
 		}
 
 		if msg.Command == "load list" {
-			if sl, ok := msg.AdvancedOptions.(configure.SourceControlMsgTypeFromAPI); ok {
+			if ado, ok := msg.AdvancedOptions.(configure.SourceControlMsgOptions); ok {
+				fmt.Println("interface{} -> user type is ", ok)
 
-				updateSourceList(chanInCore, isl, sl)
-
-				fmt.Println("create source list for memory success (OUT API MODULE)")
-				fmt.Printf("\n%T%v\n", isl, isl)
+				updateSourceList(chanInCore, isl, ado.MsgOptions.SourceList)
 			}
+
+			/*			for k, v := range msg.AdvancedOptions.(configure.SourceControlMsgTypeFromAPI) {
+						fmt.Println(k)
+						fmt.Printf("%T", v)
+					}*/
+
+			//			fmt.Println(msg.AdvancedOptions.([]configure.SourceListFromAPI))
+			/*			if sl, ok := msg.AdvancedOptions.(configure.SourceControlMsgTypeFromAPI); ok {
+
+						updateSourceList(chanInCore, isl, sl)
+
+						fmt.Println("create source list for memory success (OUT API MODULE)")
+						fmt.Printf("\n%T%v\n", isl, isl)
+					}*/
 		}
 
 		if msg.Command == "update list" {
@@ -59,7 +74,7 @@ func HandlerMsgFromCore(cwt chan<- configure.MsgWsTransmission, isl *configure.I
 
 		}*/
 
-	case "filtration_control":
+	case "filtration control":
 		if msg.Command == "start" {
 
 		}
@@ -68,7 +83,7 @@ func HandlerMsgFromCore(cwt chan<- configure.MsgWsTransmission, isl *configure.I
 
 		}
 
-	case "download_control":
+	case "download control":
 		if msg.Command == "start" {
 
 		}
@@ -93,8 +108,8 @@ func createSourceList(isl *configure.InformationSourcesList, list []configure.In
 }
 
 //updateSourceList при получении от клиента API обновляет информацию по источникам
-func updateSourceList(chanInCore chan<- configure.MsgBetweenCoreAndNI, isl *configure.InformationSourcesList, l configure.SourceControlMsgTypeFromAPI) {
-	fmt.Printf("\n function 'updateSourceList' list sources from client API %v", l)
+func updateSourceList(chanInCore chan<- configure.MsgBetweenCoreAndNI, isl *configure.InformationSourcesList, l []configure.SourceListFromAPI) {
+	fmt.Printf("\n function 'updateSourceList' list sources from client API \n%v\n", l)
 	fmt.Println("Дальше нужно делать после тестов")
 }
 

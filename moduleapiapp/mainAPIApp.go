@@ -159,7 +159,7 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 	//обработка ответов получаемых от ядра приложения
 	go func() {
 		for msg := range chn.ChanOut {
-			fmt.Println("resived message from Core to API", msg)
+			//			fmt.Println("resived message from Core to API", msg)
 
 			if msg.MsgGenerator == "Core module" && msg.MsgRecipient == "API module" {
 				clientSettings, ok := storingMemoryAPI.GetClientSettings(msg.IDClientAPI)
@@ -167,7 +167,12 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 					_ = saveMessageApp.LogMessage("error", "Server API - client with id "+msg.IDClientAPI+" not found, he sending data is not possible")
 				}
 
-				if err := clientSettings.SendWsMessage(1, msg.MsgJSON); err != nil {
+				msgjson, ok := msg.MsgJSON.([]byte)
+				if !ok {
+					_ = saveMessageApp.LogMessage("error", "Server API - failed to send json message, error while casting type")
+				}
+
+				if err := clientSettings.SendWsMessage(1, msgjson); err != nil {
 					_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
 				}
 			}
