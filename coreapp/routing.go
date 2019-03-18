@@ -56,24 +56,10 @@ func Routing(appConf *configure.AppConfig, cc *configure.ChannelCollectionCoreAp
 		case data := <-cc.InCoreChanNI:
 
 			fmt.Println("MESSAGE FROM module NetworkInteraction")
-			//использовать канал cc.OutCoreChanNI для ответа
-			fmt.Println(data)
 
-			/*if data.MsgType == "command" {
-				fmt.Println("resived message type 'command' from module NI")
+			if err := handlerslist.HandlerMsgFromNI(cc.OutCoreChanAPI, &data, smt, cc.OutCoreChanDB); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
-			if data.MsgType == "information" {
-				fmt.Println("resived message type 'information' from module NI")
-
-				handler, ok := handlersInfoMsgIN[data.DataType]
-				if !ok {
-					_ = saveMessageApp.LogMessage("error", "from the API passed an invalid data type (module Core route)")
-				}
-
-				if err := handler(data.IDClientAPI, data.AdvancedOptions); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-				}
-			}*/
 		}
 	}
 }

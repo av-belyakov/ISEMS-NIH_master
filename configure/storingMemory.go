@@ -143,16 +143,12 @@ func NewRepositorySMT() *StoringMemoryTask {
 //AddStoringMemoryTask добавить задачу
 // если задачи с заданным ID нет, то в ответ TRUE, если есть то задача не
 // изменяется, а в ответ приходит FALSE
-func (smt *StoringMemoryTask) AddStoringMemoryTask(td TaskDescription) (string, bool) {
+func (smt *StoringMemoryTask) AddStoringMemoryTask(td TaskDescription) string {
 	taskID := common.GetUniqIDFormatMD5(td.ClientID)
-
-	if _, ok := smt.GetStoringMemoryTask(taskID); ok {
-		return "", false
-	}
 
 	smt.tasks[taskID] = &td
 
-	return taskID, true
+	return taskID
 }
 
 //DelStoringMemoryTask удалить задачу

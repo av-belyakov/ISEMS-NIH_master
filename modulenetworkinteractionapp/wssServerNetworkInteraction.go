@@ -63,7 +63,7 @@ func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWrit
 
 	remoteAddr := strings.Split(req.RemoteAddr, ":")[0]
 	//если токен валидный изменяем состояние AccessIsAllowed в true
-	_, validToken := settingsHTTPServer.SourceList.SearchSourceToken(remoteAddr, stringToken)
+	_, validToken := settingsHTTPServer.SourceList.SearchSourceIPAndToken(remoteAddr, stringToken)
 
 	if (len(stringToken) == 0) || !validToken {
 		w.Header().Set("Content-Length", strconv.Itoa(utf8.RuneCount(bodyHTTPResponseError)))
@@ -83,10 +83,16 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	saveMessageApp := savemessageapp.New()
 
 	remoteIP := strings.Split(req.RemoteAddr, ":")[0]
-	_, ipIsExist := sws.SourceList.GetSourceSetting(remoteIP)
+
+	_, idIsExist := sws.SourceList.GetSourceIDOnIP(remoteIP)
+	if !idIsExist {
+		w.WriteHeader(401)
+		_ = saveMessageApp.LogMessage("error", "access for the user with ipaddress "+req.RemoteAddr+" is prohibited")
+		return
+	}
 
 	//проверяем разрешено ли данному ip соединение с сервером wss
-	if !ipIsExist || !sws.SourceList.GetAccessIsAllowed(remoteIP) {
+	if !sws.SourceList.GetAccessIsAllowed(remoteIP) {
 		w.WriteHeader(401)
 		_ = saveMessageApp.LogMessage("error", "access for the user with ipaddress "+req.RemoteAddr+" is prohibited")
 		return
@@ -113,8 +119,11 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 		//закрытие канала связи с источником
 		c.Close()
 
-		//изменяем состояние соединения для данного источника
-		_ = sws.SourceList.ChangeSourceConnectionStatus(remoteIP)
+		if id, ok := sws.SourceList.GetSourceIDOnIP(remoteIP); ok {
+			//изменяем состояние соединения для данного источника
+			_ = sws.SourceList.ChangeSourceConnectionStatus(id)
+		}
+
 		//удаляем линк соединения
 		sws.SourceList.DelLinkWebsocketConnection(remoteIP)
 
@@ -126,8 +135,10 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 		_ = saveMessageApp.LogMessage("info", "websocket disconnect whis ip "+remoteIP)
 	}()
 
-	//изменяем состояние соединения для данного источника
-	_ = sws.SourceList.ChangeSourceConnectionStatus(remoteIP)
+	if id, ok := sws.SourceList.GetSourceIDOnIP(remoteIP); ok {
+		//изменяем состояние соединения для данного источника
+		_ = sws.SourceList.ChangeSourceConnectionStatus(id)
+	}
 
 	//добавляем линк соединения по websocket
 	sws.SourceList.AddLinkWebsocketConnect(remoteIP, c)

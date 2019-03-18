@@ -9,7 +9,7 @@ import (
 //NotificationSettingsToClientAPI параметры сообщения отправляемые клиенту API
 type NotificationSettingsToClientAPI struct {
 	MsgType, MsgDescription string
-	Sources                 []string
+	Sources                 []int
 }
 
 //SendNotificationToClientAPI отправить сообщение клиенту API

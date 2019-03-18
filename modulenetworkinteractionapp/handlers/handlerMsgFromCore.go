@@ -3,7 +3,7 @@ package handlers
 /*
 * Обработчик запросов от ядра приложения
 *
-* Версия 0.1, дата релиза 13.03.2019
+* Версия 0.1, дата релиза 18.03.2019
 * */
 
 import (
@@ -15,9 +15,6 @@ import (
 //HandlerMsgFromCore обработчик сообщений от ядра приложения
 func HandlerMsgFromCore(cwt chan<- configure.MsgWsTransmission, isl *configure.InformationSourcesList, msg configure.MsgBetweenCoreAndNI, chanInCore chan<- configure.MsgBetweenCoreAndNI) {
 	fmt.Println("START func HandlerMsgFromCore...")
-
-	//инициализируем функцию конструктор для записи лог-файлов
-	//saveMessageApp := savemessageapp.New()
 
 	switch msg.Section {
 	case "source control":
@@ -35,24 +32,32 @@ func HandlerMsgFromCore(cwt chan<- configure.MsgWsTransmission, isl *configure.I
 
 		if msg.Command == "load list" {
 			if ado, ok := msg.AdvancedOptions.(configure.SourceControlMsgOptions); ok {
-				fmt.Println("interface{} -> user type is ", ok)
+				notAddSourceList := updateSourceList(isl, ado.MsgOptions.SourceList)
 
-				updateSourceList(chanInCore, isl, ado.MsgOptions.SourceList)
+				fmt.Println("NOT ADD SOURCE LIST", notAddSourceList)
+
+				//информационное сообщение пользователю
+				chanInCore <- configure.MsgBetweenCoreAndNI{
+					TaskID:  msg.TaskID,
+					Section: "message notification",
+					Command: "send client API",
+					AdvancedOptions: configure.MessageNotification{
+						SourceReport:                 "NI module",
+						Section:                      "source control",
+						TypeActionPerformed:          "load list",
+						Sources:                      notAddSourceList,
+						HumanDescriptionNotification: fmt.Sprintf("На источнике (-ах) %q выполняются задачи, изменение настроек не доступно", notAddSourceList),
+					},
+				}
+
+				/*											*
+				*											*
+				*					!!!!					*
+				*	сообщение для обновления списка в БД	*
+				*					!!!!					*
+				*											*
+				 */
 			}
-
-			/*			for k, v := range msg.AdvancedOptions.(configure.SourceControlMsgTypeFromAPI) {
-						fmt.Println(k)
-						fmt.Printf("%T", v)
-					}*/
-
-			//			fmt.Println(msg.AdvancedOptions.([]configure.SourceListFromAPI))
-			/*			if sl, ok := msg.AdvancedOptions.(configure.SourceControlMsgTypeFromAPI); ok {
-
-						updateSourceList(chanInCore, isl, sl)
-
-						fmt.Println("create source list for memory success (OUT API MODULE)")
-						fmt.Printf("\n%T%v\n", isl, isl)
-					}*/
 		}
 
 		if msg.Command == "update list" {
@@ -96,10 +101,10 @@ func HandlerMsgFromCore(cwt chan<- configure.MsgWsTransmission, isl *configure.I
 }
 
 //createSourceList создает новый список источников на основе полученного из БД
-func createSourceList(isl *configure.InformationSourcesList, list []configure.InformationAboutSource) {
-	for _, source := range list {
-		isl.AddSourceSettings(source.IP, configure.SourceSetting{
-			ID:       source.ID,
+func createSourceList(isl *configure.InformationSourcesList, l []configure.InformationAboutSource) {
+	for _, source := range l {
+		isl.AddSourceSettings(source.ID, configure.SourceSetting{
+			IP:       source.IP,
 			Token:    source.Token,
 			AsServer: source.AsServer,
 			Settings: source.SourceSetting,
@@ -108,9 +113,96 @@ func createSourceList(isl *configure.InformationSourcesList, list []configure.In
 }
 
 //updateSourceList при получении от клиента API обновляет информацию по источникам
-func updateSourceList(chanInCore chan<- configure.MsgBetweenCoreAndNI, isl *configure.InformationSourcesList, l []configure.SourceListFromAPI) {
+func updateSourceList(isl *configure.InformationSourcesList, l []configure.SourceListFromAPI) []int {
 	fmt.Printf("\n function 'updateSourceList' list sources from client API \n%v\n", l)
 	fmt.Println("Дальше нужно делать после тестов")
+
+	var listTaskExecuted []int
+
+	//если список источников в памяти приложения пуст
+	if isl.GetCountSources() == 0 {
+		for _, source := range l {
+			isl.AddSourceSettings(source.ID, configure.SourceSetting{
+				IP:       source.Argument.IP,
+				Token:    source.Argument.Token,
+				AsServer: source.Argument.Settings.AsServer,
+				Settings: configure.InfoServiceSettings{
+					EnableTelemetry:           source.Argument.Settings.EnableTelemetry,
+					MaxCountProcessfiltration: source.Argument.Settings.MaxCountProcessFiltering,
+					StorageFolders:            source.Argument.Settings.StorageFolders,
+				},
+			})
+		}
+
+		return listTaskExecuted
+	}
+
+	var sourcesIsReconnect bool
+
+	_, listDisconnected := isl.GetListsConnectedAndDisconnectedSources()
+	sourceListTaskExecuted := isl.GetListSourcesWhichTaskExecuted()
+
+	for _, source := range l {
+		//если источника нет в списке
+		s, isExist := isl.GetSourceSetting(source.ID)
+		if !isExist {
+			isl.AddSourceSettings(source.ID, configure.SourceSetting{
+				IP:       source.Argument.IP,
+				Token:    source.Argument.Token,
+				AsServer: source.Argument.Settings.AsServer,
+				Settings: configure.InfoServiceSettings{
+					EnableTelemetry:           source.Argument.Settings.EnableTelemetry,
+					MaxCountProcessfiltration: source.Argument.Settings.MaxCountProcessFiltering,
+					StorageFolders:            source.Argument.Settings.StorageFolders,
+				},
+			})
+
+			continue
+		}
+
+		//если на источнике выполняется задача
+		if _, ok := sourceListTaskExecuted[source.ID]; ok {
+			listTaskExecuted = append(listTaskExecuted, source.ID)
+
+			continue
+		}
+
+		//проверяем параметры подключения
+		if (s.Token != source.Argument.Token) || (s.AsServer != source.Argument.Settings.AsServer) {
+			sourcesIsReconnect = true
+		}
+
+		//полная замена информации об источнике
+		if _, ok := listDisconnected[source.ID]; ok {
+			isl.DelSourceSettings(source.ID)
+
+			isl.AddSourceSettings(source.ID, configure.SourceSetting{
+				IP:       source.Argument.IP,
+				Token:    source.Argument.Token,
+				AsServer: source.Argument.Settings.AsServer,
+				Settings: configure.InfoServiceSettings{
+					EnableTelemetry:           source.Argument.Settings.EnableTelemetry,
+					MaxCountProcessfiltration: source.Argument.Settings.MaxCountProcessFiltering,
+					StorageFolders:            source.Argument.Settings.StorageFolders,
+				},
+			})
+
+			continue
+		}
+
+		if sourcesIsReconnect {
+			//закрываем соединение и удаляем дискриптор
+			if cl, isExist := isl.GetLinkWebsocketConnect(source.Argument.IP); isExist {
+				cl.Link.Close()
+
+				isl.DelLinkWebsocketConnection(source.Argument.IP)
+			}
+
+			sourcesIsReconnect = false
+		}
+	}
+
+	return listTaskExecuted
 }
 
 //performActionSelectedSources выполняет действия только с заданными источниками

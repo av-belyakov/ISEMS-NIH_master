@@ -16,9 +16,11 @@ type MsgWsTransmission struct {
 // MsgBetweenCoreAndNI используется для взаимодействия между ядром приложения и модулем сет. взаимодействия
 // TaskID - ID задачи
 // Section:
-//  - 'sources_control'
-//  - 'filtration_control'
-//  - 'download_control'
+//  - 'source control'
+//  - 'filtration control'
+//  - 'download control'
+//  - 'error notification'
+//  - 'message notification'
 // Command:
 //  - для source_control:
 //		* 'load list'
@@ -32,6 +34,12 @@ type MsgWsTransmission struct {
 //  - для download_control:
 //		* 'start'
 //		* 'stop'
+//  - 'error notification'
+//      * 'send client API'
+//      * 'no send client API'
+//  - 'message notification'
+//      * 'send client API'
+//      * 'no send client API'
 type MsgBetweenCoreAndNI struct {
 	TaskID          string
 	Section         string
@@ -101,9 +109,11 @@ type MsgBetweenCoreAndDB struct {
 // SourceReport - DB module/NI module/API module
 // ErrorBody - тело ошибки (stack trace)
 // HumanDescriptionError - сообщение для пользователя
+// Sources - срез ID источников связанных с данным сообщением
 type ErrorNotification struct {
 	SourceReport, HumanDescriptionError string
 	ErrorBody                           error
+	Sources                             []int
 }
 
 //MessageNotification содержит информационное сообщение о выполненном действии
@@ -111,11 +121,13 @@ type ErrorNotification struct {
 // Section - раздел к которому относится действие
 // TypeActionPerformed - тип выполненного действия
 // HumanDescriptionError - сообщение для пользователя
+// Sources - срез ID источников связанных с данным сообщением
 type MessageNotification struct {
 	SourceReport                 string
 	Section                      string
 	TypeActionPerformed          string
 	HumanDescriptionNotification string
+	Sources                      []int
 }
 
 /* РАССМОТРЕТЬ ПОЗЖЕ */

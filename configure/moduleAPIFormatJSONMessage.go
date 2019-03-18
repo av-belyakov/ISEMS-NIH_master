@@ -43,9 +43,9 @@ type MsgNotification struct {
 
 //NotificationParameters детальное описание сообщения
 type NotificationParameters struct {
-	Type        string   `json:"type"`
-	Description string   `json:"description"`
-	Sources     []string `json:"sources"`
+	Type        string `json:"type"`
+	Description string `json:"description"`
+	Sources     []int  `json:"sources"`
 }
 
 //UserNotification сообщение пользователю
@@ -115,6 +115,7 @@ type SourceArguments struct {
 
 //SourceSettings настройки источника
 type SourceSettings struct {
+	AsServer                 bool     `json:"asServer"`
 	EnableTelemetry          bool     `json:"enableTelemetry"`
 	MaxCountProcessFiltering int8     `json:"MaxCountProcessFiltering"` //<число 1-10>,
 	StorageFolders           []string `json:"storageFolders"`

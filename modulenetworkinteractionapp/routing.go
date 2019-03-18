@@ -43,16 +43,18 @@ func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, chanInCore chan<- 
 			sourceIP, action := msg[0], msg[1]
 
 			if action == "connect" {
-				sourceSettings, _ := isl.GetSourceSetting(sourceIP)
-				formatJSON, err := processrequest.SendMsgPingPong("ping", sourceSettings.Settings.MaxCountProcessfiltration)
-				if err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-				}
+				if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
+					sourceSettings, _ := isl.GetSourceSetting(id)
+					formatJSON, err := processrequest.SendMsgPingPong("ping", sourceSettings.Settings.MaxCountProcessfiltration)
+					if err != nil {
+						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					}
 
-				//отправляем источнику запрос типа Ping
-				cwt <- configure.MsgWsTransmission{
-					DestinationHost: sourceIP,
-					Data:            formatJSON,
+					//отправляем источнику запрос типа Ping
+					cwt <- configure.MsgWsTransmission{
+						DestinationHost: sourceIP,
+						Data:            formatJSON,
+					}
 				}
 			}
 
@@ -107,17 +109,20 @@ func RouteWssConnectionResponse(cwt chan<- configure.MsgWsTransmission, isl *con
 
 		switch messageType.Type {
 		case "ping":
-			sourceSettings, _ := isl.GetSourceSetting(sourceIP)
-			formatJSON, err := processrequest.SendMsgPingPong("pong", sourceSettings.Settings.MaxCountProcessfiltration)
-			if err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
+				sourceSettings, _ := isl.GetSourceSetting(id)
+				formatJSON, err := processrequest.SendMsgPingPong("pong", sourceSettings.Settings.MaxCountProcessfiltration)
+				if err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				}
+
+				//отправляем источнику запрос типа Ping
+				cwt <- configure.MsgWsTransmission{
+					DestinationHost: sourceIP,
+					Data:            formatJSON,
+				}
 			}
 
-			//отправляем источнику запрос типа Ping
-			cwt <- configure.MsgWsTransmission{
-				DestinationHost: sourceIP,
-				Data:            formatJSON,
-			}
 		case "pong":
 			/* Нужно отправить сообщение в RouteCore о том что связь установленна */
 		case "source_telemetry":

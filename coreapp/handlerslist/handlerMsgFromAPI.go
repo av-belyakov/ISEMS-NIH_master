@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"ISEMS-NIH_master/common/notifications"
 	"ISEMS-NIH_master/configure"
@@ -13,6 +14,7 @@ import (
 func HandlerMsgFromAPI(chanToNI chan<- configure.MsgBetweenCoreAndNI, msg *configure.MsgBetweenCoreAndAPI, smt *configure.StoringMemoryTask, chanToDB chan<- configure.MsgBetweenCoreAndDB) (string, notifications.NotificationSettingsToClientAPI, error) {
 	fmt.Println("--- START function 'HandlerMsgFromAPI'...")
 
+	funcName := ", function 'HeaderMsgFromAPI'"
 	msgc := configure.MsgCommon{}
 
 	nsSuccess := notifications.NotificationSettingsToClientAPI{}
@@ -24,7 +26,12 @@ func HandlerMsgFromAPI(chanToNI chan<- configure.MsgBetweenCoreAndNI, msg *confi
 
 	//	errBody := errors.New("received incorrect JSON messages, function 'HeaderMsgFromAPI'")
 
-	if err := json.Unmarshal(msg.MsgJSON.([]byte), &msgc); err != nil {
+	msgJSON, ok := msg.MsgJSON.([]byte)
+	if !ok {
+		return msgc.ClientTaskID, nsErrJSON, errors.New("bad cast type JSON messages" + funcName)
+	}
+
+	if err := json.Unmarshal(msgJSON, &msgc); err != nil {
 		return msgc.ClientTaskID, nsErrJSON, err
 	}
 
@@ -33,43 +40,38 @@ func HandlerMsgFromAPI(chanToNI chan<- configure.MsgBetweenCoreAndNI, msg *confi
 			if msgc.MsgInsturction == "send new source list" {
 
 				var scmo configure.SourceControlMsgOptions
-				if msgjson, ok := msg.MsgJSON.([]byte); ok {
-					if err := json.Unmarshal(msgjson, &scmo); err != nil {
-						return msgc.ClientTaskID, nsErrJSON, err
-					}
-
-					fmt.Println("______ load source list from client API _________")
-					fmt.Printf("%v\n", scmo)
-					fmt.Println("____________________________________")
-
-					chanToNI <- configure.MsgBetweenCoreAndNI{
-						Section:         "source control",
-						Command:         "load list",
-						AdvancedOptions: scmo,
-					}
-
-					return "", nsSuccess, nil
+				if err := json.Unmarshal(msgJSON, &scmo); err != nil {
+					return msgc.ClientTaskID, nsErrJSON, err
 				}
+
+				//добавляем новую задачу
+				taskID := smt.AddStoringMemoryTask(configure.TaskDescription{
+					ClientID:                        msgc.ClientTaskID,
+					TaskType:                        msgc.MsgSection,
+					ModuleThatSetTask:               "API module",
+					ModuleResponsibleImplementation: "NI module",
+					TimeUpdate:                      time.Now().Unix(),
+				})
+
+				chanToNI <- configure.MsgBetweenCoreAndNI{
+					TaskID:          taskID,
+					Section:         "source control",
+					Command:         "load list",
+					AdvancedOptions: scmo,
+				}
+
+				return "", nsSuccess, nil
 			}
-			fmt.Println("*** 1111 ***")
 
-			nsErrJSON.MsgDescription = "msg 1111"
-			return "", nsErrJSON, errors.New("in the json message is not found the right option for 'MsgInsturction', function 'HeaderMsgFromAPI'")
+			return "", nsErrJSON, errors.New("in the json message is not found the right option for 'MsgInsturction'" + funcName)
 		}
-		fmt.Println("***** 2222 ****")
 
-		nsErrJSON.MsgDescription = "msg 2222"
-		return "", nsErrJSON, errors.New("in the json message is not found the right option for 'MsgSection', function 'HeaderMsgFromAPI'")
+		return "", nsErrJSON, errors.New("in the json message is not found the right option for 'MsgSection'" + funcName)
 	}
 
 	if msgc.MsgType == "command" {
 		//добавляем новую задачу
-		taskID, ok := smt.AddStoringMemoryTask(configure.TaskDescription{})
-		if !ok {
-			nsErrJSON.MsgDescription = "задача с заданным идентификатором существует, добавление задачи невозможно"
-
-			return msgc.ClientTaskID, nsErrJSON, errors.New("a task with the specified ID exists, and you cannot add a task, function 'HeaderMsgFromAPI'")
-		}
+		taskID := smt.AddStoringMemoryTask(configure.TaskDescription{})
 
 		fmt.Println("task ID =", taskID)
 
