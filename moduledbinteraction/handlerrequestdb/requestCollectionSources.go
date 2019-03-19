@@ -46,69 +46,9 @@ func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- configure.Msg
 	chanIn <- msgResult
 }
 
-//InserListSources добавить информацию об источниках которых нет в БД или параметры по которым отличаются
-/*func (qcs *QueryCollectionSources) InserListSources(list []configure.InformationAboutSource) (bool, error) {
-//получаем список источников
-	listSources, err := qcs.findAll()
-	if err != nil {
-		fmt.Println(err)
-
-		return false, err
-	}
-
-	fmt.Println(listSources)
-
-	insertData := make([]interface{}, 0, len(list))
-
-	if len(listSources) == 0 {
-		for _, v := range list {
-			insertData = append(insertData, v)
-		}
-
-		return qcs.insertData(insertData)
-	}
-
-	fmt.Println("--- Требуются доп. вычисления, поиск уикальных значений")
-
-	for _, itemAddList := range list {
-		var isExist bool
-
-		for _, itemFindList := range listSources {
-			if itemFindList.ID == itemAddList.ID {
-				isExist = true
-				break
-			}
-		}
-
-		if !isExist {
-			insertData = append(insertData, itemAddList)
-		}
-	}
-
-	fmt.Println("listSourceInser = ", insertData)
-
-	return qcs.insertData(insertData)
-}
-
-configure.MsgBetweenCoreAndAPI{
-		MsgGenerator: "API module",
-		MsgType:      "information",
-		DataType:     "change_status_source",
-		IDClientAPI:  "du68whfh733hjf9393",
-		AdvancedOptions: configure.MsgInfoChangeStatusSource{
-			SourceListIsExist: true,
-			SourceList: []configure.MainOperatingParametersSource{
-				{9, "127.0.0.1", "fmdif3o444fdf344k0fiif", false, configure.SourceDetailedInformation{}},
-				{10, "192.168.0.10", "fmdif3o444fdf344k0fiif", false, configure.SourceDetailedInformation{}},
-				{11, "192.168.0.11", "ttrr9gr9r9e9f9fadx94", false, configure.SourceDetailedInformation{}},
-				{12, "192.168.0.12", "2n3n3iixcxcc3444xfg0222", false, configure.SourceDetailedInformation{}},
-				{13, "192.168.0.13", "osdsoc9c933cc9cn939f9f33", true, configure.SourceDetailedInformation{}},
-				{14, "192.168.0.14", "hgdfffffff9333ffodffodofff0", true, configure.SourceDetailedInformation{}},
-			},
-		},
-	}
-*/
-func (qcs *QueryCollectionSources) InserListSources(chanIn chan<- configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
+//InsertListSources добавить информацию об источниках
+//которых нет в БД или параметры по которым отличаются
+func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
 		MsgRecipient: req.MsgGenerator,
@@ -116,6 +56,8 @@ func (qcs *QueryCollectionSources) InserListSources(chanIn chan<- configure.MsgB
 		MsgSection:   "source control",
 		IDClientAPI:  req.IDClientAPI,
 	}
+
+	fmt.Printf("func 'InsertListSources' resived request from Core module %v\n", req)
 
 	//получаем список источников
 	listSources, err := qcs.findAll()
@@ -147,7 +89,7 @@ func (qcs *QueryCollectionSources) InserListSources(chanIn chan<- configure.MsgB
 
 	fmt.Printf("--- source list %v", listSources)
 
-	list := ao.SourceList
+	list := *ao.SourceList
 
 	insertData := make([]interface{}, 0, len(list))
 
@@ -157,29 +99,27 @@ func (qcs *QueryCollectionSources) InserListSources(chanIn chan<- configure.MsgB
 			insertData = append(insertData, v)
 		}
 
-		//return qcs.insertData(insertData)
+		qcs.insertData(insertData)
+
+		return
 	}
 
 	fmt.Println("--- Требуются доп. вычисления, поиск уикальных значений")
 
 	for _, itemAddList := range list {
-		var isExist bool
-
 		for _, itemFindList := range listSources {
+			//если источник с таким ID существует, удаляем его и заменяем новым
 			if itemFindList.ID == itemAddList.ID {
-				isExist = true
-				break
+				_ = qcs.deleteOneData(bson.D{{"id", itemAddList.ID}})
 			}
 		}
 
-		if !isExist {
-			insertData = append(insertData, itemAddList)
-		}
+		insertData = append(insertData, itemAddList)
 	}
 
 	fmt.Println("listSourceInser = ", insertData)
 
-	//return qcs.insertData(insertData)
+	qcs.insertData(insertData)
 }
 
 //AddSourceToSourcesList добавить новые источники
@@ -228,8 +168,27 @@ func (qcs *QueryCollectionSources) findAll() ([]configure.InformationAboutSource
 func (qcs *QueryCollectionSources) insertData(list []interface{}) (bool, error) {
 	fmt.Println("===== INSERT DATA ======")
 	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
-	_, err := collection.InsertMany(context.TODO(), list)
-	if err != nil {
+	if _, err := collection.InsertMany(context.TODO(), list); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (qcs *QueryCollectionSources) deleteOneData(elem interface{}) error {
+	fmt.Println("===== DELETE DATA ONE ======")
+	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
+	if _, err := collection.DeleteOne(context.TODO(), elem); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (qcs *QueryCollectionSources) deleteManyData(list interface{}) (bool, error) {
+	fmt.Println("===== DELETE DATA MANY ======")
+	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
+	if _, err := collection.DeleteMany(context.TODO(), list); err != nil {
 		return false, err
 	}
 

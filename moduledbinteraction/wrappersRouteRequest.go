@@ -35,7 +35,7 @@ func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetwe
 		qcs.GetAllSourcesList(wr.ChanIn, msg)
 	}
 	if msg.Instruction == "insert" {
-		qcs.InserListSources(wr.ChanIn, msg)
+		qcs.InsertListSources(wr.ChanIn, msg)
 	}
 	if msg.Instruction == "update" {
 

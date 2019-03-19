@@ -28,9 +28,7 @@ func HandlerMsgFromDB(chanToAPI chan<- configure.MsgBetweenCoreAndAPI, res *conf
 			case "error notification":
 
 			}
-		}
-
-		if res.MsgRecipient == "NI module" {
+		} else if res.MsgRecipient == "NI module" {
 			switch res.MsgSection {
 			case "source list":
 				chanToNI <- configure.MsgBetweenCoreAndNI{
@@ -45,6 +43,8 @@ func HandlerMsgFromDB(chanToAPI chan<- configure.MsgBetweenCoreAndAPI, res *conf
 
 			case "download":
 			}
+		} else if res.MsgRecipient == "Core module" {
+			fmt.Printf("RESIPENT MSG FOR CORE %v", res)
 		}
 	}
 }

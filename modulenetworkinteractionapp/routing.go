@@ -45,7 +45,7 @@ func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, chanInCore chan<- 
 			if action == "connect" {
 				if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
 					sourceSettings, _ := isl.GetSourceSetting(id)
-					formatJSON, err := processrequest.SendMsgPingPong("ping", sourceSettings.Settings.MaxCountProcessfiltration)
+					formatJSON, err := processrequest.SendMsgPingPong("ping", sourceSettings.Settings.MaxCountProcessFiltration)
 					if err != nil {
 						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 					}
@@ -111,7 +111,7 @@ func RouteWssConnectionResponse(cwt chan<- configure.MsgWsTransmission, isl *con
 		case "ping":
 			if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
 				sourceSettings, _ := isl.GetSourceSetting(id)
-				formatJSON, err := processrequest.SendMsgPingPong("pong", sourceSettings.Settings.MaxCountProcessfiltration)
+				formatJSON, err := processrequest.SendMsgPingPong("pong", sourceSettings.Settings.MaxCountProcessFiltration)
 				if err != nil {
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 				}

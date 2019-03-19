@@ -26,7 +26,7 @@ package configure
 //  - изменение состояния источника
 type MsgInfoChangeStatusSource struct {
 	SourceListIsExist bool
-	SourceList        []MainOperatingParametersSource
+	SourceList        *[]MainOperatingParametersSource
 }
 
 //MsgInfoSourceTelemetry данные по телеметрии
@@ -85,9 +85,9 @@ type MainOperatingParametersSource struct {
 
 //SourceDetailedInformation детальная информация по настройке источника
 type SourceDetailedInformation struct {
-	StorageFolders           []string
-	EnableTelemetry          bool //true - включить
-	MaxCountProcessFiltering int
+	StorageFolders            []string
+	EnableTelemetry           bool //true - включить
+	MaxCountProcessFiltration int8
 }
 
 //MsgCommandfiltration команды по фильтрации:

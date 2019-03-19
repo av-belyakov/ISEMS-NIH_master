@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"ISEMS-NIH_master/common/notifications"
 	"ISEMS-NIH_master/configure"
+	"ISEMS-NIH_master/notifications"
 )
 
 //HandlerMsgFromAPI обработчик сообщений приходящих от модуля API
@@ -44,9 +44,11 @@ func HandlerMsgFromAPI(chanToNI chan<- configure.MsgBetweenCoreAndNI, msg *confi
 					return msgc.ClientTaskID, nsErrJSON, err
 				}
 
+				fmt.Printf("From API resived msg %q", msg)
+
 				//добавляем новую задачу
 				taskID := smt.AddStoringMemoryTask(configure.TaskDescription{
-					ClientID:                        msgc.ClientTaskID,
+					ClientID:                        msg.IDClientAPI,
 					TaskType:                        msgc.MsgSection,
 					ModuleThatSetTask:               "API module",
 					ModuleResponsibleImplementation: "NI module",

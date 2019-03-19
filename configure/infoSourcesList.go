@@ -104,6 +104,17 @@ func (isl *InformationSourcesList) GetSourceSetting(id int) (SourceSetting, bool
 	return SourceSetting{}, false
 }
 
+//GetSourceList возвращает список источников
+func (isl *InformationSourcesList) GetSourceList() *map[int]SourceSetting {
+	sl := map[int]SourceSetting{}
+
+	for id, ss := range isl.sourcesListSetting {
+		sl[id] = ss
+	}
+
+	return &sl
+}
+
 //ChangeSourceConnectionStatus изменить состояние источника
 func (isl *InformationSourcesList) ChangeSourceConnectionStatus(id int) bool {
 	if s, ok := isl.sourcesListSetting[id]; ok {
@@ -140,6 +151,8 @@ func (isl InformationSourcesList) GetCountSources() int {
 
 //GetListsConnectedAndDisconnectedSources возвращает списки источников подключенных и не подключенных
 func (isl InformationSourcesList) GetListsConnectedAndDisconnectedSources() (listConnected, listDisconnected map[int]string) {
+	listConnected, listDisconnected = map[int]string{}, map[int]string{}
+
 	for id, source := range isl.sourcesListSetting {
 		if source.ConnectionStatus {
 			listConnected[id] = source.IP

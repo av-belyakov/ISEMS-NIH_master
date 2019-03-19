@@ -3,18 +3,15 @@ package common
 /*
 * Модуль содержащий набор функций для верификации значений
 *
-* Версия 0.1, дата релиза 06.03.2019
+* Версия 0.2, дата релиза 19.03.2019
 * */
 
 import (
-	"fmt"
 	"regexp"
 )
 
 //CheckStringIP проверка ip адреса переданного в виде строки
 func CheckStringIP(ip string) (bool, error) {
-	fmt.Println("validate ip address", ip)
-
 	pattern := "^((25[0-5]|2[0-4]\\d|[01]?\\d\\d?)[.]){3}(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)$"
 
 	rx, err := regexp.Compile(pattern)
@@ -23,4 +20,33 @@ func CheckStringIP(ip string) (bool, error) {
 	}
 
 	return rx.MatchString(ip), nil
+}
+
+//CheckStringToken проверяет токен полученный от пользователя
+func CheckStringToken(str string) (bool, error) {
+	pattern := "^\\w+$"
+
+	rx, err := regexp.Compile(pattern)
+	if err != nil {
+		return false, err
+	}
+
+	return rx.MatchString(str), nil
+}
+
+//CheckFolders проверяет имена директорий
+func CheckFolders(f []string) (bool, error) {
+	pattern := "^(/|_|\\w)+$"
+	rx, err := regexp.Compile(pattern)
+	if err != nil {
+		return false, err
+	}
+
+	for _, v := range f {
+		if !rx.MatchString(v) {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }

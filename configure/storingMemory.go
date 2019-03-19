@@ -67,7 +67,7 @@ func (smapi *StoringMemoryAPI) SearchClientForIP(ip string) (string, *ClientSett
 //GetClientSettings получить все настройки клиента
 func (smapi *StoringMemoryAPI) GetClientSettings(id string) (*ClientSettings, bool) {
 	if _, ok := smapi.clientSettings[id]; !ok {
-		return &ClientSettings{}, false
+		return nil, false
 	}
 
 	return smapi.clientSettings[id], true

@@ -27,6 +27,8 @@ type MsgWsTransmission struct {
 // 		* 'update list' (для каждого источника свое возможно действие например,
 //			один источник нужно добавить 'add', другой удалить 'del', а третий
 // 			перезапустить 'reconnect')
+// 		* 'keep list sources in database' (сохранить список источников в БД)
+// 		* 'send list sources to client api'
 //  - для filtration_control:
 //		* 'start'
 //		* 'stop'
@@ -75,23 +77,19 @@ type MsgBetweenCoreAndAPI struct {
 // MsgRecipient - API module/NI module/DB module/Core module (получатель сообщения)
 // MsgDirection - request/response (направление, запрос или ответ)
 // MsgSection:
-//  - 'sources_control'
-//  - 'source_telemetry'
+//  - 'source control'
+//  - 'source telemetry'
 //  - 'filtration'
 //  - 'download'
-//  - 'information_search_results'
-//  - 'error_notification'
-//  - 'information_search'
+//  - 'information search results'
+//  - 'error notification'
+//  - 'information search'
 // Insturction:
 //  - insert
 //  - find
 //  - find_all
 //  - update
 //  - delete
-// Command:
-//  - 'load_source_list'
-//  - 'add sources'
-//  - ''
 // IDClientAPI - уникальный идентификатор клиента API
 type MsgBetweenCoreAndDB struct {
 	MsgGenerator    string
@@ -120,12 +118,14 @@ type ErrorNotification struct {
 // SourceReport - DB module/NI module/API module
 // Section - раздел к которому относится действие
 // TypeActionPerformed - тип выполненного действия
+// CriticalityMessage - критичность сообщения ('info', 'success', 'warning', 'danger')
 // HumanDescriptionError - сообщение для пользователя
 // Sources - срез ID источников связанных с данным сообщением
 type MessageNotification struct {
 	SourceReport                 string
 	Section                      string
 	TypeActionPerformed          string
+	CriticalityMessage           string
 	HumanDescriptionNotification string
 	Sources                      []int
 }

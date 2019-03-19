@@ -10,9 +10,9 @@ package coreapp
 import (
 	"fmt"
 
-	"ISEMS-NIH_master/common/notifications"
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/coreapp/handlerslist"
+	"ISEMS-NIH_master/notifications"
 	"ISEMS-NIH_master/savemessageapp"
 )
 

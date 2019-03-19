@@ -115,10 +115,10 @@ type SourceArguments struct {
 
 //SourceSettings настройки источника
 type SourceSettings struct {
-	AsServer                 bool     `json:"asServer"`
-	EnableTelemetry          bool     `json:"enableTelemetry"`
-	MaxCountProcessFiltering int8     `json:"MaxCountProcessFiltering"` //<число 1-10>,
-	StorageFolders           []string `json:"storageFolders"`
+	AsServer                  bool     `json:"asServer"`
+	EnableTelemetry           bool     `json:"enableTelemetry"`
+	MaxCountProcessFiltration int8     `json:"maxCountProcessFiltration"` //<число 1-10>,
+	StorageFolders            []string `json:"storageFolders"`
 }
 
 //FiltrationControlMsgTypeInfo информационные сообщения о ходе фильтрации
