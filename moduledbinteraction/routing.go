@@ -20,7 +20,7 @@ func RouteRequest(chanIn chan configure.MsgBetweenCoreAndDB, nameDB string, link
 			   configure.MsgBetweenCoreAndDB{
 			   		MsgGenerator:    "Core module",
 			   		MsgRecipient:    "DB module",
-			   		MsgDirection:    "request",
+			   		MsgType:    "request",
 					   DataType:		 "sources_list/change_status_sources",
 					   Insturction: insert
 		//  - find

@@ -7,6 +7,7 @@ package handlerslist
 * */
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -15,7 +16,12 @@ import (
 )
 
 //HandlerMsgFromNI обработчик запросов поступающих от модуля сетевого взаимодействия
-func HandlerMsgFromNI(chanToAPI chan<- configure.MsgBetweenCoreAndAPI, msg *configure.MsgBetweenCoreAndNI, smt *configure.StoringMemoryTask, chanToDB chan<- configure.MsgBetweenCoreAndDB) error {
+func HandlerMsgFromNI(
+	chanToAPI chan<- configure.MsgBetweenCoreAndAPI,
+	msg *configure.MsgBetweenCoreAndNI,
+	smt *configure.StoringMemoryTask,
+	chanToDB chan<- configure.MsgBetweenCoreAndDB) error {
+
 	fmt.Println("--- START function 'HandlerMsgFromNI'...")
 
 	funcName := ", function 'HandlerMsgFromNI'"
@@ -24,14 +30,13 @@ func HandlerMsgFromNI(chanToAPI chan<- configure.MsgBetweenCoreAndAPI, msg *conf
 	if !ok {
 		return errors.New("task with " + msg.TaskID + " not found")
 	}
+
 	switch msg.Section {
 	case "source control":
 		fmt.Println("func 'HandlerMsgFromNI', section SOURCE CONTROL")
 
 		if msg.Command == "keep list sources in database" {
 			//отправить список источников ТОЛЬКО в БД
-
-			//			fmt.Printf("to Database %T %v\n\n", msg.AdvancedOptions, msg.AdvancedOptions)
 
 			sourceList, err := getSourceListToLoadDB(msg.AdvancedOptions)
 			if err != nil {
@@ -43,9 +48,9 @@ func HandlerMsgFromNI(chanToAPI chan<- configure.MsgBetweenCoreAndAPI, msg *conf
 			chanToDB <- configure.MsgBetweenCoreAndDB{
 				MsgGenerator: "NI module",
 				MsgRecipient: "DB module",
-				MsgDirection: "request",
 				MsgSection:   "source control",
 				Instruction:  "insert",
+				TaskID:       msg.TaskID,
 				AdvancedOptions: configure.MsgInfoChangeStatusSource{
 					SourceListIsExist: true,
 					SourceList:        sourceList,
@@ -54,30 +59,32 @@ func HandlerMsgFromNI(chanToAPI chan<- configure.MsgBetweenCoreAndAPI, msg *conf
 		} else if msg.Command == "send list sources to client api" {
 			//отправить список источников ТОЛЬКО клиенту API
 
+			sourceList, err := getSourceListToAPI(msg.AdvancedOptions)
+			if err != nil {
+				return err
+			}
+
+			msg := configure.SourceControlAllListSources{
+				SourceList: *sourceList,
+			}
+
+			msg.MsgType = "information"
+			msg.MsgSection = "source control"
+			msg.MsgInsturction = "send current source list"
+			msg.ClientTaskID = taskInfo.ClientTaskID
+
+			msgjson, err := json.Marshal(&msg)
+			if err != nil {
+				return err
+			}
+
+			chanToAPI <- configure.MsgBetweenCoreAndAPI{
+				MsgGenerator: "Core module",
+				MsgRecipient: "API module",
+				IDClientAPI:  taskInfo.ClientID,
+				MsgJSON:      msgjson,
+			}
 		}
-
-	/*
-		//чтении из памяти нового списка для сохранения в БД
-					chanInCore <- configure.MsgBetweenCoreAndNI{
-						TaskID:  msg.TaskID,
-						Section: "source control",
-						Command: "keep list sources in database",
-					}
-
-					//чтение из памяти для клиента API
-					chanInCore <- configure.MsgBetweenCoreAndNI{
-						TaskID:  msg.TaskID,
-						Section: "source control",
-						Command: "send list sources to client api",
-					}
-
-		chanToAPI <- configure.MsgBetweenCoreAndAPI{
-							MsgGenerator: taskInfo.ModuleResponsibleImplementation,
-							MsgRecipient: taskInfo.ModuleThatSetTask,
-							IDClientAPI:  taskInfo.ClientID,
-							//MsgJSON:
-						}
-					}*/
 
 	case "filtration control":
 		fmt.Println("func 'HandlerMsgFromNI', section FILTRATION CONTROL")
@@ -96,6 +103,7 @@ func HandlerMsgFromNI(chanToAPI chan<- configure.MsgBetweenCoreAndAPI, msg *conf
 			if !ok {
 				return errors.New("cannot cast type" + funcName)
 			}
+
 			ns := notifications.NotificationSettingsToClientAPI{
 				MsgType:        ao.CriticalityMessage,
 				MsgDescription: ao.HumanDescriptionNotification,
@@ -104,14 +112,14 @@ func HandlerMsgFromNI(chanToAPI chan<- configure.MsgBetweenCoreAndAPI, msg *conf
 
 			fmt.Printf("TASK INFO ClientID: %q", taskInfo)
 
-			notifications.SendNotificationToClientAPI(chanToAPI, ns, "", taskInfo.ClientID)
+			notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
 		}
 	}
 
 	return nil
 }
 
-//подготаваливаем список источников полученный от модуля
+//getSourceListToLoadDB подготаваливаем список источников полученный от модуля
 //NI для загрузки его в БД
 func getSourceListToLoadDB(l interface{}) (*[]configure.MainOperatingParametersSource, error) {
 	ls, ok := l.(*map[int]configure.SourceSetting)
@@ -119,7 +127,7 @@ func getSourceListToLoadDB(l interface{}) (*[]configure.MainOperatingParametersS
 		return nil, errors.New("type conversion error, function 'getSourceListToLoadDB'")
 	}
 
-	list := make([]configure.MainOperatingParametersSource, 0, 0) //len(ls))
+	list := make([]configure.MainOperatingParametersSource, 0, len(*ls))
 
 	for id, s := range *ls {
 		list = append(list, configure.MainOperatingParametersSource{
@@ -131,6 +139,34 @@ func getSourceListToLoadDB(l interface{}) (*[]configure.MainOperatingParametersS
 				StorageFolders:            s.Settings.StorageFolders,
 				EnableTelemetry:           s.Settings.EnableTelemetry,
 				MaxCountProcessFiltration: s.Settings.MaxCountProcessFiltration,
+			},
+		})
+	}
+
+	return &list, nil
+}
+
+//getSourceListToAPI подготавливаем списко источников отправляемых пользователю
+func getSourceListToAPI(l interface{}) (*[]configure.DetailedListSources, error) {
+	ls, ok := l.(*map[int]configure.SourceSetting)
+	if !ok {
+		return nil, errors.New("type conversion error, function 'getSourceListToLoadDB'")
+	}
+
+	list := make([]configure.DetailedListSources, 0, len(*ls))
+	for id, s := range *ls {
+		list = append(list, configure.DetailedListSources{
+			ID:         id,
+			ActionType: "none",
+			Argument: configure.SourceArguments{
+				IP:    s.IP,
+				Token: "", //думаю что токен не стоит возвращать, особенно если он пойдет не тому клиенту
+				Settings: configure.SourceSettings{
+					AsServer:                  s.AsServer,
+					EnableTelemetry:           s.Settings.EnableTelemetry,
+					MaxCountProcessFiltration: s.Settings.MaxCountProcessFiltration,
+					StorageFolders:            s.Settings.StorageFolders,
+				},
 			},
 		})
 	}

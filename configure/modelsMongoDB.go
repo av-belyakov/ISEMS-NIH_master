@@ -10,6 +10,7 @@ type InformationAboutSource struct {
 	IP            string              `json:"ip" bson:"ip"`
 	Token         string              `json:"token" bson:"token"`
 	AsServer      bool                `json:"as_server" bson:"as_server"`
+	NameClientAPI string              `json:"name_client_api" bson:"name_client_api"`
 	IDClientAPI   string              `json:"id_client_api" bson:"id_client_api"`
 	SourceSetting InfoServiceSettings `json:"source_setting" bson:"source_setting"`
 }

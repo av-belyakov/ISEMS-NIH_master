@@ -12,7 +12,6 @@ import (
 
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/coreapp/handlerslist"
-	"ISEMS-NIH_master/notifications"
 	"ISEMS-NIH_master/savemessageapp"
 )
 
@@ -27,29 +26,28 @@ func Routing(appConf *configure.AppConfig, cc *configure.ChannelCollectionCoreAp
 	cc.OutCoreChanDB <- configure.MsgBetweenCoreAndDB{
 		MsgGenerator: "NI module",
 		MsgRecipient: "DB module",
-		MsgDirection: "request",
 		MsgSection:   "sources_control",
 		Instruction:  "find_all",
 	}
 
+	//обработчик запросов от модулей приложения
 	for {
 		select {
 		//CHANNEL FROM DATABASE
 		case data := <-cc.InCoreChanDB:
 			fmt.Println("MESSAGE FROM module DBInteraction")
 
-			handlerslist.HandlerMsgFromDB(cc.OutCoreChanAPI, &data, cc.OutCoreChanNI)
+			if err := handlerslist.HandlerMsgFromDB(cc.OutCoreChanAPI, &data, smt, cc.OutCoreChanNI); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
 
 		//CHANNEL FROM API
 		case data := <-cc.InCoreChanAPI:
 
 			fmt.Println("MESSAGE FROM module API")
 
-			if taskID, ns, err := handlerslist.HandlerMsgFromAPI(cc.OutCoreChanNI, &data, smt, cc.OutCoreChanDB); err != nil {
+			if err := handlerslist.HandlerMsgFromAPI(cc.OutCoreChanNI, &data, smt, cc.OutCoreChanDB, cc.OutCoreChanAPI); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-				//это сообщение для клиента только когда есть какие либо ошибки в функции HandlerMsgFromAPI
-				notifications.SendNotificationToClientAPI(cc.OutCoreChanAPI, ns, taskID, data.IDClientAPI)
 			}
 
 		//CHANNEL FROM NETWORK INTERACTION

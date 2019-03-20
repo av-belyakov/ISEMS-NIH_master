@@ -26,6 +26,7 @@ type SourceSetting struct {
 	IP                string
 	DateLastConnected int64 //Unix time
 	Token             string
+	ClientName        string            //имя клиента API (нужно для того чтобы контролировать управление определенным источником)
 	AccessIsAllowed   bool              //разрешен ли доступ, по умолчанию false (при проверке токена ставится true если он верен)
 	AsServer          bool              //false - как клиент, true - как сервер
 	CurrentTasks      map[string]string // задачи для данного источника,

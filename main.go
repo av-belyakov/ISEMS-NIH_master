@@ -141,6 +141,8 @@ func init() {
 	appConfig.ServerHTTPS.PathCertFile = appConfig.RootDir + appConfig.ServerHTTPS.PathCertFile
 	appConfig.ServerHTTPS.PathPrivateKeyFile = appConfig.RootDir + appConfig.ServerHTTPS.PathPrivateKeyFile
 
+	fmt.Printf("Config file\n %v\n", appConfig)
+
 	//соединяемся с БД
 	mongoConnect, err := connectToDB(ctx, &appConfig)
 	if err != nil {
@@ -156,15 +158,9 @@ func init() {
 	if err = getVersionApp(&appConfig); err != nil {
 		_ = saveMessageApp.LogMessage("error", "it is impossible to obtain the version number of the application")
 	}
-
-	fmt.Println("END func init")
 }
 
 func main() {
-	fmt.Println("!!! START func main !!!")
-
 	//запуск ядра приложения
 	coreapp.CoreApp(&appConfig, &mongoDBConnect)
-
-	fmt.Println("!!! END func main !!!")
 }

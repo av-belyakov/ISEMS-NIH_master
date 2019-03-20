@@ -14,6 +14,7 @@ import (
 // IsAllowed: разрешен ли доступ
 type ClientSettings struct {
 	IP         string
+	ClientName string
 	IsAllowed  bool
 	mu         sync.Mutex
 	Connection *websocket.Conn
@@ -42,12 +43,13 @@ func NewRepositorySMAPI() *StoringMemoryAPI {
 }
 
 //AddNewClient добавляет нового клиента
-func (smapi *StoringMemoryAPI) AddNewClient(clientIP string) string {
+func (smapi *StoringMemoryAPI) AddNewClient(clientIP, clientName string) string {
 	hsum := common.GetUniqIDFormatMD5(clientIP)
 
 	smapi.clientSettings[hsum] = &ClientSettings{
-		IP:        clientIP,
-		IsAllowed: true,
+		IP:         clientIP,
+		ClientName: clientName,
+		IsAllowed:  true,
 	}
 
 	return hsum
@@ -111,6 +113,7 @@ type DescriptionTaskParameters struct{}
 
 //TaskDescription описание задачи
 // ClientID - уникальный идентификатор клиента
+// ClientTaskID - идентификатор задачи полученный от клиента
 // TaskSection - секция к которой относится задача
 // TaskType - тип выполняемой задачи
 // ModuleThatSetTask - модуль от которого поступила задача
@@ -119,6 +122,7 @@ type DescriptionTaskParameters struct{}
 // TaskParameter - дополнительные параметры
 type TaskDescription struct {
 	ClientID                        string
+	ClientTaskID                    string
 	TaskType                        string
 	ModuleThatSetTask               string
 	ModuleResponsibleImplementation string
@@ -158,8 +162,8 @@ func (smt *StoringMemoryTask) DelStoringMemoryTask(taskID string) {
 
 //GetStoringMemoryTask получить информацию о задаче по ее ID
 func (smt StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescription, bool) {
-	if _, ok := smt.tasks[taskID]; ok {
-		return smt.tasks[taskID], ok
+	if task, ok := smt.tasks[taskID]; ok {
+		return task, ok
 	}
 
 	return nil, false

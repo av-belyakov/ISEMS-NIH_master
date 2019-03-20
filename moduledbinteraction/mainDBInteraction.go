@@ -32,7 +32,7 @@ func MainDBInteraction(nameDB string, linkConnection *configure.MongoDBConnect) 
 	/*go qcs.GetAllSourcesList(chanIn, &configure.MsgBetweenCoreAndDB{
 		MsgGenerator: "Core module",
 		MsgRecipient: "DB module",
-		MsgDirection: "request",
+		MsgType: "request",
 		MsgSection:   "sources_control",
 	})*/
 

@@ -36,6 +36,10 @@ func CheckStringToken(str string) (bool, error) {
 
 //CheckFolders проверяет имена директорий
 func CheckFolders(f []string) (bool, error) {
+	if len(f) == 0 {
+		return false, nil
+	}
+
 	pattern := "^(/|_|\\w)+$"
 	rx, err := regexp.Compile(pattern)
 	if err != nil {

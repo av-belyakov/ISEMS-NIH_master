@@ -13,7 +13,11 @@ type NotificationSettingsToClientAPI struct {
 }
 
 //SendNotificationToClientAPI отправить сообщение клиенту API
-func SendNotificationToClientAPI(c chan<- configure.MsgBetweenCoreAndAPI, ns NotificationSettingsToClientAPI, taskID, clientID string) {
+func SendNotificationToClientAPI(
+	c chan<- configure.MsgBetweenCoreAndAPI,
+	ns NotificationSettingsToClientAPI,
+	clientTaskID, clientID string) {
+
 	notify := configure.MsgNotification{
 		MsgOptions: configure.UserNotification{
 			Notification: configure.NotificationParameters{
@@ -27,11 +31,11 @@ func SendNotificationToClientAPI(c chan<- configure.MsgBetweenCoreAndAPI, ns Not
 	notify.MsgType = "information"
 	notify.MsgSection = "user notification"
 	notify.MsgInsturction = "send notification"
-	notify.ClientTaskID = taskID
+	notify.ClientTaskID = clientTaskID
 
 	msgjson, _ := json.Marshal(&notify)
 
-	//отправляем ошибку
+	//отправляем сообщение
 	c <- configure.MsgBetweenCoreAndAPI{
 		MsgGenerator: "Core module",
 		MsgRecipient: "API module",

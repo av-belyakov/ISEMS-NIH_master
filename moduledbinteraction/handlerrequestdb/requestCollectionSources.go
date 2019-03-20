@@ -23,12 +23,12 @@ func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- configure.Msg
 	msgResult := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
 		MsgRecipient: req.MsgGenerator,
-		MsgDirection: "response",
+		TaskID:       req.TaskID,
 	}
 
 	sourcesList, err := qcs.findAll()
 	if err != nil {
-		msgResult.MsgSection = "error_notification"
+		msgResult.MsgSection = "error notification"
 		msgResult.AdvancedOptions = configure.ErrorNotification{
 			SourceReport: "DB module",
 			ErrorBody:    err,
@@ -52,9 +52,9 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- configure.Msg
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
 		MsgRecipient: req.MsgGenerator,
-		MsgDirection: "response",
 		MsgSection:   "source control",
 		IDClientAPI:  req.IDClientAPI,
+		TaskID:       req.TaskID,
 	}
 
 	fmt.Printf("func 'InsertListSources' resived request from Core module %v\n", req)
@@ -62,6 +62,8 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- configure.Msg
 	//получаем список источников
 	listSources, err := qcs.findAll()
 	if err != nil {
+		msgRes.MsgRecipient = "Core module"
+		msgRes.MsgSection = "error notification"
 		msgRes.AdvancedOptions = configure.ErrorNotification{
 			SourceReport:          "DB module",
 			HumanDescriptionError: "an error occurred while processing request get the list of sources",
@@ -69,11 +71,16 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- configure.Msg
 		}
 
 		chanIn <- msgRes
+
+		return
 	}
 
 	ao, ok := req.AdvancedOptions.(configure.MsgInfoChangeStatusSource)
 	if !ok {
 		errMsg := "incorrect list of sources received"
+
+		msgRes.MsgRecipient = "Core module"
+		msgRes.MsgSection = "error notification"
 		msgRes.AdvancedOptions = configure.ErrorNotification{
 			SourceReport:          "DB module",
 			HumanDescriptionError: errMsg,
@@ -81,13 +88,16 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- configure.Msg
 		}
 
 		chanIn <- msgRes
+
+		return
 	}
 
+	//если в запросе не список источников
 	if !ao.SourceListIsExist {
 		return
 	}
 
-	fmt.Printf("--- source list %v", listSources)
+	fmt.Printf("--- source list %v\n", listSources)
 
 	list := *ao.SourceList
 
@@ -104,9 +114,9 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- configure.Msg
 		return
 	}
 
-	fmt.Println("--- Требуются доп. вычисления, поиск уикальных значений")
-
+	//список который пришел от клиента API
 	for _, itemAddList := range list {
+		//список из БД
 		for _, itemFindList := range listSources {
 			//если источник с таким ID существует, удаляем его и заменяем новым
 			if itemFindList.ID == itemAddList.ID {

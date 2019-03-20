@@ -25,7 +25,8 @@ import (
 )
 
 type settingsServerAPI struct {
-	IP, Port, Token string
+	IP, Port string
+	Tokens   []configure.SettingsAuthenticationTokenClientsAPI
 }
 
 type channels struct {
@@ -84,23 +85,37 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 
 	if req.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
+
 		return
 	}
 
-	if (len(stringToken) == 0) || (stringToken != settingsServerAPI.Token) {
+	if len(stringToken) == 0 {
 		w.Header().Set("Content-Length", strconv.Itoa(utf8.RuneCount(bodyHTTPResponseError)))
 
 		w.WriteHeader(400)
 		w.Write(bodyHTTPResponseError)
 
 		_ = saveMessageApp.LogMessage("error", "Server API - missing or incorrect identification token (сlient ipaddress "+req.RemoteAddr+")")
-	} else {
-		remoteAddr := strings.Split(req.RemoteAddr, ":")[0]
-		//добавляем нового пользователя которому разрешен доступ
-		_ = storingMemoryAPI.AddNewClient(remoteAddr)
-
-		http.Redirect(w, req, "https://"+settingsServerAPI.IP+":"+settingsServerAPI.Port+"/api_wss", 301)
 	}
+
+	for _, sc := range settingsServerAPI.Tokens {
+		if stringToken == sc.Token {
+			remoteAddr := strings.Split(req.RemoteAddr, ":")[0]
+			//добавляем нового пользователя которому разрешен доступ
+			_ = storingMemoryAPI.AddNewClient(remoteAddr, sc.Name)
+
+			http.Redirect(w, req, "https://"+settingsServerAPI.IP+":"+settingsServerAPI.Port+"/api_wss", 301)
+
+			return
+		}
+	}
+
+	w.Header().Set("Content-Length", strconv.Itoa(utf8.RuneCount(bodyHTTPResponseError)))
+
+	w.WriteHeader(400)
+	w.Write(bodyHTTPResponseError)
+
+	_ = saveMessageApp.LogMessage("error", "Server API - missing or incorrect identification token (сlient ipaddress "+req.RemoteAddr+")")
 }
 
 func serverWss(w http.ResponseWriter, req *http.Request) {
@@ -139,6 +154,14 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 		_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
 
 		log.Println("Client API whis ip", remoteIP, "is disconnect")
+	}
+
+	//получаем настройки клиента
+	clientSettings, ok := storingMemoryAPI.GetClientSettings(clientID)
+	if !ok {
+		_ = saveMessageApp.LogMessage("error", "Server API - client setup with ID "+clientID+" not found")
+
+		return
 	}
 
 	/*defer func() {
@@ -206,13 +229,14 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 				MsgGenerator: "API module",
 				MsgRecipient: "Core module",
 				IDClientAPI:  clientID,
+				ClientName:   clientSettings.ClientName,
 				MsgJSON:      message,
 			}
 		}
 	}()
 
-	if e := recover(); e != nil {
-		_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(e))
+	if err := recover(); err != nil {
+		_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
 	}
 }
 
@@ -230,9 +254,9 @@ func MainAPIApp(appConfig *configure.AppConfig) (chanOut, chanIn chan configure.
 	fmt.Println("START module 'MainAppAPI'...")
 
 	settingsServerAPI := settingsServerAPI{
-		IP:    appConfig.ServerAPI.Host,
-		Port:  strconv.Itoa(appConfig.ServerAPI.Port),
-		Token: appConfig.AuthenticationTokenClientAPI,
+		IP:     appConfig.ServerAPI.Host,
+		Port:   strconv.Itoa(appConfig.ServerAPI.Port),
+		Tokens: appConfig.AuthenticationTokenClientsAPI,
 	}
 
 	go func() {

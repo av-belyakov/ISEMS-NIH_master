@@ -15,6 +15,7 @@ type MsgWsTransmission struct {
 
 // MsgBetweenCoreAndNI используется для взаимодействия между ядром приложения и модулем сет. взаимодействия
 // TaskID - ID задачи
+// ClientName - имя клиента, используется для управления источниками
 // Section:
 //  - 'source control'
 //  - 'filtration control'
@@ -44,6 +45,7 @@ type MsgWsTransmission struct {
 //      * 'no send client API'
 type MsgBetweenCoreAndNI struct {
 	TaskID          string
+	ClientName      string
 	Section         string
 	Command         string
 	AdvancedOptions interface{}
@@ -68,6 +70,7 @@ type MsgBetweenCoreAndAPI struct {
 	MsgGenerator string
 	MsgRecipient string
 	IDClientAPI  string
+	ClientName   string
 	MsgJSON      interface{} //[]byte
 }
 
@@ -75,7 +78,6 @@ type MsgBetweenCoreAndAPI struct {
 //по каналам с данной структурой передаются следующие виды сообщений:
 // MsgGenerator - DB module/Core module (источник сообщения)
 // MsgRecipient - API module/NI module/DB module/Core module (получатель сообщения)
-// MsgDirection - request/response (направление, запрос или ответ)
 // MsgSection:
 //  - 'source control'
 //  - 'source telemetry'
@@ -83,6 +85,7 @@ type MsgBetweenCoreAndAPI struct {
 //  - 'download'
 //  - 'information search results'
 //  - 'error notification'
+//  - 'message notification'
 //  - 'information search'
 // Insturction:
 //  - insert
@@ -91,13 +94,14 @@ type MsgBetweenCoreAndAPI struct {
 //  - update
 //  - delete
 // IDClientAPI - уникальный идентификатор клиента API
+// TaskID - уникальный идентификатор задачи присвоенный ядром приложения
 type MsgBetweenCoreAndDB struct {
 	MsgGenerator    string
 	MsgRecipient    string
-	MsgDirection    string
 	MsgSection      string
 	Instruction     string
 	IDClientAPI     string
+	TaskID          string
 	AdvancedOptions interface{}
 }
 

@@ -32,7 +32,6 @@ type MsgCommon struct {
 	MsgSection     string `json:"msgSection"`
 	MsgInsturction string `json:"msgInsturction"`
 	ClientTaskID   string `json:"taskID"`
-	//MsgOptions     interface{} `json:"msgOptions"`
 }
 
 //MsgNotification информационное сообщение
@@ -60,12 +59,22 @@ type SourceControlMsgOptions struct {
 
 //SourceControlMsgTypeFromAPI подробно по источникам API->
 type SourceControlMsgTypeFromAPI struct {
-	SourceList []SourceListFromAPI `json:"sourceList"`
+	SourceList []DetailedListSources `json:"sourceList"`
 }
 
 //SourceControlMsgTypeToAPI подробно по источникам ->API
 type SourceControlMsgTypeToAPI struct {
 	SourceList []SourceListToAPI `json:"sourceList"`
+}
+
+//SourceControlAllListSources описание полного списка источников
+type SourceControlAllListSources struct {
+	MsgCommon
+	SourceList []DetailedListSources `json:"sourceList"`
+}
+
+//SourceControlActionsTakenSources описание выполненных действий с источниками
+type SourceControlActionsTakenSources struct {
 }
 
 //SourceListToAPI описание параметров источника API->
@@ -89,14 +98,14 @@ type SourceListInfoToAPI struct {
 	SourceArguments
 }
 
-//SourceListFromAPI весь список источников ->API
+//DetailedListSources весь список источников ->API
 //  - ID: уникальный числовой идентификатор источника
 //  - ActionType: типа действия над источником
 // ('add'/'update'/'delete'/'reconnect'/'status request',
 // добавить, обновить, удалить, переподключить, запрос состояния)
 //  - Argument: параметры источника, для actionType
 // 'delete'/'reconnect'/'status request' это ПОЛЕ ПУСТОЕ
-type SourceListFromAPI struct {
+type DetailedListSources struct {
 	ID         int             `json:"id"`
 	ActionType string          `json:"actionType"`
 	Argument   SourceArguments `json:"argument"`
