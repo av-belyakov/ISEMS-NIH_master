@@ -31,17 +31,16 @@ func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetwe
 		ConnectDB:      wr.ConnectDB,
 	}
 
-	if msg.Instruction == "find_all" {
+	switch msg.Instruction {
+	case "find_all":
 		qcs.GetAllSourcesList(wr.ChanIn, msg)
-	}
-	if msg.Instruction == "insert" {
+
+	case "insert":
 		qcs.InsertListSources(wr.ChanIn, msg)
-	}
-	if msg.Instruction == "update" {
 
-	}
+	case "update":
 
-	if msg.Instruction == "delete" {
+	case "delete":
 
 	}
 }

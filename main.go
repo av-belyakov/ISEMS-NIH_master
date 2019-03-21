@@ -141,8 +141,6 @@ func init() {
 	appConfig.ServerHTTPS.PathCertFile = appConfig.RootDir + appConfig.ServerHTTPS.PathCertFile
 	appConfig.ServerHTTPS.PathPrivateKeyFile = appConfig.RootDir + appConfig.ServerHTTPS.PathPrivateKeyFile
 
-	fmt.Printf("Config file\n %v\n", appConfig)
-
 	//соединяемся с БД
 	mongoConnect, err := connectToDB(ctx, &appConfig)
 	if err != nil {

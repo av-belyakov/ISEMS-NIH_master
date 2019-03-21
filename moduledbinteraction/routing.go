@@ -16,22 +16,6 @@ import (
 func RouteRequest(chanIn chan configure.MsgBetweenCoreAndDB, nameDB string, linkConnection *configure.MongoDBConnect, chanOut <-chan configure.MsgBetweenCoreAndDB) {
 	fmt.Println("START module 'RouteRequest' (module DBInteraction)...")
 
-	/*
-			   configure.MsgBetweenCoreAndDB{
-			   		MsgGenerator:    "Core module",
-			   		MsgRecipient:    "DB module",
-			   		MsgType:    "request",
-					   DataType:		 "sources_list/change_status_sources",
-					   Insturction: insert
-		//  - find
-		//  - update
-		//  - delete
-			   		IDClientAPI:     idClientAPI,
-			   		AdvancedOptions: advancedOptions,
-			   	}
-
-
-	*/
 	wrapperFunc := WrappersRouteRequest{
 		NameDB:    nameDB,
 		ConnectDB: linkConnection.Connect,

@@ -7,7 +7,6 @@ package handlerslist
 * */
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -37,52 +36,25 @@ func HandlerMsgFromNI(
 
 		if msg.Command == "keep list sources in database" {
 			//отправить список источников ТОЛЬКО в БД
+			/*
+				sourceList, err := getSourceListToLoadDB(msg.AdvancedOptions)
+				if err != nil {
+					return err
+				}
 
-			sourceList, err := getSourceListToLoadDB(msg.AdvancedOptions)
-			if err != nil {
-				return err
-			}
-
-			fmt.Println("*-**********", sourceList, "---********")
+			fmt.Println("*-**********", sourceList, "---********")*/
 
 			chanToDB <- configure.MsgBetweenCoreAndDB{
-				MsgGenerator: "NI module",
-				MsgRecipient: "DB module",
-				MsgSection:   "source control",
-				Instruction:  "insert",
-				TaskID:       msg.TaskID,
-				AdvancedOptions: configure.MsgInfoChangeStatusSource{
+				MsgGenerator:    "NI module",
+				MsgRecipient:    "DB module",
+				MsgSection:      "source control",
+				Instruction:     "insert",
+				TaskID:          msg.TaskID,
+				AdvancedOptions: msg.AdvancedOptions,
+				/*AdvancedOptions: configure.MsgInfoChangeStatusSource{
 					SourceListIsExist: true,
 					SourceList:        sourceList,
-				},
-			}
-		} else if msg.Command == "send list sources to client api" {
-			//отправить список источников ТОЛЬКО клиенту API
-
-			sourceList, err := getSourceListToAPI(msg.AdvancedOptions)
-			if err != nil {
-				return err
-			}
-
-			msg := configure.SourceControlAllListSources{
-				SourceList: *sourceList,
-			}
-
-			msg.MsgType = "information"
-			msg.MsgSection = "source control"
-			msg.MsgInsturction = "send current source list"
-			msg.ClientTaskID = taskInfo.ClientTaskID
-
-			msgjson, err := json.Marshal(&msg)
-			if err != nil {
-				return err
-			}
-
-			chanToAPI <- configure.MsgBetweenCoreAndAPI{
-				MsgGenerator: "Core module",
-				MsgRecipient: "API module",
-				IDClientAPI:  taskInfo.ClientID,
-				MsgJSON:      msgjson,
+				},*/
 			}
 		}
 
@@ -110,7 +82,7 @@ func HandlerMsgFromNI(
 				Sources:        ao.Sources,
 			}
 
-			fmt.Printf("TASK INFO ClientID: %q", taskInfo)
+			fmt.Printf("TASK INFO ClientID: %v", taskInfo)
 
 			notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
 		}

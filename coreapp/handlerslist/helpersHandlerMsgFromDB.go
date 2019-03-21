@@ -1,6 +1,7 @@
 package handlerslist
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"ISEMS-NIH_master/configure"
@@ -26,8 +27,6 @@ func getCurrentSourceListForAPI(
 		_ = saveMessageApp.LogMessage("error", "type conversion error section type 'error notification'"+funcName)
 	}
 
-	fmt.Printf("SOurce LIst = %v\n", listSource)
-
 	list := make([]configure.ShortListSources, 0, len(listSource))
 
 	//формируем ответ клиенту API
@@ -40,4 +39,32 @@ func getCurrentSourceListForAPI(
 		})
 	}
 
+	//получаем ID клиента API
+	st, ok := smt.GetStoringMemoryTask(res.TaskID)
+	if !ok {
+		_ = saveMessageApp.LogMessage("error", "task with "+res.TaskID+" not found")
+	}
+
+	//удаляем задачу из хранилища задач
+	smt.DelStoringMemoryTask(res.TaskID)
+
+	msg := configure.SourceControlCurrentListSources{
+		MsgOptions: configure.SourceControlCurrentListSourcesList{
+			SourceList: list,
+		},
+	}
+	msg.MsgType = "information"
+	msg.MsgSection = "source control"
+	msg.MsgInsturction = "send current source list"
+	msg.ClientTaskID = st.ClientTaskID
+
+	msgjson, _ := json.Marshal(&msg)
+
+	//отправляем данные клиенту
+	chanToAPI <- configure.MsgBetweenCoreAndAPI{
+		MsgGenerator: "Core module",
+		MsgRecipient: "API module",
+		IDClientAPI:  st.ClientID,
+		MsgJSON:      msgjson,
+	}
 }

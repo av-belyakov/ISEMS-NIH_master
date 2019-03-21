@@ -22,10 +22,6 @@ func HandlerMsgFromAPI(
 	funcName := ", function 'HeaderMsgFromAPI'"
 	msgc := configure.MsgCommon{}
 
-	nsSuccess := notifications.NotificationSettingsToClientAPI{
-		MsgType: "success",
-	}
-
 	nsErrJSON := notifications.NotificationSettingsToClientAPI{
 		MsgType:        "danger",
 		MsgDescription: "получен некорректный формат JSON сообщения",
@@ -49,7 +45,6 @@ func HandlerMsgFromAPI(
 	if msgc.MsgType == "information" {
 		if msgc.MsgSection == "source control" {
 			if msgc.MsgInsturction == "send new source list" {
-
 				var scmo configure.SourceControlMsgOptions
 				if err := json.Unmarshal(msgJSON, &scmo); err != nil {
 					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
@@ -57,7 +52,7 @@ func HandlerMsgFromAPI(
 					return errors.New("bad cast type JSON messages" + funcName)
 				}
 
-				fmt.Printf("From API resived msg %q", msg)
+				//				fmt.Printf("From API resived msg %v\n", scmo)
 
 				//добавляем новую задачу
 				taskID := smt.AddStoringMemoryTask(configure.TaskDescription{
@@ -74,10 +69,31 @@ func HandlerMsgFromAPI(
 					ClientName:      msg.ClientName,
 					Section:         "source control",
 					Command:         "load list",
-					AdvancedOptions: scmo,
+					AdvancedOptions: scmo.MsgOptions,
 				}
 
-				notifications.SendNotificationToClientAPI(chanToAPI, nsSuccess, msgc.ClientTaskID, msg.IDClientAPI)
+				return nil
+			}
+
+			if msgc.MsgInsturction == "get an updated list of sources" {
+
+				//добавляем новую задачу
+				taskID := smt.AddStoringMemoryTask(configure.TaskDescription{
+					ClientID:                        msg.IDClientAPI,
+					ClientTaskID:                    msgc.ClientTaskID,
+					TaskType:                        msgc.MsgSection,
+					ModuleThatSetTask:               "API module",
+					ModuleResponsibleImplementation: "NI module",
+					TimeUpdate:                      time.Now().Unix(),
+				})
+
+				chanToDB <- configure.MsgBetweenCoreAndDB{
+					MsgGenerator: "API module",
+					MsgRecipient: "DB module",
+					MsgSection:   "source control",
+					Instruction:  "find_all",
+					TaskID:       taskID,
+				}
 
 				return nil
 			}
@@ -114,28 +130,21 @@ func HandlerMsgFromAPI(
 				AdvancedOptions: mo,
 			}
 			*/
-			notifications.SendNotificationToClientAPI(chanToAPI, nsSuccess, msgc.ClientTaskID, msg.IDClientAPI)
 
 			return nil
 
 		case "filtration control":
 			fmt.Println("func 'HandlerMsgFromAPI' MsgType: 'command', MsgSection: 'filtration control'")
 
-			notifications.SendNotificationToClientAPI(chanToAPI, nsSuccess, msgc.ClientTaskID, msg.IDClientAPI)
-
 			return nil
 
 		case "download control":
 			fmt.Println("func 'HandlerMsgFromAPI' MsgType: 'command', MsgSection: 'download control'")
 
-			notifications.SendNotificationToClientAPI(chanToAPI, nsSuccess, msgc.ClientTaskID, msg.IDClientAPI)
-
 			return nil
 
 		case "information search control":
 			fmt.Println("func 'HandlerMsgFromAPI' MsgType: 'command', MsgSection: 'information search control'")
-
-			notifications.SendNotificationToClientAPI(chanToAPI, nsSuccess, msgc.ClientTaskID, msg.IDClientAPI)
 
 			return nil
 		}

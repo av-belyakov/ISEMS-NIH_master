@@ -26,7 +26,7 @@ func Routing(appConf *configure.AppConfig, cc *configure.ChannelCollectionCoreAp
 	cc.OutCoreChanDB <- configure.MsgBetweenCoreAndDB{
 		MsgGenerator: "NI module",
 		MsgRecipient: "DB module",
-		MsgSection:   "sources_control",
+		MsgSection:   "source control",
 		Instruction:  "find_all",
 	}
 

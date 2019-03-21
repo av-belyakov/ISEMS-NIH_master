@@ -26,6 +26,9 @@ func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- configure.Msg
 		TaskID:       req.TaskID,
 	}
 
+	fmt.Println("START function 'GetAllSourcesList'")
+	fmt.Println(msgResult)
+
 	sourcesList, err := qcs.findAll()
 	if err != nil {
 		msgResult.MsgSection = "error notification"
@@ -57,8 +60,6 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- configure.Msg
 		TaskID:       req.TaskID,
 	}
 
-	fmt.Printf("func 'InsertListSources' resived request from Core module %v\n", req)
-
 	//получаем список источников
 	listSources, err := qcs.findAll()
 	if err != nil {
@@ -75,7 +76,7 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- configure.Msg
 		return
 	}
 
-	ao, ok := req.AdvancedOptions.(configure.MsgInfoChangeStatusSource)
+	l, ok := req.AdvancedOptions.(*[]configure.InformationAboutSource)
 	if !ok {
 		errMsg := "incorrect list of sources received"
 
@@ -92,20 +93,11 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- configure.Msg
 		return
 	}
 
-	//если в запросе не список источников
-	if !ao.SourceListIsExist {
-		return
-	}
-
-	fmt.Printf("--- source list %v\n", listSources)
-
-	list := *ao.SourceList
-
-	insertData := make([]interface{}, 0, len(list))
+	insertData := make([]interface{}, 0, len(*l))
 
 	//если список источников в БД пуст, добавляем все что есть
 	if len(listSources) == 0 {
-		for _, v := range list {
+		for _, v := range *l {
 			insertData = append(insertData, v)
 		}
 
@@ -115,7 +107,7 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- configure.Msg
 	}
 
 	//список который пришел от клиента API
-	for _, itemAddList := range list {
+	for _, itemAddList := range *l {
 		//список из БД
 		for _, itemFindList := range listSources {
 			//если источник с таким ID существует, удаляем его и заменяем новым
@@ -126,8 +118,6 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- configure.Msg
 
 		insertData = append(insertData, itemAddList)
 	}
-
-	fmt.Println("listSourceInser = ", insertData)
 
 	qcs.insertData(insertData)
 }

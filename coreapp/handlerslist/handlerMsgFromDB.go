@@ -17,19 +17,23 @@ func HandlerMsgFromDB(
 	chanToNI chan<- configure.MsgBetweenCoreAndNI) error {
 
 	fmt.Println("START function 'HandlerMsgFromDB' module coreapp")
-	fmt.Printf("%v", res)
+	//	fmt.Printf("%v", res)
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'HandlerMsgFromDB'"
 
-	taskInfo, ok := smt.GetStoringMemoryTask(res.TaskID)
-	if !ok {
-		return errors.New("task with " + res.TaskID + " not found")
-	}
+	taskInfo, taskIDIsExist := smt.GetStoringMemoryTask(res.TaskID)
 
 	if res.MsgRecipient == "API module" {
+		if !taskIDIsExist {
+			_ = saveMessageApp.LogMessage("error", "task with "+res.TaskID+" not found")
+		}
+
 		switch res.MsgSection {
+		case "source list":
+			go getCurrentSourceListForAPI(chanToAPI, res, smt)
+
 		case "source control":
 
 		case "source telemetry":

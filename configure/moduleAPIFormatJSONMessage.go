@@ -28,49 +28,49 @@ package configure
 //  - 'performing an action' API<-
 //  - 'send notification' API<-
 type MsgCommon struct {
-	MsgType        string `json:"msgType"`
-	MsgSection     string `json:"msgSection"`
-	MsgInsturction string `json:"msgInsturction"`
-	ClientTaskID   string `json:"taskID"`
+	MsgType        string `json:"t"`
+	MsgSection     string `json:"s"`
+	MsgInsturction string `json:"i"`
+	ClientTaskID   string `json:"tid"`
 }
 
 //MsgNotification информационное сообщение
 type MsgNotification struct {
 	MsgCommon
-	MsgOptions UserNotification `json:"msgOptions"`
+	MsgOptions UserNotification `json:"o"`
 }
 
 //NotificationParameters детальное описание сообщения
 type NotificationParameters struct {
-	Type        string `json:"type"`
-	Description string `json:"description"`
-	Sources     []int  `json:"sources"`
+	Type        string `json:"t"`
+	Description string `json:"d"`
+	Sources     []int  `json:"s"`
 }
 
 //UserNotification сообщение пользователю
 type UserNotification struct {
-	Notification NotificationParameters `json:"notification"`
-}
-
-//SourceControlMsgOptions опции настройки источников
-type SourceControlMsgOptions struct {
-	MsgOptions SourceControlMsgTypeFromAPI `json:"msgOptions"`
+	Notification NotificationParameters `json:"n"`
 }
 
 //SourceControlMsgTypeFromAPI подробно по источникам API->
 type SourceControlMsgTypeFromAPI struct {
-	SourceList []DetailedListSources `json:"sourceList"`
+	SourceList []DetailedListSources `json:"sl"`
 }
 
-//SourceControlMsgTypeToAPI подробно по источникам ->API
-type SourceControlMsgTypeToAPI struct {
-	SourceList []SourceListToAPI `json:"sourceList"`
-}
-
-//SourceControlAllListSources описание полного списка источников
-type SourceControlAllListSources struct {
+//SourceControlCurrentListSources опции для полного списка источников
+type SourceControlCurrentListSources struct {
 	MsgCommon
-	SourceList []DetailedListSources `json:"sourceList"`
+	MsgOptions SourceControlCurrentListSourcesList `json:"o"`
+}
+
+//SourceControlCurrentListSourcesList описание полного списка источников
+type SourceControlCurrentListSourcesList struct {
+	SourceList []ShortListSources `json:"sl"`
+}
+
+//SourceControlMsgOptions опции при управлении источниками
+type SourceControlMsgOptions struct {
+	MsgOptions SourceControlMsgTypeFromAPI `json:"o"`
 }
 
 //SourceControlActionsTakenSources описание выполненных действий с источниками
@@ -91,11 +91,12 @@ type SourceListToAPI struct {
 	MessageFailure string `json:"messageFailure"`
 }
 
-//SourceListInfoToAPI весь список источников ->API
-//  - ID: уникальный числовой идентификатор источника
-type SourceListInfoToAPI struct {
-	ID int `json:"id"`
-	SourceArguments
+//ShortListSources краткие настройки источника
+type ShortListSources struct {
+	ID          int    `json:"id"`
+	IP          string `json:"ip"`
+	ShortName   string `json:"sn"`
+	Description string `json:"d"`
 }
 
 //DetailedListSources весь список источников ->API
@@ -103,13 +104,14 @@ type SourceListInfoToAPI struct {
 //  - ActionType: типа действия над источником
 // ('add'/'update'/'delete'/'reconnect'/'status request',
 // добавить, обновить, удалить, переподключить, запрос состояния)
+//  - ShortName: краткое название источника
+//  - Description: полное название источника
 //  - Argument: параметры источника, для actionType
 // 'delete'/'reconnect'/'status request' это ПОЛЕ ПУСТОЕ
 type DetailedListSources struct {
 	ID         int             `json:"id"`
-	ActionType string          `json:"actionType"`
-	Argument   SourceArguments `json:"argument"`
-	//map[string]SourceArguments `json:"argument"`
+	ActionType string          `json:"at"`
+	Argument   SourceArguments `json:"arg"`
 }
 
 //SourceArguments параметры источников
@@ -117,17 +119,19 @@ type DetailedListSources struct {
 //  - Token: уникальный идентификатор источника
 //  - Settings: настройки источника
 type SourceArguments struct {
-	IP       string         `json:"ip"`
-	Token    string         `json:"token"`
-	Settings SourceSettings `json:"settings"`
+	IP          string         `json:"ip"`
+	Token       string         `json:"t"`
+	ShortName   string         `json:"sn"`
+	Description string         `json:"d"`
+	Settings    SourceSettings `json:"s"`
 }
 
 //SourceSettings настройки источника
 type SourceSettings struct {
-	AsServer                  bool     `json:"asServer"`
-	EnableTelemetry           bool     `json:"enableTelemetry"`
-	MaxCountProcessFiltration int8     `json:"maxCountProcessFiltration"` //<число 1-10>,
-	StorageFolders            []string `json:"storageFolders"`
+	AsServer                  bool     `json:"as"`
+	EnableTelemetry           bool     `json:"et"`
+	MaxCountProcessFiltration int8     `json:"mcpf"` //<число 1-10>,
+	StorageFolders            []string `json:"sf"`
 }
 
 //FiltrationControlMsgTypeInfo информационные сообщения о ходе фильтрации

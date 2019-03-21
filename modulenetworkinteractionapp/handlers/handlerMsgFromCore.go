@@ -3,11 +3,12 @@ package handlers
 /*
 * Обработчик запросов от ядра приложения
 *
-* Версия 0.1, дата релиза 18.03.2019
+* Версия 0.2, дата релиза 21.03.2019
 * */
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 
 	"ISEMS-NIH_master/common"
@@ -27,6 +28,9 @@ func HandlerMsgFromCore(
 	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'HandlerMsgFromCore'"
 
+	//максимальное количество одновременно запущеных процессов фильтрации
+	var mcpf int8 = 3
+
 	switch msg.Section {
 	case "source control":
 		if msg.Command == "create list" {
@@ -35,23 +39,21 @@ func HandlerMsgFromCore(
 
 			sl, ok := msg.AdvancedOptions.([]configure.InformationAboutSource)
 			if !ok {
-				if !ok {
-					_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
+				_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
 
-					return
-				}
+				return
 			}
 
 			createSourceList(isl, sl)
 
-			fmt.Printf("curent list %v \n=======================\n", isl.GetSourceList())
+			//fmt.Printf("curent list %v \n=======================\n", isl.GetSourceList())
 		}
 
 		if msg.Command == "load list" {
 
 			fmt.Println("====== CREATE LIST RESIVED FROM CLIENT API =======", msg.ClientName, "====")
 
-			ado, ok := msg.AdvancedOptions.(configure.SourceControlMsgOptions)
+			ado, ok := msg.AdvancedOptions.(configure.SourceControlMsgTypeFromAPI)
 			if !ok {
 				_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
 
@@ -65,7 +67,7 @@ func HandlerMsgFromCore(
 			}
 
 			//проверяем прислал ли пользователь данные по источникам
-			if len(ado.MsgOptions.SourceList) == 0 {
+			if len(ado.SourceList) == 0 {
 				clientNotify.AdvancedOptions = configure.MessageNotification{
 					SourceReport:                 "NI module",
 					Section:                      "source control",
@@ -79,7 +81,7 @@ func HandlerMsgFromCore(
 				return
 			}
 
-			notAddSourceList, listInvalidSource := updateSourceList(isl, ado.MsgOptions.SourceList, msg.ClientName)
+			notAddSourceList, listInvalidSource := updateSourceList(isl, ado.SourceList, msg.ClientName, mcpf)
 			if len(listInvalidSource) != 0 {
 				strSourceID := createStringFromSourceList(listInvalidSource)
 
@@ -89,16 +91,17 @@ func HandlerMsgFromCore(
 					TypeActionPerformed:          "load list",
 					CriticalityMessage:           "warning",
 					Sources:                      listInvalidSource,
-					HumanDescriptionNotification: "Обновление списка сенсоров выполнено не полностью, параметры сенсоров " + strSourceID + " содержат некорректные значения",
+					HumanDescriptionNotification: "Обновление списка сенсоров выполнено не полностью, параметры источников: " + strSourceID + " содержат некорректные значения",
 				}
 
 				chanInCore <- clientNotify
 			} else {
 				hdn := "Обновление настроек сенсоров выполнено успешно"
 				cm := "success"
+
 				if len(notAddSourceList) > 0 {
 					strSourceID := createStringFromSourceList(notAddSourceList)
-					hdn = "На источнике (-ах) " + strSourceID + " выполняются задачи, изменение настроек не доступно"
+					hdn = "На источниках: " + strSourceID + " выполняются задачи, в настоящее время изменение их настроек невозможно"
 					cm = "info"
 				}
 
@@ -114,28 +117,32 @@ func HandlerMsgFromCore(
 				chanInCore <- clientNotify
 			}
 
+			lc, ld := isl.GetListsConnectedAndDisconnectedSources()
+			lcd := []map[int]string{lc, ld}
+
+			ts := make([]int, 0, (len(lc) + len(ld)))
+			for _, item := range lcd {
+				for id := range item {
+					ts = append(ts, id)
+				}
+			}
+
+			sltsdb, err := getSourceListToStoreDB(ts, &ado.SourceList, msg.ClientName, mcpf)
+			if err != nil {
+				_ = saveMessageApp.LogMessage("error", "NI module - "+fmt.Sprint(err))
+
+				return
+			}
+
 			msgToCore := configure.MsgBetweenCoreAndNI{
 				TaskID:          msg.TaskID,
 				Section:         "source control",
 				Command:         "keep list sources in database",
-				AdvancedOptions: isl.GetSourceList(),
+				AdvancedOptions: sltsdb,
 			}
 
 			//новый список источников для сохранения в БД
 			chanInCore <- msgToCore
-
-			/*
-
-			   ДУМАЮ НЕ НАДО ОТПРАВЛЯТЬ КЛИЕНТУ НОВЫЙ СПИСОК
-			   ЛУЧШЕ ПРЕДУСМОТРЕТЬ ОТДЕЛЬНЫЙ ЗАПРОС
-
-			*/
-
-			//новый список источников для клиента API
-			msgToCore.Command = "send list sources to client api"
-			chanInCore <- msgToCore
-
-			fmt.Printf("------------------------------------\n new source list from STORAGE MEMORY %v\n\n", isl.GetSourceList())
 		}
 
 		if msg.Command == "update list" {
@@ -189,6 +196,12 @@ func createStringFromSourceList(l []int) string {
 
 			continue
 		}
+		if len(l) > 1 && i == len(l)-2 {
+			strSourceID += es + " и "
+
+			continue
+		}
+
 		strSourceID += es + ", "
 	}
 
@@ -199,36 +212,30 @@ func createStringFromSourceList(l []int) string {
 func createSourceList(isl *configure.InformationSourcesList, l []configure.InformationAboutSource) {
 	for _, source := range l {
 		isl.AddSourceSettings(source.ID, configure.SourceSetting{
-			IP:       source.IP,
-			Token:    source.Token,
-			AsServer: source.AsServer,
-			Settings: source.SourceSetting,
+			IP:         source.IP,
+			Token:      source.Token,
+			ClientName: source.NameClientAPI,
+			AsServer:   source.AsServer,
+			Settings:   source.SourceSetting,
 		})
 	}
 }
 
 //updateSourceList при получении от клиента API обновляет информацию по источникам
-func updateSourceList(isl *configure.InformationSourcesList, l []configure.DetailedListSources, clientName string) ([]int, []int) {
-	fmt.Printf("\n function 'updateSourceList' list sources from client API \n%v\n", l)
-
+func updateSourceList(isl *configure.InformationSourcesList, l []configure.DetailedListSources, clientName string, mcpf int8) ([]int, []int) {
 	var listTaskExecuted, listInvalidSource []int
 	listTrastedSources := []configure.SourceSetting{}
 
 	for _, s := range l {
 		ipIsValid, _ := common.CheckStringIP(s.Argument.IP)
-
 		tokenIsValid, _ := common.CheckStringToken(s.Argument.Token)
-
 		foldersIsValid, _ := common.CheckFolders(s.Argument.Settings.StorageFolders)
-
-		fmt.Println("++++ ipIsValid:", ipIsValid, "tokenIsValid:", tokenIsValid, "foldersIsValide:", foldersIsValid, "+++++")
 
 		if !ipIsValid || !tokenIsValid || !foldersIsValid {
 			listInvalidSource = append(listInvalidSource, s.ID)
 		}
 
-		var mcpf int8 = 3
-		if s.Argument.Settings.MaxCountProcessFiltration > 0 {
+		if (s.Argument.Settings.MaxCountProcessFiltration > 0) && (s.Argument.Settings.MaxCountProcessFiltration < 10) {
 			mcpf = s.Argument.Settings.MaxCountProcessFiltration
 		}
 
@@ -342,6 +349,37 @@ func updateSourceList(isl *configure.InformationSourcesList, l []configure.Detai
 	}
 
 	return listTaskExecuted, listInvalidSource
+}
+
+//getSourceListToStoreDB формирует список источников для последующей их записи в БД
+func getSourceListToStoreDB(trastedSoures []int, l *[]configure.DetailedListSources, clientName string, mcpf int8) (*[]configure.InformationAboutSource, error) {
+	list := make([]configure.InformationAboutSource, 0, len(*l))
+
+	sort.Ints(trastedSoures)
+	for _, s := range *l {
+		if sort.SearchInts(trastedSoures, s.ID) != -1 {
+			if (s.Argument.Settings.MaxCountProcessFiltration > 0) && (s.Argument.Settings.MaxCountProcessFiltration < 10) {
+				mcpf = s.Argument.Settings.MaxCountProcessFiltration
+			}
+
+			list = append(list, configure.InformationAboutSource{
+				ID:            s.ID,
+				IP:            s.Argument.IP,
+				Token:         s.Argument.Token,
+				ShortName:     s.Argument.ShortName,
+				Description:   s.Argument.Description,
+				AsServer:      s.Argument.Settings.AsServer,
+				NameClientAPI: clientName,
+				SourceSetting: configure.InfoServiceSettings{
+					EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
+					MaxCountProcessFiltration: mcpf,
+					StorageFolders:            s.Argument.Settings.StorageFolders,
+				},
+			})
+		}
+	}
+
+	return &list, nil
 }
 
 //performActionSelectedSources выполняет действия только с заданными источниками
