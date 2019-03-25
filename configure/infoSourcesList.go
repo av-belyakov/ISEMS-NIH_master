@@ -30,7 +30,7 @@ type SourceSetting struct {
 	AccessIsAllowed   bool              //разрешен ли доступ, по умолчанию false (при проверке токена ставится true если он верен)
 	AsServer          bool              //false - как клиент, true - как сервер
 	CurrentTasks      map[string]string // задачи для данного источника,
-	//key - ID задачи, value - ее тип 'in queuq' или 'in process'
+	//key - ID задачи, value - ее тип 'filtration' или 'download'
 	Settings InfoServiceSettings
 }
 
@@ -174,6 +174,20 @@ func (isl InformationSourcesList) GetListSourcesWhichTaskExecuted() (let map[int
 	}
 
 	return let
+}
+
+//GetListTasksPerformedSourceByType получить список выполняемых на источнике задач по типу
+func (isl InformationSourcesList) GetListTasksPerformedSourceByType(id int, taskType string) []string {
+	taskList := []string{}
+	if s, ok := isl.sourcesListSetting[id]; ok {
+		for tid, info := range s.CurrentTasks {
+			if info == taskType {
+				taskList = append(taskList, tid)
+			}
+		}
+	}
+
+	return taskList
 }
 
 //SendWsMessage используется для отправки сообщений через протокол websocket (применяется Mutex)

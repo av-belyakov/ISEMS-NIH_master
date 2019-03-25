@@ -135,8 +135,9 @@ func (pdllf *PathDirLocationLogFiles) LogMessage(typeMessage, message string) (e
 	const logFileSize = 100000000
 
 	fileNameTypeMessage := map[string]string{
-		"error": "error_message.log",
-		"info":  "info_message.log",
+		"error":    "error_message.log",
+		"info":     "info_message.log",
+		"requests": "api_client_requests.log",
 	}
 
 	if typeMessage == "" || message == "" {
@@ -152,7 +153,7 @@ func (pdllf *PathDirLocationLogFiles) LogMessage(typeMessage, message string) (e
 	var fileOut *os.File
 	fileOut, err = os.OpenFile(pdllf.pathLogFiles+"/"+logDirName+"/"+fileNameTypeMessage[typeMessage], os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 
 		return err
 	}

@@ -230,6 +230,7 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 				MsgRecipient: "Core module",
 				IDClientAPI:  clientID,
 				ClientName:   clientSettings.ClientName,
+				ClientIP:     remoteIP,
 				MsgJSON:      message,
 			}
 		}

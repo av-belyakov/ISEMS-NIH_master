@@ -176,7 +176,7 @@ func (qcs *QueryCollectionSources) insertData(list []interface{}) (bool, error) 
 }
 
 func (qcs *QueryCollectionSources) deleteOneData(elem interface{}) error {
-	fmt.Println("===== DELETE DATA ONE ======")
+	//fmt.Println("===== DELETE DATA ONE ======")
 	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
 	if _, err := collection.DeleteOne(context.TODO(), elem); err != nil {
 		return err

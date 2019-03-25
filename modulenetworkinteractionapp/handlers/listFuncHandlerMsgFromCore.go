@@ -338,6 +338,11 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 				continue
 			}
 		}
+
+		/*
+			ДОДЕЛАТЬ ПРОВЕРКИ, ОБНОВИТЬ ИЛИ УДАЛИТЬ ИСТОЧНИК,
+			ВЫПОЛНИТЬ ПЕРЕПОДКЛЮЧЕНИЕ
+		*/
 	}
 
 	/*

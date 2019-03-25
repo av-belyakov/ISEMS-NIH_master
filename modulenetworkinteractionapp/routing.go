@@ -73,7 +73,7 @@ func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, chanInCore chan<- 
 
 			//обработка сообщения от ядра
 		case msg := <-chanOutCore:
-			handlers.HandlerMsgFromCore(cwt, isl, msg, chanInCore)
+			go handlers.HandlerMsgFromCore(cwt, isl, msg, chanInCore)
 		}
 	}
 }

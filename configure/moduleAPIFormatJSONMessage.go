@@ -75,6 +75,21 @@ type SourceControlMsgOptions struct {
 
 //SourceControlActionsTakenSources описание выполненных действий с источниками
 type SourceControlActionsTakenSources struct {
+	MsgOptions SourceControlMsgTypeToAPI `json:"o"`
+}
+
+//SourceControlMsgTypeToAPI описание действий над источниками
+type SourceControlMsgTypeToAPI struct {
+	SourceList []ActionTypeListSources `json:"sl"`
+}
+
+//ActionTypeListSources описание действий над источниками
+type ActionTypeListSources struct {
+	ID             int    `json:"id"`
+	Status         string `json:"s"`
+	ActionType     string `json:"at"`
+	IsSuccess      bool   `json:"is"`
+	MessageFailure string `json:"mf"`
 }
 
 //SourceListToAPI описание параметров источника API->
