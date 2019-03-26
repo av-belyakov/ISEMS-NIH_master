@@ -12,15 +12,11 @@ import (
 
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/coreapp/handlerslist"
-	"ISEMS-NIH_master/savemessageapp"
 )
 
 //Routing маршрутизирует данные поступающие в ядро из каналов
 func Routing(appConf *configure.AppConfig, cc *configure.ChannelCollectionCoreApp, smt *configure.StoringMemoryTask) {
 	fmt.Println("START ROUTE module 'CoreApp'...")
-
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
 
 	//при старте приложения запрашиваем у БД список источников
 	cc.OutCoreChanDB <- configure.MsgBetweenCoreAndDB{
@@ -37,27 +33,21 @@ func Routing(appConf *configure.AppConfig, cc *configure.ChannelCollectionCoreAp
 		case data := <-cc.InCoreChanDB:
 			fmt.Println("MESSAGE FROM module DBInteraction")
 
-			if err := handlerslist.HandlerMsgFromDB(cc.OutCoreChanAPI, &data, smt, cc.OutCoreChanNI); err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-			}
+			handlerslist.HandlerMsgFromDB(cc.OutCoreChanAPI, &data, smt, cc.OutCoreChanNI)
 
 		//CHANNEL FROM API
 		case data := <-cc.InCoreChanAPI:
 
 			fmt.Println("MESSAGE FROM module API")
 
-			if err := handlerslist.HandlerMsgFromAPI(cc.OutCoreChanNI, &data, smt, cc.OutCoreChanDB, cc.OutCoreChanAPI); err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-			}
+			handlerslist.HandlerMsgFromAPI(cc.OutCoreChanNI, &data, smt, cc.OutCoreChanDB, cc.OutCoreChanAPI)
 
 		//CHANNEL FROM NETWORK INTERACTION
 		case data := <-cc.InCoreChanNI:
 
 			fmt.Println("MESSAGE FROM module NetworkInteraction")
 
-			if err := handlerslist.HandlerMsgFromNI(cc.OutCoreChanAPI, &data, smt, cc.OutCoreChanDB); err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-			}
+			handlerslist.HandlerMsgFromNI(cc.OutCoreChanAPI, &data, smt, cc.OutCoreChanDB)
 		}
 	}
 }

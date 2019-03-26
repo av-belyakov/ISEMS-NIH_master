@@ -22,8 +22,6 @@ func getCurrentSourceListForAPI(
 
 	listSource, ok := res.AdvancedOptions.([]configure.InformationAboutSource)
 	if !ok {
-		fmt.Println("NONONONONO")
-
 		_ = saveMessageApp.LogMessage("error", "type conversion error section type 'error notification'"+funcName)
 	}
 
@@ -50,6 +48,9 @@ func getCurrentSourceListForAPI(
 
 	msg := configure.SourceControlCurrentListSources{
 		MsgOptions: configure.SourceControlCurrentListSourcesList{
+			TaskInfo: configure.MsgTaskInfo{
+				State: "end",
+			},
 			SourceList: list,
 		},
 	}

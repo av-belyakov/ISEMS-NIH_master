@@ -97,12 +97,12 @@ func (isl *InformationSourcesList) GetSourceIDOnIP(ip string) (int, bool) {
 }
 
 //GetSourceSetting получить все настройки источника по его id
-func (isl *InformationSourcesList) GetSourceSetting(id int) (SourceSetting, bool) {
+func (isl *InformationSourcesList) GetSourceSetting(id int) (*SourceSetting, bool) {
 	if s, ok := isl.sourcesListSetting[id]; ok {
-		return s, true
+		return &s, true
 	}
 
-	return SourceSetting{}, false
+	return &SourceSetting{}, false
 }
 
 //GetSourceList возвращает список источников

@@ -22,7 +22,7 @@ type WrappersRouteRequest struct {
 }
 
 //WrapperFuncSourceControl обработка запросов об источниках
-func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetweenCoreAndDB) {
+func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg configure.MsgBetweenCoreAndDB) {
 	fmt.Printf("func 'WrapperFuncSourceControl'\n %v\n", msg)
 
 	qcs := handlerrequestdb.QueryCollectionSources{
@@ -33,14 +33,18 @@ func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetwe
 
 	switch msg.Instruction {
 	case "find_all":
-		qcs.GetAllSourcesList(wr.ChanIn, msg)
+		qcs.GetAllSourcesList(wr.ChanIn, &msg)
 
 	case "insert":
-		qcs.InsertListSources(wr.ChanIn, msg)
+		fmt.Println("func 'WrapperFuncSourceControl' RESIVED COMMAND 'INSERT'")
+
+		qcs.InsertListSources(wr.ChanIn, &msg)
 
 	case "update":
+		fmt.Println("func 'WrapperFuncSourceControl' RESIVED COMMAND 'UPDATE'")
 
 	case "delete":
+		fmt.Println("func 'WrapperFuncSourceControl' RESIVED COMMAND 'DELETE'")
 
 	}
 }

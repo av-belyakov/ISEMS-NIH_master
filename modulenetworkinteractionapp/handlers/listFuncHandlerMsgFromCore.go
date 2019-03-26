@@ -82,31 +82,6 @@ func updateSourceList(isl *configure.InformationSourcesList, l []configure.Detai
 
 	listTrastedSources, listInvalidSource := validateUserData(&l, mcpf)
 
-	/*for _, s := range l {
-		ipIsValid, _ := common.CheckStringIP(s.Argument.IP)
-		tokenIsValid, _ := common.CheckStringToken(s.Argument.Token)
-		foldersIsValid, _ := common.CheckFolders(s.Argument.Settings.StorageFolders)
-
-		if !ipIsValid || !tokenIsValid || !foldersIsValid {
-			listInvalidSource = append(listInvalidSource, s.ID)
-		}
-
-		if (s.Argument.Settings.MaxCountProcessFiltration > 0) && (s.Argument.Settings.MaxCountProcessFiltration < 10) {
-			mcpf = s.Argument.Settings.MaxCountProcessFiltration
-		}
-
-		listTrastedSources = append(listTrastedSources, configure.SourceSetting{
-			IP:       s.Argument.IP,
-			Token:    s.Argument.Token,
-			AsServer: s.Argument.Settings.AsServer,
-			Settings: configure.InfoServiceSettings{
-				EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
-				MaxCountProcessFiltration: mcpf,
-				StorageFolders:            s.Argument.Settings.StorageFolders,
-			},
-		})
-	}*/
-
 	if len(*listTrastedSources) == 0 {
 		return listTaskExecuted, listInvalidSource
 	}
@@ -169,7 +144,7 @@ func updateSourceList(isl *configure.InformationSourcesList, l []configure.Detai
 		}
 
 		//проверяем параметры подключения
-		if (s.Token != source.Argument.Token) || (s.AsServer != source.Argument.Settings.AsServer) {
+		if (s.Token != source.Argument.Token) || (s.IP != source.Argument.IP) || (s.AsServer != source.Argument.Settings.AsServer) {
 			sourcesIsReconnect = true
 		}
 
@@ -238,21 +213,6 @@ func getSourceListToStoreDB(trastedSoures []int, l *[]configure.DetailedListSour
 	return &list, nil
 }
 
-//splitSourceList разделяет список источников по выполняемым над ними действиям
-/*func splitSourceList(l *[]configure.DetailedListSources) (lau, ldr, listActionUndefined []int) {
-	for _, s := range *l {
-		if s.ActionType == "add" || s.ActionType == "update" {
-			lau = append(lau, s.ID)
-		} else if s.ActionType == "delete" || s.ActionType == "reconnect" || s.ActionType == "status request" {
-			ldr = append(ldr, s.ID)
-		} else {
-			listActionUndefined = append(listActionUndefined, s.ID)
-		}
-	}
-
-	return lau, ldr, listActionUndefined
-}*/
-
 //performActionSelectedSources выполняет действия только с заданными источниками
 func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]configure.DetailedListSources, clientName string, mcpf int8) (*[]configure.ActionTypeListSources, *[]int, error) {
 	listTrastedSources, listInvalidSource := validateUserData(l, mcpf)
@@ -261,6 +221,9 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 	if len(*listTrastedSources) == 0 {
 		return &listActionIsExecuted, &listInvalidSource, errors.New("parameters of all sources passed by the user have incorrect values, the action on any source will not be performed")
 	}
+
+	var ok bool
+	var sourceInfo *configure.SourceSetting
 
 	for _, s := range *l {
 		aie := configure.ActionTypeListSources{
@@ -271,9 +234,8 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 
 		strID := strconv.Itoa(s.ID)
 
-		sourceInfo, ok := isl.GetSourceSetting(s.ID)
-		//если источник не найден
-		if !ok {
+		//есть ли источник с таким ID
+		if sourceInfo, ok = isl.GetSourceSetting(s.ID); !ok {
 			if s.ActionType == "add" {
 				isl.AddSourceSettings(s.ID, configure.SourceSetting{
 					IP:         s.Argument.IP,
@@ -289,6 +251,7 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 
 				aie.IsSuccess = true
 			}
+			listActionIsExecuted = append(listActionIsExecuted, aie)
 
 			continue
 		}
@@ -297,19 +260,32 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 			aie.Status = "connect"
 		}
 
+		//обработка запроса статуса соединений
+		if s.ActionType == "status request" {
+			aie.IsSuccess = true
+
+			listActionIsExecuted = append(listActionIsExecuted, aie)
+
+			continue
+		}
+
 		//если источник найден
 		if s.ActionType == "add" {
 			aie.IsSuccess = false
 			aie.MessageFailure = "невозможно добавить сенсор, сенсор с ID " + strID + " уже существует"
+
+			listActionIsExecuted = append(listActionIsExecuted, aie)
 
 			continue
 		}
 
 		if s.ActionType == "update" || s.ActionType == "delete" {
 			//проверяем имеет ли право клиент делать какие либо изменения с информацией по источнику
-			if clientName != sourceInfo.ClientName && clientName != "root token" {
+			if (clientName != sourceInfo.ClientName) && (clientName != "root token") {
 				aie.IsSuccess = false
 				aie.MessageFailure = "недостаточно прав для выполнения действий с сенсором ID " + strID + ", возможно данный сенсор был добавлен другим клиентом"
+
+				listActionIsExecuted = append(listActionIsExecuted, aie)
 
 				continue
 			}
@@ -319,14 +295,67 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 				aie.IsSuccess = false
 				aie.MessageFailure = "невозможно выполнить действия на сенсоре с ID " + strID + ", так как в настоящее время на данном сенсоре выполняется задача"
 
+				listActionIsExecuted = append(listActionIsExecuted, aie)
+
 				continue
 			}
 		}
 
+		if s.ActionType == "update" {
+			//проверяем параметры подключения
+			if (s.Argument.Token != sourceInfo.Token) || (s.Argument.IP != sourceInfo.IP) || (s.Argument.Settings.AsServer != sourceInfo.AsServer) {
+				//закрываем соединение и удаляем дискриптор
+				if cl, isExist := isl.GetLinkWebsocketConnect(sourceInfo.IP); isExist {
+					cl.Link.Close()
+
+					isl.DelLinkWebsocketConnection(sourceInfo.IP)
+				}
+			}
+
+			isl.AddSourceSettings(s.ID, configure.SourceSetting{
+				IP:         s.Argument.IP,
+				Token:      s.Argument.Token,
+				ClientName: clientName,
+				AsServer:   s.Argument.Settings.AsServer,
+				Settings: configure.InfoServiceSettings{
+					EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
+					MaxCountProcessFiltration: s.Argument.Settings.MaxCountProcessFiltration,
+					StorageFolders:            s.Argument.Settings.StorageFolders,
+				},
+			})
+
+			aie.IsSuccess = true
+
+			listActionIsExecuted = append(listActionIsExecuted, aie)
+
+			continue
+		}
+
+		if s.ActionType == "delete" {
+			//закрываем соединение и удаляем дискриптор
+			if cl, isExist := isl.GetLinkWebsocketConnect(sourceInfo.IP); isExist {
+				cl.Link.Close()
+
+				isl.DelLinkWebsocketConnection(sourceInfo.IP)
+			}
+
+			//удаление всей информации об источнике
+			isl.DelSourceSettings(s.ID)
+
+			aie.IsSuccess = true
+
+			listActionIsExecuted = append(listActionIsExecuted, aie)
+
+			continue
+		}
+
+		//при переподключении
 		if s.ActionType == "reconnect" {
 			if !sourceInfo.ConnectionStatus {
 				aie.IsSuccess = false
 				aie.MessageFailure = "невозможно выполнить переподключение, сенсор с ID " + strID + " не подключен"
+
+				listActionIsExecuted = append(listActionIsExecuted, aie)
 
 				continue
 			}
@@ -335,27 +364,83 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 				aie.IsSuccess = false
 				aie.MessageFailure = "невозможно выполнить переподключение, с сенсора с ID " + strID + " осуществляется загрузка файлов"
 
+				listActionIsExecuted = append(listActionIsExecuted, aie)
+
 				continue
 			}
-		}
 
-		/*
-			ДОДЕЛАТЬ ПРОВЕРКИ, ОБНОВИТЬ ИЛИ УДАЛИТЬ ИСТОЧНИК,
-			ВЫПОЛНИТЬ ПЕРЕПОДКЛЮЧЕНИЕ
-		*/
+			//закрываем соединение и удаляем дискриптор
+			if cl, isExist := isl.GetLinkWebsocketConnect(sourceInfo.IP); isExist {
+				cl.Link.Close()
+
+				isl.DelLinkWebsocketConnection(sourceInfo.IP)
+			}
+
+			aie.IsSuccess = true
+
+			listActionIsExecuted = append(listActionIsExecuted, aie)
+		}
 	}
 
-	/*
-		sl: [ ARRAY
-				{
-					id: <INT> // ID - уникальный цифровой идентификатор источника
-					s: <STRING> // status - 'connect'/'disconnect',
-					at: <STRING>, // actionType — тип действия, 'add' / 'delete' / 'update' / 'reconnect' / 'none'
-					is: <BOOL>, // isSuccess — успешность (true/flase)
-					mf: <STRING>'' //  messageFailure — сообщение об ошибке
-				}
-			]
-	*/
-
 	return &listActionIsExecuted, &listInvalidSource, nil
+}
+
+//getSourceListForWriteToBD получаем ID источников по которым нужно актуализировать информацию
+// в БД, к ним относятся источники для которых выполненно действие
+// add, delete, update
+func getSourceListsForWriteToBD(
+	ml *[]configure.DetailedListSources,
+	l *[]configure.ActionTypeListSources,
+	clientName string,
+	mcpf int8) (*[]configure.InformationAboutSource, *[]configure.InformationAboutSource, *[]int) {
+
+	var listAdd, listUpdate []configure.InformationAboutSource
+	listDel := []int{}
+
+	for _, source := range *l {
+		if !source.IsSuccess {
+			continue
+		}
+
+		if source.ActionType == "delete" {
+			listDel = append(listDel, source.ID)
+
+			continue
+		}
+
+		for _, s := range *ml {
+			if s.ID == source.ID {
+				si := configure.InformationAboutSource{
+					ID:            source.ID,
+					IP:            s.Argument.IP,
+					Token:         s.Argument.Token,
+					ShortName:     s.Argument.ShortName,
+					Description:   s.Argument.Description,
+					AsServer:      s.Argument.Settings.AsServer,
+					NameClientAPI: clientName,
+					SourceSetting: configure.InfoServiceSettings{
+						EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
+						MaxCountProcessFiltration: mcpf,
+						StorageFolders:            s.Argument.Settings.StorageFolders,
+					},
+				}
+
+				if source.ActionType == "add" {
+					listAdd = append(listAdd, si)
+
+					continue
+				}
+
+				if source.ActionType == "update" {
+					listUpdate = append(listUpdate, si)
+
+					continue
+				}
+
+				break
+			}
+		}
+	}
+
+	return &listAdd, &listUpdate, &listDel
 }

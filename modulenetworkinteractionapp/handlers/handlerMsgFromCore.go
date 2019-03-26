@@ -145,9 +145,7 @@ func HandlerMsgFromCore(
 		if msg.Command == "perform actions on sources" {
 			fmt.Println("====== PERFOM ACTIONS ON SOURCES RESIVED FROM CLIENT API =======", msg.ClientName, "====")
 
-			//'add'/'update'/'delete'/'reconnect'/'status request'
-
-			ado, ok := msg.AdvancedOptions.(configure.SourceControlMsgTypeFromAPI)
+			ado, ok := msg.AdvancedOptions.(configure.SourceControlMsgOptions)
 			if !ok {
 				_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
 
@@ -155,7 +153,7 @@ func HandlerMsgFromCore(
 			}
 
 			//проверяем прислал ли пользователь данные по источникам
-			if len(ado.SourceList) == 0 {
+			if len(ado.MsgOptions.SourceList) == 0 {
 				clientNotify.AdvancedOptions = configure.MessageNotification{
 					SourceReport:                 "NI module",
 					Section:                      "source control",
@@ -169,7 +167,7 @@ func HandlerMsgFromCore(
 				return
 			}
 
-			listActionType, listInvalidSource, err := performActionSelectedSources(isl, &ado.SourceList, msg.ClientName, mcpf)
+			listActionType, listInvalidSource, err := performActionSelectedSources(isl, &ado.MsgOptions.SourceList, msg.ClientName, mcpf)
 			if err != nil {
 				strSourceID := createStringFromSourceList(*listInvalidSource)
 
@@ -188,6 +186,42 @@ func HandlerMsgFromCore(
 			}
 
 			fmt.Println("List Action Type", listActionType)
+
+			// получаем ID источников по которым нужно актуализировать информацию
+			// в БД, к ним относятся источники для которых выполненно действие
+			// add, delete, update
+			la, lu, ld := getSourceListsForWriteToBD(&ado.MsgOptions.SourceList, listActionType, msg.ClientName, mcpf)
+
+			//отправляем сообщение пользователю
+			chanInCore <- configure.MsgBetweenCoreAndNI{
+				TaskID:          msg.TaskID,
+				Section:         "source control",
+				Command:         "confirm the action",
+				AdvancedOptions: listActionType,
+			}
+
+			//актуализируем информацию в БД
+			//добавить
+			chanInCore <- configure.MsgBetweenCoreAndNI{
+				TaskID:          msg.TaskID,
+				Section:         "source control",
+				Command:         "keep list sources in database",
+				AdvancedOptions: la,
+			}
+			//удалить
+			chanInCore <- configure.MsgBetweenCoreAndNI{
+				TaskID:          msg.TaskID,
+				Section:         "source control",
+				Command:         "delete sources in database",
+				AdvancedOptions: ld,
+			}
+			//обновить
+			chanInCore <- configure.MsgBetweenCoreAndNI{
+				TaskID:          msg.TaskID,
+				Section:         "source control",
+				Command:         "update sources in database",
+				AdvancedOptions: lu,
+			}
 		}
 
 	case "filtration control":

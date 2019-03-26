@@ -1,7 +1,6 @@
 package handlerslist
 
 import (
-	"errors"
 	"fmt"
 
 	"ISEMS-NIH_master/configure"
@@ -14,7 +13,7 @@ func HandlerMsgFromDB(
 	chanToAPI chan<- configure.MsgBetweenCoreAndAPI,
 	res *configure.MsgBetweenCoreAndDB,
 	smt *configure.StoringMemoryTask,
-	chanToNI chan<- configure.MsgBetweenCoreAndNI) error {
+	chanToNI chan<- configure.MsgBetweenCoreAndNI) {
 
 	fmt.Println("START function 'HandlerMsgFromDB' module coreapp")
 	//	fmt.Printf("%v", res)
@@ -47,7 +46,9 @@ func HandlerMsgFromDB(
 		case "error notification":
 			en, ok := res.AdvancedOptions.(configure.ErrorNotification)
 			if !ok {
-				return errors.New("type conversion error section type 'error notification'" + funcName)
+				_ = saveMessageApp.LogMessage("error", "type conversion error section type 'error notification'"+funcName)
+
+				return
 			}
 
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(en.ErrorBody))
@@ -62,7 +63,9 @@ func HandlerMsgFromDB(
 		case "message notification":
 			mn, ok := res.AdvancedOptions.(configure.MessageNotification)
 			if !ok {
-				return errors.New("type conversion error section type 'message notification'" + funcName)
+				_ = saveMessageApp.LogMessage("error", "type conversion error section type 'message notification'"+funcName)
+
+				return
 			}
 
 			ns := notifications.NotificationSettingsToClientAPI{
@@ -94,10 +97,10 @@ func HandlerMsgFromDB(
 		if res.MsgSection == "error notification" {
 			//если сообщение об ошибке только для ядра приложения
 			if en, ok := res.AdvancedOptions.(configure.ErrorNotification); ok {
-				return en.ErrorBody
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(en.ErrorBody))
+
+				return
 			}
 		}
 	}
-
-	return nil
 }

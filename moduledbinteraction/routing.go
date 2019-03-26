@@ -25,7 +25,7 @@ func RouteRequest(chanIn chan configure.MsgBetweenCoreAndDB, nameDB string, link
 	for msg := range chanOut {
 		switch msg.MsgSection {
 		case "source control":
-			go wrapperFunc.WrapperFuncSourceControl(&msg)
+			go wrapperFunc.WrapperFuncSourceControl(msg)
 		case "source telemetry":
 
 		case "filtration":

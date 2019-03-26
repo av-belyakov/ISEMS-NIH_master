@@ -2,7 +2,6 @@ package handlerslist
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -17,9 +16,12 @@ func HandlerMsgFromAPI(
 	msg *configure.MsgBetweenCoreAndAPI,
 	smt *configure.StoringMemoryTask,
 	chanToDB chan<- configure.MsgBetweenCoreAndDB,
-	chanToAPI chan<- configure.MsgBetweenCoreAndAPI) error {
+	chanToAPI chan<- configure.MsgBetweenCoreAndAPI) {
 
 	fmt.Println("--- START function 'HandlerMsgFromAPI'...")
+
+	//инициализируем функцию конструктор для записи лог-файлов
+	saveMessageApp := savemessageapp.New()
 
 	funcName := ", function 'HeaderMsgFromAPI'"
 	msgc := configure.MsgCommon{}
@@ -34,18 +36,18 @@ func HandlerMsgFromAPI(
 	msgJSON, ok := msg.MsgJSON.([]byte)
 	if !ok {
 		notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
+		_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
-		return errors.New("bad cast type JSON messages" + funcName)
+		return
 	}
 
 	if err := json.Unmarshal(msgJSON, &msgc); err != nil {
 		notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
+		_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
-		return errors.New("bad cast type JSON messages" + funcName)
+		return
 	}
 
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
 	//логируем запросы клиентов
 	_ = saveMessageApp.LogMessage("requests", "client name: '"+msg.ClientName+"' ("+msg.ClientIP+"), request: type = "+msgc.MsgType+", section = "+msgc.MsgSection+", instruction = "+msgc.MsgInsturction+", client task ID = "+msgc.ClientTaskID)
 
@@ -55,8 +57,9 @@ func HandlerMsgFromAPI(
 				var scmo configure.SourceControlMsgOptions
 				if err := json.Unmarshal(msgJSON, &scmo); err != nil {
 					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
+					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
-					return errors.New("bad cast type JSON messages" + funcName)
+					return
 				}
 
 				//добавляем новую задачу
@@ -76,18 +79,18 @@ func HandlerMsgFromAPI(
 					Command:         "load list",
 					AdvancedOptions: scmo.MsgOptions,
 				}
-
-				return nil
 			}
 
 			notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+			_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgSection'"+funcName)
 
-			return errors.New("in the json message is not found the right option for 'MsgSection'" + funcName)
+			return
 		}
 
 		notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+		_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgSection'"+funcName)
 
-		return errors.New("in the json message is not found the right option for 'MsgInsturction'" + funcName)
+		return
 	}
 
 	if msgc.MsgType == "command" {
@@ -114,7 +117,7 @@ func HandlerMsgFromAPI(
 					TaskID:       taskID,
 				}
 
-				return nil
+				return
 			}
 
 			//выполнить какие либо действия над источниками
@@ -122,8 +125,9 @@ func HandlerMsgFromAPI(
 				var scmo configure.SourceControlMsgOptions
 				if err := json.Unmarshal(msgJSON, &scmo); err != nil {
 					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
+					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
-					return errors.New("bad cast type JSON messages" + funcName)
+					return
 				}
 
 				//добавляем новую задачу
@@ -144,36 +148,34 @@ func HandlerMsgFromAPI(
 					AdvancedOptions: scmo,
 				}
 
-				return nil
+				return
 			}
 
 			notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+			_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgInstruction'"+funcName)
 
-			return errors.New("in the json message is not found the right option for 'MsgInstruction'" + funcName)
+			return
 
 		case "filtration control":
 			fmt.Println("func 'HandlerMsgFromAPI' MsgType: 'command', MsgSection: 'filtration control'")
 
-			return nil
+			return
 
 		case "download control":
 			fmt.Println("func 'HandlerMsgFromAPI' MsgType: 'command', MsgSection: 'download control'")
 
-			return nil
+			return
 
 		case "information search control":
 			fmt.Println("func 'HandlerMsgFromAPI' MsgType: 'command', MsgSection: 'information search control'")
 
-			return nil
+			return
 
 		default:
 			notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+			_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgInstruction'"+funcName)
 
-			return errors.New("in the json message is not found the right option for 'MsgSection'" + funcName)
+			return
 		}
 	}
-
-	notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
-
-	return errors.New("in the json message is not found the right option for 'MsgType'" + funcName)
 }

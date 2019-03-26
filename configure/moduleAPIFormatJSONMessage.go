@@ -54,6 +54,7 @@ type UserNotification struct {
 
 //SourceControlMsgTypeFromAPI подробно по источникам API->
 type SourceControlMsgTypeFromAPI struct {
+	TaskInfo   MsgTaskInfo           `json:"ti"`
 	SourceList []DetailedListSources `json:"sl"`
 }
 
@@ -63,8 +64,16 @@ type SourceControlCurrentListSources struct {
 	MsgOptions SourceControlCurrentListSourcesList `json:"o"`
 }
 
+//SourceControlConfirmActionSource список источников с выполненными над ними
+//действиями и статусом успешности действия
+type SourceControlConfirmActionSource struct {
+	MsgCommon
+	MsgOptions SourceControlMsgTypeToAPI `json:"o"`
+}
+
 //SourceControlCurrentListSourcesList описание полного списка источников
 type SourceControlCurrentListSourcesList struct {
+	TaskInfo   MsgTaskInfo        `json:"ti"`
 	SourceList []ShortListSources `json:"sl"`
 }
 
@@ -80,7 +89,14 @@ type SourceControlActionsTakenSources struct {
 
 //SourceControlMsgTypeToAPI описание действий над источниками
 type SourceControlMsgTypeToAPI struct {
+	TaskInfo   MsgTaskInfo             `json:"ti"`
 	SourceList []ActionTypeListSources `json:"sl"`
+}
+
+//MsgTaskInfo описания состояния задачи
+type MsgTaskInfo struct {
+	State       string `json:"s"`
+	Explanation string `json:"e"`
 }
 
 //ActionTypeListSources описание действий над источниками

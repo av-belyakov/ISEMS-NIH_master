@@ -21,7 +21,7 @@ func getConfirmActionSourceListForAPI(
 	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'getConfirmActionSourceListForAPI'"
 
-	listSource, ok := res.AdvancedOptions.([]configure.ActionTypeListSources)
+	listSource, ok := res.AdvancedOptions.(*[]configure.ActionTypeListSources)
 	if !ok {
 		_ = saveMessageApp.LogMessage("error", "type conversion error section type 'error notification'"+funcName)
 	}
@@ -40,7 +40,7 @@ func getConfirmActionSourceListForAPI(
 			TaskInfo: configure.MsgTaskInfo{
 				State: "end",
 			},
-			SourceList: listSource,
+			SourceList: *listSource,
 		},
 	}
 	msg.MsgType = "information"
