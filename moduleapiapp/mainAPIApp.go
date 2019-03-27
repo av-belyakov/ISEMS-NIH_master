@@ -30,7 +30,7 @@ type settingsServerAPI struct {
 }
 
 type channels struct {
-	ChanIn, ChanOut chan configure.MsgBetweenCoreAndAPI
+	ChanIn, ChanOut chan *configure.MsgBetweenCoreAndAPI
 }
 
 var chn channels
@@ -225,7 +225,7 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 
 			fmt.Println("resived message from API client")
 
-			chn.ChanIn <- configure.MsgBetweenCoreAndAPI{
+			chn.ChanIn <- &configure.MsgBetweenCoreAndAPI{
 				MsgGenerator: "API module",
 				MsgRecipient: "Core module",
 				IDClientAPI:  clientID,
@@ -243,15 +243,15 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 
 func init() {
 	chn = channels{
-		ChanOut: make(chan configure.MsgBetweenCoreAndAPI, 10),
-		ChanIn:  make(chan configure.MsgBetweenCoreAndAPI, 10),
+		ChanOut: make(chan *configure.MsgBetweenCoreAndAPI, 10),
+		ChanIn:  make(chan *configure.MsgBetweenCoreAndAPI, 10),
 	}
 
 	storingMemoryAPI = configure.NewRepositorySMAPI()
 }
 
 //MainAPIApp обработчик запросов поступающих через API
-func MainAPIApp(appConfig *configure.AppConfig) (chanOut, chanIn chan configure.MsgBetweenCoreAndAPI) {
+func MainAPIApp(appConfig *configure.AppConfig) (chanOut, chanIn chan *configure.MsgBetweenCoreAndAPI) {
 	fmt.Println("START module 'MainAppAPI'...")
 
 	settingsServerAPI := settingsServerAPI{

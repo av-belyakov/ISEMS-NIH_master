@@ -17,7 +17,13 @@ import (
 )
 
 //RouteCoreRequest маршрутизирует запросы от CoreApp и обрабатывает сообщения от wss модулей
-func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, chanInCore chan<- configure.MsgBetweenCoreAndNI, isl *configure.InformationSourcesList, chanColl map[string]chan [2]string, chanOutCore <-chan configure.MsgBetweenCoreAndNI) {
+func RouteCoreRequest(
+	cwt chan<- configure.MsgWsTransmission,
+	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
+	isl *configure.InformationSourcesList,
+	chanColl map[string]chan [2]string,
+	chanOutCore <-chan *configure.MsgBetweenCoreAndNI) {
+
 	fmt.Println("START module 'RouteCoreRequest' (network interaction)...")
 
 	//инициализируем функцию конструктор для записи лог-файлов
@@ -63,14 +69,6 @@ func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, chanInCore chan<- 
 				fmt.Println(action, sourceIP)
 			}
 
-			/*
-				обработка сообщений от ЯДРА приложения, тип:
-					SourceID
-					MsgType //команда/информационное
-					TypeRequiredAction string
-					Data []byte
-			*/
-
 			//обработка сообщения от ядра
 		case msg := <-chanOutCore:
 			go handlers.HandlerMsgFromCore(cwt, isl, msg, chanInCore)
@@ -79,7 +77,11 @@ func RouteCoreRequest(cwt chan<- configure.MsgWsTransmission, chanInCore chan<- 
 }
 
 //RouteWssConnectionResponse маршрутизирует сообщения от источников
-func RouteWssConnectionResponse(cwt chan<- configure.MsgWsTransmission, isl *configure.InformationSourcesList, chanInCore chan<- configure.MsgBetweenCoreAndNI) {
+func RouteWssConnectionResponse(
+	cwt chan<- configure.MsgWsTransmission,
+	isl *configure.InformationSourcesList,
+	chanInCore chan<- *configure.MsgBetweenCoreAndNI) {
+
 	fmt.Println("START module 'RouteWssConnectionResponse' (network interaction)...")
 
 	//инициализируем функцию конструктор для записи лог-файлов

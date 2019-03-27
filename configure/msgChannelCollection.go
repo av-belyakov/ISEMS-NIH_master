@@ -2,9 +2,9 @@ package configure
 
 //ChannelCollectionCoreApp коллекция каналов для coreAppRoute
 type ChannelCollectionCoreApp struct {
-	OutCoreChanDB, InCoreChanDB   chan MsgBetweenCoreAndDB
-	OutCoreChanAPI, InCoreChanAPI chan MsgBetweenCoreAndAPI
-	OutCoreChanNI, InCoreChanNI   chan MsgBetweenCoreAndNI
+	OutCoreChanDB, InCoreChanDB   chan *MsgBetweenCoreAndDB
+	OutCoreChanAPI, InCoreChanAPI chan *MsgBetweenCoreAndAPI
+	OutCoreChanNI, InCoreChanNI   chan *MsgBetweenCoreAndNI
 }
 
 //MsgWsTransmission содержит информацию для передачи подключенному источнику

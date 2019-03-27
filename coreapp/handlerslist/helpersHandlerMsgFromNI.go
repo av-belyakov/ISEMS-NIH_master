@@ -11,7 +11,7 @@ import (
 //getConfirmActionSourceListForAPI подгатавливает список источников с выполненными
 //над ними действиями и статусом успешности
 func getConfirmActionSourceListForAPI(
-	chanToAPI chan<- configure.MsgBetweenCoreAndAPI,
+	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
 	res *configure.MsgBetweenCoreAndNI,
 	smt *configure.StoringMemoryTask) {
 
@@ -51,7 +51,7 @@ func getConfirmActionSourceListForAPI(
 	msgjson, _ := json.Marshal(&msg)
 
 	//отправляем данные клиенту
-	chanToAPI <- configure.MsgBetweenCoreAndAPI{
+	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
 		MsgGenerator: "Core module",
 		MsgRecipient: "API module",
 		IDClientAPI:  st.ClientID,

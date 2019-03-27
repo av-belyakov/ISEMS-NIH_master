@@ -16,10 +16,10 @@ import (
 
 //HandlerMsgFromNI обработчик запросов поступающих от модуля сетевого взаимодействия
 func HandlerMsgFromNI(
-	chanToAPI chan<- configure.MsgBetweenCoreAndAPI,
+	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
 	msg *configure.MsgBetweenCoreAndNI,
 	smt *configure.StoringMemoryTask,
-	chanToDB chan<- configure.MsgBetweenCoreAndDB) {
+	chanToDB chan<- *configure.MsgBetweenCoreAndDB) {
 
 	fmt.Println("--- START function 'HandlerMsgFromNI'...")
 
@@ -44,7 +44,7 @@ func HandlerMsgFromNI(
 		if msg.Command == "keep list sources in database" {
 			fmt.Println(":INSERT (Core module)")
 
-			chanToDB <- configure.MsgBetweenCoreAndDB{
+			chanToDB <- &configure.MsgBetweenCoreAndDB{
 				MsgGenerator:    "NI module",
 				MsgRecipient:    "DB module",
 				MsgSection:      "source control",
@@ -58,7 +58,7 @@ func HandlerMsgFromNI(
 		if msg.Command == "delete sources in database" {
 			fmt.Println(":DELETE (Core module)")
 
-			chanToDB <- configure.MsgBetweenCoreAndDB{
+			chanToDB <- &configure.MsgBetweenCoreAndDB{
 				MsgGenerator:    "NI module",
 				MsgRecipient:    "DB module",
 				MsgSection:      "source control",
@@ -72,7 +72,7 @@ func HandlerMsgFromNI(
 		if msg.Command == "update sources in database" {
 			fmt.Println(":UPDATE (Core module)")
 
-			chanToDB <- configure.MsgBetweenCoreAndDB{
+			chanToDB <- &configure.MsgBetweenCoreAndDB{
 				MsgGenerator:    "NI module",
 				MsgRecipient:    "DB module",
 				MsgSection:      "source control",

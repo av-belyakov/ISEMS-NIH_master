@@ -10,10 +10,10 @@ import (
 
 //HandlerMsgFromDB обработчик сообщений приходящих от модуля взаимодействия с базой данных
 func HandlerMsgFromDB(
-	chanToAPI chan<- configure.MsgBetweenCoreAndAPI,
+	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
 	res *configure.MsgBetweenCoreAndDB,
 	smt *configure.StoringMemoryTask,
-	chanToNI chan<- configure.MsgBetweenCoreAndNI) {
+	chanToNI chan<- *configure.MsgBetweenCoreAndNI) {
 
 	fmt.Println("START function 'HandlerMsgFromDB' module coreapp")
 	//	fmt.Printf("%v", res)
@@ -79,7 +79,7 @@ func HandlerMsgFromDB(
 	} else if res.MsgRecipient == "NI module" {
 		switch res.MsgSection {
 		case "source list":
-			chanToNI <- configure.MsgBetweenCoreAndNI{
+			chanToNI <- &configure.MsgBetweenCoreAndNI{
 				Section:         "source control",
 				Command:         "create list",
 				AdvancedOptions: res.AdvancedOptions,

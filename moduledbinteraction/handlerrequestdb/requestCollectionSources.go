@@ -19,7 +19,7 @@ type QueryCollectionSources struct {
 }
 
 //GetAllSourcesList получить весь список источников
-func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
+func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- *configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
 	msgResult := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
 		MsgRecipient: req.MsgGenerator,
@@ -37,7 +37,7 @@ func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- configure.Msg
 			ErrorBody:    err,
 		}
 
-		chanIn <- msgResult
+		chanIn <- &msgResult
 
 		return
 	}
@@ -46,12 +46,12 @@ func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- configure.Msg
 	msgResult.AdvancedOptions = sourcesList
 
 	//отправка списка источников маршрутизатору ядра приложения
-	chanIn <- msgResult
+	chanIn <- &msgResult
 }
 
 //InsertListSources добавить информацию об источниках
 //которых нет в БД или параметры по которым отличаются
-func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
+func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- *configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
 		MsgRecipient: req.MsgGenerator,
@@ -71,7 +71,7 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- configure.Msg
 			ErrorBody:             err,
 		}
 
-		chanIn <- msgRes
+		chanIn <- &msgRes
 
 		return
 	}
@@ -88,7 +88,7 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- configure.Msg
 			ErrorBody:             errors.New(errMsg),
 		}
 
-		chanIn <- msgRes
+		chanIn <- &msgRes
 
 		return
 	}
@@ -123,7 +123,7 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- configure.Msg
 }
 
 //AddSourceToSourcesList добавить новые источники
-func AddSourceToSourcesList(chanIn chan<- configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
+func AddSourceToSourcesList(chanIn chan<- *configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
 
 }
 

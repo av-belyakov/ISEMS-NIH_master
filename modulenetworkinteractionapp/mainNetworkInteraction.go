@@ -18,7 +18,7 @@ import (
 )
 
 //MainNetworkInteraction осуществляет общее управление
-func MainNetworkInteraction(appConf *configure.AppConfig) (chanOutCore, chanInCore chan configure.MsgBetweenCoreAndNI) {
+func MainNetworkInteraction(appConf *configure.AppConfig) (chanOutCore, chanInCore chan *configure.MsgBetweenCoreAndNI) {
 	fmt.Println("START module 'MainNetworkInteraction'...")
 
 	//инициализируем функцию конструктор для записи лог-файлов
@@ -28,8 +28,8 @@ func MainNetworkInteraction(appConf *configure.AppConfig) (chanOutCore, chanInCo
 	cwt := make(chan configure.MsgWsTransmission)
 
 	//инициализируем каналы для передачи данных между ядром приложения и текущем модулем
-	chanOutCore = make(chan configure.MsgBetweenCoreAndNI)
-	chanInCore = make(chan configure.MsgBetweenCoreAndNI)
+	chanOutCore = make(chan *configure.MsgBetweenCoreAndNI)
+	chanInCore = make(chan *configure.MsgBetweenCoreAndNI)
 
 	//инициализация каналов управления и состояния источников
 	chansStatSource := map[string]chan [2]string{

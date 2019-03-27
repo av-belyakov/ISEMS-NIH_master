@@ -12,11 +12,11 @@ import (
 
 //HandlerMsgFromAPI обработчик сообщений приходящих от модуля API
 func HandlerMsgFromAPI(
-	chanToNI chan<- configure.MsgBetweenCoreAndNI,
+	chanToNI chan<- *configure.MsgBetweenCoreAndNI,
 	msg *configure.MsgBetweenCoreAndAPI,
 	smt *configure.StoringMemoryTask,
-	chanToDB chan<- configure.MsgBetweenCoreAndDB,
-	chanToAPI chan<- configure.MsgBetweenCoreAndAPI) {
+	chanToDB chan<- *configure.MsgBetweenCoreAndDB,
+	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) {
 
 	fmt.Println("--- START function 'HandlerMsgFromAPI'...")
 
@@ -72,13 +72,15 @@ func HandlerMsgFromAPI(
 					TimeUpdate:                      time.Now().Unix(),
 				})
 
-				chanToNI <- configure.MsgBetweenCoreAndNI{
+				chanToNI <- &configure.MsgBetweenCoreAndNI{
 					TaskID:          taskID,
 					ClientName:      msg.ClientName,
 					Section:         "source control",
 					Command:         "load list",
 					AdvancedOptions: scmo.MsgOptions,
 				}
+
+				return
 			}
 
 			notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
@@ -109,7 +111,7 @@ func HandlerMsgFromAPI(
 					TimeUpdate:                      time.Now().Unix(),
 				})
 
-				chanToDB <- configure.MsgBetweenCoreAndDB{
+				chanToDB <- &configure.MsgBetweenCoreAndDB{
 					MsgGenerator: "API module",
 					MsgRecipient: "DB module",
 					MsgSection:   "source control",
@@ -140,7 +142,7 @@ func HandlerMsgFromAPI(
 					TimeUpdate:                      time.Now().Unix(),
 				})
 
-				chanToNI <- configure.MsgBetweenCoreAndNI{
+				chanToNI <- &configure.MsgBetweenCoreAndNI{
 					TaskID:          taskID,
 					ClientName:      msg.ClientName,
 					Section:         "source control",

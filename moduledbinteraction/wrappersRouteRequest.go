@@ -18,11 +18,11 @@ import (
 type WrappersRouteRequest struct {
 	NameDB    string
 	ConnectDB *mongo.Client
-	ChanIn    chan configure.MsgBetweenCoreAndDB
+	ChanIn    chan *configure.MsgBetweenCoreAndDB
 }
 
 //WrapperFuncSourceControl обработка запросов об источниках
-func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg configure.MsgBetweenCoreAndDB) {
+func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetweenCoreAndDB) {
 	fmt.Printf("func 'WrapperFuncSourceControl'\n %v\n", msg)
 
 	qcs := handlerrequestdb.QueryCollectionSources{
@@ -33,12 +33,12 @@ func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg configure.MsgBetwee
 
 	switch msg.Instruction {
 	case "find_all":
-		qcs.GetAllSourcesList(wr.ChanIn, &msg)
+		qcs.GetAllSourcesList(wr.ChanIn, msg)
 
 	case "insert":
 		fmt.Println("func 'WrapperFuncSourceControl' RESIVED COMMAND 'INSERT'")
 
-		qcs.InsertListSources(wr.ChanIn, &msg)
+		qcs.InsertListSources(wr.ChanIn, msg)
 
 	case "update":
 		fmt.Println("func 'WrapperFuncSourceControl' RESIVED COMMAND 'UPDATE'")

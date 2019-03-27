@@ -14,7 +14,7 @@ type NotificationSettingsToClientAPI struct {
 
 //SendNotificationToClientAPI отправить сообщение клиенту API
 func SendNotificationToClientAPI(
-	c chan<- configure.MsgBetweenCoreAndAPI,
+	c chan<- *configure.MsgBetweenCoreAndAPI,
 	ns NotificationSettingsToClientAPI,
 	clientTaskID, clientID string) {
 
@@ -36,7 +36,7 @@ func SendNotificationToClientAPI(
 	msgjson, _ := json.Marshal(&notify)
 
 	//отправляем сообщение
-	c <- configure.MsgBetweenCoreAndAPI{
+	c <- &configure.MsgBetweenCoreAndAPI{
 		MsgGenerator: "Core module",
 		MsgRecipient: "API module",
 		IDClientAPI:  clientID,

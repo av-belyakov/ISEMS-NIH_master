@@ -17,8 +17,8 @@ import (
 func HandlerMsgFromCore(
 	cwt chan<- configure.MsgWsTransmission,
 	isl *configure.InformationSourcesList,
-	msg configure.MsgBetweenCoreAndNI,
-	chanInCore chan<- configure.MsgBetweenCoreAndNI) {
+	msg *configure.MsgBetweenCoreAndNI,
+	chanInCore chan<- *configure.MsgBetweenCoreAndNI) {
 
 	fmt.Println("START func HandlerMsgFromCore...")
 	//инициализируем функцию конструктор для записи лог-файлов
@@ -73,7 +73,7 @@ func HandlerMsgFromCore(
 					HumanDescriptionNotification: "Получен пустой список сенсоров",
 				}
 
-				chanInCore <- clientNotify
+				chanInCore <- &clientNotify
 
 				return
 			}
@@ -91,7 +91,7 @@ func HandlerMsgFromCore(
 					HumanDescriptionNotification: "Обновление списка сенсоров выполнено не полностью, параметры сенсоров: " + strSourceID + " содержат некорректные значения",
 				}
 
-				chanInCore <- clientNotify
+				chanInCore <- &clientNotify
 			} else {
 				hdn := "Обновление настроек сенсоров выполнено успешно"
 				cm := "success"
@@ -111,7 +111,7 @@ func HandlerMsgFromCore(
 					HumanDescriptionNotification: hdn,
 				}
 
-				chanInCore <- clientNotify
+				chanInCore <- &clientNotify
 			}
 
 			lc, ld := isl.GetListsConnectedAndDisconnectedSources()
@@ -139,7 +139,7 @@ func HandlerMsgFromCore(
 			}
 
 			//новый список источников для сохранения в БД
-			chanInCore <- msgToCore
+			chanInCore <- &msgToCore
 		}
 
 		if msg.Command == "perform actions on sources" {
@@ -162,7 +162,7 @@ func HandlerMsgFromCore(
 					HumanDescriptionNotification: "Получен пустой список сенсоров",
 				}
 
-				chanInCore <- clientNotify
+				chanInCore <- &clientNotify
 
 				return
 			}
@@ -180,7 +180,7 @@ func HandlerMsgFromCore(
 					HumanDescriptionNotification: "невозможно выполнить действия над сенсорами:" + strSourceID + ", приняты некорректные значения",
 				}
 
-				chanInCore <- clientNotify
+				chanInCore <- &clientNotify
 
 				return
 			}
@@ -193,7 +193,7 @@ func HandlerMsgFromCore(
 			la, lu, ld := getSourceListsForWriteToBD(&ado.MsgOptions.SourceList, listActionType, msg.ClientName, mcpf)
 
 			//отправляем сообщение пользователю
-			chanInCore <- configure.MsgBetweenCoreAndNI{
+			chanInCore <- &configure.MsgBetweenCoreAndNI{
 				TaskID:          msg.TaskID,
 				Section:         "source control",
 				Command:         "confirm the action",
@@ -202,21 +202,21 @@ func HandlerMsgFromCore(
 
 			//актуализируем информацию в БД
 			//добавить
-			chanInCore <- configure.MsgBetweenCoreAndNI{
+			chanInCore <- &configure.MsgBetweenCoreAndNI{
 				TaskID:          msg.TaskID,
 				Section:         "source control",
 				Command:         "keep list sources in database",
 				AdvancedOptions: la,
 			}
 			//удалить
-			chanInCore <- configure.MsgBetweenCoreAndNI{
+			chanInCore <- &configure.MsgBetweenCoreAndNI{
 				TaskID:          msg.TaskID,
 				Section:         "source control",
 				Command:         "delete sources in database",
 				AdvancedOptions: ld,
 			}
 			//обновить
-			chanInCore <- configure.MsgBetweenCoreAndNI{
+			chanInCore <- &configure.MsgBetweenCoreAndNI{
 				TaskID:          msg.TaskID,
 				Section:         "source control",
 				Command:         "update sources in database",

@@ -13,7 +13,7 @@ import (
 )
 
 //RouteRequest маршрутизатор запросов
-func RouteRequest(chanIn chan configure.MsgBetweenCoreAndDB, nameDB string, linkConnection *configure.MongoDBConnect, chanOut <-chan configure.MsgBetweenCoreAndDB) {
+func RouteRequest(chanIn chan *configure.MsgBetweenCoreAndDB, nameDB string, linkConnection *configure.MongoDBConnect, chanOut <-chan *configure.MsgBetweenCoreAndDB) {
 	fmt.Println("START module 'RouteRequest' (module DBInteraction)...")
 
 	wrapperFunc := WrappersRouteRequest{

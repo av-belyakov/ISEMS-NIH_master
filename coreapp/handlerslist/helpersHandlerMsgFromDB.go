@@ -10,7 +10,7 @@ import (
 
 //getCurrentSourceListForAPI подготавливает список актуальных источников для передаче клиенту API
 func getCurrentSourceListForAPI(
-	chanToAPI chan<- configure.MsgBetweenCoreAndAPI,
+	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
 	res *configure.MsgBetweenCoreAndDB,
 	smt *configure.StoringMemoryTask) {
 
@@ -62,7 +62,7 @@ func getCurrentSourceListForAPI(
 	msgjson, _ := json.Marshal(&msg)
 
 	//отправляем данные клиенту
-	chanToAPI <- configure.MsgBetweenCoreAndAPI{
+	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
 		MsgGenerator: "Core module",
 		MsgRecipient: "API module",
 		IDClientAPI:  st.ClientID,
