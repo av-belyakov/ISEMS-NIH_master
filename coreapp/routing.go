@@ -12,10 +12,16 @@ import (
 
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/coreapp/handlerslist"
+	"ISEMS-NIH_master/notifications"
 )
 
 //Routing маршрутизирует данные поступающие в ядро из каналов
-func Routing(appConf *configure.AppConfig, cc *configure.ChannelCollectionCoreApp, smt *configure.StoringMemoryTask) {
+func Routing(
+	appConf *configure.AppConfig,
+	cc *configure.ChannelCollectionCoreApp,
+	smt *configure.StoringMemoryTask,
+	chanCheckTask <-chan configure.MsgChanStoringMemoryTask) {
+
 	fmt.Println("START ROUTE module 'CoreApp'...")
 
 	//при старте приложения запрашиваем у БД список источников
@@ -31,23 +37,32 @@ func Routing(appConf *configure.AppConfig, cc *configure.ChannelCollectionCoreAp
 		select {
 		//CHANNEL FROM DATABASE
 		case data := <-cc.InCoreChanDB:
-			fmt.Println("MESSAGE FROM module DBInteraction")
+			fmt.Println("MESSAGE FROM module DBInteraction (route Core module)")
 
-			handlerslist.HandlerMsgFromDB(cc.OutCoreChanAPI, data, smt, cc.OutCoreChanNI)
+			go handlerslist.HandlerMsgFromDB(cc.OutCoreChanAPI, data, smt, cc.OutCoreChanNI)
 
 		//CHANNEL FROM API
 		case data := <-cc.InCoreChanAPI:
+			fmt.Println("MESSAGE FROM module API (route Core module)")
 
-			fmt.Println("MESSAGE FROM module API")
-
-			handlerslist.HandlerMsgFromAPI(cc.OutCoreChanNI, data, smt, cc.OutCoreChanDB, cc.OutCoreChanAPI)
+			go handlerslist.HandlerMsgFromAPI(cc.OutCoreChanNI, data, smt, cc.OutCoreChanDB, cc.OutCoreChanAPI)
 
 		//CHANNEL FROM NETWORK INTERACTION
 		case data := <-cc.InCoreChanNI:
+			fmt.Println("MESSAGE FROM module NetworkInteraction (route Core module)")
 
-			fmt.Println("MESSAGE FROM module NetworkInteraction")
+			go handlerslist.HandlerMsgFromNI(cc.OutCoreChanAPI, data, smt, cc.OutCoreChanDB)
 
-			handlerslist.HandlerMsgFromNI(cc.OutCoreChanAPI, data, smt, cc.OutCoreChanDB)
+			//сообщение клиенту о том что данная задача долго выполняется
+		case infoHungTask := <-chanCheckTask:
+			if ti, ok := smt.GetStoringMemoryTask(infoHungTask.ID); ok {
+				nsErrJSON := notifications.NotificationSettingsToClientAPI{
+					MsgType:        infoHungTask.Type,
+					MsgDescription: infoHungTask.Description,
+				}
+
+				notifications.SendNotificationToClientAPI(cc.OutCoreChanAPI, nsErrJSON, ti.ClientTaskID, ti.ClientID)
+			}
 		}
 	}
 }

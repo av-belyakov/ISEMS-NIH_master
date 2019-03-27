@@ -21,7 +21,7 @@ func HandlerMsgFromNI(
 	smt *configure.StoringMemoryTask,
 	chanToDB chan<- *configure.MsgBetweenCoreAndDB) {
 
-	fmt.Println("--- START function 'HandlerMsgFromNI'...")
+	//	fmt.Printf("--- START function 'HandlerMsgFromNI'... (Core module) %v\n", msg.Command)
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
@@ -33,12 +33,13 @@ func HandlerMsgFromNI(
 
 		return
 	}
+	smt.TimeUpdateStoringMemoryTask(msg.TaskID)
 
-	fmt.Printf("%v\n", msg)
+	//	fmt.Printf("%v\n", msg)
 
 	switch msg.Section {
 	case "source control":
-		fmt.Println("func 'HandlerMsgFromNI', section SOURCE CONTROL", msg.Command)
+		fmt.Printf("func 'HandlerMsgFromNI', section SOURCE CONTROL '%v'\n", msg.Command)
 
 		//в БД
 		if msg.Command == "keep list sources in database" {
@@ -84,7 +85,7 @@ func HandlerMsgFromNI(
 
 		//клиенту API
 		if msg.Command == "confirm the action" {
-			go getConfirmActionSourceListForAPI(chanToAPI, msg, smt)
+			getConfirmActionSourceListForAPI(chanToAPI, msg, smt)
 		}
 
 	case "filtration control":

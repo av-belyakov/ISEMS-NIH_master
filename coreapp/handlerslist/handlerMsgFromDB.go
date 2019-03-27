@@ -31,7 +31,7 @@ func HandlerMsgFromDB(
 
 		switch res.MsgSection {
 		case "source list":
-			go getCurrentSourceListForAPI(chanToAPI, res, smt)
+			getCurrentSourceListForAPI(chanToAPI, res, smt)
 
 		case "source control":
 
@@ -102,5 +102,7 @@ func HandlerMsgFromDB(
 				return
 			}
 		}
+	} else {
+		_ = saveMessageApp.LogMessage("error", "the module receiver is not defined, request processing is impossible"+funcName)
 	}
 }

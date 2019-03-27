@@ -11,7 +11,7 @@ import (
 /*
 * Набор функций оберток для обработки запросов к БД
 *
-* Версия 0.1, дата релиза 05.03.2019
+* Версия 0.2, дата релиза 27.03.2019
 * */
 
 //WrappersRouteRequest обертки для запросов
@@ -23,8 +23,6 @@ type WrappersRouteRequest struct {
 
 //WrapperFuncSourceControl обработка запросов об источниках
 func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetweenCoreAndDB) {
-	fmt.Printf("func 'WrapperFuncSourceControl'\n %v\n", msg)
-
 	qcs := handlerrequestdb.QueryCollectionSources{
 		NameDB:         wr.NameDB,
 		CollectionName: "sources_list",
@@ -43,8 +41,14 @@ func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetwe
 	case "update":
 		fmt.Println("func 'WrapperFuncSourceControl' RESIVED COMMAND 'UPDATE'")
 
+		fmt.Printf("%v\n", msg.AdvancedOptions)
+
+		qcs.UpdateSourceToSourcesList(wr.ChanIn, msg)
+
 	case "delete":
 		fmt.Println("func 'WrapperFuncSourceControl' RESIVED COMMAND 'DELETE'")
+
+		qcs.DelSourceToSourcesList(wr.ChanIn, msg)
 
 	}
 }

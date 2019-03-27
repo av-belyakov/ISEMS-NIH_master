@@ -74,10 +74,7 @@ func getVersionApp(appc *configure.AppConfig) error {
 func connectToDB(ctx context.Context, appc *configure.AppConfig) (*mongo.Client, error) {
 	host := appc.ConnectionDB.Host
 	port := appc.ConnectionDB.Port
-	/*
-		user := appc.ConnectionDB.User
-		pwd := appc.ConnectionDB.Password
-	*/
+
 	optAuth := options.Credential{
 		AuthMechanism: "SCRAM-SHA-256",
 		AuthSource:    appc.ConnectionDB.NameDB,
@@ -108,8 +105,6 @@ func connectToDB(ctx context.Context, appc *configure.AppConfig) (*mongo.Client,
 }
 
 func init() {
-	fmt.Println("START func init")
-
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 

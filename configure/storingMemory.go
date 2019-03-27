@@ -3,6 +3,7 @@ package configure
 import (
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 
@@ -114,8 +115,8 @@ type DescriptionTaskParameters struct{}
 //TaskDescription описание задачи
 // ClientID - уникальный идентификатор клиента
 // ClientTaskID - идентификатор задачи полученный от клиента
-// TaskSection - секция к которой относится задача
 // TaskType - тип выполняемой задачи
+// TaskStatus - статус задачи, false выполняется, true завершена
 // ModuleThatSetTask - модуль от которого поступила задача
 // ModuleResponsibleImplementation - модуль который должен выполнить обработку
 // TimeUpdate - время последнего обновления в формате Unix
@@ -124,6 +125,7 @@ type TaskDescription struct {
 	ClientID                        string
 	ClientTaskID                    string
 	TaskType                        string
+	TaskStatus                      bool
 	ModuleThatSetTask               string
 	ModuleResponsibleImplementation string
 	TimeUpdate                      int64
@@ -160,6 +162,13 @@ func (smt *StoringMemoryTask) DelStoringMemoryTask(taskID string) {
 	delete(smt.tasks, taskID)
 }
 
+//StoringMemoryTaskComplete установить статус выполненно для задачи
+func (smt *StoringMemoryTask) StoringMemoryTaskComplete(taskID string) {
+	if _, ok := smt.tasks[taskID]; ok {
+		smt.tasks[taskID].TaskStatus = true
+	}
+}
+
 //GetStoringMemoryTask получить информацию о задаче по ее ID
 func (smt StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescription, bool) {
 	if task, ok := smt.tasks[taskID]; ok {
@@ -183,24 +192,57 @@ func (smt StoringMemoryTask) GetAllStoringMemoryTask(clientID string) []string {
 }
 
 //TimeUpdateStoringMemoryTask обновить значение таймера в задачи
-func (smt *StoringMemoryTask) TimeUpdateStoringMemoryTask(taskID string, time int64) bool {
-	if _, ok := smt.GetStoringMemoryTask(taskID); !ok {
-		return false
+func (smt *StoringMemoryTask) TimeUpdateStoringMemoryTask(taskID string) {
+	if _, ok := smt.GetStoringMemoryTask(taskID); ok {
+		smt.tasks[taskID].TimeUpdate = time.Now().Unix()
 	}
-
-	smt.tasks[taskID].TimeUpdate = time
-
-	return true
 }
 
-//CounterCheckTimeUpdateStoringMemoryTask счетчик проверяющий время обнавления
-// задачи и отправляющий, через канал, ID задачи которая устарела
-func (smt StoringMemoryTask) CounterCheckTimeUpdateStoringMemoryTask() chan string {
-	chanOut := make(chan string)
+//MsgChanStoringMemoryTask информация о подвисшей задачи
+type MsgChanStoringMemoryTask struct {
+	ID, Type, Description string
+}
 
-	/*
-		!!! НЕ ДОПИСАН !!!
-	*/
+//CheckTimeUpdateStoringMemoryTask проверка времени выполнения задач
+// если обновление задачи было больше заданного времени то проверяется
+// если задача была выполнена то она удаляется, если нет то отправляется сообщение
+// о подвисшей задачи и счетчик увеличивается на 1 до 3, потом задача удаляется
+func (smt *StoringMemoryTask) CheckTimeUpdateStoringMemoryTask(sec int) chan MsgChanStoringMemoryTask {
+	chanOut := make(chan MsgChanStoringMemoryTask)
+
+	//создаем канал генерирующий регулярные запросы на получение системной информации
+	ticker := time.NewTicker(time.Duration(sec) * time.Second)
+
+	go func() {
+		for range ticker.C {
+			if len(smt.tasks) > 0 {
+				timeNow := time.Now().Unix()
+
+				for id, t := range smt.tasks {
+					if t.TaskStatus && (t.TimeUpdate+60) < timeNow {
+						//если задача выполнена и прошло какое то время удаляем ее
+						smt.DelStoringMemoryTask(id)
+					} else {
+						if (t.TimeUpdate + 60) < timeNow {
+							chanOut <- MsgChanStoringMemoryTask{
+								ID:          id,
+								Type:        "warning",
+								Description: "информация по задаче с ID " + id + " достаточно долго не обновлялась, возможно выполнение задачи было приостановленно",
+							}
+						} else if (t.TimeUpdate + 180) < timeNow {
+							chanOut <- MsgChanStoringMemoryTask{
+								ID:          id,
+								Type:        "danger",
+								Description: "обработка задачи с ID " + id + " была прервана",
+							}
+
+							smt.StoringMemoryTaskComplete(id)
+						}
+					}
+				}
+			}
+		}
+	}()
 
 	return chanOut
 }

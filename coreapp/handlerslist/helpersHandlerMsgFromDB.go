@@ -37,14 +37,10 @@ func getCurrentSourceListForAPI(
 		})
 	}
 
-	//получаем ID клиента API
 	st, ok := smt.GetStoringMemoryTask(res.TaskID)
 	if !ok {
 		_ = saveMessageApp.LogMessage("error", "task with "+res.TaskID+" not found")
 	}
-
-	//удаляем задачу из хранилища задач
-	smt.DelStoringMemoryTask(res.TaskID)
 
 	msg := configure.SourceControlCurrentListSources{
 		MsgOptions: configure.SourceControlCurrentListSourcesList{
@@ -61,11 +57,7 @@ func getCurrentSourceListForAPI(
 
 	msgjson, _ := json.Marshal(&msg)
 
-	//отправляем данные клиенту
-	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
-		MsgGenerator: "Core module",
-		MsgRecipient: "API module",
-		IDClientAPI:  st.ClientID,
-		MsgJSON:      msgjson,
+	if err := senderMsgToAPI(chanToAPI, smt, res.TaskID, msgjson); err != nil {
+		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
 }

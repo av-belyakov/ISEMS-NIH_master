@@ -20,14 +20,14 @@ type QueryCollectionSources struct {
 
 //GetAllSourcesList получить весь список источников
 func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- *configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
+
+	fmt.Println("START function 'GetAllSourcesList'")
+
 	msgResult := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
 		MsgRecipient: req.MsgGenerator,
 		TaskID:       req.TaskID,
 	}
-
-	fmt.Println("START function 'GetAllSourcesList'")
-	fmt.Println(msgResult)
 
 	sourcesList, err := qcs.findAll()
 	if err != nil {
@@ -112,7 +112,7 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- *configure.Ms
 		for _, itemFindList := range listSources {
 			//если источник с таким ID существует, удаляем его и заменяем новым
 			if itemFindList.ID == itemAddList.ID {
-				_ = qcs.deleteOneData(bson.D{{"id", itemAddList.ID}})
+				_ = qcs.deleteOneData(bson.D{bson.E{Key: "id", Value: itemAddList.ID}})
 			}
 		}
 
@@ -122,16 +122,109 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- *configure.Ms
 	qcs.insertData(insertData)
 }
 
-//AddSourceToSourcesList добавить новые источники
-func AddSourceToSourcesList(chanIn chan<- *configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
+//UpdateSourceToSourcesList обновить информацию об источниках
+func (qcs *QueryCollectionSources) UpdateSourceToSourcesList(chanIn chan<- *configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
 
+	fmt.Println("requestCollectionSources - func UpdateSourceToSourcesList")
+
+	msgRes := configure.MsgBetweenCoreAndDB{
+		MsgGenerator: req.MsgRecipient,
+		MsgRecipient: req.MsgGenerator,
+		MsgSection:   "source control",
+		IDClientAPI:  req.IDClientAPI,
+		TaskID:       req.TaskID,
+	}
+
+	l, ok := req.AdvancedOptions.(*[]configure.InformationAboutSource)
+	if !ok {
+		errMsg := "incorrect list of sources received"
+
+		fmt.Println("CONVERTION ERROR")
+
+		msgRes.MsgRecipient = "Core module"
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: errMsg,
+			ErrorBody:             errors.New(errMsg),
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	fmt.Println("UPDATE", l)
+
+	/*	insertData := make([]interface{}, 0, len(*l))
+
+		for _, i := range *l {
+			_ = qcs.deleteOneData(bson.D{{"id", i.ID}})
+
+			insertData = append(insertData, i)
+		}
+
+		qcs.insertData(insertData)*/
+
+	for _, i := range *l {
+		if err := qcs.updateOne(bson.D{bson.E{Key: "id", Value: i.ID}}, bson.D{
+			bson.E{Key: "$set", Value: bson.D{
+				bson.E{Key: "id", Value: i.ID},
+				bson.E{Key: "ip", Value: i.IP},
+				bson.E{Key: "token", Value: i.Token},
+				bson.E{Key: "short_name", Value: i.ShortName},
+				bson.E{Key: "description", Value: i.Description},
+				bson.E{Key: "as_server", Value: i.AsServer},
+				bson.E{Key: "name_client_api", Value: i.NameClientAPI},
+				bson.E{Key: "source_setting", Value: bson.D{
+					bson.E{Key: "enable_telemetry", Value: i.SourceSetting.EnableTelemetry},
+					bson.E{Key: "max_count_process_filtration", Value: i.SourceSetting.MaxCountProcessFiltration},
+					bson.E{Key: "storage_folders", Value: i.SourceSetting.StorageFolders},
+				}}}},
+		}); err != nil {
+			fmt.Println("ERROR UPDATE", err)
+		}
+
+		/*if err := qcs.updateOne(bson.D{bson.E{Key: "id", Value: i.ID}}, bson.D{
+			bson.E{Key: "$set", Value: bson.D{bson.E{Key: "short_name", Value: "1112211"}}}},
+		);*/
+	}
 }
 
-//UpdateSourceToSourcesList обновить информацию об источниках
-func UpdateSourceToSourcesList() {}
-
 //DelSourceToSourcesList удалить источники
-func DelSourceToSourcesList() {}
+func (qcs *QueryCollectionSources) DelSourceToSourcesList(chanIn chan<- *configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
+
+	fmt.Println("requestCollectionSources - func DelSourceToSourcesList")
+
+	msgRes := configure.MsgBetweenCoreAndDB{
+		MsgGenerator: req.MsgRecipient,
+		MsgRecipient: req.MsgGenerator,
+		MsgSection:   "source control",
+		IDClientAPI:  req.IDClientAPI,
+		TaskID:       req.TaskID,
+	}
+
+	l, ok := req.AdvancedOptions.(*[]int)
+	if !ok {
+		errMsg := "incorrect list of sources received"
+
+		msgRes.MsgRecipient = "Core module"
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: errMsg,
+			ErrorBody:             errors.New(errMsg),
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	for _, id := range *l {
+		_ = qcs.deleteOneData(bson.D{bson.E{Key: "id", Value: id}})
+	}
+}
 
 //findAll найти всю информацию по всем источникам
 func (qcs *QueryCollectionSources) findAll() ([]configure.InformationAboutSource, error) {
@@ -143,7 +236,7 @@ func (qcs *QueryCollectionSources) findAll() ([]configure.InformationAboutSource
 		return nil, err
 	}
 
-	listSources := []configure.InformationAboutSource{} //[]interface{}{}
+	listSources := []configure.InformationAboutSource{}
 	//получаем все ID источников
 	for cur.Next(context.TODO()) {
 		var model configure.InformationAboutSource
@@ -185,217 +278,54 @@ func (qcs *QueryCollectionSources) deleteOneData(elem interface{}) error {
 	return nil
 }
 
-func (qcs *QueryCollectionSources) deleteManyData(list interface{}) (bool, error) {
+func (qcs *QueryCollectionSources) deleteManyData(list []interface{}) error {
 	fmt.Println("===== DELETE DATA MANY ======")
 	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
 	if _, err := collection.DeleteMany(context.TODO(), list); err != nil {
-		return false, err
+		return err
 	}
 
-	return true, nil
+	return nil
 }
 
-//InsertListSource добавляет список источников !!! ТЕСТ !!!
-/*func (qcs *QueryCollectionSources) InsertListSource() (bool, error) {
-	fmt.Println("START func InserListSourcesTMPFinaly...")
-
-	listSources := []interface{}{
-		configure.InformationAboutSource{9, 3, "127.0.0.1", "fmdif3o444fdf344k0fiif", true},
-		configure.InformationAboutSource{10, 3, "192.168.0.10", "fmdif3o444fdf344k0fiif", true},
-		configure.InformationAboutSource{11, 3, "192.168.0.11", "ttrr9gr9r9e9f9fadx94", false},
-		configure.InformationAboutSource{12, 3, "192.168.0.12", "2n3n3iixcxcc3444xfg0222", false},
-		configure.InformationAboutSource{13, 3, "192.168.0.13", "osdsoc9c933cc9cn939f9f33", false},
+func (qcs *QueryCollectionSources) updateOne(searchElem, update interface{}) error {
+	fmt.Println("===== UPDATE ONE ======")
+	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
+	if _, err := collection.UpdateOne(context.TODO(), searchElem, update); err != nil {
+		return err
 	}
 
-	funcInserMany := func(collection *mongo.Collection, insertListSource []interface{}) (bool, error) {
-		fmt.Println("===== INSERT DATA ======")
-		_, err := collection.InsertMany(context.TODO(), insertListSource)
-		if err != nil {
-			return false, err
-		}
+	return nil
+}
 
-		return true, nil
-	}
-
-	//ищем все источники
+func (qcs *QueryCollectionSources) find(elem interface{}) ([]configure.InformationAboutSource, error) {
 	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
 	options := options.Find()
-	cur, err := collection.Find(context.TODO(), bson.D{{}} , options)
-	//bson.D{{"ip", "192.168.0.10"}}, options)
+
+	cur, err := collection.Find(context.TODO(), elem, options)
 	if err != nil {
-		fmt.Println("ERROR FIND", err)
-	}
-
-	insertListSource := []interface{}{}
-	listSourcesID := []int{}
-
-	//получаем все ID источников
-	for cur.Next(context.TODO()) {
-		var im configure.InformationAboutSource
-		err := cur.Decode(&im)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		listSourcesID = append(listSourcesID, im.ID)
-	}
-
-	if err := cur.Err(); err != nil {
-		fmt.Println(err)
-	}
-
-	cur.Close(context.TODO())
-
-	fmt.Println("---------", "LIST SOURCES FROM DB", listSourcesID, "---------")
-
-	if len(listSourcesID) == 0 {
-		return funcInserMany(collection, listSources)
-	}
-
-	//готовим insertListSources
-	for _, value := range listSources {
-		//контролируемое привидение типов и получаем срез id
-		if im, ok := value.(configure.InformationAboutSource); ok {
-
-			fmt.Println(sort.SearchInts(listSourcesID, im.ID))
-
-			i := sort.Search(len(listSourcesID), func(i int) bool {
-				return listSourcesID[i] >= im.ID
-			})
-			if i < len(listSourcesID) && listSourcesID[i] == im.ID {
-				fmt.Println("ID", im.ID, "listSourcesID[i] == im.ID", listSourcesID[i] == im.ID)
-			}
-
-			if sort.SearchInts(listSourcesID, im.ID) == -1 {
-				insertListSource = append(insertListSource, configure.InformationAboutSource{im.ID, im.MaxCountProcessfiltration, im.IP, im.Token, im.AsServer})
-			}
-		}
-	}
-
-	fmt.Println("count isnert sources=", len(insertListSource), insertListSource)
-
-	if len(insertListSource) == 0 {
-		return false, nil
-	}
-
-	fmt.Println("===== INSERT DATA ======")
-
-	return funcInserMany(collection, insertListSource)
-}
-
-//InserListSourcesTMPFinaly вставляем список источников ДЛЯ ТЕСТА
-func InserListSourcesTMPFinaly(ism *configure.InformationStoringMemory, appConfig *configure.AppConfig) (bool, error) {
-	fmt.Println("START func InserListSourcesTMPFinaly...")
-
-	type infoMsg struct {
-		ID        int
-		IP, Token string
-	}
-
-	listSources := []interface{}{
-		infoMsg{9, "127.0.0.1", "fmdif3o444fdf344k0fiif"},
-		infoMsg{10, "192.168.0.10", "fmdif3o444fdf344k0fiif"},
-		infoMsg{11, "192.168.0.11", "ttrr9gr9r9e9f9fadx94"},
-		infoMsg{12, "192.168.0.12", "2n3n3iixcxcc3444xfg0222"},
-		infoMsg{13, "192.168.0.13", "osdsoc9c933cc9cn939f9f33"},
-	}
-
-	funcInserMany := func(collection *mongo.Collection, insertListSource []interface{}) (bool, error) {
-		fmt.Println("===== INSERT DATA ======")
-		_, err := collection.InsertMany(context.TODO(), insertListSource)
-		if err != nil {
-			return false, err
-		}
-
-		return true, nil
-	}
-
-	//ищем все источники
-	collection := ism.MongoConnect.Connect.Database(appConfig.ConnectionDB.NameDB).Collection("sources_list")
-	options := options.Find()
-	cur, err := collection.Find(context.TODO(), bson.D{{}}
-	//bson.D{{"ip", "192.168.0.10"}}, options)
-	if err != nil {
-		fmt.Println("ERROR FIND", err)
-	}
-
-	insertListSource := []interface{}{}
-	listSourcesID := []int{}
-
-	//получаем все ID источников
-	for cur.Next(context.TODO()) {
-		var im infoMsg
-		err := cur.Decode(&im)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		listSourcesID = append(listSourcesID, im.ID)
-	}
-
-	if err := cur.Err(); err != nil {
-		fmt.Println(err)
-	}
-
-	cur.Close(context.TODO())
-
-	fmt.Println("---------", "LIST SOURCES FROM DB", listSourcesID, "---------")
-
-	if len(listSourcesID) == 0 {
-		return funcInserMany(collection, listSources)
-	}
-
-	//готовим insertListSources
-	for _, value := range listSources {
-		//контролируемое привидение типов и получаем срез id
-		if im, ok := value.(infoMsg); ok {
-
-			fmt.Println(sort.SearchInts(listSourcesID, im.ID))
-
-			i := sort.Search(len(listSourcesID), func(i int) bool {
-				return listSourcesID[i] >= im.ID
-			})
-			if i < len(listSourcesID) && listSourcesID[i] == im.ID {
-				fmt.Println("ID", im.ID, "listSourcesID[i] == im.ID", listSourcesID[i] == im.ID)
-			}
-
-			if sort.SearchInts(listSourcesID, im.ID) == -1 {
-				insertListSource = append(insertListSource, infoMsg{im.ID, im.IP, im.Token})
-			}
-		}
-	}
-
-	fmt.Println("count isnert sources=", len(insertListSource), insertListSource)
-
-	if len(insertListSource) == 0 {
-		return false, nil
-	}
-
-	fmt.Println("===== INSERT DATA ======")
-
-	return funcInserMany(collection, insertListSource)
-}
-
-//InsertTestData тест
-func InsertTestData(ism *configure.InformationStoringMemory, appConfig *configure.AppConfig) (*mongo.InsertOneResult, error) {
-	type testType struct {
-		name, city, country string
-		age                 int
-	}
-
-	collection := ism.MongoConnect.Connect.Database(appConfig.ConnectionDB.NameDB).Collection("tcollection")
-	res, err := collection.InsertOne(context.Background(), bson.M{
-		"name":    "Mariya",
-		"city":    "Moscow",
-		"country": "Russia",
-		"ago":     34,
-	})
-	if err != nil {
-		fmt.Println("ERROR:", err)
-
 		return nil, err
 	}
 
-	return res, nil
+	fmt.Println(cur)
+
+	listSources := []configure.InformationAboutSource{}
+	//получаем все ID источников
+	for cur.Next(context.TODO()) {
+		var model configure.InformationAboutSource
+		err := cur.Decode(&model)
+		if err != nil {
+			return nil, err
+		}
+
+		listSources = append(listSources, model)
+	}
+
+	if err := cur.Err(); err != nil {
+		return nil, err
+	}
+
+	cur.Close(context.TODO())
+
+	return listSources, nil
 }
-*/

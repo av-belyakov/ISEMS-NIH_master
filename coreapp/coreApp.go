@@ -22,6 +22,9 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	//инициализация хранилища для учета выполняемых задач
 	smt := configure.NewRepositorySMT()
 
+	//инициализируем отслеживания выполнения задач
+	chanCheckTask := smt.CheckTimeUpdateStoringMemoryTask(55)
+
 	//запуск подпрограммы для взаимодействия с БД
 	chanOutCoreDB, chanInCoreDB := moduledbinteraction.MainDBInteraction(appConf.ConnectionDB.NameDB, linkConnection)
 
@@ -41,5 +44,5 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	}
 
 	//запуск подпрограммы для маршрутизации запросов внутри приложения
-	Routing(appConf, &chanColl, smt)
+	Routing(appConf, &chanColl, smt, chanCheckTask)
 }

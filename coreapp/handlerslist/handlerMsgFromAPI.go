@@ -55,6 +55,7 @@ func HandlerMsgFromAPI(
 		if msgc.MsgSection == "source control" {
 			if msgc.MsgInsturction == "send new source list" {
 				var scmo configure.SourceControlMsgOptions
+
 				if err := json.Unmarshal(msgJSON, &scmo); err != nil {
 					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)

@@ -61,10 +61,16 @@ func sendMsgGetSourceList(clientID string) error {
 
 //HandlerRequest обработчик HTTPS запроса к "/"
 func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter, req *http.Request) {
-	fmt.Println("RESIVED http request '/api'")
+	//fmt.Println("RESIVED http request '/api'")
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
+
+	defer func() {
+		if err := recover(); err != nil {
+			_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
+		}
+	}()
 
 	bodyHTTPResponseError := []byte(`<!DOCTYPE html>
 		<html lang="en"
@@ -119,10 +125,16 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 }
 
 func serverWss(w http.ResponseWriter, req *http.Request) {
-	fmt.Println("START server wss")
+	fmt.Println("START SERVER WSS API")
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
+
+	defer func() {
+		if err := recover(); err != nil {
+			_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
+		}
+	}()
 
 	remoteIP := strings.Split(req.RemoteAddr, ":")[0]
 
@@ -223,8 +235,6 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 				break
 			}
 
-			fmt.Println("resived message from API client")
-
 			chn.ChanIn <- &configure.MsgBetweenCoreAndAPI{
 				MsgGenerator: "API module",
 				MsgRecipient: "Core module",
@@ -235,10 +245,6 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 	}()
-
-	if err := recover(); err != nil {
-		_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
-	}
 }
 
 func init() {

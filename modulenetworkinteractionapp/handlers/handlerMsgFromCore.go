@@ -20,7 +20,7 @@ func HandlerMsgFromCore(
 	msg *configure.MsgBetweenCoreAndNI,
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI) {
 
-	fmt.Println("START func HandlerMsgFromCore...")
+	fmt.Println("START func HandlerMsgFromCore... (NI module)")
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'HandlerMsgFromCore'"
@@ -152,6 +152,8 @@ func HandlerMsgFromCore(
 				return
 			}
 
+			//fmt.Printf("BEFORE update MEMORY: %v\n", isl.GetSourceList())
+
 			//проверяем прислал ли пользователь данные по источникам
 			if len(ado.MsgOptions.SourceList) == 0 {
 				clientNotify.AdvancedOptions = configure.MessageNotification{
@@ -185,12 +187,45 @@ func HandlerMsgFromCore(
 				return
 			}
 
-			fmt.Println("List Action Type", listActionType)
+			//fmt.Printf("\nLIST SOURCES IN MEMORY\n%v\n", isl.GetSourceList())
 
-			// получаем ID источников по которым нужно актуализировать информацию
+			//fmt.Println("List Action Type", listActionType)
+
+			// получаем ID источников по которым нужно обновить информацию
 			// в БД, к ним относятся источники для которых выполненно действие
 			// add, delete, update
 			la, lu, ld := getSourceListsForWriteToBD(&ado.MsgOptions.SourceList, listActionType, msg.ClientName, mcpf)
+
+			//актуализируем информацию в БД
+			if len(*la) > 0 {
+				//добавить
+				chanInCore <- &configure.MsgBetweenCoreAndNI{
+					TaskID:          msg.TaskID,
+					Section:         "source control",
+					Command:         "keep list sources in database",
+					AdvancedOptions: la,
+				}
+			}
+
+			if len(*ld) > 0 {
+				//удалить
+				chanInCore <- &configure.MsgBetweenCoreAndNI{
+					TaskID:          msg.TaskID,
+					Section:         "source control",
+					Command:         "delete sources in database",
+					AdvancedOptions: ld,
+				}
+			}
+
+			if len(*lu) > 0 {
+				//обновить
+				chanInCore <- &configure.MsgBetweenCoreAndNI{
+					TaskID:          msg.TaskID,
+					Section:         "source control",
+					Command:         "update sources in database",
+					AdvancedOptions: lu,
+				}
+			}
 
 			//отправляем сообщение пользователю
 			chanInCore <- &configure.MsgBetweenCoreAndNI{
@@ -198,29 +233,6 @@ func HandlerMsgFromCore(
 				Section:         "source control",
 				Command:         "confirm the action",
 				AdvancedOptions: listActionType,
-			}
-
-			//актуализируем информацию в БД
-			//добавить
-			chanInCore <- &configure.MsgBetweenCoreAndNI{
-				TaskID:          msg.TaskID,
-				Section:         "source control",
-				Command:         "keep list sources in database",
-				AdvancedOptions: la,
-			}
-			//удалить
-			chanInCore <- &configure.MsgBetweenCoreAndNI{
-				TaskID:          msg.TaskID,
-				Section:         "source control",
-				Command:         "delete sources in database",
-				AdvancedOptions: ld,
-			}
-			//обновить
-			chanInCore <- &configure.MsgBetweenCoreAndNI{
-				TaskID:          msg.TaskID,
-				Section:         "source control",
-				Command:         "update sources in database",
-				AdvancedOptions: lu,
 			}
 		}
 
