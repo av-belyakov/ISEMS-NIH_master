@@ -2,6 +2,7 @@ package configure
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -157,8 +158,8 @@ func (smt *StoringMemoryTask) AddStoringMemoryTask(td TaskDescription) string {
 	return taskID
 }
 
-//DelStoringMemoryTask удалить задачу
-func (smt *StoringMemoryTask) DelStoringMemoryTask(taskID string) {
+//delStoringMemoryTask удалить задачу
+func (smt *StoringMemoryTask) delStoringMemoryTask(taskID string) {
 	delete(smt.tasks, taskID)
 }
 
@@ -210,7 +211,6 @@ type MsgChanStoringMemoryTask struct {
 func (smt *StoringMemoryTask) CheckTimeUpdateStoringMemoryTask(sec int) chan MsgChanStoringMemoryTask {
 	chanOut := make(chan MsgChanStoringMemoryTask)
 
-	//создаем канал генерирующий регулярные запросы на получение системной информации
 	ticker := time.NewTicker(time.Duration(sec) * time.Second)
 
 	go func() {
@@ -218,10 +218,17 @@ func (smt *StoringMemoryTask) CheckTimeUpdateStoringMemoryTask(sec int) chan Msg
 			if len(smt.tasks) > 0 {
 				timeNow := time.Now().Unix()
 
+				fmt.Println("task count =", len(smt.tasks))
+
 				for id, t := range smt.tasks {
-					if t.TaskStatus && (t.TimeUpdate+60) < timeNow {
+
+					fmt.Printf("Next Tick %v\n task status:%v, time:%v < %v (%v)\n", time.Now(), t.TaskStatus, (t.TimeUpdate + 60), timeNow, ((t.TimeUpdate + 60) < timeNow))
+
+					if t.TaskStatus && ((t.TimeUpdate + 60) < timeNow) {
+
+						fmt.Println("delete task ID -", id)
 						//если задача выполнена и прошло какое то время удаляем ее
-						smt.DelStoringMemoryTask(id)
+						smt.delStoringMemoryTask(id)
 					} else {
 						if (t.TimeUpdate + 60) < timeNow {
 							chanOut <- MsgChanStoringMemoryTask{

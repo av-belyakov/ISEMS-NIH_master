@@ -118,6 +118,13 @@ func HandlerMsgFromNI(
 
 			notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
 		}
+
+	case "monitoring task performance":
+		fmt.Println("func 'HandlerMsgFromNI', section MESSAGE MONITORING TASKPERFORMANCE")
+
+		if msg.Command == "complete task" {
+			smt.StoringMemoryTaskComplete(msg.TaskID)
+		}
 	}
 }
 

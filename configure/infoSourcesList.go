@@ -22,7 +22,7 @@ type MongoDBConnect struct {
 
 //SourceSetting параметры источника
 type SourceSetting struct {
-	ConnectionStatus  bool //true/false
+	ConnectionStatus  bool
 	IP                string
 	DateLastConnected int64 //Unix time
 	Token             string

@@ -45,6 +45,8 @@ func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWrit
 		<body><h1>Access denied. For additional information, please contact the webmaster.</h1></body>
 		</html>`)
 
+	fmt.Printf("_____________ RESIVED HTTP REQUEST FROM IP:%v _______________ %v\n", req.RemoteAddr, req.Header)
+
 	stringToken := ""
 	for headerName := range req.Header {
 		if headerName == "Token" {

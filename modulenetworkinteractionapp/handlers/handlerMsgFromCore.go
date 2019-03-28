@@ -38,7 +38,7 @@ func HandlerMsgFromCore(
 	case "source control":
 		if msg.Command == "create list" {
 
-			fmt.Println("====== CREATE LIST RESIVED FROM DB =======")
+			//fmt.Println("====== CREATE LIST RESIVED FROM DB =======")
 
 			sl, ok := msg.AdvancedOptions.([]configure.InformationAboutSource)
 			if !ok {
@@ -54,11 +54,18 @@ func HandlerMsgFromCore(
 
 		if msg.Command == "load list" {
 
-			fmt.Println("====== CREATE LIST RESIVED FROM CLIENT API =======", msg.ClientName, "====")
+			//fmt.Println("====== CREATE LIST RESIVED FROM CLIENT API =======", msg.ClientName, "====")
 
 			ado, ok := msg.AdvancedOptions.(configure.SourceControlMsgTypeFromAPI)
 			if !ok {
 				_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
+
+				//снять отслеживание выполнения задачи
+				chanInCore <- &configure.MsgBetweenCoreAndNI{
+					TaskID:  msg.TaskID,
+					Section: "monitoring task performance",
+					Command: "complete task",
+				}
 
 				return
 			}
@@ -74,6 +81,13 @@ func HandlerMsgFromCore(
 				}
 
 				chanInCore <- &clientNotify
+
+				//снять отслеживание выполнения задачи
+				chanInCore <- &configure.MsgBetweenCoreAndNI{
+					TaskID:  msg.TaskID,
+					Section: "monitoring task performance",
+					Command: "complete task",
+				}
 
 				return
 			}
@@ -128,6 +142,13 @@ func HandlerMsgFromCore(
 			if err != nil {
 				_ = saveMessageApp.LogMessage("error", "NI module - "+fmt.Sprint(err))
 
+				//снять отслеживание выполнения задачи
+				chanInCore <- &configure.MsgBetweenCoreAndNI{
+					TaskID:  msg.TaskID,
+					Section: "monitoring task performance",
+					Command: "complete task",
+				}
+
 				return
 			}
 
@@ -140,6 +161,13 @@ func HandlerMsgFromCore(
 
 			//новый список источников для сохранения в БД
 			chanInCore <- &msgToCore
+
+			//снять отслеживание выполнения задачи
+			chanInCore <- &configure.MsgBetweenCoreAndNI{
+				TaskID:  msg.TaskID,
+				Section: "monitoring task performance",
+				Command: "complete task",
+			}
 		}
 
 		if msg.Command == "perform actions on sources" {
@@ -148,6 +176,13 @@ func HandlerMsgFromCore(
 			ado, ok := msg.AdvancedOptions.(configure.SourceControlMsgOptions)
 			if !ok {
 				_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
+
+				//снять отслеживание выполнения задачи
+				chanInCore <- &configure.MsgBetweenCoreAndNI{
+					TaskID:  msg.TaskID,
+					Section: "monitoring task performance",
+					Command: "complete task",
+				}
 
 				return
 			}
@@ -165,6 +200,13 @@ func HandlerMsgFromCore(
 				}
 
 				chanInCore <- &clientNotify
+
+				//снять отслеживание выполнения задачи
+				chanInCore <- &configure.MsgBetweenCoreAndNI{
+					TaskID:  msg.TaskID,
+					Section: "monitoring task performance",
+					Command: "complete task",
+				}
 
 				return
 			}
@@ -184,6 +226,12 @@ func HandlerMsgFromCore(
 
 				chanInCore <- &clientNotify
 
+				//снять отслеживание выполнения задачи
+				chanInCore <- &configure.MsgBetweenCoreAndNI{
+					TaskID:  msg.TaskID,
+					Section: "monitoring task performance",
+					Command: "complete task",
+				}
 				return
 			}
 
@@ -234,6 +282,13 @@ func HandlerMsgFromCore(
 				Command:         "confirm the action",
 				AdvancedOptions: listActionType,
 			}
+
+			//снять отслеживание выполнения задачи
+			chanInCore <- &configure.MsgBetweenCoreAndNI{
+				TaskID:  msg.TaskID,
+				Section: "monitoring task performance",
+				Command: "complete task",
+			}
 		}
 
 	case "filtration control":
@@ -242,7 +297,14 @@ func HandlerMsgFromCore(
 		}
 
 		if msg.Command == "stop" {
-
+			/*
+				//снять отслеживание выполнения задачи
+					chanInCore <- &configure.MsgBetweenCoreAndNI{
+						TaskID:  msg.TaskID,
+						Section: "monitoring task performance",
+						Command: "complete task",
+					}
+			*/
 		}
 
 	case "download control":
@@ -251,7 +313,14 @@ func HandlerMsgFromCore(
 		}
 
 		if msg.Command == "stop" {
-
+			/*
+				//снять отслеживание выполнения задачи
+					chanInCore <- &configure.MsgBetweenCoreAndNI{
+						TaskID:  msg.TaskID,
+						Section: "monitoring task performance",
+						Command: "complete task",
+					}
+			*/
 		}
 
 	}
