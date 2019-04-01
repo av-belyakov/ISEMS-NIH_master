@@ -8,6 +8,7 @@ package configure
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -121,9 +122,14 @@ func (isl *InformationSourcesList) ChangeSourceConnectionStatus(id int) bool {
 	if s, ok := isl.sourcesListSetting[id]; ok {
 		s.ConnectionStatus = !s.ConnectionStatus
 
+		fmt.Println("function 'ChangeSourceConnectionStatus' connection status:", s.ConnectionStatus)
+
 		if s.ConnectionStatus {
 			s.DateLastConnected = time.Now().Unix()
 		} else {
+
+			fmt.Println("function 'ChangeSourceConnectionStatus' set status FALSE")
+
 			s.AccessIsAllowed = false
 		}
 		isl.sourcesListSetting[id] = s
@@ -143,6 +149,14 @@ func (isl *InformationSourcesList) GetAccessIsAllowed(ip string) bool {
 	}
 
 	return false
+}
+
+//SetAccessIsAllowed устанавливает статус позволяющий продолжать wss соединение
+func (isl *InformationSourcesList) SetAccessIsAllowed(id int) {
+	if s, ok := isl.sourcesListSetting[id]; ok {
+		s.AccessIsAllowed = true
+		isl.sourcesListSetting[id] = s
+	}
 }
 
 //GetCountSources возвращает общее количество источников

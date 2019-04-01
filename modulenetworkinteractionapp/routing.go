@@ -40,7 +40,12 @@ func RouteCoreRequest(
 			sourceIP, action := msg[0], msg[1]
 
 			if action == "disconnect" {
-				fmt.Println("convert IP to ID and send in channel 'chanOutCore'")
+				fmt.Println("--- SOURCE WITH IP", sourceIP, " has success ", action)
+				fmt.Println(action, sourceIP)
+			}
+
+			if action == "connect" {
+				fmt.Println("--- SOURCE WITH IP", sourceIP, " has success ", action)
 				fmt.Println(action, sourceIP)
 			}
 
@@ -78,9 +83,10 @@ func RouteCoreRequest(
 
 //RouteWssConnectionResponse маршрутизирует сообщения от источников
 func RouteWssConnectionResponse(
-	cwt chan<- configure.MsgWsTransmission,
+	cwtRes chan<- configure.MsgWsTransmission,
 	isl *configure.InformationSourcesList,
-	chanInCore chan<- *configure.MsgBetweenCoreAndNI) {
+	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
+	cwtReq <-chan configure.MsgWsTransmission) {
 
 	fmt.Println("START module 'RouteWssConnectionResponse' (network interaction)...")
 
@@ -94,18 +100,13 @@ func RouteWssConnectionResponse(
 
 	var messageType MessageType
 
-	sourcesListConnection := isl.GetSourcesListConnection()
+	//sourcesListConnection := isl.GetSourcesListConnection()
 
-	for _, c := range sourcesListConnection {
+	for msg := range cwtReq {
+		sourceIP := msg.DestinationHost
+		message := msg.Data
 
-		sourceIP := c.Link.RemoteAddr().String()
-
-		_, message, err := c.Link.ReadMessage()
-		if err != nil {
-			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-			break
-		}
-		if err = json.Unmarshal(message, &messageType); err != nil {
+		if err := json.Unmarshal(message, &messageType); err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 		}
 
@@ -119,7 +120,7 @@ func RouteWssConnectionResponse(
 				}
 
 				//отправляем источнику запрос типа Ping
-				cwt <- configure.MsgWsTransmission{
+				cwtRes <- configure.MsgWsTransmission{
 					DestinationHost: sourceIP,
 					Data:            formatJSON,
 				}
@@ -135,4 +136,44 @@ func RouteWssConnectionResponse(
 
 		}
 	}
+
+	/*for _, c := range sourcesListConnection {
+
+	sourceIP := c.Link.RemoteAddr().String()
+
+	_, message, err := c.Link.ReadMessage()
+	if err != nil {
+		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+		break
+	}
+	if err = json.Unmarshal(message, &messageType); err != nil {
+		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+	}
+
+	switch messageType.Type {
+	case "ping":
+		if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
+			sourceSettings, _ := isl.GetSourceSetting(id)
+			formatJSON, err := processrequest.SendMsgPingPong("pong", sourceSettings.Settings.MaxCountProcessFiltration)
+			if err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
+
+			//отправляем источнику запрос типа Ping
+			cwtRes <- configure.MsgWsTransmission{
+				DestinationHost: sourceIP,
+				Data:            formatJSON,
+			}
+		}
+
+	case "pong":
+		/* Нужно отправить сообщение в RouteCore о том что связь установленна */
+	/*case "source_telemetry":
+
+		case "filtration":
+
+		case "download files":
+
+		}
+	}*/
 }

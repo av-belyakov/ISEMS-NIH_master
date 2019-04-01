@@ -89,6 +89,8 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Content-Language", "en")
 
+	fmt.Println(req.Header)
+
 	if req.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
 

@@ -25,7 +25,9 @@ func MainNetworkInteraction(appConf *configure.AppConfig) (chanOutCore, chanInCo
 	saveMessageApp := savemessageapp.New()
 
 	//инициализируем канал для передачи данных через websocket соединение
-	cwt := make(chan configure.MsgWsTransmission)
+	cwtRes := make(chan configure.MsgWsTransmission)
+	//инициализируем канал для приема данных через websocket соединение
+	cwtReq := make(chan configure.MsgWsTransmission)
 
 	//инициализируем каналы для передачи данных между ядром приложения и текущем модулем
 	chanOutCore = make(chan *configure.MsgBetweenCoreAndNI)
@@ -42,18 +44,18 @@ func MainNetworkInteraction(appConf *configure.AppConfig) (chanOutCore, chanInCo
 	isl := configure.NewRepositoryISL()
 
 	//маршрутизат запросов получаемых от CoreApp
-	go RouteCoreRequest(cwt, chanInCore, isl, chansStatSource, chanOutCore)
+	go RouteCoreRequest(cwtRes, chanInCore, isl, chansStatSource, chanOutCore)
 	//маршрутизат запросов получаемых Wss
-	go RouteWssConnectionResponse(cwt, isl, chanInCore)
+	//go RouteWssConnectionResponse(cwt, isl, chanInCore)
 
 	//запуск модуля wssServerNI
-	go WssServerNetworkInteraction(chansStatSource["outWssModuleServer"], appConf, isl)
+	go WssServerNetworkInteraction(chansStatSource["outWssModuleServer"], appConf, isl, cwtReq)
 
 	//запуск модуля wssClientNI
 	go WssClientNetworkInteraction(chansStatSource["outWssModuleClient"], appConf.TimeReconnectClient, isl, chansStatSource["inWssModule"])
 
 	go func() {
-		for msg := range cwt {
+		for msg := range cwtRes {
 			sourceIP, data := msg.DestinationHost, msg.Data
 			if conn, ok := isl.GetLinkWebsocketConnect(sourceIP); ok {
 				if err := conn.SendWsMessage(1, data); err != nil {
