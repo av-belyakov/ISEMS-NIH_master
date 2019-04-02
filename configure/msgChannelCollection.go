@@ -10,7 +10,7 @@ type ChannelCollectionCoreApp struct {
 //MsgWsTransmission содержит информацию для передачи подключенному источнику
 type MsgWsTransmission struct {
 	DestinationHost string
-	Data            []byte
+	Data            *[]byte
 }
 
 // MsgBetweenCoreAndNI используется для взаимодействия между ядром приложения и модулем сет. взаимодействия

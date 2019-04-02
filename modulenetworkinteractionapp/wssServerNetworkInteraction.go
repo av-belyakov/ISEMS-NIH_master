@@ -52,6 +52,7 @@ func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWrit
 	for headerName := range req.Header {
 		if headerName == "Token" {
 			stringToken = req.Header[headerName][0]
+
 			continue
 		}
 	}
@@ -61,6 +62,7 @@ func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWrit
 
 	if req.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
+
 		return
 	}
 
@@ -94,7 +96,8 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	id, idIsExist := sws.SourceList.GetSourceIDOnIP(remoteIP)
 	if !idIsExist {
 		w.WriteHeader(401)
-		_ = saveMessageApp.LogMessage("error", "access for the user with ipaddress "+req.RemoteAddr+" is prohibited")
+		_ = saveMessageApp.LogMessage("error", "access for the user with ipaddress "+remoteIP+" is prohibited")
+
 		return
 	}
 
@@ -107,7 +110,8 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	//проверяем разрешено ли данному ip соединение с сервером wss
 	if !sws.SourceList.GetAccessIsAllowed(remoteIP) {
 		w.WriteHeader(401)
-		_ = saveMessageApp.LogMessage("error", "access for the user with ipaddress "+req.RemoteAddr+" is prohibited")
+		_ = saveMessageApp.LogMessage("error", "access for the user with ipaddress "+remoteIP+" is prohibited")
+
 		return
 	}
 
@@ -131,8 +135,6 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 
 		//удаляем линк соединения
 		sws.SourceList.DelLinkWebsocketConnection(remoteIP)
-
-		_ = saveMessageApp.LogMessage("info", "disconnect for IP address "+remoteIP)
 
 		//при разрыве соединения отправляем модулю routing сообщение об изменении статуса источников
 		sws.MsgChangeSourceConnection <- [2]string{remoteIP, "disconnect"}
@@ -176,7 +178,6 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	sws.MsgChangeSourceConnection <- [2]string{remoteIP, "connect"}
 
 	//маршрутизация запросов получаемых с подключенного источника
-	//RouteWssConnectionResponse(cwt, isl, chanInCore)
 	for {
 		if c == nil {
 			break
@@ -189,7 +190,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 
 		sws.CwtReq <- configure.MsgWsTransmission{
 			DestinationHost: remoteIP,
-			Data:            message,
+			Data:            &message,
 		}
 	}
 }

@@ -24,9 +24,9 @@
     "serverHTTPS": {
         "host": "127.0.0.1",
         "port": 13313,
-        "pathCertFile": "keys/isems_nih_master_cert.pem",
+        "pathCertFile": "keys/isems_nih_master.crt",
         "pathCertFile_comments": "ОТНОСИТЕЛЬНЫЙ путь до файла с сертификатом",
-        "pathPrivateKeyFile": "keys/isems_nih_master_private_key.pem",
+        "pathPrivateKeyFile": "keys/device.key",
         "pathPrivateKeyFile_comments": "ОТНОСИТЕЛЬНЫЙ путь до файла с приватным ключем"
     },
     "serverHTTPS_comments": "параметры для запуска сервера к которому подключаются сенсора",

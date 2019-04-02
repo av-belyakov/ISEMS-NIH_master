@@ -64,7 +64,7 @@ func RouteCoreRequest(
 					//отправляем источнику запрос типа Ping
 					cwt <- configure.MsgWsTransmission{
 						DestinationHost: sourceIP,
-						Data:            formatJSON,
+						Data:            &formatJSON,
 					}
 				}
 			}
@@ -106,7 +106,7 @@ func RouteWssConnectionResponse(
 		sourceIP := msg.DestinationHost
 		message := msg.Data
 
-		if err := json.Unmarshal(message, &messageType); err != nil {
+		if err := json.Unmarshal(*message, &messageType); err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 		}
 
@@ -122,7 +122,7 @@ func RouteWssConnectionResponse(
 				//отправляем источнику запрос типа Ping
 				cwtRes <- configure.MsgWsTransmission{
 					DestinationHost: sourceIP,
-					Data:            formatJSON,
+					Data:            &formatJSON,
 				}
 			}
 
