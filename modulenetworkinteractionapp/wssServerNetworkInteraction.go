@@ -30,9 +30,9 @@ type SettingsHTTPServer struct {
 
 //SettingsWssServer параметры для взаимодействия с wssServer
 type SettingsWssServer struct {
-	SourceList                *configure.InformationSourcesList
-	MsgChangeSourceConnection chan<- [2]string
-	CwtReq                    chan<- configure.MsgWsTransmission
+	SourceList *configure.InformationSourcesList
+	COut       chan<- [2]string
+	CwtReq     chan<- configure.MsgWsTransmission
 }
 
 //HandlerRequest обработчик HTTPS запросов
@@ -46,7 +46,7 @@ func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWrit
 		<body><h1>Access denied. For additional information, please contact the webmaster.</h1></body>
 		</html>`)
 
-	fmt.Printf("_____________ RESIVED HTTP REQUEST FROM IP:%v _______________ %v\n", req.RemoteAddr, req.Header)
+	fmt.Printf("_____________ RESIVED HTTP REQUEST FROM IP:%v _______________\n %v\n", req.RemoteAddr, req.Header)
 
 	stringToken := ""
 	for headerName := range req.Header {
@@ -77,12 +77,14 @@ func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWrit
 		w.Write(bodyHTTPResponseError)
 
 		_ = saveMessageApp.LogMessage("error", "missing or incorrect identification token (сlient ipaddress "+req.RemoteAddr+")")
-	} else {
-		if id, ok := settingsHTTPServer.SourceList.GetSourceIDOnIP(remoteAddr); ok {
-			settingsHTTPServer.SourceList.SetAccessIsAllowed(id)
 
-			http.Redirect(w, req, "https://"+settingsHTTPServer.Host+":"+settingsHTTPServer.Port+"/wss", 301)
-		}
+		return
+	}
+
+	if id, ok := settingsHTTPServer.SourceList.GetSourceIDOnIP(remoteAddr); ok {
+		settingsHTTPServer.SourceList.SetAccessIsAllowed(id)
+
+		http.Redirect(w, req, "https://"+settingsHTTPServer.Host+":"+settingsHTTPServer.Port+"/wss", 301)
 	}
 }
 
@@ -93,19 +95,13 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 
 	remoteIP := strings.Split(req.RemoteAddr, ":")[0]
 
-	id, idIsExist := sws.SourceList.GetSourceIDOnIP(remoteIP)
+	clientID, idIsExist := sws.SourceList.GetSourceIDOnIP(remoteIP)
 	if !idIsExist {
 		w.WriteHeader(401)
 		_ = saveMessageApp.LogMessage("error", "access for the user with ipaddress "+remoteIP+" is prohibited")
 
 		return
 	}
-
-	sett, _ := sws.SourceList.GetSourceSetting(id)
-
-	fmt.Println("Request WSS", req)
-
-	fmt.Println("Access is allowed:", sett.AccessIsAllowed)
 
 	//проверяем разрешено ли данному ip соединение с сервером wss
 	if !sws.SourceList.GetAccessIsAllowed(remoteIP) {
@@ -117,29 +113,6 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 
 	if req.Header.Get("Connection") != "Upgrade" {
 		return
-	}
-
-	connectClose := func(c *websocket.Conn) {
-		//закрытие канала связи с источником
-		if c != nil {
-			c.Close()
-		}
-
-		if id, ok := sws.SourceList.GetSourceIDOnIP(remoteIP); ok {
-
-			fmt.Println("1111111111")
-
-			//изменяем состояние соединения для данного источника
-			_ = sws.SourceList.ChangeSourceConnectionStatus(id)
-		}
-
-		//удаляем линк соединения
-		sws.SourceList.DelLinkWebsocketConnection(remoteIP)
-
-		//при разрыве соединения отправляем модулю routing сообщение об изменении статуса источников
-		sws.MsgChangeSourceConnection <- [2]string{remoteIP, "disconnect"}
-
-		_ = saveMessageApp.LogMessage("info", "websocket disconnect whis ip "+remoteIP)
 	}
 
 	var upgrader = websocket.Upgrader{
@@ -160,22 +133,16 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
+	defer connClose(sws.COut, c, sws.SourceList, clientID, remoteIP)
 
-	defer connectClose(c)
-
-	if id, ok := sws.SourceList.GetSourceIDOnIP(remoteIP); ok {
-
-		fmt.Println("22222222222")
-
-		//изменяем состояние соединения для данного источника
-		_ = sws.SourceList.ChangeSourceConnectionStatus(id)
-	}
+	//изменяем состояние соединения для данного источника
+	_ = sws.SourceList.ChangeSourceConnectionStatus(clientID)
 
 	//добавляем линк соединения по websocket
 	sws.SourceList.AddLinkWebsocketConnect(remoteIP, c)
 
 	//отправляем модулю routing сообщение об изменении статуса источника
-	sws.MsgChangeSourceConnection <- [2]string{remoteIP, "connect"}
+	sws.COut <- [2]string{remoteIP, "connect"}
 
 	//маршрутизация запросов получаемых с подключенного источника
 	for {
@@ -185,7 +152,9 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 
 		_, message, err := c.ReadMessage()
 		if err != nil {
-			connectClose(c)
+			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+			break
 		}
 
 		sws.CwtReq <- configure.MsgWsTransmission{
@@ -195,8 +164,13 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	}
 }
 
-//WssServerNetworkInteraction запуск сервера для обработки запросов с источников
-func WssServerNetworkInteraction(cOut chan<- [2]string, appConf *configure.AppConfig, isl *configure.InformationSourcesList, cwtReq chan<- configure.MsgWsTransmission) {
+//WssServerNetworkInteraction соединение в режиме 'Сервер'
+func WssServerNetworkInteraction(
+	cOut chan<- [2]string,
+	appConf *configure.AppConfig,
+	isl *configure.InformationSourcesList,
+	cwtReq chan<- configure.MsgWsTransmission) {
+
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
@@ -209,9 +183,9 @@ func WssServerNetworkInteraction(cOut chan<- [2]string, appConf *configure.AppCo
 	}
 
 	settingsWssServer := SettingsWssServer{
-		SourceList:                isl,
-		MsgChangeSourceConnection: cOut,
-		CwtReq:                    cwtReq,
+		CwtReq:     cwtReq,
+		SourceList: isl,
+		COut:       cOut,
 	}
 
 	/* инициализируем HTTPS сервер */

@@ -8,7 +8,7 @@ import (
 	"ISEMS-NIH_master/savemessageapp"
 )
 
-//getConfirmActionSourceListForAPI подгатавливает список источников с выполненными
+//getConfirmActionSourceListForAPI формирует список источников с выполненными
 //над ними действиями и статусом успешности
 func getConfirmActionSourceListForAPI(
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
@@ -24,6 +24,8 @@ func getConfirmActionSourceListForAPI(
 	listSource, ok := res.AdvancedOptions.(*[]configure.ActionTypeListSources)
 	if !ok {
 		_ = saveMessageApp.LogMessage("error", "type conversion error section type 'error notification'"+funcName)
+
+		return
 	}
 
 	//получаем ID клиента API
@@ -49,5 +51,49 @@ func getConfirmActionSourceListForAPI(
 
 	if err := senderMsgToAPI(chanToAPI, smt, res.TaskID, msgjson); err != nil {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+	}
+}
+
+//sendChanStatusSourceForAPI формирование информационного сообщения об изменении
+// статуса соединения источника
+func sendChanStatusSourceForAPI(chanToAPI chan<- *configure.MsgBetweenCoreAndAPI, res *configure.MsgBetweenCoreAndNI) {
+	//инициализируем функцию конструктор для записи лог-файлов
+	saveMessageApp := savemessageapp.New()
+	funcName := ", function 'sendChanStatusSourceForAPI'"
+
+	s, ok := res.AdvancedOptions.(configure.SettingsChangeConnectionStatusSource)
+	if !ok {
+		_ = saveMessageApp.LogMessage("error", "type conversion error section type 'error notification'"+funcName)
+
+		return
+	}
+
+	sl := []configure.ActionTypeListSources{
+		configure.ActionTypeListSources{
+			ID:         s.ID,
+			Status:     s.Status,
+			ActionType: "none",
+			IsSuccess:  true,
+		},
+	}
+
+	msg := configure.SourceControlActionsTakenSources{
+		MsgOptions: configure.SourceControlMsgTypeToAPI{
+			SourceList: sl,
+		},
+	}
+
+	msg.MsgType = "information"
+	msg.MsgSection = "source control"
+	msg.MsgInsturction = "change status source"
+
+	msgjson, _ := json.Marshal(&msg)
+
+	//отправляем данные клиенту
+	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+		MsgGenerator: "Core module",
+		MsgRecipient: "API module",
+		IDClientAPI:  "",
+		MsgJSON:      msgjson,
 	}
 }

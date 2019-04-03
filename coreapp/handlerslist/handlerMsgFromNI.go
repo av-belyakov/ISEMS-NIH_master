@@ -28,12 +28,9 @@ func HandlerMsgFromNI(
 	funcName := ", function 'HandlerMsgFromNI'"
 
 	taskInfo, ok := smt.GetStoringMemoryTask(msg.TaskID)
-	if !ok {
-		_ = saveMessageApp.LogMessage("error", "task with "+msg.TaskID+" not found")
-
-		return
+	if ok {
+		smt.TimeUpdateStoringMemoryTask(msg.TaskID)
 	}
-	smt.TimeUpdateStoringMemoryTask(msg.TaskID)
 
 	//	fmt.Printf("%v\n", msg)
 
@@ -88,6 +85,14 @@ func HandlerMsgFromNI(
 			getConfirmActionSourceListForAPI(chanToAPI, msg, smt)
 		}
 
+		//клиенту API
+		if msg.Command == "change connection status source" {
+			fmt.Println("MSG Core module 'change connection status source'")
+			fmt.Printf("%v\n", msg.AdvancedOptions)
+
+			sendChanStatusSourceForAPI(chanToAPI, msg)
+		}
+
 	case "filtration control":
 		fmt.Println("func 'HandlerMsgFromNI', section FILTRATION CONTROL")
 
@@ -104,6 +109,12 @@ func HandlerMsgFromNI(
 			ao, ok := msg.AdvancedOptions.(configure.MessageNotification)
 			if !ok {
 				_ = saveMessageApp.LogMessage("error", "type conversion error"+funcName)
+
+				return
+			}
+
+			if taskInfo == nil {
+				_ = saveMessageApp.LogMessage("error", "task with "+msg.TaskID+" not found")
 
 				return
 			}

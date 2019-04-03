@@ -21,4 +21,5 @@ type InfoServiceSettings struct {
 	EnableTelemetry           bool     `json:"enable_telemetry" bson:"enable_telemetry"`
 	MaxCountProcessFiltration int8     `json:"max_count_process_filtration" bson:"max_count_process_filtration"`
 	StorageFolders            []string `json:"storage_folders" bson:"storage_folders"`
+	IfAsServerThenPort        int      `json:"if_as_server_then_port" bson:"if_as_server_then_port"`
 }

@@ -180,6 +180,7 @@ func (qcs *QueryCollectionSources) UpdateSourceToSourcesList(chanIn chan<- *conf
 					bson.E{Key: "enable_telemetry", Value: i.SourceSetting.EnableTelemetry},
 					bson.E{Key: "max_count_process_filtration", Value: i.SourceSetting.MaxCountProcessFiltration},
 					bson.E{Key: "storage_folders", Value: i.SourceSetting.StorageFolders},
+					bson.E{Key: "if_as_server_then_port", Value: i.SourceSetting.IfAsServerThenPort},
 				}}}},
 		}); err != nil {
 			fmt.Println("ERROR UPDATE", err)

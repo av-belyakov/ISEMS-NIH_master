@@ -8,13 +8,14 @@ import (
 )
 
 //SendMsgPingPong отправить сообщение типа Ping
-func SendMsgPingPong(msgType string, countProsessFilter int8) ([]byte, error) {
+func SendMsgPingPong(msgType string, countProsessFilter int8, enableTelemetry bool) ([]byte, error) {
 	fmt.Println("для клиента, отправить запрос PING")
 
 	msgPing := configure.MsgTypePingPong{
 		MsgType: msgType,
 		Info: configure.DetailInfoMsgPingPong{
 			MaxCountProcessFiltration: countProsessFilter,
+			EnableTelemetry:           enableTelemetry,
 		},
 	}
 

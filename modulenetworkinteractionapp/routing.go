@@ -39,27 +39,35 @@ func RouteCoreRequest(
 		case msg := <-chanColl["outWssModuleServer"]:
 			sourceIP, action := msg[0], msg[1]
 
-			if action == "disconnect" {
-				fmt.Println("--- SOURCE WITH IP", sourceIP, " has success ", action)
-				fmt.Println(action, sourceIP)
+			fmt.Println("--- SERVER: SOURCE WITH IP", sourceIP, " has success ", action)
+			fmt.Println(action, sourceIP)
+
+			sourceID, ok := isl.GetSourceIDOnIP(sourceIP)
+			if !ok {
+				break
 			}
 
-			if action == "connect" {
-				fmt.Println("--- SOURCE WITH IP", sourceIP, " has success ", action)
-				fmt.Println(action, sourceIP)
+			sendMsg := configure.MsgBetweenCoreAndNI{
+				Section: "source control",
+				Command: "change connection status source",
+				AdvancedOptions: configure.SettingsChangeConnectionStatusSource{
+					ID:     sourceID,
+					Status: action,
+				},
 			}
 
-		//модуль wssClient
-		case msg := <-chanColl["outWssModuleClient"]:
-			sourceIP, action := msg[0], msg[1]
+			chanInCore <- &sendMsg
 
 			if action == "connect" {
 				if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
-					sourceSettings, _ := isl.GetSourceSetting(id)
-					formatJSON, err := processrequest.SendMsgPingPong("ping", sourceSettings.Settings.MaxCountProcessFiltration)
+					ss, _ := isl.GetSourceSetting(id)
+					formatJSON, err := processrequest.SendMsgPingPong("ping", ss.Settings.MaxCountProcessFiltration, ss.Settings.EnableTelemetry)
 					if err != nil {
 						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 					}
+
+					fmt.Println("send msg type PING")
+					fmt.Printf("%v\n", formatJSON)
 
 					//отправляем источнику запрос типа Ping
 					cwt <- configure.MsgWsTransmission{
@@ -69,9 +77,46 @@ func RouteCoreRequest(
 				}
 			}
 
-			if action == "disconnect" {
-				fmt.Println("convert IP to ID and send in channel 'chanOutCore'")
-				fmt.Println(action, sourceIP)
+		//модуль wssClient
+		case msg := <-chanColl["outWssModuleClient"]:
+			sourceIP, action := msg[0], msg[1]
+
+			fmt.Println("--- CLIENT: SOURCE WITH IP", sourceIP, " has success ", action)
+			fmt.Println(action, sourceIP)
+
+			sourceID, ok := isl.GetSourceIDOnIP(sourceIP)
+			if !ok {
+				break
+			}
+
+			sendMsg := configure.MsgBetweenCoreAndNI{
+				Section: "source control",
+				Command: "change connection status source",
+				AdvancedOptions: configure.SettingsChangeConnectionStatusSource{
+					ID:     sourceID,
+					Status: action,
+				},
+			}
+
+			chanInCore <- &sendMsg
+
+			if action == "connect" {
+				if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
+					ss, _ := isl.GetSourceSetting(id)
+					formatJSON, err := processrequest.SendMsgPingPong("ping", ss.Settings.MaxCountProcessFiltration, ss.Settings.EnableTelemetry)
+					if err != nil {
+						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					}
+
+					fmt.Println("send msg type PING")
+					fmt.Printf("%v\n", formatJSON)
+
+					//отправляем источнику запрос типа Ping
+					cwt <- configure.MsgWsTransmission{
+						DestinationHost: sourceIP,
+						Data:            &formatJSON,
+					}
+				}
 			}
 
 			//обработка сообщения от ядра
@@ -111,23 +156,27 @@ func RouteWssConnectionResponse(
 		}
 
 		switch messageType.Type {
-		case "ping":
-			if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
-				sourceSettings, _ := isl.GetSourceSetting(id)
-				formatJSON, err := processrequest.SendMsgPingPong("pong", sourceSettings.Settings.MaxCountProcessFiltration)
-				if err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-				}
-
-				//отправляем источнику запрос типа Ping
-				cwtRes <- configure.MsgWsTransmission{
-					DestinationHost: sourceIP,
-					Data:            &formatJSON,
-				}
+		/*case "ping":
+		if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
+			sourceSettings, _ := isl.GetSourceSetting(id)
+			formatJSON, err := processrequest.SendMsgPingPong("pong", sourceSettings.Settings.MaxCountProcessFiltration)
+			if err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
 
+			//отправляем источнику запрос типа Ping
+			cwtRes <- configure.MsgWsTransmission{
+				DestinationHost: sourceIP,
+				Data:            &formatJSON,
+			}
+		}
+		*/
 		case "pong":
 			/* Нужно отправить сообщение в RouteCore о том что связь установленна */
+
+			fmt.Println("RESIVED message type 'PONG' from IP", sourceIP)
+			fmt.Printf("%v\n", message)
+
 		case "source_telemetry":
 
 		case "filtration":

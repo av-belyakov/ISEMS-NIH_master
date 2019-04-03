@@ -61,11 +61,17 @@ func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]configu
 			mcpf = s.Argument.Settings.MaxCountProcessFiltration
 		}
 
+		serverPort := s.Argument.Settings.Port
+		if s.Argument.Settings.Port == 0 {
+			serverPort = 13113
+		}
+
 		listTrastedSources = append(listTrastedSources, configure.SourceSetting{
 			IP:       s.Argument.IP,
 			Token:    s.Argument.Token,
 			AsServer: s.Argument.Settings.AsServer,
 			Settings: configure.InfoServiceSettings{
+				IfAsServerThenPort:        serverPort,
 				EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
 				MaxCountProcessFiltration: mcpf,
 				StorageFolders:            s.Argument.Settings.StorageFolders,
@@ -95,6 +101,7 @@ func updateSourceList(isl *configure.InformationSourcesList, l []configure.Detai
 				ClientName: clientName,
 				AsServer:   s.Argument.Settings.AsServer,
 				Settings: configure.InfoServiceSettings{
+					IfAsServerThenPort:        s.Argument.Settings.Port,
 					EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
 					MaxCountProcessFiltration: s.Argument.Settings.MaxCountProcessFiltration,
 					StorageFolders:            s.Argument.Settings.StorageFolders,
@@ -120,6 +127,7 @@ func updateSourceList(isl *configure.InformationSourcesList, l []configure.Detai
 				ClientName: clientName,
 				AsServer:   source.Argument.Settings.AsServer,
 				Settings: configure.InfoServiceSettings{
+					IfAsServerThenPort:        source.Argument.Settings.Port,
 					EnableTelemetry:           source.Argument.Settings.EnableTelemetry,
 					MaxCountProcessFiltration: source.Argument.Settings.MaxCountProcessFiltration,
 					StorageFolders:            source.Argument.Settings.StorageFolders,
@@ -158,6 +166,7 @@ func updateSourceList(isl *configure.InformationSourcesList, l []configure.Detai
 				ClientName: clientName,
 				AsServer:   source.Argument.Settings.AsServer,
 				Settings: configure.InfoServiceSettings{
+					IfAsServerThenPort:        source.Argument.Settings.Port,
 					EnableTelemetry:           source.Argument.Settings.EnableTelemetry,
 					MaxCountProcessFiltration: source.Argument.Settings.MaxCountProcessFiltration,
 					StorageFolders:            source.Argument.Settings.StorageFolders,
@@ -202,6 +211,7 @@ func getSourceListToStoreDB(trastedSoures []int, l *[]configure.DetailedListSour
 				AsServer:      s.Argument.Settings.AsServer,
 				NameClientAPI: clientName,
 				SourceSetting: configure.InfoServiceSettings{
+					IfAsServerThenPort:        s.Argument.Settings.Port,
 					EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
 					MaxCountProcessFiltration: mcpf,
 					StorageFolders:            s.Argument.Settings.StorageFolders,
@@ -243,6 +253,7 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 					ClientName: clientName,
 					AsServer:   s.Argument.Settings.AsServer,
 					Settings: configure.InfoServiceSettings{
+						IfAsServerThenPort:        s.Argument.Settings.Port,
 						EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
 						MaxCountProcessFiltration: s.Argument.Settings.MaxCountProcessFiltration,
 						StorageFolders:            s.Argument.Settings.StorageFolders,
@@ -318,6 +329,7 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 				ClientName: clientName,
 				AsServer:   s.Argument.Settings.AsServer,
 				Settings: configure.InfoServiceSettings{
+					IfAsServerThenPort:        s.Argument.Settings.Port,
 					EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
 					MaxCountProcessFiltration: s.Argument.Settings.MaxCountProcessFiltration,
 					StorageFolders:            s.Argument.Settings.StorageFolders,
@@ -419,6 +431,7 @@ func getSourceListsForWriteToBD(
 					AsServer:      s.Argument.Settings.AsServer,
 					NameClientAPI: clientName,
 					SourceSetting: configure.InfoServiceSettings{
+						IfAsServerThenPort:        s.Argument.Settings.Port,
 						EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
 						MaxCountProcessFiltration: mcpf,
 						StorageFolders:            s.Argument.Settings.StorageFolders,

@@ -30,6 +30,7 @@ type MsgWsTransmission struct {
 // 			перезапустить 'reconnect')
 // 		* 'keep list sources in database' (сохранить список источников в БД)
 // 		* 'send list sources to client api'
+// 		* 'change connection status source'
 //  - для filtration_control:
 //		* 'start'
 //		* 'stop'

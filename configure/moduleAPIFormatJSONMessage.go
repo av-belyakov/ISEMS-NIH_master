@@ -84,6 +84,7 @@ type SourceControlMsgOptions struct {
 
 //SourceControlActionsTakenSources описание выполненных действий с источниками
 type SourceControlActionsTakenSources struct {
+	MsgCommon
 	MsgOptions SourceControlMsgTypeToAPI `json:"o"`
 }
 
@@ -160,6 +161,7 @@ type SourceArguments struct {
 //SourceSettings настройки источника
 type SourceSettings struct {
 	AsServer                  bool     `json:"as"`
+	Port                      int      `json:"p"`
 	EnableTelemetry           bool     `json:"et"`
 	MaxCountProcessFiltration int8     `json:"mcpf"` //<число 1-10>,
 	StorageFolders            []string `json:"sf"`

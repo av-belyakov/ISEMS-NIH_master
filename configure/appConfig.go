@@ -43,8 +43,7 @@ type AppConfig struct {
 	ServerHTTPS                             settingsServerHTTP
 	AuthenticationTokenClientsAPI           []SettingsAuthenticationTokenClientsAPI
 	ServerAPI                               settingsServerHTTP
-	PathCertFile                            string
-	PathPrivateKeyFile                      string
+	PathRootCA                              string
 	TimeReconnectClient                     int
 	ConnectionDB                            settingsConnectionDB
 	DirectoryLongTermStorageDownloadedFiles settingsDirectoryStoreFiles

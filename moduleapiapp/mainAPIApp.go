@@ -200,17 +200,22 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 			//			fmt.Println("Storage ClientID:", clientID, ", resived ClientID:", msg.IDClientAPI)
 
 			if msg.MsgGenerator == "Core module" && msg.MsgRecipient == "API module" {
-				clientSettings, ok := storingMemoryAPI.GetClientSettings(msg.IDClientAPI)
-
+				msgjson, ok := msg.MsgJSON.([]byte)
 				if !ok {
-					_ = saveMessageApp.LogMessage("error", "Server API - client with id "+msg.IDClientAPI+" not found, he sending data is not possible")
+					_ = saveMessageApp.LogMessage("error", "Server API - failed to send json message, error while casting type")
 
 					continue
 				}
 
-				msgjson, ok := msg.MsgJSON.([]byte)
+				clientSettings, ok := storingMemoryAPI.GetClientSettings(msg.IDClientAPI)
+				//если клиент с таким ID не найден, отправляем широковещательное сообщение
 				if !ok {
-					_ = saveMessageApp.LogMessage("error", "Server API - failed to send json message, error while casting type")
+					cl := storingMemoryAPI.GetClientList()
+					for _, cs := range cl {
+						if err := cs.SendWsMessage(1, msgjson); err != nil {
+							_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
+						}
+					}
 
 					continue
 				}

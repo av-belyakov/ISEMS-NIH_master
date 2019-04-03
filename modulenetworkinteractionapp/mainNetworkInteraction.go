@@ -15,7 +15,30 @@ import (
 
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/savemessageapp"
+
+	"github.com/gorilla/websocket"
 )
+
+//при разрыве соединения удаляет дескриптор соединения и изменяет статус клиента
+func connClose(
+	COut chan<- [2]string,
+	c *websocket.Conn,
+	isl *configure.InformationSourcesList,
+	id int,
+	ip string) {
+
+	fmt.Println("CLOSE WSS LINK")
+
+	c.Close()
+
+	//изменяем статус подключения клиента
+	_ = isl.ChangeSourceConnectionStatus(id)
+	//удаляем дескриптор соединения
+	isl.DelLinkWebsocketConnection(ip)
+
+	//отправляем сообщение о разрыве соединения
+	COut <- [2]string{ip, "disconnect"}
+}
 
 //MainNetworkInteraction осуществляет общее управление
 func MainNetworkInteraction(appConf *configure.AppConfig) (chanOutCore, chanInCore chan *configure.MsgBetweenCoreAndNI) {
@@ -35,7 +58,6 @@ func MainNetworkInteraction(appConf *configure.AppConfig) (chanOutCore, chanInCo
 
 	//инициализация каналов управления и состояния источников
 	chansStatSource := map[string]chan [2]string{
-		"inWssModuleClient":  make(chan [2]string),
 		"outWssModuleServer": make(chan [2]string),
 		"outWssModuleClient": make(chan [2]string),
 	}
@@ -52,7 +74,7 @@ func MainNetworkInteraction(appConf *configure.AppConfig) (chanOutCore, chanInCo
 	go WssServerNetworkInteraction(chansStatSource["outWssModuleServer"], appConf, isl, cwtReq)
 
 	//запуск модуля wssClientNI
-	go WssClientNetworkInteraction(chansStatSource["outWssModuleClient"], appConf.TimeReconnectClient, isl, chansStatSource["inWssModule"])
+	go WssClientNetworkInteraction(chansStatSource["outWssModuleClient"], appConf, isl, cwtReq)
 
 	go func() {
 		for msg := range cwtRes {

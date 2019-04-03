@@ -77,6 +77,11 @@ func (smapi *StoringMemoryAPI) GetClientSettings(id string) (*ClientSettings, bo
 	return smapi.clientSettings[id], true
 }
 
+//GetClientList получить весь список клиентов
+func (smapi *StoringMemoryAPI) GetClientList() map[string]*ClientSettings {
+	return smapi.clientSettings
+}
+
 //SaveWssClientConnection сохранить линк соединения с клиентом
 func (smapi *StoringMemoryAPI) SaveWssClientConnection(id string, conn *websocket.Conn) error {
 	if err := smapi.searchID(id); err != nil {
