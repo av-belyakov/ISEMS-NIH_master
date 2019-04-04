@@ -11,6 +11,8 @@ import (
 func SendMsgPing(ss *configure.SourceSetting) ([]byte, error) {
 	fmt.Println("для клиента, отправить запрос PING")
 
+	fmt.Println(ss.Settings)
+
 	msgPing := configure.MsgTypePingPong{
 		MsgType: "ping",
 		Info: configure.DetailInfoMsgPingPong{

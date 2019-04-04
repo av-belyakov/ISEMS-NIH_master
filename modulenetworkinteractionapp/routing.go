@@ -61,13 +61,12 @@ func RouteCoreRequest(
 			if action == "connect" {
 				if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
 					ss, _ := isl.GetSourceSetting(id)
-					formatJSON, err := processrequest.SendMsgPingPong("ping", ss.Settings.MaxCountProcessFiltration, ss.Settings.EnableTelemetry)
+					formatJSON, err := processrequest.SendMsgPing(ss)
 					if err != nil {
 						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 					}
 
-					fmt.Println("send msg type PING")
-					fmt.Printf("%v\n", formatJSON)
+					fmt.Printf("send msg type PING source %v (action SERVER)\n", id)
 
 					//отправляем источнику запрос типа Ping
 					cwt <- configure.MsgWsTransmission{
@@ -103,13 +102,12 @@ func RouteCoreRequest(
 			if action == "connect" {
 				if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
 					ss, _ := isl.GetSourceSetting(id)
-					formatJSON, err := processrequest.SendMsgPingPong("ping", ss.Settings.MaxCountProcessFiltration, ss.Settings.EnableTelemetry)
+					formatJSON, err := processrequest.SendMsgPing(ss)
 					if err != nil {
 						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 					}
 
-					fmt.Println("send msg type PING")
-					fmt.Printf("%v\n", formatJSON)
+					fmt.Println("send msg type PING (action CLIENT)")
 
 					//отправляем источнику запрос типа Ping
 					cwt <- configure.MsgWsTransmission{
@@ -140,7 +138,8 @@ func RouteWssConnectionResponse(
 
 	//MessageType содержит тип JSON сообщения
 	type MessageType struct {
-		Type string `json:"messageType"`
+		Type string  `json:"messageType"`
+		Info *[]byte `json:"info"`
 	}
 
 	var messageType MessageType
@@ -151,6 +150,9 @@ func RouteWssConnectionResponse(
 		sourceIP := msg.DestinationHost
 		message := msg.Data
 
+		fmt.Println("RESIVED source ip", sourceIP)
+		//fmt.Printf("%v\n", *message)
+
 		if err := json.Unmarshal(*message, &messageType); err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 		}
@@ -159,7 +161,7 @@ func RouteWssConnectionResponse(
 		/*case "ping":
 		if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
 			sourceSettings, _ := isl.GetSourceSetting(id)
-			formatJSON, err := processrequest.SendMsgPingPong("pong", sourceSettings.Settings.MaxCountProcessFiltration)
+			formatJSON, err := processrequest.SendMsgPing(ss)
 			if err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
@@ -172,12 +174,27 @@ func RouteWssConnectionResponse(
 		}
 		*/
 		case "pong":
-			/* Нужно отправить сообщение в RouteCore о том что связь установленна */
 
 			fmt.Println("RESIVED message type 'PONG' from IP", sourceIP)
-			fmt.Printf("%v\n", message)
 
-		case "source_telemetry":
+		case "telemetry":
+			fmt.Println("RESIVED message type 'TELEMETRY' from IP", sourceIP)
+			fmt.Printf("%v\n", messageType.Info)
+
+			if sourceID, ok := isl.GetSourceIDOnIP(sourceIP); ok {
+				chanInCore <- &configure.MsgBetweenCoreAndNI{
+					Section: "source control",
+					Command: "telemetry",
+					AdvancedOptions: configure.SourceTelemetry{
+						SourceID:    sourceID,
+						Information: *messageType.Info,
+					},
+				}
+
+				/*
+					Дописать передачу телеметрии через ядро клиенту API
+				*/
+			}
 
 		case "filtration":
 

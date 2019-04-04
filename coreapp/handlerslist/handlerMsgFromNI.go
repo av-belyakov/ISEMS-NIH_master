@@ -38,8 +38,9 @@ func HandlerMsgFromNI(
 	case "source control":
 		fmt.Printf("func 'HandlerMsgFromNI', section SOURCE CONTROL '%v'\n", msg.Command)
 
-		//в БД
-		if msg.Command == "keep list sources in database" {
+		switch msg.Command {
+		case "keep list sources in database":
+			//в БД
 			fmt.Println(":INSERT (Core module)")
 
 			chanToDB <- &configure.MsgBetweenCoreAndDB{
@@ -50,10 +51,9 @@ func HandlerMsgFromNI(
 				TaskID:          msg.TaskID,
 				AdvancedOptions: msg.AdvancedOptions,
 			}
-		}
 
-		//в БД
-		if msg.Command == "delete sources in database" {
+		case "delete sources in database":
+			//в БД
 			fmt.Println(":DELETE (Core module)")
 
 			chanToDB <- &configure.MsgBetweenCoreAndDB{
@@ -64,10 +64,9 @@ func HandlerMsgFromNI(
 				TaskID:          msg.TaskID,
 				AdvancedOptions: msg.AdvancedOptions,
 			}
-		}
 
-		//в БД
-		if msg.Command == "update sources in database" {
+		case "update sources in database":
+			//в БД
 			fmt.Println(":UPDATE (Core module)")
 
 			chanToDB <- &configure.MsgBetweenCoreAndDB{
@@ -78,19 +77,29 @@ func HandlerMsgFromNI(
 				TaskID:          msg.TaskID,
 				AdvancedOptions: msg.AdvancedOptions,
 			}
-		}
 
-		//клиенту API
-		if msg.Command == "confirm the action" {
+		case "confirm the action":
+			//клиенту API
 			getConfirmActionSourceListForAPI(chanToAPI, msg, smt)
-		}
 
-		//клиенту API
-		if msg.Command == "change connection status source" {
+		case "change connection status source":
+			//клиенту API
 			fmt.Println("MSG Core module 'change connection status source'")
 			fmt.Printf("%v\n", msg.AdvancedOptions)
 
 			sendChanStatusSourceForAPI(chanToAPI, msg)
+
+		case "telemetry":
+			//клиенту API
+			fmt.Println("TELEMETRY func 'handlerMsgFromNI'")
+			fmt.Printf("%v\n", msg.AdvancedOptions)
+
+			chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+				MsgGenerator: "Core module",
+				MsgRecipient: "API module",
+				MsgJSON:      msg.AdvancedOptions,
+			}
+
 		}
 
 	case "filtration control":

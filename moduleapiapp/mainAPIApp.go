@@ -178,16 +178,6 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	/*defer func() {
-		c.Close()
-
-		//удаляем информацию о клиенте
-		storingMemoryAPI.DelClientAPI(clientID)
-		_ = saveMessageApp.LogMessage("info", "Server API - disconnect for IP address "+remoteIP)
-
-		fmt.Println("Client API whis ip", remoteIP, "is disconnect")
-	}()*/
-
 	storingMemoryAPI.SaveWssClientConnection(clientID, c)
 
 	//при подключении клиента отправляем запрос на получение списка источников
@@ -196,7 +186,7 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 	//обработка ответов получаемых от ядра приложения
 	go func() {
 		for msg := range chn.ChanOut {
-			//			fmt.Println("resived message from Core to API", msg)
+			fmt.Println("resived message from Core to API", msg)
 			//			fmt.Println("Storage ClientID:", clientID, ", resived ClientID:", msg.IDClientAPI)
 
 			if msg.MsgGenerator == "Core module" && msg.MsgRecipient == "API module" {

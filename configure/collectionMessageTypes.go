@@ -29,10 +29,6 @@ type MsgInfoChangeStatusSource struct {
 	SourceList        *[]MainOperatingParametersSource
 }
 
-//MsgInfoSourceTelemetry данные по телеметрии
-type MsgInfoSourceTelemetry struct {
-}
-
 //MsgInfofiltration информация о фильтрации
 //
 type MsgInfofiltration struct {

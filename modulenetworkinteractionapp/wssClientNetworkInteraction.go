@@ -75,6 +75,8 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 			for {
 				_, message, err := c.ReadMessage()
 				if err != nil {
+
+					fmt.Println("ERROR WSS CONNECT", err)
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 					break

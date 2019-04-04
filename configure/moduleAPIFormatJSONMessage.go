@@ -167,6 +167,12 @@ type SourceSettings struct {
 	StorageFolders            []string `json:"sf"`
 }
 
+//SourceTelemetry телеметрия источника
+type SourceTelemetry struct {
+	SourceID    int    `json:"id"`
+	Information []byte `json:"i"`
+}
+
 //FiltrationControlMsgTypeInfo информационные сообщения о ходе фильтрации
 type FiltrationControlMsgTypeInfo struct{}
 

@@ -3,8 +3,37 @@ package configure
 /*
 * Описание типов JSON сообщений принимаемых от источников
 *
-* Версия 0.1, дата релиза 27.02.2019
+* Версия 0.2, дата релиза 04.04.2019
 * */
+
+//Memory содержит информацию об используемой ПО
+type Memory struct {
+	Total int `json:"total"`
+	Used  int `json:"used"`
+	Free  int `json:"free"`
+}
+
+//CurrentDisk начальное и конечное время для файлов сет. трафика
+type CurrentDisk struct {
+	DateMin int `json:"dateMin"`
+	DateMax int `json:"dateMax"`
+}
+
+//DetailedInformation системная информация
+type DetailedInformation struct {
+	CurrentDateTime    int64                     `json:"currentDateTime"`
+	DiskSpace          []map[string]string       `json:"diskSpace"`
+	TimeInterval       map[string]map[string]int `json:"timeInterval"`
+	RandomAccessMemory Memory                    `json:"randomAccessMemory"`
+	LoadCPU            float64                   `json:"loadCPU"`
+	LoadNetwork        map[string]map[string]int `json:"loadNetwork"`
+}
+
+//SysInfo полная системная информация подготовленная к отправке
+type SysInfo struct {
+	MessageType string              `json:"messageType"`
+	Info        DetailedInformation `json:"info"`
+}
 
 //FoundFilesInfo содержит информацию о файле
 type FoundFilesInfo struct {
@@ -56,7 +85,7 @@ type MessageTypefiltrationCompleteInfoFirstPart struct {
 //MessageTypefiltrationCompleteInfoSecondPart информация при ЗАВЕРШЕНИИ выполнения фильтрации (вторая часть)
 type MessageTypefiltrationCompleteInfoSecondPart struct {
 	FilterInfoPattern
-	NumberMessageParts            [2]int           `json:"numberMessageParts"`
+	NumberMessageParts             [2]int           `json:"numberMessageParts"`
 	ListFilesFoundDuringfiltration []FoundFilesInfo `json:"listFilesFoundDuringfiltration"`
 }
 
@@ -65,12 +94,12 @@ type MessageTypefiltrationStartInfoFirstPart struct {
 	FilterInfoPattern
 	Directoryfiltration      string         `json:"directoryfiltration"`
 	CountDirectoryfiltration int            `json:"countDirectoryfiltration"`
-	CountFullCycle          int            `json:"countFullCycle"`
+	CountFullCycle           int            `json:"countFullCycle"`
 	CountFilesfiltration     int            `json:"countFilesfiltration"`
-	CountMaxFilesSize       int64          `json:"countMaxFilesSize"`
-	UseIndexes              bool           `json:"useIndexes"`
-	NumberMessageParts      [2]int         `json:"numberMessageParts"`
-	ListCountFilesFilter    map[string]int `json:"listCountFilesFilter"`
+	CountMaxFilesSize        int64          `json:"countMaxFilesSize"`
+	UseIndexes               bool           `json:"useIndexes"`
+	NumberMessageParts       [2]int         `json:"numberMessageParts"`
+	ListCountFilesFilter     map[string]int `json:"listCountFilesFilter"`
 }
 
 //MessageTypefiltrationStartInfoSecondPart детальная информация с именами файлов
@@ -90,37 +119,37 @@ type MessageTypefiltrationExecuteOrUnexecuteInfo struct {
 
 //MessageTypefiltrationStartFirstPart при начале фильтрации (первая часть)
 type MessageTypefiltrationStartFirstPart struct {
-	MessageType string                                 `json:"messageType"`
+	MessageType string                                  `json:"messageType"`
 	Info        MessageTypefiltrationStartInfoFirstPart `json:"info"`
 }
 
 //MessageTypefiltrationStartSecondPart при начале фильтрации (первая часть)
 type MessageTypefiltrationStartSecondPart struct {
-	MessageType string                                  `json:"messageType"`
+	MessageType string                                   `json:"messageType"`
 	Info        MessageTypefiltrationStartInfoSecondPart `json:"info"`
 }
 
 //MessageTypefiltrationStop отправляется для подтверждения остановки фильтрации
 type MessageTypefiltrationStop struct {
-	MessageType string                       `json:"messageType"`
+	MessageType string                        `json:"messageType"`
 	Info        MessageTypefiltrationStopInfo `json:"info"`
 }
 
 //MessageTypefiltrationCompleteFirstPart отправляется при завершении фильтрации
 type MessageTypefiltrationCompleteFirstPart struct {
-	MessageType string                                    `json:"messageType"`
+	MessageType string                                     `json:"messageType"`
 	Info        MessageTypefiltrationCompleteInfoFirstPart `json:"info"`
 }
 
 //MessageTypefiltrationCompleteSecondPart отправляется при завершении фильтрации
 type MessageTypefiltrationCompleteSecondPart struct {
-	MessageType string                                     `json:"messageType"`
+	MessageType string                                      `json:"messageType"`
 	Info        MessageTypefiltrationCompleteInfoSecondPart `json:"info"`
 }
 
 //MessageTypefiltrationExecutedOrUnexecuted при выполнении или не выполнении фильтрации
 type MessageTypefiltrationExecutedOrUnexecuted struct {
-	MessageType string                                     `json:"messageType"`
+	MessageType string                                      `json:"messageType"`
 	Info        MessageTypefiltrationExecuteOrUnexecuteInfo `json:"info"`
 }
 
