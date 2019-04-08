@@ -7,6 +7,7 @@ package handlerslist
 * */
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"ISEMS-NIH_master/configure"
@@ -92,14 +93,45 @@ func HandlerMsgFromNI(
 		case "telemetry":
 			//клиенту API
 			fmt.Println("TELEMETRY func 'handlerMsgFromNI'")
-			fmt.Printf("%v\n", msg.AdvancedOptions)
+
+			jsonIn, ok := msg.AdvancedOptions.(*[]byte)
+			if !ok {
+				_ = saveMessageApp.LogMessage("error", "type conversion error"+funcName)
+
+				return
+			}
+
+			var st configure.SourceTelemetry
+			err := json.Unmarshal(*jsonIn, &st)
+			if err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+				return
+			}
+
+			msg := configure.Telemetry{
+				MsgOptions: configure.TelemetryOptions{
+					SourceID:    msg.SourceID,
+					Information: st.Info,
+				},
+			}
+
+			msg.MsgType = "information"
+			msg.MsgSection = "source control"
+			msg.MsgInsturction = "send telemetry"
+
+			jsonOut, err := json.Marshal(msg)
+			if err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+				return
+			}
 
 			chanToAPI <- &configure.MsgBetweenCoreAndAPI{
 				MsgGenerator: "Core module",
 				MsgRecipient: "API module",
-				MsgJSON:      msg.AdvancedOptions,
+				MsgJSON:      jsonOut,
 			}
-
 		}
 
 	case "filtration control":

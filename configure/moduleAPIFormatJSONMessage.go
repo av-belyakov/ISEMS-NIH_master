@@ -4,11 +4,7 @@ package configure
 * Описание сообщений типа JSON передоваемых между API и клиентами
 * */
 
-//MsgCommonTask общее сообщение которое должно содержать ID задачи
-/*type MsgCommonTask struct {
-	TaskID string `json:"taskID"`
-	MsgCommon
-}*/
+/*--- ОБЩИЕ ---*/
 
 //MsgCommon общее сообщение
 // MsgType:
@@ -34,6 +30,8 @@ type MsgCommon struct {
 	ClientTaskID   string `json:"tid"`
 }
 
+/*--- ИНФОРМАЦИОННЫЕ СООБЩЕНИЯ ---*/
+
 //MsgNotification информационное сообщение
 type MsgNotification struct {
 	MsgCommon
@@ -51,6 +49,8 @@ type NotificationParameters struct {
 type UserNotification struct {
 	Notification NotificationParameters `json:"n"`
 }
+
+/*--- УПРАВЛЕНИЕ ИСТОЧНИКАМИ ---*/
 
 //SourceControlMsgTypeFromAPI подробно по источникам API->
 type SourceControlMsgTypeFromAPI struct {
@@ -167,11 +167,21 @@ type SourceSettings struct {
 	StorageFolders            []string `json:"sf"`
 }
 
-//SourceTelemetry телеметрия источника
-type SourceTelemetry struct {
-	SourceID    int    `json:"id"`
-	Information []byte `json:"i"`
+/*--- ИНФОРМАЦИЯ ПО ТЕЛЕМЕТРИИ ---*/
+
+//Telemetry телеметрия
+type Telemetry struct {
+	MsgCommon
+	MsgOptions TelemetryOptions `json:"o"`
 }
+
+//TelemetryOptions дополнительные опции
+type TelemetryOptions struct {
+	SourceID    int                  `json:"id"`
+	Information TelemetryInformation `json:"i"`
+}
+
+/*--- ИНФОРМАЦИЯ ПО ФИЛЬТРАЦИИ ---*/
 
 //FiltrationControlMsgTypeInfo информационные сообщения о ходе фильтрации
 type FiltrationControlMsgTypeInfo struct{}

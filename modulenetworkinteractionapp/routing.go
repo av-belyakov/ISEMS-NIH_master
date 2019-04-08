@@ -138,8 +138,8 @@ func RouteWssConnectionResponse(
 
 	//MessageType содержит тип JSON сообщения
 	type MessageType struct {
-		Type string  `json:"messageType"`
-		Info *[]byte `json:"info"`
+		Type string `json:"messageType"`
+		//		Info []byte `json:"info"`
 	}
 
 	var messageType MessageType
@@ -158,42 +158,21 @@ func RouteWssConnectionResponse(
 		}
 
 		switch messageType.Type {
-		/*case "ping":
-		if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
-			sourceSettings, _ := isl.GetSourceSetting(id)
-			formatJSON, err := processrequest.SendMsgPing(ss)
-			if err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-			}
-
-			//отправляем источнику запрос типа Ping
-			cwtRes <- configure.MsgWsTransmission{
-				DestinationHost: sourceIP,
-				Data:            &formatJSON,
-			}
-		}
-		*/
 		case "pong":
 
 			fmt.Println("RESIVED message type 'PONG' from IP", sourceIP)
 
 		case "telemetry":
 			fmt.Println("RESIVED message type 'TELEMETRY' from IP", sourceIP)
-			fmt.Printf("%v\n", messageType.Info)
+			fmt.Printf("%v\n", messageType)
 
-			if sourceID, ok := isl.GetSourceIDOnIP(sourceIP); ok {
-				chanInCore <- &configure.MsgBetweenCoreAndNI{
-					Section: "source control",
-					Command: "telemetry",
-					AdvancedOptions: configure.SourceTelemetry{
-						SourceID:    sourceID,
-						Information: *messageType.Info,
-					},
-				}
+			sourceID, _ := isl.GetSourceIDOnIP(sourceIP)
 
-				/*
-					Дописать передачу телеметрии через ядро клиенту API
-				*/
+			chanInCore <- &configure.MsgBetweenCoreAndNI{
+				Section:         "source control",
+				Command:         "telemetry",
+				SourceID:        sourceID,
+				AdvancedOptions: message,
 			}
 
 		case "filtration":

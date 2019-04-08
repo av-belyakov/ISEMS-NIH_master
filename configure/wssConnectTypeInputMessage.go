@@ -3,8 +3,24 @@ package configure
 /*
 * Описание типов JSON сообщений принимаемых от источников
 *
-* Версия 0.2, дата релиза 04.04.2019
+* Версия 0.21, дата релиза 08.04.2019
 * */
+
+//SourceTelemetry полная системная информация подготовленная к отправке
+type SourceTelemetry struct {
+	MessageType string               `json:"messageType"`
+	Info        TelemetryInformation `json:"info"`
+}
+
+//TelemetryInformation системная информация
+type TelemetryInformation struct {
+	CurrentDateTime    int64                     `json:"currentDateTime"`
+	DiskSpace          []map[string]string       `json:"diskSpace"`
+	TimeInterval       map[string]map[string]int `json:"timeInterval"`
+	RandomAccessMemory Memory                    `json:"randomAccessMemory"`
+	LoadCPU            float64                   `json:"loadCPU"`
+	LoadNetwork        map[string]map[string]int `json:"loadNetwork"`
+}
 
 //Memory содержит информацию об используемой ПО
 type Memory struct {
@@ -17,22 +33,6 @@ type Memory struct {
 type CurrentDisk struct {
 	DateMin int `json:"dateMin"`
 	DateMax int `json:"dateMax"`
-}
-
-//DetailedInformation системная информация
-type DetailedInformation struct {
-	CurrentDateTime    int64                     `json:"currentDateTime"`
-	DiskSpace          []map[string]string       `json:"diskSpace"`
-	TimeInterval       map[string]map[string]int `json:"timeInterval"`
-	RandomAccessMemory Memory                    `json:"randomAccessMemory"`
-	LoadCPU            float64                   `json:"loadCPU"`
-	LoadNetwork        map[string]map[string]int `json:"loadNetwork"`
-}
-
-//SysInfo полная системная информация подготовленная к отправке
-type SysInfo struct {
-	MessageType string              `json:"messageType"`
-	Info        DetailedInformation `json:"info"`
 }
 
 //FoundFilesInfo содержит информацию о файле

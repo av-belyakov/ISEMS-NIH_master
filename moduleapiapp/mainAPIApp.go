@@ -186,7 +186,7 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 	//обработка ответов получаемых от ядра приложения
 	go func() {
 		for msg := range chn.ChanOut {
-			fmt.Println("resived message from Core to API", msg)
+			fmt.Println("resived message from Core to API")
 			//			fmt.Println("Storage ClientID:", clientID, ", resived ClientID:", msg.IDClientAPI)
 
 			if msg.MsgGenerator == "Core module" && msg.MsgRecipient == "API module" {
