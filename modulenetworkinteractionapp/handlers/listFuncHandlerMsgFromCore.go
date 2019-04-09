@@ -151,8 +151,13 @@ func updateSourceList(isl *configure.InformationSourcesList, l []configure.Detai
 			continue
 		}
 
+		changeToken := (s.Token != source.Argument.Token)
+		changeIP := (s.IP != source.Argument.IP)
+		changeAsServer := (s.AsServer != source.Argument.Settings.AsServer)
+		changeEnTelemetry := (s.Settings.EnableTelemetry != source.Argument.Settings.EnableTelemetry)
+
 		//проверяем параметры подключения
-		if (s.Token != source.Argument.Token) || (s.IP != source.Argument.IP) || (s.AsServer != source.Argument.Settings.AsServer) {
+		if changeToken || changeIP || changeAsServer || changeEnTelemetry {
 			sourcesIsReconnect = true
 		}
 
@@ -313,8 +318,13 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 		}
 
 		if s.ActionType == "update" {
+			changeToken := (sourceInfo.Token != s.Argument.Token)
+			changeIP := (sourceInfo.IP != s.Argument.IP)
+			changeAsServer := (sourceInfo.AsServer != s.Argument.Settings.AsServer)
+			changeEnTelemetry := (sourceInfo.Settings.EnableTelemetry != s.Argument.Settings.EnableTelemetry)
+
 			//проверяем параметры подключения
-			if (s.Argument.Token != sourceInfo.Token) || (s.Argument.IP != sourceInfo.IP) || (s.Argument.Settings.AsServer != sourceInfo.AsServer) {
+			if changeToken || changeIP || changeAsServer || changeEnTelemetry {
 				//закрываем соединение и удаляем дискриптор
 				if cl, isExist := isl.GetLinkWebsocketConnect(sourceInfo.IP); isExist {
 					cl.Link.Close()
