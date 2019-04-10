@@ -32,7 +32,7 @@ func connClose(
 	c.Close()
 
 	//изменяем статус подключения клиента
-	_ = isl.ChangeSourceConnectionStatus(id)
+	_ = isl.ChangeSourceConnectionStatus(id, false)
 	//удаляем дескриптор соединения
 	isl.DelLinkWebsocketConnection(ip)
 

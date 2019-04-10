@@ -246,8 +246,8 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 
 func init() {
 	chn = channels{
-		ChanOut: make(chan *configure.MsgBetweenCoreAndAPI, 10),
-		ChanIn:  make(chan *configure.MsgBetweenCoreAndAPI, 10),
+		ChanOut: make(chan *configure.MsgBetweenCoreAndAPI),
+		ChanIn:  make(chan *configure.MsgBetweenCoreAndAPI),
 	}
 
 	storingMemoryAPI = configure.NewRepositorySMAPI()

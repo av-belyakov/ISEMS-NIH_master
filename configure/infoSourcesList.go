@@ -118,13 +118,13 @@ func (isl *InformationSourcesList) GetSourceList() *map[int]SourceSetting {
 }
 
 //ChangeSourceConnectionStatus изменить состояние источника
-func (isl *InformationSourcesList) ChangeSourceConnectionStatus(id int) bool {
+func (isl *InformationSourcesList) ChangeSourceConnectionStatus(id int, status bool) bool {
 	if s, ok := isl.sourcesListSetting[id]; ok {
-		s.ConnectionStatus = !s.ConnectionStatus
+		s.ConnectionStatus = status
 
 		fmt.Println("function 'ChangeSourceConnectionStatus' connection status:", s.ConnectionStatus)
 
-		if s.ConnectionStatus {
+		if status {
 			s.DateLastConnected = time.Now().Unix()
 		} else {
 

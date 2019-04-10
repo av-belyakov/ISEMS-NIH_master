@@ -115,8 +115,12 @@ func (smapi *StoringMemoryAPI) searchID(id string) error {
 	return nil
 }
 
-//DescriptionTaskParameters описание параметров задачи
-type DescriptionTaskParameters struct{}
+//StoringMemoryTask описание типа в котором храняться описание и ID выполняемых задач
+// ключом отображения является уникальный идентификатор задачи
+type StoringMemoryTask struct {
+	tasks   map[string]*TaskDescription
+	channel chan ChanStoringMemoryTask
+}
 
 //TaskDescription описание задачи
 // ClientID - уникальный идентификатор клиента
@@ -138,16 +142,43 @@ type TaskDescription struct {
 	TaskParameter                   DescriptionTaskParameters
 }
 
-//StoringMemoryTask описание типа в котором храняться описание и ID выполняемых задач
-// ключом отображения является уникальный идентификатор задачи
-type StoringMemoryTask struct {
-	tasks map[string]*TaskDescription
+//DescriptionTaskParameters описание параметров задачи
+type DescriptionTaskParameters struct{}
+
+//ChanStoringMemoryTask описание информации передоваемой через канал
+type ChanStoringMemoryTask struct {
+	ActionType, TaskID string
+	Description        *TaskDescription
 }
 
 //NewRepositorySMT создание нового рапозитория для хранения выполняемых задач
 func NewRepositorySMT() *StoringMemoryTask {
 	smt := StoringMemoryTask{}
 	smt.tasks = map[string]*TaskDescription{}
+	smt.channel = make(chan ChanStoringMemoryTask)
+
+	go func() {
+		for msg := range smt.channel {
+			switch msg.ActionType {
+			case "add":
+				smt.tasks[msg.TaskID] = msg.Description
+
+			case "complete":
+				if _, ok := smt.GetStoringMemoryTask(msg.TaskID); ok {
+					smt.tasks[msg.TaskID].TaskStatus = true
+				}
+
+			case "timer update":
+				if _, ok := smt.GetStoringMemoryTask(msg.TaskID); ok {
+					smt.tasks[msg.TaskID].TimeUpdate = time.Now().Unix()
+				}
+
+			case "delete":
+				delete(smt.tasks, msg.TaskID)
+
+			}
+		}
+	}()
 
 	return &smt
 }
@@ -155,23 +186,39 @@ func NewRepositorySMT() *StoringMemoryTask {
 //AddStoringMemoryTask добавить задачу
 // если задачи с заданным ID нет, то в ответ TRUE, если есть то задача не
 // изменяется, а в ответ приходит FALSE
-func (smt *StoringMemoryTask) AddStoringMemoryTask(td TaskDescription) string {
+func (smt StoringMemoryTask) AddStoringMemoryTask(td TaskDescription) string {
 	taskID := common.GetUniqIDFormatMD5(td.ClientID)
 
-	smt.tasks[taskID] = &td
+	smt.channel <- ChanStoringMemoryTask{
+		ActionType:  "add",
+		TaskID:      taskID,
+		Description: &td,
+	}
 
 	return taskID
 }
 
 //delStoringMemoryTask удалить задачу
-func (smt *StoringMemoryTask) delStoringMemoryTask(taskID string) {
-	delete(smt.tasks, taskID)
+func (smt StoringMemoryTask) delStoringMemoryTask(taskID string) {
+	smt.channel <- ChanStoringMemoryTask{
+		ActionType: "delete",
+		TaskID:     taskID,
+	}
 }
 
 //StoringMemoryTaskComplete установить статус выполненно для задачи
 func (smt *StoringMemoryTask) StoringMemoryTaskComplete(taskID string) {
-	if _, ok := smt.tasks[taskID]; ok {
-		smt.tasks[taskID].TaskStatus = true
+	smt.channel <- ChanStoringMemoryTask{
+		ActionType: "complete",
+		TaskID:     taskID,
+	}
+}
+
+//TimerUpdateStoringMemoryTask обновить значение таймера в задачи
+func (smt *StoringMemoryTask) TimerUpdateStoringMemoryTask(taskID string) {
+	smt.channel <- ChanStoringMemoryTask{
+		ActionType: "timer update",
+		TaskID:     taskID,
 	}
 }
 
@@ -197,13 +244,6 @@ func (smt StoringMemoryTask) GetAllStoringMemoryTask(clientID string) []string {
 	return foundTask
 }
 
-//TimeUpdateStoringMemoryTask обновить значение таймера в задачи
-func (smt *StoringMemoryTask) TimeUpdateStoringMemoryTask(taskID string) {
-	if _, ok := smt.GetStoringMemoryTask(taskID); ok {
-		smt.tasks[taskID].TimeUpdate = time.Now().Unix()
-	}
-}
-
 //MsgChanStoringMemoryTask информация о подвисшей задачи
 type MsgChanStoringMemoryTask struct {
 	ID, Type, Description string
@@ -223,11 +263,11 @@ func (smt *StoringMemoryTask) CheckTimeUpdateStoringMemoryTask(sec int) chan Msg
 			if len(smt.tasks) > 0 {
 				timeNow := time.Now().Unix()
 
-				fmt.Println("task count =", len(smt.tasks))
+				//fmt.Println("task count =", len(smt.tasks))
 
 				for id, t := range smt.tasks {
 
-					fmt.Printf("Next Tick %v\n task status:%v, time:%v < %v (%v)\n", time.Now(), t.TaskStatus, (t.TimeUpdate + 60), timeNow, ((t.TimeUpdate + 60) < timeNow))
+					//fmt.Printf("Next Tick %v\n task status:%v, time:%v < %v (%v)\n", time.Now(), t.TaskStatus, (t.TimeUpdate + 60), timeNow, ((t.TimeUpdate + 60) < timeNow))
 
 					if t.TaskStatus && ((t.TimeUpdate + 60) < timeNow) {
 

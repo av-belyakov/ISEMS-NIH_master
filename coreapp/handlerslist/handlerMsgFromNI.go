@@ -30,7 +30,7 @@ func HandlerMsgFromNI(
 
 	taskInfo, ok := smt.GetStoringMemoryTask(msg.TaskID)
 	if ok {
-		smt.TimeUpdateStoringMemoryTask(msg.TaskID)
+		smt.TimerUpdateStoringMemoryTask(msg.TaskID)
 	}
 
 	//	fmt.Printf("%v\n", msg)

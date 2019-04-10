@@ -55,6 +55,8 @@ func Routing(
 
 			//сообщение клиенту о том что данная задача долго выполняется
 		case infoHungTask := <-chanCheckTask:
+			fmt.Println("сообщение клиенту о том что данная задача долго выполняется")
+
 			if ti, ok := smt.GetStoringMemoryTask(infoHungTask.ID); ok {
 				nsErrJSON := notifications.NotificationSettingsToClientAPI{
 					MsgType:        infoHungTask.Type,

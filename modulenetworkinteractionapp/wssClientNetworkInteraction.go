@@ -63,7 +63,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 
 		if res.StatusCode == 101 {
 			//изменяем статус подключения клиента
-			_ = cs.InfoSourceList.ChangeSourceConnectionStatus(cs.ID)
+			_ = cs.InfoSourceList.ChangeSourceConnectionStatus(cs.ID, true)
 
 			//добавляем линк соединения
 			cs.InfoSourceList.AddLinkWebsocketConnect(cs.IP, c)

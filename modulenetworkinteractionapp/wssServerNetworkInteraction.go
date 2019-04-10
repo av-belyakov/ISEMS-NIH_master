@@ -136,7 +136,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	defer connClose(sws.COut, c, sws.SourceList, clientID, remoteIP)
 
 	//изменяем состояние соединения для данного источника
-	_ = sws.SourceList.ChangeSourceConnectionStatus(clientID)
+	_ = sws.SourceList.ChangeSourceConnectionStatus(clientID, true)
 
 	//добавляем линк соединения по websocket
 	sws.SourceList.AddLinkWebsocketConnect(remoteIP, c)
