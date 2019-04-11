@@ -95,6 +95,8 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 
 	remoteIP := strings.Split(req.RemoteAddr, ":")[0]
 
+	fmt.Printf("*-*-*--**- WSS connect IP %v\n", remoteIP)
+
 	clientID, idIsExist := sws.SourceList.GetSourceIDOnIP(remoteIP)
 	if !idIsExist {
 		w.WriteHeader(401)
@@ -134,6 +136,8 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
 	defer connClose(sws.COut, c, sws.SourceList, clientID, remoteIP)
+
+	fmt.Printf("********* WSS SERVER SUCCESS ESTABLISHED client IP %v\n", remoteIP)
 
 	//изменяем состояние соединения для данного источника
 	_ = sws.SourceList.ChangeSourceConnectionStatus(clientID, true)

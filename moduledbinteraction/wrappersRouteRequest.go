@@ -1,18 +1,19 @@
 package moduledbinteraction
 
-import (
-	"ISEMS-NIH_master/configure"
-	"ISEMS-NIH_master/moduledbinteraction/handlerrequestdb"
-	"fmt"
-
-	"github.com/mongodb/mongo-go-driver/mongo"
-)
-
 /*
 * Набор функций оберток для обработки запросов к БД
 *
 * Версия 0.2, дата релиза 27.03.2019
 * */
+
+import (
+	"fmt"
+
+	"ISEMS-NIH_master/configure"
+	"ISEMS-NIH_master/moduledbinteraction/handlerrequestdb"
+
+	"github.com/mongodb/mongo-go-driver/mongo"
+)
 
 //WrappersRouteRequest обертки для запросов
 type WrappersRouteRequest struct {

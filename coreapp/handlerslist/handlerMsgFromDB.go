@@ -34,14 +34,19 @@ func HandlerMsgFromDB(
 			getCurrentSourceListForAPI(chanToAPI, res, smt)
 
 		case "source control":
+			//пока заглушка
 
 		case "source telemetry":
+			//пока заглушка
 
 		case "filtration":
+			//пока заглушка
 
 		case "download":
+			//пока заглушка
 
 		case "information search results":
+			//пока заглушка
 
 		case "error notification":
 			en, ok := res.AdvancedOptions.(configure.ErrorNotification)
@@ -86,10 +91,14 @@ func HandlerMsgFromDB(
 			}
 
 		case "source control":
+			//пока заглушка
 
 		case "filtration":
+			//пока заглушка
 
 		case "download":
+			//пока заглушка
+
 		}
 	} else if res.MsgRecipient == "Core module" {
 		fmt.Printf("RESIPENT MSG FOR CORE %v", res)

@@ -23,6 +23,8 @@ func getCurrentSourceListForAPI(
 	listSource, ok := res.AdvancedOptions.([]configure.InformationAboutSource)
 	if !ok {
 		_ = saveMessageApp.LogMessage("error", "type conversion error section type 'error notification'"+funcName)
+
+		return
 	}
 
 	list := make([]configure.ShortListSources, 0, len(listSource))
@@ -40,6 +42,8 @@ func getCurrentSourceListForAPI(
 	st, ok := smt.GetStoringMemoryTask(res.TaskID)
 	if !ok {
 		_ = saveMessageApp.LogMessage("error", "task with "+res.TaskID+" not found")
+
+		return
 	}
 
 	msg := configure.SourceControlCurrentListSources{
@@ -57,7 +61,7 @@ func getCurrentSourceListForAPI(
 
 	msgjson, _ := json.Marshal(&msg)
 
-	if err := senderMsgToAPI(chanToAPI, smt, res.TaskID, msgjson); err != nil {
+	if err := senderMsgToAPI(chanToAPI, smt, res.TaskID, st.ClientID, msgjson); err != nil {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
 }

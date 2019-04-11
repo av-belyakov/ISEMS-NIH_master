@@ -58,8 +58,8 @@ func MainNetworkInteraction(appConf *configure.AppConfig) (chanOutCore, chanInCo
 
 	//инициализация каналов управления и состояния источников
 	chansStatSource := map[string]chan [2]string{
-		"outWssModuleServer": make(chan [2]string),
-		"outWssModuleClient": make(chan [2]string),
+		"outWssModuleServer": make(chan [2]string, 10),
+		"outWssModuleClient": make(chan [2]string, 10),
 	}
 
 	//инициализируем хранилище для источников

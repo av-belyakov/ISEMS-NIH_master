@@ -101,9 +101,6 @@ func HandlerMsgFromAPI(
 		case "source control":
 			//получить актуальный список источников
 			if msgc.MsgInsturction == "get an updated list of sources" {
-
-				fmt.Println("----- RESIVED MESSAGE type 'get an updated list of sources'")
-
 				//добавляем новую задачу
 				taskID := smt.AddStoringMemoryTask(configure.TaskDescription{
 					ClientID:                        msg.IDClientAPI,

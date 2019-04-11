@@ -159,6 +159,7 @@ func (pdllf *PathDirLocationLogFiles) LogMessage(typeMessage, message string) (e
 	}
 
 	timeNowString := time.Now().String()
+	tns := strings.Split(timeNowString, " ")
 
 	writer := bufio.NewWriter(fileOut)
 	defer func() {
@@ -167,7 +168,9 @@ func (pdllf *PathDirLocationLogFiles) LogMessage(typeMessage, message string) (e
 		}
 	}()
 
-	if _, err = writer.WriteString(timeNowString + "\t" + message + "\n"); err != nil {
+	strMsg := fmt.Sprintf("%s %s [%s %s] - %s\n", tns[0], tns[1], tns[2], tns[3], message)
+
+	if _, err = writer.WriteString(strMsg); err != nil {
 		return err
 	}
 

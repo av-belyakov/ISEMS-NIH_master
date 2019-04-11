@@ -92,7 +92,7 @@ func HandlerMsgFromCore(
 				return
 			}
 
-			notAddSourceList, listInvalidSource := updateSourceList(isl, ado.SourceList, msg.ClientName, mcpf)
+			executedSourcesList, listInvalidSource := updateSourceList(isl, ado.SourceList, msg.ClientName, mcpf)
 			if len(listInvalidSource) != 0 {
 				strSourceID := createStringFromSourceList(listInvalidSource)
 
@@ -110,8 +110,8 @@ func HandlerMsgFromCore(
 				hdn := "Обновление настроек сенсоров выполнено успешно"
 				cm := "success"
 
-				if len(notAddSourceList) > 0 {
-					strSourceID := createStringFromSourceList(notAddSourceList)
+				if len(executedSourcesList) > 0 {
+					strSourceID := createStringFromSourceList(executedSourcesList)
 					hdn = "На сенсорах: " + strSourceID + " выполняются задачи, в настоящее время изменение их настроек невозможно"
 					cm = "info"
 				}
@@ -121,7 +121,7 @@ func HandlerMsgFromCore(
 					Section:                      "source control",
 					TypeActionPerformed:          "load list",
 					CriticalityMessage:           cm,
-					Sources:                      notAddSourceList,
+					Sources:                      executedSourcesList,
 					HumanDescriptionNotification: hdn,
 				}
 
@@ -241,7 +241,7 @@ func HandlerMsgFromCore(
 
 			// получаем ID источников по которым нужно обновить информацию
 			// в БД, к ним относятся источники для которых выполненно действие
-			// add, delete, update
+			// la - add, lu - update, ld - delete
 			la, lu, ld := getSourceListsForWriteToBD(&ado.MsgOptions.SourceList, listActionType, msg.ClientName, mcpf)
 
 			//актуализируем информацию в БД

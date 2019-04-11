@@ -23,30 +23,34 @@ func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- *configure.Ms
 
 	fmt.Println("START function 'GetAllSourcesList'")
 
-	msgResult := configure.MsgBetweenCoreAndDB{
+	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
 		MsgRecipient: req.MsgGenerator,
+		MsgSection:   "source control",
+		IDClientAPI:  req.IDClientAPI,
 		TaskID:       req.TaskID,
 	}
 
 	sourcesList, err := qcs.findAll()
 	if err != nil {
-		msgResult.MsgSection = "error notification"
-		msgResult.AdvancedOptions = configure.ErrorNotification{
-			SourceReport: "DB module",
-			ErrorBody:    err,
+		msgRes.MsgRecipient = "Core module"
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: "an error occurred while processing request get the list of sources",
+			ErrorBody:             err,
 		}
 
-		chanIn <- &msgResult
+		chanIn <- &msgRes
 
 		return
 	}
 
-	msgResult.MsgSection = "source list"
-	msgResult.AdvancedOptions = sourcesList
+	msgRes.MsgSection = "source list"
+	msgRes.AdvancedOptions = sourcesList
 
 	//отправка списка источников маршрутизатору ядра приложения
-	chanIn <- &msgResult
+	chanIn <- &msgRes
 }
 
 //InsertListSources добавить информацию об источниках
@@ -139,8 +143,6 @@ func (qcs *QueryCollectionSources) UpdateSourceToSourcesList(chanIn chan<- *conf
 	if !ok {
 		errMsg := "incorrect list of sources received"
 
-		fmt.Println("CONVERTION ERROR")
-
 		msgRes.MsgRecipient = "Core module"
 		msgRes.MsgSection = "error notification"
 		msgRes.AdvancedOptions = configure.ErrorNotification{
@@ -153,18 +155,6 @@ func (qcs *QueryCollectionSources) UpdateSourceToSourcesList(chanIn chan<- *conf
 
 		return
 	}
-
-	fmt.Println("UPDATE", l)
-
-	/*	insertData := make([]interface{}, 0, len(*l))
-
-		for _, i := range *l {
-			_ = qcs.deleteOneData(bson.D{{"id", i.ID}})
-
-			insertData = append(insertData, i)
-		}
-
-		qcs.insertData(insertData)*/
 
 	for _, i := range *l {
 		if err := qcs.updateOne(bson.D{bson.E{Key: "id", Value: i.ID}}, bson.D{
@@ -183,12 +173,18 @@ func (qcs *QueryCollectionSources) UpdateSourceToSourcesList(chanIn chan<- *conf
 					bson.E{Key: "if_as_server_then_port", Value: i.SourceSetting.IfAsServerThenPort},
 				}}}},
 		}); err != nil {
-			fmt.Println("ERROR UPDATE", err)
-		}
+			msgRes.MsgRecipient = "Core module"
+			msgRes.MsgSection = "error notification"
+			msgRes.AdvancedOptions = configure.ErrorNotification{
+				SourceReport:          "DB module",
+				HumanDescriptionError: "error writing list of sources in the database",
+				ErrorBody:             errors.New(fmt.Sprint(err)),
+			}
 
-		/*if err := qcs.updateOne(bson.D{bson.E{Key: "id", Value: i.ID}}, bson.D{
-			bson.E{Key: "$set", Value: bson.D{bson.E{Key: "short_name", Value: "1112211"}}}},
-		);*/
+			chanIn <- &msgRes
+
+			return
+		}
 	}
 }
 

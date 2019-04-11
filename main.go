@@ -90,11 +90,6 @@ func connectToDB(ctx context.Context, appc *configure.AppConfig) (*mongo.Client,
 		return nil, err
 	}
 
-	/*client, err := mongo.NewClient("mongodb://" + user + ":" + pwd + "@" + host + ":" + strconv.Itoa(port) + "/" + appc.ConnectionDB.NameDB)
-	if err != nil {
-		return nil, err
-	}*/
-
 	client.Connect(ctx)
 
 	if err = client.Ping(ctx, readpref.Primary()); err != nil {

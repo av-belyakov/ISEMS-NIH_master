@@ -32,6 +32,8 @@ func getConfirmActionSourceListForAPI(
 	st, ok := smt.GetStoringMemoryTask(res.TaskID)
 	if !ok {
 		_ = saveMessageApp.LogMessage("error", "task with "+res.TaskID+" not found")
+
+		return
 	}
 
 	msg := configure.SourceControlConfirmActionSource{
@@ -49,13 +51,13 @@ func getConfirmActionSourceListForAPI(
 
 	msgjson, _ := json.Marshal(&msg)
 
-	if err := senderMsgToAPI(chanToAPI, smt, res.TaskID, msgjson); err != nil {
+	if err := senderMsgToAPI(chanToAPI, smt, res.TaskID, st.ClientID, msgjson); err != nil {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
 }
 
-//sendChanStatusSourceForAPI формирование информационного сообщения об изменении
-// статуса соединения источника
+//sendChanStatusSourceForAPI формирование информационного сообщения
+//об изменении статуса соединения источника
 func sendChanStatusSourceForAPI(chanToAPI chan<- *configure.MsgBetweenCoreAndAPI, res *configure.MsgBetweenCoreAndNI) {
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()

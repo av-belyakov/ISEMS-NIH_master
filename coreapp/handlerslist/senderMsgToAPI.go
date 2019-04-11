@@ -1,7 +1,6 @@
 package handlerslist
 
 import (
-	"errors"
 	"fmt"
 
 	"ISEMS-NIH_master/configure"
@@ -10,19 +9,14 @@ import (
 func senderMsgToAPI(
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
 	smt *configure.StoringMemoryTask,
-	taskID string,
+	taskID, clientID string,
 	msgjson []byte) error {
-
-	st, ok := smt.GetStoringMemoryTask(taskID)
-	if !ok {
-		return errors.New("task with " + taskID + " not found")
-	}
 
 	//отправляем данные клиенту
 	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
 		MsgGenerator: "Core module",
 		MsgRecipient: "API module",
-		IDClientAPI:  st.ClientID,
+		IDClientAPI:  clientID,
 		MsgJSON:      msgjson,
 	}
 

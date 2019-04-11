@@ -24,7 +24,8 @@ func Routing(
 
 	fmt.Println("START ROUTE module 'CoreApp'...")
 
-	//при старте приложения запрашиваем у БД список источников
+	//при старте приложения запрашиваем список источников
+	//отправляем запрос в БД
 	cc.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 		MsgGenerator: "NI module",
 		MsgRecipient: "DB module",
@@ -53,7 +54,7 @@ func Routing(
 
 			go handlerslist.HandlerMsgFromNI(cc.OutCoreChanAPI, data, smt, cc.OutCoreChanDB)
 
-			//сообщение клиенту о том что данная задача долго выполняется
+		//сообщение клиенту API о том что задача с указанным ID долго выполняется
 		case infoHungTask := <-chanCheckTask:
 			fmt.Println("сообщение клиенту о том что данная задача долго выполняется")
 
