@@ -57,7 +57,7 @@ func HandlerMsgFromAPI(
 				var scmo configure.SourceControlMsgOptions
 
 				if err := json.Unmarshal(msgJSON, &scmo); err != nil {
-					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 					return
@@ -98,6 +98,8 @@ func HandlerMsgFromAPI(
 
 	if msgc.MsgType == "command" {
 		switch msgc.MsgSection {
+
+		// УПРАВЛЕНИЕ ИСТОЧНИКАМИ
 		case "source control":
 			//получить актуальный список источников
 			if msgc.MsgInsturction == "get an updated list of sources" {
@@ -126,7 +128,7 @@ func HandlerMsgFromAPI(
 			if msgc.MsgInsturction == "performing an action" {
 				var scmo configure.SourceControlMsgOptions
 				if err := json.Unmarshal(msgJSON, &scmo); err != nil {
-					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 					return
@@ -158,16 +160,43 @@ func HandlerMsgFromAPI(
 
 			return
 
+		// УПРАВЛЕНИЕ ФИЛЬТРАЦИЕЙ
 		case "filtration control":
 			fmt.Println("func 'HandlerMsgFromAPI' MsgType: 'command', MsgSection: 'filtration control'")
 
+			//обработка команды на запуск фильтрации
+			if msgc.MsgInsturction == "to start filtering" {
+				fmt.Printf("*-*-* resive instracion to START filtration '%v'\n", msgc.MsgInsturction)
+
+				var fcts configure.FiltrationControlTypeStart
+				if err := json.Unmarshal(msgJSON, &fcts); err != nil {
+					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
+					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
+
+					return
+				}
+
+				go handlerFiltrationControlTypeStart(chanToDB, &fcts, smt, msg.IDClientAPI, chanToAPI)
+
+				return
+			}
+
+			//команда на останов фильтрации
+			if msgc.MsgInsturction == "to cancel the filtering" {
+				fmt.Printf("*-*-* resive instracion to STOP filtration '%v'\n", msgc.MsgInsturction)
+
+				return
+			}
+
 			return
 
+		// УПРАВЛЕНИЕ ВЫГРУЗКОЙ ФАЙЛОВ
 		case "download control":
 			fmt.Println("func 'HandlerMsgFromAPI' MsgType: 'command', MsgSection: 'download control'")
 
 			return
 
+		// УПРАВЛЕНИЕ ПОИСКОМ ИНФОРМАЦИИ В БД ПРИЛОЖЕНИЯ
 		case "information search control":
 			fmt.Println("func 'HandlerMsgFromAPI' MsgType: 'command', MsgSection: 'information search control'")
 

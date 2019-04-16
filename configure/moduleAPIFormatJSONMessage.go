@@ -183,6 +183,40 @@ type TelemetryOptions struct {
 
 /*--- ИНФОРМАЦИЯ ПО ФИЛЬТРАЦИИ ---*/
 
+//FiltrationControlTypeStart общее описание запроса на начало фильтрации
+type FiltrationControlTypeStart struct {
+	MsgCommon
+	MsgOption FiltrationControlCommonParametersFiltration `json:"o"`
+}
+
+//FiltrationControlCommonParametersFiltration описание параметров фильтрации
+type FiltrationControlCommonParametersFiltration struct {
+	ID       int                                       `json:"id"`
+	DateTime DateTimeParameters                        `json:"dt"`
+	Protocol string                                    `json:"p"`
+	Filters  FiltrationControlParametersNetworkFilters `json:"f"`
+}
+
+//DateTimeParameters параметры времени
+type DateTimeParameters struct {
+	Start int64 `json:"s"`
+	End   int64 `json:"e"`
+}
+
+//FiltrationControlParametersNetworkFilters параметры сетевых фильтров
+type FiltrationControlParametersNetworkFilters struct {
+	IP      FiltrationControlIPorNetorPortParameters `json:"ip"`
+	Port    FiltrationControlIPorNetorPortParameters `json:"pt"`
+	Network FiltrationControlIPorNetorPortParameters `json:"nw"`
+}
+
+//FiltrationControlIPorNetorPortParameters параметры для ip или network
+type FiltrationControlIPorNetorPortParameters struct {
+	Any []string `json:"any"`
+	Src []string `json:"src"`
+	Dst []string `json:"dst"`
+}
+
 //FiltrationControlMsgTypeInfo информационные сообщения о ходе фильтрации
 type FiltrationControlMsgTypeInfo struct{}
 

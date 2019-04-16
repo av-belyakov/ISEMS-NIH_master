@@ -10,38 +10,6 @@ import (
 	"ISEMS-NIH_master/savemessageapp"
 )
 
-/*
-type FiltrationControlCommonParametersFiltration struct {
-	ID       int                                       `json:"id"`
-	DateTime DateTimeParameters                        `json:"dt"`
-	Protocol string                                    `json:"p"`
-	Filters  FiltrationControlParametersNetworkFilters `json:"f"`
-}
-
-type DateTimeParameters struct {
-	Start int64 `json:"s"`
-	End   int64 `json:"e"`
-}
-
-type FiltrationControlParametersNetworkFilters struct {
-	IP      FiltrationControlIPorNetParameters `json:"ip"`
-	Port    FiltrationControlPortParameters    `json:"pt"`
-	Network FiltrationControlIPorNetParameters `json:"nw"`
-}
-
-type FiltrationControlIPorNetParameters struct {
-	Any []string `json:"any"`
-	Src []string `json:"src"`
-	Dst []string `json:"dst"`
-}
-
-type FiltrationControlPortParameters struct {
-	Any []int `json:"any"`
-	Src []int `json:"src"`
-	Dst []int `json:"dst"`
-}
-*/
-
 //checkParametersFiltration проверяет параметры фильтрации
 func checkParametersFiltration(fccpf *configure.FiltrationControlCommonParametersFiltration) (string, bool) {
 	fmt.Println("START function 'checkParametersFiltration'...")
@@ -72,7 +40,59 @@ func checkParametersFiltration(fccpf *configure.FiltrationControlCommonParameter
 
 	isEmpty := true
 
-	//проверка ip адресов
+	circle := func(fp map[string]map[string]*[]string, f func(string, *[]string) error) error {
+		for pn, pv := range fp {
+			var err error
+
+			for _, v := range pv {
+				if err = f(pn, v); err != nil {
+					return err
+				}
+			}
+
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	checkIPOrPortOrNetwork := func(paramType string, param *[]string) error {
+		switch paramType {
+		case "IP":
+
+		case "Port":
+
+		case "Network":
+
+		}
+
+		return nil
+	}
+
+	filterParameters := map[string]map[string]*[]string{
+		"IP": map[string]*[]string{
+			"Any": &fccpf.Filters.IP.Any,
+			"Src": &fccpf.Filters.IP.Src,
+			"Dst": &fccpf.Filters.IP.Dst,
+		},
+		"Port": map[string]*[]string{
+			"Any": &fccpf.Filters.Port.Any,
+			"Src": &fccpf.Filters.Port.Src,
+			"Dst": &fccpf.Filters.Port.Dst,
+		},
+		"Network": map[string]*[]string{
+			"Any": &fccpf.Filters.Network.Any,
+			"Src": &fccpf.Filters.Network.Src,
+			"Dst": &fccpf.Filters.Network.Dst,
+		},
+	}
+
+	//проверка ip адресов, портов и подсетей
+	if err := circle(filterParameters, checkIPOrPortOrNetwork); err != nil {
+		return "невозможно начать фильтрацию, задан некорректный ip адрес, порт или подсеть", false
+	}
 
 	//проверяем параметры свойства 'Filters' на пустоту
 	if isEmpty {
