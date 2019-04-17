@@ -21,7 +21,7 @@ func senderMsgToAPI(
 	}
 
 	//устанавливаем статус задачи как выполненую
-	smt.StoringMemoryTaskComplete(taskID)
+	smt.CompleteStoringMemoryTask(taskID)
 
 	if ti, ok := smt.GetStoringMemoryTask(taskID); ok {
 		fmt.Printf("new status task with task ID %q - %v\n", taskID, ti.TaskStatus)

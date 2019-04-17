@@ -175,7 +175,7 @@ func HandlerMsgFromNI(
 		fmt.Println("func 'HandlerMsgFromNI', section MESSAGE MONITORING TASKPERFORMANCE")
 
 		if msg.Command == "complete task" {
-			smt.StoringMemoryTaskComplete(msg.TaskID)
+			smt.CompleteStoringMemoryTask(msg.TaskID)
 		}
 	}
 }

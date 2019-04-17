@@ -56,7 +56,28 @@ func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetwe
 
 //WrapperFuncFiltration обработка запросов по фильтрации
 func (wr *WrappersRouteRequest) WrapperFuncFiltration(msg *configure.MsgBetweenCoreAndDB) {
+	qcf := handlerrequestdb.QueryCollectionFiltration{
+		NameDB:         wr.NameDB,
+		CollectionName: "filter_task_list",
+		ConnectDB:      wr.ConnectDB,
+	}
 
+	switch msg.Instruction {
+	case "insert":
+		fmt.Println("func 'WrapperFuncFiltration' RESIVED COMMAND 'INSERT'")
+
+		qcf.CreateNewFiltrationTask(wr.ChanIn, msg)
+
+	case "find":
+		fmt.Println("func 'WrapperFuncFiltration' RESIVED COMMAND 'FIND'")
+
+	case "find_all":
+		fmt.Println("func 'WrapperFuncFiltration' RESIVED COMMAND 'FIND_ALL'")
+
+	case "update":
+		fmt.Println("func 'WrapperFuncFiltration' RESIVED COMMAND 'UPDATE'")
+
+	}
 }
 
 //WrapperFuncDownload обработка запросов по скачиванию файлов

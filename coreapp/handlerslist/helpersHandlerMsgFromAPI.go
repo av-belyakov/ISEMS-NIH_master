@@ -1,17 +1,20 @@
 package handlerslist
 
 import (
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
+	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/notifications"
 	"ISEMS-NIH_master/savemessageapp"
 )
 
 //checkParametersFiltration проверяет параметры фильтрации
-func checkParametersFiltration(fccpf *configure.FiltrationControlCommonParametersFiltration) (string, bool) {
+func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParametersFiltration) (string, bool) {
 	fmt.Println("START function 'checkParametersFiltration'...")
 
 	//проверяем наличие ID источника
@@ -59,12 +62,62 @@ func checkParametersFiltration(fccpf *configure.FiltrationControlCommonParameter
 	}
 
 	checkIPOrPortOrNetwork := func(paramType string, param *[]string) error {
+		changeIP := func(item string) bool {
+			ok, _ := common.CheckStringIP(item)
+
+			return ok
+		}
+
+		changePort := func(item string) bool {
+			p, err := strconv.Atoi(item)
+			if err != nil {
+				return false
+			}
+
+			if p == 0 || p > 65536 {
+				return false
+			}
+
+			return true
+		}
+
+		changeNetwork := func(item string) bool {
+			ok, _ := common.CheckStringNetwork(item)
+
+			return ok
+		}
+
+		iteration := func(param *[]string, f func(string) bool) bool {
+			if len(*param) == 0 {
+				return true
+			}
+
+			isEmpty = false
+
+			for _, v := range *param {
+				if ok := f(v); !ok {
+					return false
+				}
+			}
+
+			return true
+		}
+
 		switch paramType {
 		case "IP":
+			if ok := iteration(param, changeIP); !ok {
+				return errors.New("неверные параметры фильтрации, один или более переданных пользователем IP адресов имеет некорректное значение")
+			}
 
 		case "Port":
+			if ok := iteration(param, changePort); !ok {
+				return errors.New("неверные параметры фильтрации, один или более из заданных пользователем портов имеет некорректное значение")
+			}
 
 		case "Network":
+			if ok := iteration(param, changeNetwork); !ok {
+				return errors.New("неверные параметры фильтрации, некорректное значение маски подсети заданное пользователем")
+			}
 
 		}
 
@@ -91,7 +144,7 @@ func checkParametersFiltration(fccpf *configure.FiltrationControlCommonParameter
 
 	//проверка ip адресов, портов и подсетей
 	if err := circle(filterParameters, checkIPOrPortOrNetwork); err != nil {
-		return "невозможно начать фильтрацию, задан некорректный ip адрес, порт или подсеть", false
+		return fmt.Sprint(err), false
 	}
 
 	//проверяем параметры свойства 'Filters' на пустоту
@@ -117,7 +170,7 @@ func handlerFiltrationControlTypeStart(
 
 	funcName := ", function 'handlerFiltrationControlTypeStart'"
 
-	if msg, ok := checkParametersFiltration(&fcts.MsgOption); !ok {
+	if msg, ok := сheckParametersFiltration(&fcts.MsgOption); !ok {
 		notifications.SendNotificationToClientAPI(
 			chanToAPI,
 			notifications.NotificationSettingsToClientAPI{
@@ -142,10 +195,14 @@ func handlerFiltrationControlTypeStart(
 		TimeUpdate:                      time.Now().Unix(),
 	})
 
-	fmt.Printf("JSON: %v\nTaskID: %v\n", fcts, taskID)
-
 	//сохранение параметров задачи в БД
-
-	//запрос на наличие индексов по заданным параметрам
-
+	chanToDB <- &configure.MsgBetweenCoreAndDB{
+		MsgGenerator:    "Core module",
+		MsgRecipient:    "DB module",
+		MsgSection:      "filtration",
+		Instruction:     "insert",
+		IDClientAPI:     clientID,
+		TaskID:          taskID,
+		AdvancedOptions: fcts.MsgOption,
+	}
 }

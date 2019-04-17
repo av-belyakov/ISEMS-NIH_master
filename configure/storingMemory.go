@@ -145,7 +145,7 @@ type TaskDescription struct {
 //DescriptionTaskParameters описание параметров задачи
 type DescriptionTaskParameters struct{}
 
-//ChanStoringMemoryTask описание информации передоваемой через канал
+//ChanStoringMemoryTask описание информации передаваемой через канал
 type ChanStoringMemoryTask struct {
 	ActionType, TaskID string
 	Description        *TaskDescription
@@ -206,8 +206,8 @@ func (smt StoringMemoryTask) delStoringMemoryTask(taskID string) {
 	}
 }
 
-//StoringMemoryTaskComplete установить статус выполненно для задачи
-func (smt *StoringMemoryTask) StoringMemoryTaskComplete(taskID string) {
+//CompleteStoringMemoryTask установить статус выполненно для задачи
+func (smt *StoringMemoryTask) CompleteStoringMemoryTask(taskID string) {
 	smt.channel <- ChanStoringMemoryTask{
 		ActionType: "complete",
 		TaskID:     taskID,
@@ -288,7 +288,7 @@ func (smt *StoringMemoryTask) CheckTimeUpdateStoringMemoryTask(sec int) chan Msg
 								Description: "обработка задачи с ID " + id + " была прервана",
 							}
 
-							smt.StoringMemoryTaskComplete(id)
+							smt.CompleteStoringMemoryTask(id)
 						}
 					}
 				}

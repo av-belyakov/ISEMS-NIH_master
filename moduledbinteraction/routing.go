@@ -29,9 +29,9 @@ func RouteRequest(chanIn chan *configure.MsgBetweenCoreAndDB, nameDB string, lin
 		case "source telemetry":
 
 		case "filtration":
-
+			go wrapperFunc.WrapperFuncFiltration(msg)
 		case "dawnload":
-
+			go wrapperFunc.WrapperFuncDownload(msg)
 		case "error notification":
 
 		case "information search":
