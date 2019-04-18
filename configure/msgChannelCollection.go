@@ -106,6 +106,7 @@ type MsgBetweenCoreAndDB struct {
 	Instruction     string
 	IDClientAPI     string
 	TaskID          string
+	TaskIDClientAPI string
 	AdvancedOptions interface{}
 }
 

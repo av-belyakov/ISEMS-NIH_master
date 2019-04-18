@@ -1,7 +1,7 @@
 package configure
 
 /*
-* Описание общих пльзовательский типов
+* Описание общих пользовательских типов
 * */
 
 //SettingsChangeConnectionStatusSource тип с информацией об источнике изменившем
@@ -9,4 +9,11 @@ package configure
 type SettingsChangeConnectionStatusSource struct {
 	ID     int
 	Status string
+}
+
+//TypeFiltrationMsgFoundIndex тип 'фильтрация', информация о найденных индексах
+type TypeFiltrationMsgFoundIndex struct {
+	FilteringOption FiltrationControlCommonParametersFiltration
+	IndexIsFound    bool
+	IndexData       map[string]string
 }

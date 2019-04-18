@@ -24,7 +24,7 @@ type WrappersRouteRequest struct {
 
 //WrapperFuncSourceControl обработка запросов об источниках
 func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetweenCoreAndDB) {
-	qcs := handlerrequestdb.QueryCollectionSources{
+	qp := handlerrequestdb.QueryParameters{
 		NameDB:         wr.NameDB,
 		CollectionName: "sources_list",
 		ConnectDB:      wr.ConnectDB,
@@ -32,31 +32,31 @@ func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetwe
 
 	switch msg.Instruction {
 	case "find_all":
-		qcs.GetAllSourcesList(wr.ChanIn, msg)
+		handlerrequestdb.GetAllSourcesList(wr.ChanIn, msg, qp)
 
 	case "insert":
 		fmt.Println("func 'WrapperFuncSourceControl' RESIVED COMMAND 'INSERT'")
 
-		qcs.InsertListSources(wr.ChanIn, msg)
+		handlerrequestdb.InsertListSources(wr.ChanIn, msg, qp)
 
 	case "update":
 		fmt.Println("func 'WrapperFuncSourceControl' RESIVED COMMAND 'UPDATE'")
 
 		fmt.Printf("%v\n", msg.AdvancedOptions)
 
-		qcs.UpdateSourceToSourcesList(wr.ChanIn, msg)
+		handlerrequestdb.UpdateSourceToSourcesList(wr.ChanIn, msg, qp)
 
 	case "delete":
 		fmt.Println("func 'WrapperFuncSourceControl' RESIVED COMMAND 'DELETE'")
 
-		qcs.DelSourceToSourcesList(wr.ChanIn, msg)
+		handlerrequestdb.DelSourceToSourcesList(wr.ChanIn, msg, qp)
 
 	}
 }
 
 //WrapperFuncFiltration обработка запросов по фильтрации
 func (wr *WrappersRouteRequest) WrapperFuncFiltration(msg *configure.MsgBetweenCoreAndDB) {
-	qcf := handlerrequestdb.QueryCollectionFiltration{
+	qp := handlerrequestdb.QueryParameters{
 		NameDB:         wr.NameDB,
 		CollectionName: "filter_task_list",
 		ConnectDB:      wr.ConnectDB,
@@ -66,7 +66,7 @@ func (wr *WrappersRouteRequest) WrapperFuncFiltration(msg *configure.MsgBetweenC
 	case "insert":
 		fmt.Println("func 'WrapperFuncFiltration' RESIVED COMMAND 'INSERT'")
 
-		qcf.CreateNewFiltrationTask(wr.ChanIn, msg)
+		handlerrequestdb.CreateNewFiltrationTask(wr.ChanIn, msg, qp)
 
 	case "find":
 		fmt.Println("func 'WrapperFuncFiltration' RESIVED COMMAND 'FIND'")

@@ -203,6 +203,7 @@ func handlerFiltrationControlTypeStart(
 		Instruction:     "insert",
 		IDClientAPI:     clientID,
 		TaskID:          taskID,
+		TaskIDClientAPI: fcts.ClientTaskID,
 		AdvancedOptions: fcts.MsgOption,
 	}
 }

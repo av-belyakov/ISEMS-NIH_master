@@ -6,20 +6,15 @@ import (
 	"fmt"
 
 	"github.com/mongodb/mongo-go-driver/bson"
-	"github.com/mongodb/mongo-go-driver/mongo"
-	"github.com/mongodb/mongo-go-driver/mongo/options"
 
 	"ISEMS-NIH_master/configure"
 )
 
-//QueryCollectionSources значения для работы с коллекцией источников
-type QueryCollectionSources struct {
-	NameDB, CollectionName string
-	ConnectDB              *mongo.Client
-}
-
 //GetAllSourcesList получить весь список источников
-func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- *configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
+func GetAllSourcesList(
+	chanIn chan<- *configure.MsgBetweenCoreAndDB,
+	req *configure.MsgBetweenCoreAndDB,
+	qp QueryParameters) {
 
 	fmt.Println("START function 'GetAllSourcesList'")
 
@@ -31,7 +26,7 @@ func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- *configure.Ms
 		TaskID:       req.TaskID,
 	}
 
-	sourcesList, err := qcs.findAll()
+	sourcesList, err := findAll(qp)
 	if err != nil {
 		msgRes.MsgRecipient = "Core module"
 		msgRes.MsgSection = "error notification"
@@ -55,7 +50,11 @@ func (qcs *QueryCollectionSources) GetAllSourcesList(chanIn chan<- *configure.Ms
 
 //InsertListSources добавить информацию об источниках
 //которых нет в БД или параметры по которым отличаются
-func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- *configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
+func InsertListSources(
+	chanIn chan<- *configure.MsgBetweenCoreAndDB,
+	req *configure.MsgBetweenCoreAndDB,
+	qp QueryParameters) {
+
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
 		MsgRecipient: req.MsgGenerator,
@@ -65,7 +64,7 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- *configure.Ms
 	}
 
 	//получаем список источников
-	listSources, err := qcs.findAll()
+	listSources, err := findAll(qp)
 	if err != nil {
 		msgRes.MsgRecipient = "Core module"
 		msgRes.MsgSection = "error notification"
@@ -105,7 +104,7 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- *configure.Ms
 			insertData = append(insertData, v)
 		}
 
-		qcs.insertData(insertData)
+		qp.InsertData(insertData)
 
 		return
 	}
@@ -116,18 +115,21 @@ func (qcs *QueryCollectionSources) InsertListSources(chanIn chan<- *configure.Ms
 		for _, itemFindList := range listSources {
 			//если источник с таким ID существует, удаляем его и заменяем новым
 			if itemFindList.ID == itemAddList.ID {
-				_ = qcs.deleteOneData(bson.D{bson.E{Key: "id", Value: itemAddList.ID}})
+				_ = qp.DeleteOneData(bson.D{bson.E{Key: "id", Value: itemAddList.ID}})
 			}
 		}
 
 		insertData = append(insertData, itemAddList)
 	}
 
-	qcs.insertData(insertData)
+	qp.InsertData(insertData)
 }
 
 //UpdateSourceToSourcesList обновить информацию об источниках
-func (qcs *QueryCollectionSources) UpdateSourceToSourcesList(chanIn chan<- *configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
+func UpdateSourceToSourcesList(
+	chanIn chan<- *configure.MsgBetweenCoreAndDB,
+	req *configure.MsgBetweenCoreAndDB,
+	qp QueryParameters) {
 
 	fmt.Println("requestCollectionSources - func UpdateSourceToSourcesList")
 
@@ -157,7 +159,7 @@ func (qcs *QueryCollectionSources) UpdateSourceToSourcesList(chanIn chan<- *conf
 	}
 
 	for _, i := range *l {
-		if err := qcs.updateOne(bson.D{bson.E{Key: "id", Value: i.ID}}, bson.D{
+		if err := qp.UpdateOne(bson.D{bson.E{Key: "id", Value: i.ID}}, bson.D{
 			bson.E{Key: "$set", Value: bson.D{
 				bson.E{Key: "id", Value: i.ID},
 				bson.E{Key: "ip", Value: i.IP},
@@ -189,7 +191,10 @@ func (qcs *QueryCollectionSources) UpdateSourceToSourcesList(chanIn chan<- *conf
 }
 
 //DelSourceToSourcesList удалить источники
-func (qcs *QueryCollectionSources) DelSourceToSourcesList(chanIn chan<- *configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB) {
+func DelSourceToSourcesList(
+	chanIn chan<- *configure.MsgBetweenCoreAndDB,
+	req *configure.MsgBetweenCoreAndDB,
+	qp QueryParameters) {
 
 	fmt.Println("requestCollectionSources - func DelSourceToSourcesList")
 
@@ -219,16 +224,13 @@ func (qcs *QueryCollectionSources) DelSourceToSourcesList(chanIn chan<- *configu
 	}
 
 	for _, id := range *l {
-		_ = qcs.deleteOneData(bson.D{bson.E{Key: "id", Value: id}})
+		_ = qp.DeleteOneData(bson.D{bson.E{Key: "id", Value: id}})
 	}
 }
 
 //findAll найти всю информацию по всем источникам
-func (qcs *QueryCollectionSources) findAll() ([]configure.InformationAboutSource, error) {
-	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
-	options := options.Find()
-
-	cur, err := collection.Find(context.TODO(), bson.D{{}}, options)
+func findAll(qp QueryParameters) ([]configure.InformationAboutSource, error) {
+	cur, err := qp.FindAlltoCollection()
 	if err != nil {
 		return nil, err
 	}
@@ -254,48 +256,7 @@ func (qcs *QueryCollectionSources) findAll() ([]configure.InformationAboutSource
 	return listSources, nil
 }
 
-//InsertData добавляет все данные
-func (qcs *QueryCollectionSources) insertData(list []interface{}) (bool, error) {
-	fmt.Println("===== INSERT DATA ======")
-	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
-	if _, err := collection.InsertMany(context.TODO(), list); err != nil {
-		return false, err
-	}
-
-	return true, nil
-}
-
-func (qcs *QueryCollectionSources) deleteOneData(elem interface{}) error {
-	//fmt.Println("===== DELETE DATA ONE ======")
-	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
-	if _, err := collection.DeleteOne(context.TODO(), elem); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (qcs *QueryCollectionSources) deleteManyData(list []interface{}) error {
-	fmt.Println("===== DELETE DATA MANY ======")
-	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
-	if _, err := collection.DeleteMany(context.TODO(), list); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (qcs *QueryCollectionSources) updateOne(searchElem, update interface{}) error {
-	fmt.Println("===== UPDATE ONE ======")
-	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
-	if _, err := collection.UpdateOne(context.TODO(), searchElem, update); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (qcs *QueryCollectionSources) find(elem interface{}) ([]configure.InformationAboutSource, error) {
+/*func (qcs *QueryCollectionSources) find(elem interface{}) ([]configure.InformationAboutSource, error) {
 	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
 	options := options.Find()
 
@@ -325,4 +286,4 @@ func (qcs *QueryCollectionSources) find(elem interface{}) ([]configure.Informati
 	cur.Close(context.TODO())
 
 	return listSources, nil
-}
+}*/

@@ -39,10 +39,10 @@ func HandlerMsgFromDB(
 		case "source telemetry":
 			//пока заглушка
 
-		case "filtration":
+		case "filtration control":
 			//пока заглушка
 
-		case "download":
+		case "download control":
 			//пока заглушка
 
 		case "information search results":
@@ -93,10 +93,19 @@ func HandlerMsgFromDB(
 		case "source control":
 			//пока заглушка
 
-		case "filtration":
+		case "filtration control":
 			//пока заглушка
 
-		case "download":
+			fmt.Println(" ***** CORE MODULE (handlerMsgFromDB), Resived MSG 'filtration' ****")
+			fmt.Printf("%v\n", res)
+
+			/*
+					!!!
+				ОТПРАВИТЬ ЗАПРОС НА ФИЛЬТРАЦИЮ В МОДУЛЬ NetworkInteraction
+					!!!
+			*/
+
+		case "download control":
 			//пока заглушка
 
 		}
