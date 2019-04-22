@@ -1,6 +1,8 @@
 package handlerslist
 
 import (
+	"ISEMS-NIH_master/common"
+	"encoding/json"
 	"fmt"
 
 	"ISEMS-NIH_master/configure"
@@ -13,6 +15,7 @@ func HandlerMsgFromDB(
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
 	res *configure.MsgBetweenCoreAndDB,
 	smt *configure.StoringMemoryTask,
+	chanDropNI <-chan string,
 	chanToNI chan<- *configure.MsgBetweenCoreAndNI) {
 
 	fmt.Println("START function 'HandlerMsgFromDB' module coreapp")
@@ -98,6 +101,92 @@ func HandlerMsgFromDB(
 
 			fmt.Println(" ***** CORE MODULE (handlerMsgFromDB), Resived MSG 'filtration' ****")
 			fmt.Printf("%v\n", res)
+
+			tfmfi, ok := res.AdvancedOptions.(configure.TypeFiltrationMsgFoundIndex)
+			if !ok {
+				_ = saveMessageApp.LogMessage("error", "type conversion error section type 'message notification'"+funcName)
+
+				return
+			}
+
+			msg := configure.MsgBetweenCoreAndNI{
+				TaskID:   res.TaskID,
+				Section:  "filtration control",
+				Command:  "start",
+				SourceID: tfmfi.FilteringOption.ID,
+			}
+
+			mtfc := configure.MsgTypeFiltrationControl{
+				MsgType: "filtration",
+				Info: configure.SettingsFiltrationControl{
+					Command: "start",
+					Options: tfmfi.FilteringOption,
+				},
+			}
+
+			if !tfmfi.IndexIsFound {
+				msgJSON, err := json.Marshal(mtfc)
+				if err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+					return
+				}
+
+				//если индексы не найдены
+				msg.AdvancedOptions = msgJSON
+				chanToNI <- &msg
+
+				return
+			}
+
+			//размер части сообщения
+			const maxChunk = 100
+			var numIndexFiles int
+
+			var tmpList map[string]int
+			for k, v := range tfmfi.IndexData {
+				nf := len(v)
+				numIndexFiles += nf
+
+				tmpList[k] = nf
+			}
+
+			numChunk := common.GetCountPartsMessage(tmpList, maxChunk)
+
+			//если индексы найдены
+			mtfc.Info.IndexIsFound = true
+			mtfc.Info.CountIndexFiles = numIndexFiles
+			mtfc.Info.NumberMessagesFrom = [2]int{0, numChunk}
+
+			//отправляем первое сообщение (фактически нулевое, так как оно не содержит списка файлов)
+			msgJSON, err := json.Marshal(mtfc)
+			if err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+				return
+			}
+
+			msg.AdvancedOptions = msgJSON
+			chanToNI <- &msg
+
+			//отправляем последующие сообщения содержащие списки файлов,
+			// параметры фильтрации данные сообщения уже не содержат
+			for i := 1; i < numChunk; i++ {
+				listFiles := common.GetChunkListFiles(i, maxChunk, numChunk, tfmfi.IndexData)
+
+				mtfc.Info.NumberMessagesFrom[0] = i
+				mtfc.Info.ListFilesReceivedIndex = listFiles
+
+				msgJSON, err := json.Marshal(mtfc)
+				if err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+					return
+				}
+
+				msg.AdvancedOptions = msgJSON
+				chanToNI <- &msg
+			}
 
 			/*
 					!!!

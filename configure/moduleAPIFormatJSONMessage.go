@@ -181,7 +181,7 @@ type TelemetryOptions struct {
 	Information TelemetryInformation `json:"i"`
 }
 
-/*--- ИНФОРМАЦИЯ ПО ФИЛЬТРАЦИИ ---*/
+/*--- ИНФОРМАЦИЯ ПО ФИЛЬТРАЦИИ  ---*/
 
 //FiltrationControlTypeStart общее описание запроса на начало фильтрации
 type FiltrationControlTypeStart struct {

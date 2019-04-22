@@ -12,14 +12,14 @@ import (
 func searchIndexFormFiltration(
 	cn string,
 	tf *configure.FiltrationControlCommonParametersFiltration,
-	qp QueryParameters) (bool, *map[string]string, error) {
+	qp QueryParameters) (bool, *map[string][]string, error) {
 
 	fmt.Println("START function 'searchIndexFormFiltration'...")
 
 	qp.CollectionName = cn
 
 	//ключ - может быть директория, значение - имя файла
-	FoundIndexInformation := map[string]string{}
+	FoundIndexInformation := map[string][]string{}
 
 	c, err := qp.CountDocuments(bson.D{{}})
 	if err != nil {

@@ -40,7 +40,7 @@ func Routing(
 		case data := <-cc.InCoreChanDB:
 			fmt.Println("MESSAGE FROM module DBInteraction (route Core module)")
 
-			go handlerslist.HandlerMsgFromDB(cc.OutCoreChanAPI, data, smt, cc.OutCoreChanNI)
+			go handlerslist.HandlerMsgFromDB(cc.OutCoreChanAPI, data, smt, cc.ChanDropNI, cc.OutCoreChanNI)
 
 		//CHANNEL FROM API
 		case data := <-cc.InCoreChanAPI:

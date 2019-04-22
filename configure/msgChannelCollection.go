@@ -5,6 +5,7 @@ type ChannelCollectionCoreApp struct {
 	OutCoreChanDB, InCoreChanDB   chan *MsgBetweenCoreAndDB
 	OutCoreChanAPI, InCoreChanAPI chan *MsgBetweenCoreAndAPI
 	OutCoreChanNI, InCoreChanNI   chan *MsgBetweenCoreAndNI
+	ChanDropNI                    chan string
 }
 
 //MsgWsTransmission содержит информацию для передачи подключенному источнику

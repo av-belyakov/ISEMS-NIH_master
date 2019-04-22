@@ -32,7 +32,7 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	chanOutCoreAPI, chanInCoreAPI := moduleapiapp.MainAPIApp(appConf)
 
 	//инициализация модуля сетевого взаимодействия (взаимодействие с сенсорами)
-	chanOutCoreNI, chanInCoreNI := modulenetworkinteractionapp.MainNetworkInteraction(appConf)
+	chanOutCoreNI, chanInCoreNI, chanDropNI := modulenetworkinteractionapp.MainNetworkInteraction(appConf)
 
 	chanColl := configure.ChannelCollectionCoreApp{
 		OutCoreChanDB:  chanOutCoreDB,  //->БД
@@ -41,6 +41,7 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 		InCoreChanAPI:  chanInCoreAPI,  //<-API
 		OutCoreChanNI:  chanOutCoreNI,  //->NI
 		InCoreChanNI:   chanInCoreNI,   //<-NI
+		ChanDropNI:     chanDropNI,     //для останова цикличной передачи данных в NI
 	}
 
 	//запуск подпрограммы для маршрутизации запросов внутри приложения

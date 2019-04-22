@@ -18,7 +18,8 @@ func HandlerMsgFromCore(
 	cwt chan<- configure.MsgWsTransmission,
 	isl *configure.InformationSourcesList,
 	msg *configure.MsgBetweenCoreAndNI,
-	chanInCore chan<- *configure.MsgBetweenCoreAndNI) {
+	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
+	chanDrop chan<- string) {
 
 	fmt.Println("START func HandlerMsgFromCore... (NI module)")
 	//инициализируем функцию конструктор для записи лог-файлов
@@ -294,6 +295,22 @@ func HandlerMsgFromCore(
 	case "filtration control":
 		if msg.Command == "start" {
 
+			fmt.Printf("|-|-|-|-|-| RESIVED MESSAGE 'filtration control', 'START'\n%v\n", msg)
+
+			/*
+			   ПРОВЕРИТЬ НАЛИЧИЕ СОЕДИНЕНИЯ И ЕСЛИ СОЕДИНЕНИЯ НЕТ
+			   ОТПРАВИТЬ В КАНАЛ chanDrop ID задачи,
+			   и выйти
+			*/
+
+			/*
+
+				tfmfi, ok := res.AdvancedOptions.(configure.TypeFiltrationMsgFoundIndex)
+				if !ok {
+					_ = saveMessageApp.LogMessage("error", "type conversion error section type 'message notification'"+funcName)
+
+					return
+				}*/
 		}
 
 		if msg.Command == "stop" {

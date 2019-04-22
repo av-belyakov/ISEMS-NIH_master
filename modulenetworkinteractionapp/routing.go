@@ -20,6 +20,7 @@ import (
 func RouteCoreRequest(
 	cwt chan<- configure.MsgWsTransmission,
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
+	chanDrop chan<- string,
 	isl *configure.InformationSourcesList,
 	chanColl map[string]chan [2]string,
 	chanOutCore <-chan *configure.MsgBetweenCoreAndNI) {
@@ -119,7 +120,7 @@ func RouteCoreRequest(
 
 			//обработка сообщения от ядра
 		case msg := <-chanOutCore:
-			go handlers.HandlerMsgFromCore(cwt, isl, msg, chanInCore)
+			go handlers.HandlerMsgFromCore(cwt, isl, msg, chanInCore, chanDrop)
 		}
 	}
 }

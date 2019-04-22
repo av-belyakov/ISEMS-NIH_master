@@ -15,5 +15,5 @@ type SettingsChangeConnectionStatusSource struct {
 type TypeFiltrationMsgFoundIndex struct {
 	FilteringOption FiltrationControlCommonParametersFiltration
 	IndexIsFound    bool
-	IndexData       map[string]string
+	IndexData       map[string][]string
 }

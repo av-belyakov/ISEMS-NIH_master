@@ -1,1 +1,5 @@
 package mytestpackages
+
+func main() {
+
+}
