@@ -18,8 +18,8 @@ func HandlerMsgFromCore(
 	cwt chan<- configure.MsgWsTransmission,
 	isl *configure.InformationSourcesList,
 	msg *configure.MsgBetweenCoreAndNI,
-	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
-	chanDrop chan<- string) {
+	smt *configure.StoringMemoryTask,
+	chanInCore chan<- *configure.MsgBetweenCoreAndNI) {
 
 	fmt.Println("START func HandlerMsgFromCore... (NI module)")
 	//инициализируем функцию конструктор для записи лог-файлов
@@ -284,7 +284,7 @@ func HandlerMsgFromCore(
 				AdvancedOptions: listActionType,
 			}
 
-			//снять отслеживание выполнения задачи
+			//снимаем отслеживание выполнения задачи
 			chanInCore <- &configure.MsgBetweenCoreAndNI{
 				TaskID:  msg.TaskID,
 				Section: "monitoring task performance",
@@ -297,20 +297,48 @@ func HandlerMsgFromCore(
 
 			fmt.Printf("|-|-|-|-|-| RESIVED MESSAGE 'filtration control', 'START'\n%v\n", msg)
 
-			/*
-			   ПРОВЕРИТЬ НАЛИЧИЕ СОЕДИНЕНИЯ И ЕСЛИ СОЕДИНЕНИЯ НЕТ
-			   ОТПРАВИТЬ В КАНАЛ chanDrop ID задачи,
-			   и выйти
-			*/
+			//проверяем наличие подключения для заданного источника
+			if si, ok := isl.GetSourceSetting(msg.SourceID); ok {
+				if !si.ConnectionStatus {
+					if ti, ok := smt.GetStoringMemoryTask(msg.TaskID); !ok {
+						//останавливаем передачу списка файлов (найденных в результате поиска по индексам)
+						ti.ChanStopTransferListFiles <- struct{}{}
+					}
 
-			/*
+					//отправляем сообщение пользователю
+					clientNotify.AdvancedOptions = configure.MessageNotification{
+						SourceReport:                 "NI module",
+						Section:                      "filtration control",
+						TypeActionPerformed:          "start",
+						CriticalityMessage:           "warning",
+						HumanDescriptionNotification: fmt.Sprintf("Не возможно отправить запрос на фильтрацию, источник с ID %v не подключен", msg.SourceID),
+					}
 
-				tfmfi, ok := res.AdvancedOptions.(configure.TypeFiltrationMsgFoundIndex)
-				if !ok {
-					_ = saveMessageApp.LogMessage("error", "type conversion error section type 'message notification'"+funcName)
+					chanInCore <- &clientNotify
+
+					//снимаем отслеживание выполнения задачи
+					chanInCore <- &configure.MsgBetweenCoreAndNI{
+						TaskID:  msg.TaskID,
+						Section: "monitoring task performance",
+						Command: "complete task",
+					}
 
 					return
-				}*/
+				}
+
+				msgJSON, ok := msg.AdvancedOptions.([]byte)
+				if !ok {
+					_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
+
+					return
+				}
+
+				//передаем задачу источнику
+				cwt <- configure.MsgWsTransmission{
+					DestinationHost: si.IP,
+					Data:            &msgJSON,
+				}
+			}
 		}
 
 		if msg.Command == "stop" {

@@ -41,7 +41,7 @@ func connClose(
 }
 
 //MainNetworkInteraction осуществляет общее управление
-func MainNetworkInteraction(appConf *configure.AppConfig) (chanOutCore, chanInCore chan *configure.MsgBetweenCoreAndNI, chanDrop chan string) {
+func MainNetworkInteraction(appConf *configure.AppConfig, smt *configure.StoringMemoryTask) (chanOutCore, chanInCore chan *configure.MsgBetweenCoreAndNI) {
 	fmt.Println("START module 'MainNetworkInteraction'...")
 
 	//инициализируем функцию конструктор для записи лог-файлов
@@ -56,11 +56,6 @@ func MainNetworkInteraction(appConf *configure.AppConfig) (chanOutCore, chanInCo
 	chanOutCore = make(chan *configure.MsgBetweenCoreAndNI)
 	chanInCore = make(chan *configure.MsgBetweenCoreAndNI)
 
-	//инициализируем канал через который будет останавливатся цикличная
-	// передача информации, например, передача списка файлов в несколько частей
-	// через него передается ID задачи
-	chanDrop = make(chan string)
-
 	//инициализация каналов управления и состояния источников
 	chansStatSource := map[string]chan [2]string{
 		"outWssModuleServer": make(chan [2]string, 10),
@@ -71,7 +66,7 @@ func MainNetworkInteraction(appConf *configure.AppConfig) (chanOutCore, chanInCo
 	isl := configure.NewRepositoryISL()
 
 	//маршрутизатор запросов получаемых от CoreApp
-	go RouteCoreRequest(cwtRes, chanInCore, chanDrop, isl, chansStatSource, chanOutCore)
+	go RouteCoreRequest(cwtRes, chanInCore, isl, smt, chansStatSource, chanOutCore)
 	//маршрутизатор запросов получаемых Wss
 	go RouteWssConnectionResponse(cwtRes, isl, chanInCore, cwtReq)
 
@@ -92,5 +87,5 @@ func MainNetworkInteraction(appConf *configure.AppConfig) (chanOutCore, chanInCo
 		}
 	}()
 
-	return chanOutCore, chanInCore, chanDrop
+	return chanOutCore, chanInCore
 }

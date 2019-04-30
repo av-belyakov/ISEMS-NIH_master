@@ -131,6 +131,8 @@ type StoringMemoryTask struct {
 // ModuleResponsibleImplementation - модуль который должен выполнить обработку
 // TimeUpdate - время последнего обновления в формате Unix
 // TaskParameter - дополнительные параметры
+// ChanStopTransferListFiles - останов передачи списка файлов (полученных в
+// результате поиска по индексам или фильтрации)
 type TaskDescription struct {
 	ClientID                        string
 	ClientTaskID                    string
@@ -140,6 +142,7 @@ type TaskDescription struct {
 	ModuleResponsibleImplementation string
 	TimeUpdate                      int64
 	TaskParameter                   DescriptionTaskParameters
+	ChanStopTransferListFiles       chan struct{}
 }
 
 //DescriptionTaskParameters описание параметров задачи

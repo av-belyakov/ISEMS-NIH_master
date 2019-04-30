@@ -29,7 +29,7 @@ func HandlerMsgFromDB(
 
 	if res.MsgRecipient == "API module" {
 		if !taskIDIsExist {
-			_ = saveMessageApp.LogMessage("error", "task with "+res.TaskID+" not found")
+			_ = saveMessageApp.LogMessage("error", "task with "+res.TaskID+" not found"+funcName)
 		}
 
 		switch res.MsgSection {
@@ -97,7 +97,6 @@ func HandlerMsgFromDB(
 			//пока заглушка
 
 		case "filtration control":
-			//пока заглушка
 
 			fmt.Println(" ***** CORE MODULE (handlerMsgFromDB), Resived MSG 'filtration' ****")
 			fmt.Printf("%v\n", res)
@@ -169,30 +168,40 @@ func HandlerMsgFromDB(
 			msg.AdvancedOptions = msgJSON
 			chanToNI <- &msg
 
-			//отправляем последующие сообщения содержащие списки файлов,
-			// параметры фильтрации данные сообщения уже не содержат
-			for i := 1; i < numChunk; i++ {
-				listFiles := common.GetChunkListFiles(i, maxChunk, numChunk, tfmfi.IndexData)
+			//информация о задаче по заданному ID
+			t, ok := smt.GetStoringMemoryTask(res.TaskID)
+			if !ok {
+				_ = saveMessageApp.LogMessage("error", "task with "+res.TaskID+" not found"+funcName)
 
-				mtfc.Info.NumberMessagesFrom[0] = i
-				mtfc.Info.ListFilesReceivedIndex = listFiles
-
-				msgJSON, err := json.Marshal(mtfc)
-				if err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-					return
-				}
-
-				msg.AdvancedOptions = msgJSON
-				chanToNI <- &msg
+				return
 			}
 
-			/*
-					!!!
-				ОТПРАВИТЬ ЗАПРОС НА ФИЛЬТРАЦИЮ В МОДУЛЬ NetworkInteraction
-					!!!
-			*/
+			//отправляем последующие сообщения содержащие списки файлов,
+			// параметры фильтрации данные сообщения уже не содержат
+		DONE:
+			for i := 1; i < numChunk; i++ {
+				select {
+				case <-t.ChanStopTransferListFiles:
+					break DONE
+
+				default:
+					listFiles := common.GetChunkListFiles(i, maxChunk, numChunk, tfmfi.IndexData)
+
+					mtfc.Info.NumberMessagesFrom[0] = i
+					mtfc.Info.ListFilesReceivedIndex = listFiles
+
+					msgJSON, err := json.Marshal(mtfc)
+					if err != nil {
+						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+						return
+					}
+
+					msg.AdvancedOptions = msgJSON
+					chanToNI <- &msg
+
+				}
+			}
 
 		case "download control":
 			//пока заглушка
