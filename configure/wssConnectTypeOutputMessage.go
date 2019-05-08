@@ -28,12 +28,14 @@ type MsgTypeFiltrationControl struct {
 }
 
 //SettingsFiltrationControl описание параметров для запуска процесса фильтрации
+// TaskID - идентификатор задачи
 // Command - команда 'start'/'stop'
 // IndexIsFound - найдены ли индексы
 // CountIndexFiles - количество файлов найденных в результате поиска по индексу
 // NumberMessagesFrom - количество сообщений из... например, 1 из 3
 // Options - параметры фильтрации, заполняются ТОЛЬКО в сообщении где NumberMessageFrom[0,N]
 type SettingsFiltrationControl struct {
+	TaskID                 string                                      `json:"id"`
 	Command                string                                      `json:"c"`
 	Options                FiltrationControlCommonParametersFiltration `json:"o"`
 	IndexIsFound           bool                                        `json:"iif"`

@@ -180,6 +180,10 @@ func RouteWssConnectionResponse(
 
 		case "download files":
 
+		case "error":
+			fmt.Println("--- RESIVED MESSAGE TYPE 'ERROR' ---")
+			fmt.Println("------------------------------------")
+
 		}
 	}
 

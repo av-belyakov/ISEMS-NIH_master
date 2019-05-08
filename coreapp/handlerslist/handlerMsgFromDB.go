@@ -118,6 +118,7 @@ func HandlerMsgFromDB(
 			mtfc := configure.MsgTypeFiltrationControl{
 				MsgType: "filtration",
 				Info: configure.SettingsFiltrationControl{
+					TaskID:  res.TaskID,
 					Command: "start",
 					Options: tfmfi.FilteringOption,
 				},
