@@ -55,55 +55,6 @@ var _ = Describe("Function Test", func() {
 				"D_5": []string{"f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "f13"},
 			}
 
-			getListFiles := func(numPart, sizeChunk, countParts int, listFilesFilter map[string][]string) map[string][]string {
-				lff := map[string][]string{}
-
-				fmt.Printf("Parts: %v\n", numPart)
-
-				for disk, files := range listFilesFilter {
-					if numPart == 1 {
-						if len(files) < sizeChunk {
-							lff[disk] = files[:]
-						} else {
-							lff[disk] = files[:sizeChunk]
-						}
-
-						continue
-					}
-
-					num := sizeChunk * (numPart - 1)
-					numEnd := num + sizeChunk
-
-					if numPart == countParts {
-						if num < len(files) {
-							lff[disk] = files[num:]
-
-							continue
-						}
-
-						lff[disk] = []string{}
-					}
-
-					if numPart < countParts {
-						if num > len(files) {
-							lff[disk] = []string{}
-
-							continue
-						}
-
-						if numEnd < len(files) {
-							lff[disk] = files[num:numEnd]
-
-							continue
-						}
-
-						lff[disk] = files[num:]
-					}
-
-				}
-				return lff
-			}
-
 			sizeChunk := 4
 
 			lft := map[string]int{}
@@ -114,7 +65,7 @@ var _ = Describe("Function Test", func() {
 			countParts := common.GetCountPartsMessage(lft, sizeChunk)
 
 			for i := 1; i <= countParts; i++ {
-				list := getListFiles(i, sizeChunk, countParts, lf)
+				list := common.GetChunkListFiles(i, sizeChunk, countParts, lf)
 
 				fmt.Printf("List: %v\n", list)
 

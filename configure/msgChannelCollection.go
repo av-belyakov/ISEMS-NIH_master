@@ -119,9 +119,11 @@ type MsgBetweenCoreAndDB struct {
 // HumanDescriptionError - сообщение для пользователя
 // Sources - срез ID источников связанных с данным сообщением
 type ErrorNotification struct {
-	SourceReport, HumanDescriptionError string
-	ErrorBody                           error
-	Sources                             []int
+	SourceReport          string
+	HumanDescriptionError string
+	ErrorName             string
+	ErrorBody             error
+	Sources               []int
 }
 
 //MessageNotification содержит информационное сообщение о выполненном действии

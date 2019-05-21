@@ -154,6 +154,8 @@ func RouteWssConnectionResponse(
 		fmt.Println("RESIVED source ip", sourceIP)
 		//fmt.Printf("%v\n", *message)
 
+		sourceID, _ := isl.GetSourceIDOnIP(sourceIP)
+
 		if err := json.Unmarshal(*message, &messageType); err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 		}
@@ -167,8 +169,6 @@ func RouteWssConnectionResponse(
 			fmt.Println("RESIVED message type 'TELEMETRY' from IP", sourceIP)
 			fmt.Printf("%v\n", messageType)
 
-			sourceID, _ := isl.GetSourceIDOnIP(sourceIP)
-
 			chanInCore <- &configure.MsgBetweenCoreAndNI{
 				Section:         "source control",
 				Command:         "telemetry",
@@ -180,10 +180,60 @@ func RouteWssConnectionResponse(
 
 		case "download files":
 
+		case "notification":
+			fmt.Println("--- RESIVED MESSAGE TYPE 'NOTIFICATION' ---")
+			fmt.Println("------------------------------------")
+
+			var notify configure.MsgTypeNotification
+			err := json.Unmarshal(*message, &notify)
+			if err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+				return
+			}
+
+			clientNotify := &configure.MsgBetweenCoreAndNI{
+				TaskID:   notify.Info.TaskID,
+				Section:  "message notification",
+				Command:  "send client API",
+				SourceID: sourceID,
+				AdvancedOptions: configure.MessageNotification{
+					SourceReport:                 "NI module",
+					Section:                      notify.Info.Section,
+					TypeActionPerformed:          notify.Info.TypeActionPerformed,
+					CriticalityMessage:           notify.Info.CriticalityMessage,
+					HumanDescriptionNotification: notify.Info.Description,
+					Sources:                      []int{sourceID},
+				},
+			}
+
+			chanInCore <- clientNotify
+
 		case "error":
 			fmt.Println("--- RESIVED MESSAGE TYPE 'ERROR' ---")
 			fmt.Println("------------------------------------")
 
+			var errMsg configure.MsgTypeError
+			err := json.Unmarshal(*message, errMsg)
+			if err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+				return
+			}
+
+			errNotify := &configure.MsgBetweenCoreAndNI{
+				TaskID:   errMsg.Info.TaskID,
+				Section:  "error notification",
+				SourceID: sourceID,
+				AdvancedOptions: configure.ErrorNotification{
+					SourceReport:          "NI module",
+					ErrorName:             errMsg.Info.ErrorName,
+					HumanDescriptionError: errMsg.Info.ErrorDescription,
+					Sources:               []int{sourceID},
+				},
+			}
+
+			chanInCore <- errNotify
 		}
 	}
 

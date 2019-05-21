@@ -316,6 +316,9 @@ func HandlerMsgFromCore(
 
 					chanInCore <- &clientNotify
 
+//отправляем сообщение содержащее новые параметры выполнения задачи по фильтрации
+chanInCore <- 
+
 					//снимаем отслеживание выполнения задачи
 					chanInCore <- &configure.MsgBetweenCoreAndNI{
 						TaskID:  msg.TaskID,

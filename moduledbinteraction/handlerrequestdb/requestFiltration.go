@@ -69,7 +69,26 @@ func CreateNewFiltrationTask(chanIn chan<- *configure.MsgBetweenCoreAndDB, req *
 				},
 			},
 		},
+		DetailedInformationOnFiltering: configure.DetailedInformationFiltering{
+			TaskStatus: "wait",
+		},
 	}
+
+	//поиск индексов
+	isFound, index, err := searchIndexFormFiltration("index_filtration", &tf, qp)
+	if err != nil {
+		msgRes.MsgRecipient = "Core module"
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: "error when searching of the index information files of network traffic",
+			ErrorBody:             err,
+		}
+
+		chanIn <- &msgRes
+	}
+
+	itf.DetailedInformationOnFiltering.WasIndexUsed = isFound
 
 	insertData := make([]interface{}, 0, 1)
 	insertData = append(insertData, itf)
@@ -89,20 +108,6 @@ func CreateNewFiltrationTask(chanIn chan<- *configure.MsgBetweenCoreAndDB, req *
 		chanIn <- &msgRes
 
 		return
-	}
-
-	//поиск индексов
-	isFound, index, err := searchIndexFormFiltration("index_filtration", &tf, qp)
-	if err != nil {
-		msgRes.MsgRecipient = "Core module"
-		msgRes.MsgSection = "error notification"
-		msgRes.AdvancedOptions = configure.ErrorNotification{
-			SourceReport:          "DB module",
-			HumanDescriptionError: "error when searching of the index information files of network traffic",
-			ErrorBody:             err,
-		}
-
-		chanIn <- &msgRes
 	}
 
 	msgRes.MsgRecipient = "NI module"

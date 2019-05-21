@@ -3,7 +3,7 @@ package configure
 /*
 * Описание типов JSON сообщений принимаемых от источников
 *
-* Версия 0.21, дата релиза 08.04.2019
+* Версия 0.22, дата релиза 21.05.2019
 * */
 
 //SourceTelemetry полная системная информация подготовленная к отправке
@@ -41,6 +41,43 @@ type FoundFilesInfo struct {
 	FileSize int64  `json:"fileSize"`
 }
 
+//MsgTypeNotification информационное сообщение
+type MsgTypeNotification struct {
+	MsgType string                    `json:"messageType"`
+	Info    DetailInfoMsgNotification `json:"info"`
+}
+
+//DetailInfoMsgNotification информационное сообщение, подробная информация
+// TaskID - id задачи
+// Section - раздел обработки заданий
+// TypeActionPerformed - тип выполняемого действия
+// CriticalityMessage - тип сообщения ('info'/'success'/'warning'/'danger')
+// Description - описание сообщения
+type DetailInfoMsgNotification struct {
+	TaskID              string `json:"tid"`
+	Section             string `json:"s"`
+	TypeActionPerformed string `json:"tap"`
+	CriticalityMessage  string `json:"cm"`
+	Description         string `json:"d"`
+}
+
+//MsgTypeError сообщение отправляемое при возникновении ошибки
+type MsgTypeError struct {
+	MsgType string             `json:"messageType"`
+	Info    DetailInfoMsgError `json:"info"`
+}
+
+//DetailInfoMsgError детальное описание ошибки
+// TaskID - id задачи
+// ErrorName - наименование ошибки
+// ErrorDescription - детальное описание ошибки
+type DetailInfoMsgError struct {
+	TaskID           string `json:"tid"`
+	ErrorName        string `json:"en"`
+	ErrorDescription string `json:"ed"`
+}
+
+/*
 //ChunkListParameters хранит набор параметров для разделения среза имен файлов на отдельные части
 type ChunkListParameters struct {
 	NumPart, CountParts, SizeChunk int
@@ -178,3 +215,4 @@ type MessageTypeDownloadFilesExecute struct {
 	MessageType string                              `json:"messageType"`
 	Info        MessageTypeDownloadFilesInfoExecute `json:"info"`
 }
+*/

@@ -143,6 +143,39 @@ func HandlerMsgFromNI(
 	case "error notification":
 		fmt.Println("func 'HandlerMsgFromNI', section ERROR NOTIFICATION")
 
+		if taskInfo == nil {
+			_ = saveMessageApp.LogMessage("error", "task with "+msg.TaskID+" not found")
+
+			return
+		}
+
+		ao, ok := msg.AdvancedOptions.(configure.ErrorNotification)
+		if !ok {
+			_ = saveMessageApp.LogMessage("error", "type conversion error"+funcName)
+
+			return
+		}
+
+		/*
+		   Обработка ошибок в зависимости от типов ошибок
+		*/
+		switch ao.ErrorName {
+		case "":
+
+		default:
+			//останавливаем выполнение задачи
+			smt.CompleteStoringMemoryTask(msg.TaskID)
+
+			//информационное сообщение пользователю
+			ns := notifications.NotificationSettingsToClientAPI{
+				MsgType:        "danger",
+				MsgDescription: ao.HumanDescriptionError,
+				Sources:        ao.Sources,
+			}
+
+			notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
+		}
+
 	case "message notification":
 		fmt.Println("func 'HandlerMsgFromNI', section MESSAGE NOTIFICATION")
 
