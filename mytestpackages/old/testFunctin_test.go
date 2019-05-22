@@ -11,7 +11,7 @@ import (
 )
 
 var _ = Describe("Function Test", func() {
-	Context("Тест 1: проверкf ip адреса с помощью регулярного вырожения", func() {
+	Context("Тест 1: проверка ip адреса с помощью регулярного вырожения", func() {
 		It("Должен вернуть true на валидное IP", func() {
 			ok, err := common.CheckStringIP("123.0.56.45")
 

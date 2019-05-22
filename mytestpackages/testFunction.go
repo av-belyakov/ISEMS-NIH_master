@@ -1,5 +1,0 @@
-package mytestpackages
-
-func main() {
-
-}

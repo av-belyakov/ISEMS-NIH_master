@@ -13,7 +13,12 @@ import (
 )
 
 //RouteRequest маршрутизатор запросов
-func RouteRequest(chanIn chan *configure.MsgBetweenCoreAndDB, nameDB string, linkConnection *configure.MongoDBConnect, chanOut <-chan *configure.MsgBetweenCoreAndDB) {
+func RouteRequest(
+	chanIn chan *configure.MsgBetweenCoreAndDB,
+	nameDB string, linkConnection *configure.MongoDBConnect,
+	smt *configure.StoringMemoryTask,
+	chanOut <-chan *configure.MsgBetweenCoreAndDB) {
+
 	fmt.Println("START module 'RouteRequest' (module DBInteraction)...")
 
 	wrapperFunc := WrappersRouteRequest{
@@ -29,9 +34,9 @@ func RouteRequest(chanIn chan *configure.MsgBetweenCoreAndDB, nameDB string, lin
 		case "source telemetry":
 
 		case "filtration":
-			go wrapperFunc.WrapperFuncFiltration(msg)
+			go wrapperFunc.WrapperFuncFiltration(msg, smt)
 		case "dawnload":
-			go wrapperFunc.WrapperFuncDownload(msg)
+			go wrapperFunc.WrapperFuncDownload(msg, smt)
 		case "error notification":
 
 		case "information search":

@@ -316,8 +316,16 @@ func HandlerMsgFromCore(
 
 					chanInCore <- &clientNotify
 
-//отправляем сообщение содержащее новые параметры выполнения задачи по фильтрации
-chanInCore <- 
+					//обнавляем информацию о задаче фильтрации в памяти приложения
+					smt.UpdateTaskFiltrationAllParameters(msg.TaskID, configure.FiltrationTaskParameters{Status: "refused"})
+
+					//отправляем сообщение в БД информирующее о необходимости записи новых параметров
+					chanInCore <- &configure.MsgBetweenCoreAndNI{
+						TaskID:   msg.TaskID,
+						Section:  "filtration control",
+						Command:  "update",
+						SourceID: msg.SourceID,
+					}
 
 					//снимаем отслеживание выполнения задачи
 					chanInCore <- &configure.MsgBetweenCoreAndNI{

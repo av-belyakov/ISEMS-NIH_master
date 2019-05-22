@@ -12,7 +12,11 @@ import (
 
 //CreateNewFiltrationTask запись информации о новой фильтрации
 //обрабатывается при получении запроса на фильтрацию
-func CreateNewFiltrationTask(chanIn chan<- *configure.MsgBetweenCoreAndDB, req *configure.MsgBetweenCoreAndDB, qp QueryParameters) {
+func CreateNewFiltrationTask(
+	chanIn chan<- *configure.MsgBetweenCoreAndDB,
+	req *configure.MsgBetweenCoreAndDB,
+	qp QueryParameters) {
+
 	fmt.Println("START function 'CreateNewFiltrationTask'...")
 
 	msgRes := configure.MsgBetweenCoreAndDB{
@@ -119,4 +123,19 @@ func CreateNewFiltrationTask(chanIn chan<- *configure.MsgBetweenCoreAndDB, req *
 
 	//отправляем в ядро сообщение о возможности продолжения обработки запроса на фильтрацию
 	chanIn <- &msgRes
+}
+
+//UpdateParametersFiltrationTask изменение параметров задачи по фильтрации
+func UpdateParametersFiltrationTask(
+	chanIn chan<- *configure.MsgBetweenCoreAndDB,
+	req *configure.MsgBetweenCoreAndDB,
+	qp QueryParameters,
+	smt *configure.StoringMemoryTask) {
+
+	fmt.Println("START function 'UpdateParametersFiltrationTask'...")
+
+	//получить информацию о выполняемой задачи из StoringMemoryTask
+
+	//записать эту информацию в БД
+
 }

@@ -1,0 +1,148 @@
+package mytestpackages_test
+
+import (
+	"fmt"
+	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"ISEMS-NIH_master/common"
+	"ISEMS-NIH_master/configure"
+	//. "ISEMS-NIH_master/mytestpackages"
+)
+
+var _ = Describe("StorageMemoryTask", func() {
+	smt := configure.NewRepositorySMT()
+
+	//генерируем хеш для clientID
+	clientID := common.GetUniqIDFormatMD5("client id")
+	clientTaskID := common.GetUniqIDFormatMD5("client_task id")
+
+	//добавляем новую задачу
+	taskID := smt.AddStoringMemoryTask(configure.TaskDescription{
+		ClientID:                        clientID,
+		ClientTaskID:                    clientTaskID,
+		TaskType:                        "filtration control",
+		ModuleThatSetTask:               "API module",
+		ModuleResponsibleImplementation: "NI module",
+		TimeUpdate:                      time.Now().Unix(),
+		TimeInterval: configure.TimeIntervalTaskExecution{
+			Start: time.Now().Unix(),
+			End:   time.Now().Unix(),
+		},
+	})
+
+	Context("Тест 1: Добавляем новую задачу и проверяем ее наличие", func() {
+		It("Задача должна существовать", func() {
+			_, isFound := smt.GetStoringMemoryTask(taskID)
+
+			Expect(isFound).To(Equal(true))
+		})
+	})
+
+	Context("Тест 2: Делаем ПЕРВЫЙ update параметров и проверяем их наличие", func() {
+		It("Должны быть добавлены новые параметры фильтрации", func() {
+			//делаем update параметров фильтрации
+			smt.UpdateTaskFiltrationAllParameters(taskID, configure.FiltrationTaskParameters{
+				ID:                       190,
+				Status:                   "execute",
+				NumberFilesToBeFiltered:  231,
+				SizeFilesToBeFiltered:    4738959669055,
+				CountDirectoryFiltartion: 3,
+				NumberFilesProcessed:     1,
+				NumberFilesFound:         0,
+				SizeFilesFound:           0,
+				PathStorageSource:        "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
+			})
+
+			Expect(true).To(Equal(true))
+		})
+
+		It("Должны существовать некоторые параметры заданные пользователем", func() {
+			//проверяем заданные параметры фильтрации
+			task, ok := smt.GetStoringMemoryTask(taskID)
+			taskInfo := task.TaskParameter.FiltrationTask
+
+			fmt.Println(taskInfo)
+
+			Expect(ok).Should(Equal(true))
+
+			Expect(taskInfo.ID).Should(Equal(190))
+			Expect(taskInfo.Status).Should(Equal("execute"))
+			Expect(taskInfo.NumberFilesProcessed).Should(Equal(1))
+		})
+	})
+
+	Context("Тест 3: Формируем список файлов найденных по результатам фильтрации и проверяем их наличие", func() {
+		It("Должнен быть сформирован список файлов найденных по результатам фильтрации", func() {
+			//делаем update параметров фильтрации
+			smt.UpdateTaskFiltrationAllParameters(taskID, configure.FiltrationTaskParameters{
+				ID:                       190,
+				Status:                   "execute",
+				NumberFilesToBeFiltered:  231,
+				SizeFilesToBeFiltered:    4738959669055,
+				CountDirectoryFiltartion: 3,
+				NumberFilesProcessed:     2,
+				NumberFilesFound:         1,
+				SizeFilesFound:           0,
+				PathStorageSource:        "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
+				FoundFilesInformation: map[string]*configure.FoundFilesInformation{
+					"1438537240_2015_08_02____20_40_40_104870.tdp": &configure.FoundFilesInformation{
+						Size: 3484834452,
+						Hex:  "fj9j939j9t88232",
+					},
+				},
+			})
+
+			smt.UpdateTaskFiltrationAllParameters(taskID, configure.FiltrationTaskParameters{
+				ID:                       190,
+				Status:                   "execute",
+				NumberFilesToBeFiltered:  231,
+				SizeFilesToBeFiltered:    4738959669055,
+				CountDirectoryFiltartion: 3,
+				NumberFilesProcessed:     10,
+				NumberFilesFound:         2,
+				SizeFilesFound:           0,
+				PathStorageSource:        "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
+				FoundFilesInformation: map[string]*configure.FoundFilesInformation{
+					"1438536146_2015_08_02____20_22_26_974623.tdp": &configure.FoundFilesInformation{
+						Size: 748956954,
+						Hex:  "fj9j939j9t88232",
+					},
+				},
+			})
+
+			smt.UpdateTaskFiltrationAllParameters(taskID, configure.FiltrationTaskParameters{
+				ID:                       190,
+				Status:                   "execute",
+				NumberFilesToBeFiltered:  231,
+				SizeFilesToBeFiltered:    4738959669055,
+				CountDirectoryFiltartion: 3,
+				NumberFilesProcessed:     12,
+				NumberFilesFound:         3,
+				SizeFilesFound:           0,
+				PathStorageSource:        "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
+				FoundFilesInformation: map[string]*configure.FoundFilesInformation{
+					"1438535410_2015_08_02____20_10_10_644263.tdp": &configure.FoundFilesInformation{
+						Size: 1448375,
+						Hex:  "fj9j939j9t88232",
+					},
+				},
+			})
+
+			//проверяем заданные параметры фильтрации
+			task, ok := smt.GetStoringMemoryTask(taskID)
+			taskInfo := task.TaskParameter.FiltrationTask
+
+			fmt.Println(taskInfo)
+
+			for n, s := range taskInfo.FoundFilesInformation {
+				fmt.Printf("Filte name: %v, size = %v\n", n, s)
+			}
+
+			Expect(ok).Should(Equal(true))
+			Expect(len(taskInfo.FoundFilesInformation)).Should(Equal(3))
+		})
+	})
+})

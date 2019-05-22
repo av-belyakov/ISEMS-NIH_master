@@ -55,7 +55,7 @@ func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetwe
 }
 
 //WrapperFuncFiltration обработка запросов по фильтрации
-func (wr *WrappersRouteRequest) WrapperFuncFiltration(msg *configure.MsgBetweenCoreAndDB) {
+func (wr *WrappersRouteRequest) WrapperFuncFiltration(msg *configure.MsgBetweenCoreAndDB, smt *configure.StoringMemoryTask) {
 	qp := handlerrequestdb.QueryParameters{
 		NameDB:         wr.NameDB,
 		CollectionName: "filter_task_list",
@@ -77,10 +77,12 @@ func (wr *WrappersRouteRequest) WrapperFuncFiltration(msg *configure.MsgBetweenC
 	case "update":
 		fmt.Println("func 'WrapperFuncFiltration' RESIVED COMMAND 'UPDATE'")
 
+		handlerrequestdb.UpdateParametersFiltrationTask(wr.ChanIn, msg, qp, smt)
 	}
+
 }
 
 //WrapperFuncDownload обработка запросов по скачиванию файлов
-func (wr *WrappersRouteRequest) WrapperFuncDownload(msg *configure.MsgBetweenCoreAndDB) {
+func (wr *WrappersRouteRequest) WrapperFuncDownload(msg *configure.MsgBetweenCoreAndDB, smt *configure.StoringMemoryTask) {
 
 }

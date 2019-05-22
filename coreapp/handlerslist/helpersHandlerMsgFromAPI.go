@@ -193,6 +193,10 @@ func handlerFiltrationControlTypeStart(
 		ModuleThatSetTask:               "API module",
 		ModuleResponsibleImplementation: "NI module",
 		TimeUpdate:                      time.Now().Unix(),
+		TimeInterval: configure.TimeIntervalTaskExecution{
+			Start: time.Now().Unix(),
+			End:   time.Now().Unix(),
+		},
 	})
 
 	//сохранение параметров задачи в БД

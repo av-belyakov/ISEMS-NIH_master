@@ -118,8 +118,8 @@ func (smapi *StoringMemoryAPI) searchID(id string) error {
 //StoringMemoryTask описание типа в котором храняться описание и ID выполняемых задач
 // ключом отображения является уникальный идентификатор задачи
 type StoringMemoryTask struct {
-	tasks   map[string]*TaskDescription
-	channel chan ChanStoringMemoryTask
+	tasks      map[string]*TaskDescription
+	channelReq chan ChanStoringMemoryTask
 }
 
 //TaskDescription описание задачи
@@ -130,6 +130,7 @@ type StoringMemoryTask struct {
 // ModuleThatSetTask - модуль от которого поступила задача
 // ModuleResponsibleImplementation - модуль который должен выполнить обработку
 // TimeUpdate - время последнего обновления в формате Unix
+// TimeInterval - интервал времени выполнения задачи
 // TaskParameter - дополнительные параметры
 // ChanStopTransferListFiles - останов передачи списка файлов (полученных в
 // результате поиска по индексам или фильтрации)
@@ -141,30 +142,99 @@ type TaskDescription struct {
 	ModuleThatSetTask               string
 	ModuleResponsibleImplementation string
 	TimeUpdate                      int64
+	TimeInterval                    TimeIntervalTaskExecution
 	TaskParameter                   DescriptionTaskParameters
 	ChanStopTransferListFiles       chan struct{}
 }
 
 //DescriptionTaskParameters описание параметров задачи
-type DescriptionTaskParameters struct{}
+type DescriptionTaskParameters struct {
+	FiltrationTask FiltrationTaskParameters
+	DownloadTask   DownloadTaskParameters
+}
+
+//TimeIntervalTaskExecution временной интервал выполнения задачи
+type TimeIntervalTaskExecution struct {
+	Start, End int64
+}
+
+//FoundFilesInformation подробная информация о файлах
+type FoundFilesInformation struct {
+	Size     uint64
+	Hex      string
+	IsLoaded bool
+}
+
+//FiltrationTaskParameters параметры задачи по фильтрации файлов
+// ID - уникальный цифровой идентификатор источника
+// Status - статус задачи 'wait'/'refused'/'execute'/'completed'/'stop' ('ожидает' / 'отклонена' / 'выполняется' / 'завершена' / 'остановлена')
+// UseIndex - используется ли индекс для поиска файлов
+// NumberFilesToBeFiltered - количество файлов подходящих под параметры фильтрации
+// SizeFilesToBeFiltered — общий размер файлов подходящих под параметры фильтрации
+// CountDirectoryFiltartion — количество директорий по которым выполняется фильт.
+// NumberFilesProcessed — количество обработанных файлов
+// NumberFilesFound — количество найденных файлов
+// SizeFilesFound — общий размер найденных файлов
+// PathStorageSource — путь до директории в которой сохраняются файлы при
+// FoundFileName - имя файла, найденного в результате фильтрации сет. трафика
+// FoundSizeFile - размер файла, найденного в результате фильтрации сет. трафика
+// FoundFilesInformation - информация о файлах, ключ - имя файла
+type FiltrationTaskParameters struct {
+	ID                       int
+	Status                   string
+	UseIndex                 bool
+	NumberFilesToBeFiltered  int
+	SizeFilesToBeFiltered    uint64
+	CountDirectoryFiltartion int
+	NumberFilesProcessed     int
+	NumberFilesFound         int
+	SizeFilesFound           uint64
+	PathStorageSource        string
+	FoundFilesInformation    map[string]*FoundFilesInformation
+}
+
+//DownloadTaskParameters параметры задачи по скачиванию файлов
+type DownloadTaskParameters struct {
+}
 
 //ChanStoringMemoryTask описание информации передаваемой через канал
 type ChanStoringMemoryTask struct {
 	ActionType, TaskID string
 	Description        *TaskDescription
+	ChannelRes         chan channelResSettings
+}
+
+//ChannelResSettings параметры канала ответа
+type channelResSettings struct {
+	IsExist     bool
+	TaskID      string
+	Description *TaskDescription
 }
 
 //NewRepositorySMT создание нового рапозитория для хранения выполняемых задач
 func NewRepositorySMT() *StoringMemoryTask {
 	smt := StoringMemoryTask{}
 	smt.tasks = map[string]*TaskDescription{}
-	smt.channel = make(chan ChanStoringMemoryTask)
+	smt.channelReq = make(chan ChanStoringMemoryTask)
 
 	go func() {
-		for msg := range smt.channel {
+		for msg := range smt.channelReq {
 			switch msg.ActionType {
+			case "get task info":
+				task, ok := smt.tasks[msg.TaskID]
+
+				msg.ChannelRes <- channelResSettings{
+					IsExist:     ok,
+					TaskID:      msg.TaskID,
+					Description: task,
+				}
+
 			case "add":
 				smt.tasks[msg.TaskID] = msg.Description
+				smt.tasks[msg.TaskID].TaskParameter.FiltrationTask = FiltrationTaskParameters{
+					FoundFilesInformation: map[string]*FoundFilesInformation{},
+				}
+				smt.tasks[msg.TaskID].TaskParameter.DownloadTask = DownloadTaskParameters{}
 
 			case "complete":
 				if _, ok := smt.GetStoringMemoryTask(msg.TaskID); ok {
@@ -179,6 +249,9 @@ func NewRepositorySMT() *StoringMemoryTask {
 			case "delete":
 				delete(smt.tasks, msg.TaskID)
 
+			case "update task filtration all parameters":
+				smt.updateTaskFiltrationAllParameters(msg.TaskID, msg.Description)
+
 			}
 		}
 	}()
@@ -192,7 +265,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 func (smt StoringMemoryTask) AddStoringMemoryTask(td TaskDescription) string {
 	taskID := common.GetUniqIDFormatMD5(td.ClientID)
 
-	smt.channel <- ChanStoringMemoryTask{
+	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType:  "add",
 		TaskID:      taskID,
 		Description: &td,
@@ -203,7 +276,7 @@ func (smt StoringMemoryTask) AddStoringMemoryTask(td TaskDescription) string {
 
 //delStoringMemoryTask удалить задачу
 func (smt StoringMemoryTask) delStoringMemoryTask(taskID string) {
-	smt.channel <- ChanStoringMemoryTask{
+	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "delete",
 		TaskID:     taskID,
 	}
@@ -211,7 +284,7 @@ func (smt StoringMemoryTask) delStoringMemoryTask(taskID string) {
 
 //CompleteStoringMemoryTask установить статус выполненно для задачи
 func (smt *StoringMemoryTask) CompleteStoringMemoryTask(taskID string) {
-	smt.channel <- ChanStoringMemoryTask{
+	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "complete",
 		TaskID:     taskID,
 	}
@@ -219,7 +292,7 @@ func (smt *StoringMemoryTask) CompleteStoringMemoryTask(taskID string) {
 
 //TimerUpdateStoringMemoryTask обновить значение таймера в задачи
 func (smt *StoringMemoryTask) TimerUpdateStoringMemoryTask(taskID string) {
-	smt.channel <- ChanStoringMemoryTask{
+	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "timer update",
 		TaskID:     taskID,
 	}
@@ -227,11 +300,17 @@ func (smt *StoringMemoryTask) TimerUpdateStoringMemoryTask(taskID string) {
 
 //GetStoringMemoryTask получить информацию о задаче по ее ID
 func (smt StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescription, bool) {
-	if task, ok := smt.tasks[taskID]; ok {
-		return task, ok
+	chanRes := make(chan channelResSettings)
+
+	smt.channelReq <- ChanStoringMemoryTask{
+		ActionType: "get task info",
+		TaskID:     taskID,
+		ChannelRes: chanRes,
 	}
 
-	return nil, false
+	info := <-chanRes
+
+	return info.Description, info.IsExist
 }
 
 //GetAllStoringMemoryTask получить все ID задач для выбранного клиента
@@ -246,6 +325,41 @@ func (smt StoringMemoryTask) GetAllStoringMemoryTask(clientID string) []string {
 
 	return foundTask
 }
+
+/*UpdateTaskFiltrationAllParameters управление задачами по фильтрации */
+func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, fp FiltrationTaskParameters) {
+	smt.channelReq <- ChanStoringMemoryTask{
+		ActionType: "update task filtration all parameters",
+		TaskID:     taskID,
+		Description: &TaskDescription{
+			TaskParameter: DescriptionTaskParameters{
+				FiltrationTask: fp,
+			},
+		},
+	}
+}
+
+func (smt *StoringMemoryTask) updateTaskFiltrationAllParameters(taskID string, td *TaskDescription) {
+	if _, ok := smt.tasks[taskID]; !ok {
+		return
+	}
+
+	//изменяем время окончания задачи
+	smt.tasks[taskID].TimeInterval.End = time.Now().Unix()
+
+	//получаем список файлов
+	listFoundFiles := smt.tasks[taskID].TaskParameter.FiltrationTask.FoundFilesInformation
+
+	foundFiles := td.TaskParameter.FiltrationTask.FoundFilesInformation
+	for fname, fsize := range foundFiles {
+		listFoundFiles[fname] = fsize
+	}
+
+	td.TaskParameter.FiltrationTask.FoundFilesInformation = listFoundFiles
+	smt.tasks[taskID].TaskParameter.FiltrationTask = td.TaskParameter.FiltrationTask
+}
+
+/* управление задачами по скачиванию файлов */
 
 //MsgChanStoringMemoryTask информация о подвисшей задачи
 type MsgChanStoringMemoryTask struct {
