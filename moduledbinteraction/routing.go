@@ -16,7 +16,6 @@ import (
 func RouteRequest(
 	chanIn chan *configure.MsgBetweenCoreAndDB,
 	nameDB string, linkConnection *configure.MongoDBConnect,
-	smt *configure.StoringMemoryTask,
 	chanOut <-chan *configure.MsgBetweenCoreAndDB) {
 
 	fmt.Println("START module 'RouteRequest' (module DBInteraction)...")
@@ -34,9 +33,9 @@ func RouteRequest(
 		case "source telemetry":
 
 		case "filtration":
-			go wrapperFunc.WrapperFuncFiltration(msg, smt)
+			go wrapperFunc.WrapperFuncFiltration(msg)
 		case "dawnload":
-			go wrapperFunc.WrapperFuncDownload(msg, smt)
+			go wrapperFunc.WrapperFuncDownload(msg)
 		case "error notification":
 
 		case "information search":
