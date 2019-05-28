@@ -176,8 +176,6 @@ type FoundFilesInformation struct {
 // NumberFilesFound — количество найденных файлов
 // SizeFilesFound — общий размер найденных файлов
 // PathStorageSource — путь до директории в которой сохраняются файлы при
-// FoundFileName - имя файла, найденного в результате фильтрации сет. трафика
-// FoundSizeFile - размер файла, найденного в результате фильтрации сет. трафика
 // FoundFilesInformation - информация о файлах, ключ - имя файла
 type FiltrationTaskParameters struct {
 	ID                       int

@@ -165,6 +165,7 @@ type SourceSettings struct {
 	EnableTelemetry           bool     `json:"et"`
 	MaxCountProcessFiltration int8     `json:"mcpf"` //<число 1-10>,
 	StorageFolders            []string `json:"sf"`
+	TypeAreaNetwork           string   `json:"tan"`
 }
 
 /*--- ИНФОРМАЦИЯ ПО ТЕЛЕМЕТРИИ ---*/

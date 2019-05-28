@@ -6,6 +6,7 @@ import (
 	"errors"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 func createStringFromSourceList(l []int) string {
@@ -92,9 +93,15 @@ func updateSourceList(isl *configure.InformationSourcesList, l []configure.Detai
 		return listTaskExecuted, listInvalidSource
 	}
 
+	typeAreaNetwork := "ip"
+
 	//если список источников в памяти приложения пуст
 	if isl.GetCountSources() == 0 {
 		for _, s := range l {
+			if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe" {
+				typeAreaNetwork = "pppoe"
+			}
+
 			isl.AddSourceSettings(s.ID, configure.SourceSetting{
 				IP:         s.Argument.IP,
 				Token:      s.Argument.Token,
@@ -105,6 +112,7 @@ func updateSourceList(isl *configure.InformationSourcesList, l []configure.Detai
 					EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
 					MaxCountProcessFiltration: s.Argument.Settings.MaxCountProcessFiltration,
 					StorageFolders:            s.Argument.Settings.StorageFolders,
+					TypeAreaNetwork:           typeAreaNetwork,
 				},
 			})
 		}
@@ -118,6 +126,10 @@ func updateSourceList(isl *configure.InformationSourcesList, l []configure.Detai
 	sourceListTaskExecuted := isl.GetListSourcesWhichTaskExecuted()
 
 	for _, source := range l {
+		if strings.ToLower(source.Argument.Settings.TypeAreaNetwork) == "pppoe" {
+			typeAreaNetwork = "pppoe"
+		}
+
 		//если источника нет в списке
 		s, isExist := isl.GetSourceSetting(source.ID)
 		if !isExist {
@@ -131,6 +143,7 @@ func updateSourceList(isl *configure.InformationSourcesList, l []configure.Detai
 					EnableTelemetry:           source.Argument.Settings.EnableTelemetry,
 					MaxCountProcessFiltration: source.Argument.Settings.MaxCountProcessFiltration,
 					StorageFolders:            source.Argument.Settings.StorageFolders,
+					TypeAreaNetwork:           typeAreaNetwork,
 				},
 			})
 
@@ -175,6 +188,7 @@ func updateSourceList(isl *configure.InformationSourcesList, l []configure.Detai
 					EnableTelemetry:           source.Argument.Settings.EnableTelemetry,
 					MaxCountProcessFiltration: source.Argument.Settings.MaxCountProcessFiltration,
 					StorageFolders:            source.Argument.Settings.StorageFolders,
+					TypeAreaNetwork:           typeAreaNetwork,
 				},
 			})
 
@@ -200,11 +214,17 @@ func updateSourceList(isl *configure.InformationSourcesList, l []configure.Detai
 func getSourceListToStoreDB(trastedSoures []int, l *[]configure.DetailedListSources, clientName string, mcpf int8) (*[]configure.InformationAboutSource, error) {
 	list := make([]configure.InformationAboutSource, 0, len(*l))
 
+	typeAreaNetwork := "ip"
+
 	sort.Ints(trastedSoures)
 	for _, s := range *l {
 		if sort.SearchInts(trastedSoures, s.ID) != -1 {
 			if (s.Argument.Settings.MaxCountProcessFiltration > 0) && (s.Argument.Settings.MaxCountProcessFiltration < 10) {
 				mcpf = s.Argument.Settings.MaxCountProcessFiltration
+			}
+
+			if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe" {
+				typeAreaNetwork = "pppoe"
 			}
 
 			list = append(list, configure.InformationAboutSource{
@@ -220,6 +240,7 @@ func getSourceListToStoreDB(trastedSoures []int, l *[]configure.DetailedListSour
 					EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
 					MaxCountProcessFiltration: mcpf,
 					StorageFolders:            s.Argument.Settings.StorageFolders,
+					TypeAreaNetwork:           typeAreaNetwork,
 				},
 			})
 		}
@@ -240,11 +261,17 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 	var ok bool
 	var sourceInfo *configure.SourceSetting
 
+	typeAreaNetwork := "ip"
+
 	for _, s := range *l {
 		aie := configure.ActionTypeListSources{
 			ID:         s.ID,
 			Status:     "disconnect",
 			ActionType: s.ActionType,
+		}
+
+		if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe" {
+			typeAreaNetwork = "pppoe"
 		}
 
 		strID := strconv.Itoa(s.ID)
@@ -262,6 +289,7 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 						EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
 						MaxCountProcessFiltration: s.Argument.Settings.MaxCountProcessFiltration,
 						StorageFolders:            s.Argument.Settings.StorageFolders,
+						TypeAreaNetwork:           typeAreaNetwork,
 					},
 				})
 
@@ -343,6 +371,7 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 					EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
 					MaxCountProcessFiltration: s.Argument.Settings.MaxCountProcessFiltration,
 					StorageFolders:            s.Argument.Settings.StorageFolders,
+					TypeAreaNetwork:           typeAreaNetwork,
 				},
 			})
 
@@ -416,6 +445,8 @@ func getSourceListsForWriteToBD(
 	clientName string,
 	mcpf int8) (*[]configure.InformationAboutSource, *[]configure.InformationAboutSource, *[]int) {
 
+	typeAreaNetwork := "ip"
+
 	var listAdd, listUpdate []configure.InformationAboutSource
 	listDel := []int{}
 
@@ -431,6 +462,10 @@ func getSourceListsForWriteToBD(
 		}
 
 		for _, s := range *ml {
+			if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe" {
+				typeAreaNetwork = "pppoe"
+			}
+
 			if s.ID == source.ID {
 				si := configure.InformationAboutSource{
 					ID:            source.ID,
@@ -445,6 +480,7 @@ func getSourceListsForWriteToBD(
 						EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
 						MaxCountProcessFiltration: mcpf,
 						StorageFolders:            s.Argument.Settings.StorageFolders,
+						TypeAreaNetwork:           typeAreaNetwork,
 					},
 				}
 

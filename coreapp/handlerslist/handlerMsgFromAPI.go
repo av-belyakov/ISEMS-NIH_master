@@ -31,8 +31,6 @@ func HandlerMsgFromAPI(
 		MsgDescription: "получен некорректный формат JSON сообщения",
 	}
 
-	//	errBody := errors.New("received incorrect JSON messages, function 'HeaderMsgFromAPI'")
-
 	msgJSON, ok := msg.MsgJSON.([]byte)
 	if !ok {
 		notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)

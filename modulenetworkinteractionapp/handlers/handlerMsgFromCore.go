@@ -316,7 +316,7 @@ func HandlerMsgFromCore(
 
 					chanInCore <- &clientNotify
 
-					//обнавляем информацию о задаче фильтрации в памяти приложения
+					//обновляем информацию о задаче фильтрации в памяти приложения
 					smt.UpdateTaskFiltrationAllParameters(msg.TaskID, configure.FiltrationTaskParameters{Status: "refused"})
 
 					//отправляем сообщение в БД информирующее о необходимости записи новых параметров
