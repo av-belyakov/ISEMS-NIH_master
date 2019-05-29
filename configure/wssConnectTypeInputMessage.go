@@ -93,6 +93,7 @@ type MsgTypeFiltration struct {
 // SizeFilesMeetFilterParameters - общий размер файлов (в байтах) удовлетворяющих параметрам фильтрации
 // SizeFilesFoundResultFiltering - общий размер найденных, в результате фильтрации, файлов (в байтах)
 // PathStorageSource — путь до директории в которой сохраняются файлы при
+// NumberMessagesParts - коичество частей сообщения
 // FoundFilesInformation - информация о файлах, ключ - имя файла
 type DetailInfoMsgFiltration struct {
 	TaskID                          string                            `json:"tid"`
@@ -104,6 +105,7 @@ type DetailInfoMsgFiltration struct {
 	SizeFilesMeetFilterParameters   int64                             `json:"sfmfp"`
 	SizeFilesFoundResultFiltering   int64                             `json:"sffrf"`
 	PathStorageSource               string                            `json:"pss"`
+	NumberMessagesParts             [2]int                            `json:"nmp"`
 	FoundFilesInformation           map[string]*InputFilesInformation `json:"ffi"`
 }
 
@@ -111,7 +113,7 @@ type DetailInfoMsgFiltration struct {
 // Size - размер файла
 // Hex - хеш сумма файла
 type InputFilesInformation struct {
-	Size uint64 `json:"s"`
+	Size int64  `json:"s"`
 	Hex  string `json:"h"`
 }
 
