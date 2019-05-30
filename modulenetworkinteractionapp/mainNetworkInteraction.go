@@ -68,7 +68,7 @@ func MainNetworkInteraction(appConf *configure.AppConfig, smt *configure.Storing
 	//маршрутизатор запросов получаемых от CoreApp
 	go RouteCoreRequest(cwtRes, chanInCore, isl, smt, chansStatSource, chanOutCore)
 	//маршрутизатор запросов получаемых Wss
-	go RouteWssConnectionResponse(cwtRes, isl, chanInCore, cwtReq)
+	go RouteWssConnectionResponse(cwtRes, isl, smt, chanInCore, cwtReq)
 
 	//запуск модуля wssServerNI
 	go WssServerNetworkInteraction(chansStatSource["outWssModuleServer"], appConf, isl, cwtReq)

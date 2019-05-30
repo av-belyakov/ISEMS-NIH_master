@@ -137,6 +137,33 @@ func HandlerMsgFromNI(
 	case "filtration control":
 		fmt.Println("func 'HandlerMsgFromNI', section FILTRATION CONTROL")
 
+		/*
+					!!! ВНИМАНИЕ !!!
+			Сделал отправку сообщения, с информацией о фильтрации, в
+			БД и клиенту API.
+				Клиенту API дроде сделал полностью, тепер только тестить.
+				А в БД сделано не до конца, нет записи информации в БД,
+				нужно доделать. Еще, при записи, нужно обращать внимание
+				на списки файлов, ИХ НУЖНО ДОПИСЫВАТЬ если статус задачи
+				'execute' и проверять и возможно ДО ЗАПИСЫВАТЬ если статус
+				задачи 'stop' или 'complete'
+		*/
+
+		//отправляем иформацию о ходе фильтрации в БД
+		chanToDB <- &configure.MsgBetweenCoreAndDB{
+			MsgGenerator:    "NI module",
+			MsgRecipient:    "DB module",
+			MsgSection:      "filtration",
+			Instruction:     "update",
+			TaskID:          msg.TaskID,
+			AdvancedOptions: msg.AdvancedOptions,
+		}
+
+		/* упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
+		при чем если статус 'execute', то отправляем еще и содержимое поля 'FoundFilesInformation',
+		а если статус фильтрации 'stop' или 'complite' то данное поле не заполняем */
+		sendInformationFiltrationTask(chanToAPI, taskInfo, msg)
+
 	case "download control":
 		fmt.Println("func 'HandlerMsgFromNI', section DOWNLOAD CONTROL")
 
@@ -144,7 +171,7 @@ func HandlerMsgFromNI(
 		fmt.Println("func 'HandlerMsgFromNI', section ERROR NOTIFICATION")
 
 		if taskInfo == nil {
-			_ = saveMessageApp.LogMessage("error", "task with "+msg.TaskID+" not found")
+			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", msg.TaskID))
 
 			return
 		}

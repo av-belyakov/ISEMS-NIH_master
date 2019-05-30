@@ -60,6 +60,7 @@ type TimeInterval struct {
 // NumberProcessedFiles - кол-во обработанных файлов
 // NumberFilesFoundResultFiltering - кол-во найденных, в результате фильтрации, файлов
 // NumberDirectoryFiltartion - кол-во директорий по которым выполняется фильтрация
+// NumberErrorProcessedFiles - кол-во не обработанных файлов или файлов обработанных с ошибками
 // SizeFilesMeetFilterParameters - общий размер файлов (в байтах) удовлетворяющих параметрам фильтрации
 // SizeFilesFoundResultFiltering - общий размер найденных, в результате фильтрации, файлов (в байтах)
 // PathDirectoryForFilteredFiles - путь к директории в которой хранятся отфильтрованные файлы
@@ -72,6 +73,7 @@ type DetailedInformationFiltering struct {
 	NumberProcessedFiles            int                                     `json:"number_processed_files" bson:"number_processed_files"`
 	NumberFilesFoundResultFiltering int                                     `json:"number_files_found_result_filtering" bson:"number_files_found_result_filtering"`
 	NumberDirectoryFiltartion       int                                     `json:"number_directory_filtartion" bson:"number_directory_filtartion"`
+	NumberErrorProcessedFiles       int                                     `json:"number_error_processed_files" bson:"number_error_processed_files"`
 	SizeFilesMeetFilterParameters   int64                                   `json:"size_files_meet_filter_parameters" bson:"size_files_meet_filter_parameters"`
 	SizeFilesFoundResultFiltering   int64                                   `json:"size_files_found_result_filtering" bson:"size_files_found_result_filtering"`
 	PathDirectoryForFilteredFiles   string                                  `json:"path_directory_for_filtered_files" bson:"path_directory_for_filtered_files"`

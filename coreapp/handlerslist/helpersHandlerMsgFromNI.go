@@ -31,7 +31,7 @@ func getConfirmActionSourceListForAPI(
 	//получаем ID клиента API
 	st, ok := smt.GetStoringMemoryTask(res.TaskID)
 	if !ok {
-		_ = saveMessageApp.LogMessage("error", "task with "+res.TaskID+" not found")
+		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", res.TaskID))
 
 		return
 	}
@@ -97,5 +97,62 @@ func sendChanStatusSourceForAPI(chanToAPI chan<- *configure.MsgBetweenCoreAndAPI
 		MsgRecipient: "API module",
 		IDClientAPI:  "",
 		MsgJSON:      msgjson,
+	}
+}
+
+//sendInformationFiltrationTask отправляет информационное сообщение о ходе фильтрации
+func sendInformationFiltrationTask(
+	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
+	taskInfo *configure.TaskDescription,
+	msg *configure.MsgBetweenCoreAndNI) {
+
+	//инициализируем функцию конструктор для записи лог-файлов
+	saveMessageApp := savemessageapp.New()
+
+	ao, ok := msg.AdvancedOptions.(configure.DetailInfoMsgFiltration)
+	if !ok {
+		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", msg.TaskID))
+
+		return
+	}
+
+	resMsg := configure.FiltrationControlTypeInfo{
+		MsgOption: configure.FiltrationControlMsgTypeInfo{
+			ID:                              msg.SourceID,
+			Status:                          ao.TaskStatus,
+			NumberFilesMeetFilterParameters: ao.NumberFilesMeetFilterParameters,
+			NumberProcessedFiles:            ao.NumberProcessedFiles,
+			NumberFilesFoundResultFiltering: ao.NumberFilesFoundResultFiltering,
+			NumberErrorProcessedFiles:       ao.NumberErrorProcessedFiles,
+			NumberDirectoryFiltartion:       ao.NumberDirectoryFiltartion,
+			SizeFilesMeetFilterParameters:   ao.SizeFilesMeetFilterParameters,
+			SizeFilesFoundResultFiltering:   ao.SizeFilesFoundResultFiltering,
+			PathStorageSource:               ao.PathStorageSource,
+		},
+	}
+
+	resMsg.MsgType = "information"
+	resMsg.MsgSection = "filtration control"
+	resMsg.MsgInsturction = "task processing"
+	resMsg.ClientTaskID = taskInfo.ClientTaskID
+
+	//получаем ID задачи пришедший от клиента API
+
+	if ao.TaskStatus == "execute" {
+		resMsg.MsgOption.FoundFilesInformation = ao.FoundFilesInformation
+	}
+
+	msgJSON, err := json.Marshal(resMsg)
+	if err != nil {
+		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+		return
+	}
+
+	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+		MsgGenerator: "Core module",
+		MsgRecipient: "API module",
+		IDClientAPI:  taskInfo.ClientID,
+		MsgJSON:      msgJSON,
 	}
 }

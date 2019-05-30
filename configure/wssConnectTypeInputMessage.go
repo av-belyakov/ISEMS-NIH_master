@@ -90,6 +90,7 @@ type MsgTypeFiltration struct {
 // NumberProcessedFiles - кол-во обработанных файлов
 // NumberFilesFoundResultFiltering - кол-во найденных, в результате фильтрации, файлов
 // NumberDirectoryFiltartion - кол-во директорий по которым выполняется фильтрация
+// NumberErrorProcessedFiles - кол-во не обработанных файлов или файлов обработанных с ошибками
 // SizeFilesMeetFilterParameters - общий размер файлов (в байтах) удовлетворяющих параметрам фильтрации
 // SizeFilesFoundResultFiltering - общий размер найденных, в результате фильтрации, файлов (в байтах)
 // PathStorageSource — путь до директории в которой сохраняются файлы при
@@ -102,6 +103,7 @@ type DetailInfoMsgFiltration struct {
 	NumberProcessedFiles            int                               `json:"npf"`
 	NumberFilesFoundResultFiltering int                               `json:"nffrf"`
 	NumberDirectoryFiltartion       int                               `json:"ndf"`
+	NumberErrorProcessedFiles       int                               `json:"nepf"`
 	SizeFilesMeetFilterParameters   int64                             `json:"sfmfp"`
 	SizeFilesFoundResultFiltering   int64                             `json:"sffrf"`
 	PathStorageSource               string                            `json:"pss"`

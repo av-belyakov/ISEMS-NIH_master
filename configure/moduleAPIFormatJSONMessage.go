@@ -218,8 +218,38 @@ type FiltrationControlIPorNetorPortParameters struct {
 	Dst []string `json:"dst"`
 }
 
+//FiltrationControlTypeInfo общее описание сообщения о ходе фильтрации
+type FiltrationControlTypeInfo struct {
+	MsgCommon
+	MsgOption FiltrationControlMsgTypeInfo `json:"o"`
+}
+
 //FiltrationControlMsgTypeInfo информационные сообщения о ходе фильтрации
-type FiltrationControlMsgTypeInfo struct{}
+// ID - уникальный цифровой идентификатор источника
+// Status - статус выполняемой задачи
+// NumberFilesMeetFilterParameters - кол-во файлов удовлетворяющих параметрам фильтрации
+// NumberProcessedFiles - кол-во обработанных файлов
+// NumberFilesFoundResultFiltering - кол-во найденных, в результате фильтрации, файлов
+// NumberErrorProcessedFiles - кол-во не обработанных файлов или файлов обработанных с ошибками
+// NumberDirectoryFiltartion - кол-во директорий по которым выполняется фильтрация
+// SizeFilesMeetFilterParameters - общий размер файлов (в байтах) удовлетворяющих параметрам фильтрации
+// SizeFilesFoundResultFiltering - общий размер найденных, в результате фильтрации, файлов (в байтах)
+// PathStorageSource — путь до директории в которой сохраняются файлы при
+// NumberMessagesParts - коичество частей сообщения
+// FoundFilesInformation - информация о файлах, ключ - имя файла
+type FiltrationControlMsgTypeInfo struct {
+	ID                              int                               `json:"id"`
+	Status                          string                            `json:"s"`
+	NumberFilesMeetFilterParameters int                               `json:"nfmfp"`
+	NumberProcessedFiles            int                               `json:"npf"`
+	NumberFilesFoundResultFiltering int                               `json:"nffrf"`
+	NumberErrorProcessedFiles       int                               `json:"nepf"`
+	NumberDirectoryFiltartion       int                               `json:"ndf"`
+	SizeFilesMeetFilterParameters   int64                             `json:"sfmfp"`
+	SizeFilesFoundResultFiltering   int64                             `json:"sffrf"`
+	PathStorageSource               string                            `json:"pss"`
+	FoundFilesInformation           map[string]*InputFilesInformation `json:"ffi"`
+}
 
 //FiltrationControlMsgTypeCommand командные сообщения связанные с фильтрацией
 //MsgInsturction:
