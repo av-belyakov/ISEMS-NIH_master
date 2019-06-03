@@ -30,7 +30,7 @@ func ProcessingReceivedMsgTypeFiltering(
 
 	switch resMsg.Info.TaskStatus {
 	case "execute":
-		/* Просто отправляем в ядро, а от туда в БД иклиенту API */
+		/* Просто отправляем в ядро, а от туда в БД и клиенту API */
 
 		chanInCore <- &configure.MsgBetweenCoreAndNI{
 			TaskID:          resMsg.Info.TaskID,
@@ -41,6 +41,33 @@ func ProcessingReceivedMsgTypeFiltering(
 		}
 
 	case "stop":
+
+		ffi := make(map[string]*configure.FoundFilesInformation{}, len(resMsg.Info.FoundFilesInformation))
+		for n, v := range resMsg.Info.FoundFilesInformation {
+			ffi[n] = &configure.FoundFilesInformation{
+				Size: v.Size,
+				Hex:  v.Hex,
+			}
+		}
+
+		if resMsg.Info.NumberMessagesParts[1] > 0 {
+			smt.UpdateTaskFiltrationFilesList(resMsg.Info.TaskID, ffi)
+		}
+
+		if resMsg.Info.NumberMessagesParts[0] == resMsg.Info.NumberMessagesParts[1] {
+			td, ok := smt.GetStoringMemoryTask(resMsg.Info.TaskID)
+			if !ok {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", resMsg.Info.TaskID))
+
+				return
+			}
+
+			//проверяем общее кол-во найденных файлов
+			if len(td.TaskParameter.FiltrationTask.FoundFilesInformation) != resMsg.Info.NumberFilesFoundResultFiltering {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("the number of files in the list does not match the total number of files found as a result of filtering (task ID %v)", resMsg.Info.TaskID))
+			}
+
+		}
 
 		/*
 		   Тоже самое что и при 'execute', но с начала объединяем все списки

@@ -135,14 +135,36 @@ var _ = Describe("StorageMemoryTask", func() {
 			task, ok := smt.GetStoringMemoryTask(taskID)
 			taskInfo := task.TaskParameter.FiltrationTask
 
-			fmt.Println(taskInfo)
-
-			for n, s := range taskInfo.FoundFilesInformation {
-				fmt.Printf("Filte name: %v, size = %v\n", n, s)
-			}
-
 			Expect(ok).Should(Equal(true))
 			Expect(len(taskInfo.FoundFilesInformation)).Should(Equal(3))
+		})
+	})
+
+	Context("Тест 4: Проверка функции добавления списка найденных файлов", func() {
+		It("По результатам должен быть получен список файлов коли-во которых соответствует заданным условиям", func() {
+			newFilesList := map[string]*configure.FoundFilesInformation{
+				"1438535410_2015_08_02____20_10_12_556677.tdp": &configure.FoundFilesInformation{
+					Size: 545868,
+					Hex:  "fefee888f88e7f7e7e",
+				},
+				"1438535410_2015_08_02____20_10_13_23267.tdp": &configure.FoundFilesInformation{
+					Size: 34454666,
+					Hex:  "fere0r0r30r33999994ffd",
+				},
+				"1438535410_2015_08_02____20_10_14_724263.tdp": &configure.FoundFilesInformation{
+					Size: 34400005,
+					Hex:  "iewe8828e2e82888484848df8s",
+				},
+			}
+
+			smt.UpdateTaskFiltrationFilesList(taskID, newFilesList)
+
+			//проверяем заданные параметры фильтрации
+			task, ok := smt.GetStoringMemoryTask(taskID)
+			taskInfo := task.TaskParameter.FiltrationTask
+
+			Expect(ok).Should(Equal(true))
+			Expect(len(taskInfo.FoundFilesInformation)).Should(Equal(6))
 		})
 	})
 })

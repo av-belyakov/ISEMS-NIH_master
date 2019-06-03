@@ -136,8 +136,6 @@ func sendInformationFiltrationTask(
 	resMsg.MsgInsturction = "task processing"
 	resMsg.ClientTaskID = taskInfo.ClientTaskID
 
-	//получаем ID задачи пришедший от клиента API
-
 	if ao.TaskStatus == "execute" {
 		resMsg.MsgOption.FoundFilesInformation = ao.FoundFilesInformation
 	}

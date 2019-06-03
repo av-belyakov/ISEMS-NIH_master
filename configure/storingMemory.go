@@ -250,6 +250,9 @@ func NewRepositorySMT() *StoringMemoryTask {
 			case "update task filtration all parameters":
 				smt.updateTaskFiltrationAllParameters(msg.TaskID, msg.Description)
 
+			case "update task filtration files list":
+				smt.updateTaskFiltrationFilesList(msg.TaskID, msg.Description)
+
 			}
 		}
 	}()
@@ -324,7 +327,7 @@ func (smt StoringMemoryTask) GetAllStoringMemoryTask(clientID string) []string {
 	return foundTask
 }
 
-/*UpdateTaskFiltrationAllParameters управление задачами по фильтрации */
+//UpdateTaskFiltrationAllParameters управление задачами по фильтрации
 func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, fp FiltrationTaskParameters) {
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "update task filtration all parameters",
@@ -332,6 +335,21 @@ func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, f
 		Description: &TaskDescription{
 			TaskParameter: DescriptionTaskParameters{
 				FiltrationTask: fp,
+			},
+		},
+	}
+}
+
+//UpdateTaskFiltrationFilesList обновление списка файлов полученных в результате фильтрации
+func (smt *StoringMemoryTask) UpdateTaskFiltrationFilesList(taskID string, filesList map[string]*FoundFilesInformation) {
+	smt.channelReq <- ChanStoringMemoryTask{
+		ActionType: "update task filtration files list",
+		TaskID:     taskID,
+		Description: &TaskDescription{
+			TaskParameter: DescriptionTaskParameters{
+				FiltrationTask: FiltrationTaskParameters{
+					FoundFilesInformation: filesList,
+				},
 			},
 		},
 	}
@@ -355,6 +373,20 @@ func (smt *StoringMemoryTask) updateTaskFiltrationAllParameters(taskID string, t
 
 	td.TaskParameter.FiltrationTask.FoundFilesInformation = listFoundFiles
 	smt.tasks[taskID].TaskParameter.FiltrationTask = td.TaskParameter.FiltrationTask
+}
+
+func (smt *StoringMemoryTask) updateTaskFiltrationFilesList(taskID string, td *TaskDescription) {
+	if _, ok := smt.tasks[taskID]; !ok {
+		return
+	}
+
+	//получаем список файлов
+	//		listFoundFiles := smt.tasks[taskID].TaskParameter.FiltrationTask.FoundFilesInformation
+	filesList := td.TaskParameter.FiltrationTask.FoundFilesInformation
+
+	for n, v := range filesList {
+		smt.tasks[taskID].TaskParameter.FiltrationTask.FoundFilesInformation[n] = v
+	}
 }
 
 /* управление задачами по скачиванию файлов */

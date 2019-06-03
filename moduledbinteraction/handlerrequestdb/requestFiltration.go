@@ -3,11 +3,15 @@ package handlerrequestdb
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	//"github.com/mongodb/mongo-go-driver/mongo/options"
 	//"github.com/mongodb/mongo-go-driver/bson"
 
 	"ISEMS-NIH_master/configure"
+	"ISEMS-NIH_master/savemessageapp"
+
+	"github.com/mongodb/mongo-go-driver/bson"
 )
 
 //CreateNewFiltrationTask запись информации о новой фильтрации
@@ -44,6 +48,20 @@ func CreateNewFiltrationTask(
 		return
 	}
 
+	//поиск индексов
+	isFound, index, err := searchIndexFormFiltration("index_filtration", &tf, qp)
+	if err != nil {
+		msgRes.MsgRecipient = "Core module"
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: "error when searching of the index information files of network traffic",
+			ErrorBody:             err,
+		}
+
+		chanIn <- &msgRes
+	}
+
 	itf := configure.InformationAboutTaskFiltration{
 		TaskID:       req.TaskID,
 		ClientID:     req.IDClientAPI,
@@ -74,25 +92,11 @@ func CreateNewFiltrationTask(
 			},
 		},
 		DetailedInformationOnFiltering: configure.DetailedInformationFiltering{
-			TaskStatus: "wait",
+			TaskStatus:                    "wait",
+			ListFilesFoundResultFiltering: []*configure.InformationFilesFoundResultFiltering{},
+			WasIndexUsed:                  isFound,
 		},
 	}
-
-	//поиск индексов
-	isFound, index, err := searchIndexFormFiltration("index_filtration", &tf, qp)
-	if err != nil {
-		msgRes.MsgRecipient = "Core module"
-		msgRes.MsgSection = "error notification"
-		msgRes.AdvancedOptions = configure.ErrorNotification{
-			SourceReport:          "DB module",
-			HumanDescriptionError: "error when searching of the index information files of network traffic",
-			ErrorBody:             err,
-		}
-
-		chanIn <- &msgRes
-	}
-
-	itf.DetailedInformationOnFiltering.WasIndexUsed = isFound
 
 	insertData := make([]interface{}, 0, 1)
 	insertData = append(insertData, itf)
@@ -132,75 +136,70 @@ func UpdateParametersFiltrationTask(
 	qp QueryParameters) {
 
 	fmt.Println("START function 'UpdateParametersFiltrationTask'...")
-	/*
 
-	   !!! ВНИМАНИЕ !!!
-	   Это примерный шаблон, наверное подробно стоит писать, когда
-	   приложение начнет принимать данные о фильтрации от
-	   приложения ISEMS-NIH_slave
+	//инициализируем функцию конструктор для записи лог-файлов
+	saveMessageApp := savemessageapp.New()
+	funcName := ", function 'UpdateParametersFiltrationTask'"
 
-	   Но перед этим нужно сделать на ISEMS-NIH_slave:
-	   + 1. Подготовить функцию для формирование шаблона для фильтрации
-	   + 2. Описать JSON тип для передачи информации о ходе фильтрации
-	   + 3. Функцию выполнения фильтрации
-	   + 4. Функцию передачи данных при разрывесоединения и его последующего
-	   востановления
-	   ______________________________________________________________
+	ao, ok := req.AdvancedOptions.(configure.DetailInfoMsgFiltration)
+	if !ok {
+		_ = saveMessageApp.LogMessage("error", "type conversion error"+funcName)
 
-	   	msgRes := configure.MsgBetweenCoreAndDB{
-	   		MsgGenerator: req.MsgRecipient,
-	   		MsgRecipient: req.MsgGenerator,
-	   		MsgSection:   "filtration control",
-	   		IDClientAPI:  req.IDClientAPI,
-	   		TaskID:       req.TaskID,
-	   	}
+		return
+	}
 
-	   	//приведение типа
-	   	tf, ok := req.AdvancedOptions.(configure.FiltrationControlCommonParametersFiltration)
-	   	if !ok {
-	   		errMsg := "taken incorrect settings for task filtering"
+	//обновление основной информации
+	commonValueUpdate := bson.D{
+		bson.E{Key: "$set", Value: bson.D{
+			bson.E{Key: "detailed_information_on_filtering.task_status", Value: ao.TaskStatus},
+			bson.E{Key: "detailed_information_on_filtering.time_interval_task_execution.end", Value: time.Now().Unix()},
+			bson.E{Key: "detailed_information_on_filtering.number_files_meet_filter_parameters", Value: ao.NumberFilesMeetFilterParameters},
+			bson.E{Key: "detailed_information_on_filtering.number_processed_files", Value: ao.NumberProcessedFiles},
+			bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: ao.NumberFilesFoundResultFiltering},
+			bson.E{Key: "detailed_information_on_filtering.number_error_processed_files", Value: ao.NumberErrorProcessedFiles},
+			bson.E{Key: "detailed_information_on_filtering.number_directory_filtartion", Value: ao.NumberDirectoryFiltartion},
+			bson.E{Key: "detailed_information_on_filtering.size_files_meet_filter_parameters", Value: ao.SizeFilesMeetFilterParameters},
+			bson.E{Key: "detailed_information_on_filtering.size_files_found_result_filtering", Value: ao.SizeFilesFoundResultFiltering},
+			bson.E{Key: "detailed_information_on_filtering.path_directory_for_filtered_files", Value: ao.PathStorageSource},
+		}}}
 
-	   		msgRes.MsgRecipient = "Core module"
-	   		msgRes.MsgSection = "error notification"
-	   		msgRes.AdvancedOptions = configure.ErrorNotification{
-	   			SourceReport:          "DB module",
-	   			HumanDescriptionError: errMsg,
-	   			ErrorBody:             errors.New(errMsg),
-	   		}
+	//обновляем детальную информацию о ходе фильтрации
+	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: ao.TaskID}}, commonValueUpdate); err != nil {
+		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-	   		chanIn <- &msgRes
+		return
+	}
 
-	   		return
-	   	}
+	arr := []interface{}{}
 
-	   	valueUpdate := bson.D{
-	   		bson.E{Key: "$set", Value: bson.D{
-	   			bson.E{Key: "detailed_information_on_filtering.task_status", Value: ftp.Status},
-	   			bson.E{Key: "detailed_information_on_filtering.was_index_used", Value: ftp.UseIndex},
-	   			bson.E{Key: "detailed_information_on_filtering.time_interval_task_execution.end", Value: time.Now().Unix()},
-	   			bson.E{Key: "detailed_information_on_filtering.number_files_meet_filter_parameters", Value: ftp.NumberFilesToBeFiltered},
-	   			bson.E{Key: "detailed_information_on_filtering.number_processed_files", Value: ftp.NumberFilesProcessed},
-	   			bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: ftp.NumberFilesFound},
-	   			bson.E{Key: "detailed_information_on_filtering.number_directory_filtartion", Value: ftp.CountDirectoryFiltartion},
-	   			bson.E{Key: "detailed_information_on_filtering.size_files_meet_filter_parameters", Value: ftp.SizeFilesToBeFiltered},
-	   			bson.E{Key: "detailed_information_on_filtering.size_files_found_result_filtering", Value: ftp.SizeFilesFound},
-	   			bson.E{Key: "detailed_information_on_filtering.path_directory_for_filtered_files", Value: ftp.PathStorageSource},
-	   			bson.E{Key: "detailed_information_on_filtering.list_files_found_result_filtering", Value: ftp.FoundFilesInformation},
-	   		}}}
+	for fileName, v := range ao.FoundFilesInformation {
+		arr = append(arr, bson.D{
+			bson.E{Key: "file_name", Value: fileName},
+			bson.E{Key: "file_size", Value: v.Size},
+			bson.E{Key: "file_hax", Value: v.Hex},
+		})
+	}
 
-	   	//запись информации по задачи фильтрации в коллекцию 'filter_task_list'
-	   	if _, err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, valueUpdate); err != nil {
-	   		msgRes.MsgRecipient = "Core module"
-	   		msgRes.MsgSection = "error notification"
-	   		msgRes.AdvancedOptions = configure.ErrorNotification{
-	   			SourceReport:          "DB module",
-	   			HumanDescriptionError: "error writing tasks for filtering in the application database",
-	   			ErrorBody:             err,
-	   		}
+	arrayValueUpdate := bson.D{
+		bson.E{
+			Key: "$addToSet", Value: bson.D{
+				bson.E{
+					Key: "detailed_information_on_filtering.list_files_found_result_filtering",
+					Value: bson.D{
+						bson.E{
+							Key:   "$each",
+							Value: arr,
+						},
+					},
+				},
+			},
+		},
+	}
 
-	   		chanIn <- &msgRes
+	//обновление информации об отфильтрованном файле
+	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: ao.TaskID}}, arrayValueUpdate); err != nil {
+		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-	   		return
-	   	}
-	*/
+		return
+	}
 }

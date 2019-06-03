@@ -83,7 +83,9 @@ func createNewFiltrationTask(
 			},
 		},
 		DetailedInformationOnFiltering: configure.DetailedInformationFiltering{
-			TaskStatus: "wait",
+			TaskStatus:                    "wait",
+			ListFilesFoundResultFiltering: []*configure.InformationFilesFoundResultFiltering{},
+			WasIndexUsed:                  true,
 		},
 	}
 
@@ -109,10 +111,10 @@ func updateFiltrationTaskParameters(
 	taskID string,
 	ftp *configure.FiltrationTaskParameters) error {
 
-	valueUpdate := bson.D{
+	//обновление основной информации
+	commonValueUpdate := bson.D{
 		bson.E{Key: "$set", Value: bson.D{
 			bson.E{Key: "detailed_information_on_filtering.task_status", Value: ftp.Status},
-			bson.E{Key: "detailed_information_on_filtering.was_index_used", Value: ftp.UseIndex},
 			bson.E{Key: "detailed_information_on_filtering.time_interval_task_execution.end", Value: time.Now().Unix()},
 			bson.E{Key: "detailed_information_on_filtering.number_files_meet_filter_parameters", Value: ftp.NumberFilesToBeFiltered},
 			bson.E{Key: "detailed_information_on_filtering.number_processed_files", Value: ftp.NumberFilesProcessed},
@@ -121,11 +123,43 @@ func updateFiltrationTaskParameters(
 			bson.E{Key: "detailed_information_on_filtering.size_files_meet_filter_parameters", Value: ftp.SizeFilesToBeFiltered},
 			bson.E{Key: "detailed_information_on_filtering.size_files_found_result_filtering", Value: ftp.SizeFilesFound},
 			bson.E{Key: "detailed_information_on_filtering.path_directory_for_filtered_files", Value: ftp.PathStorageSource},
-			bson.E{Key: "detailed_information_on_filtering.list_files_found_result_filtering", Value: ftp.FoundFilesInformation},
+
+			//			bson.E{Key: "detailed_information_on_filtering.list_files_found_result_filtering", Value: ftp.FoundFilesInformation},
 		}}}
 
 	//обновляем детальную информацию о ходе фильтрации
-	if err := updateOne(connectDB, "isems-nih", "filter_task_list", bson.D{bson.E{Key: "task_id", Value: taskID}}, valueUpdate); err != nil {
+	if err := updateOne(connectDB, "isems-nih", "filter_task_list", bson.D{bson.E{Key: "task_id", Value: taskID}}, commonValueUpdate); err != nil {
+		return err
+	}
+
+	arr := []interface{}{}
+
+	for fileName, v := range ftp.FoundFilesInformation {
+		arr = append(arr, bson.D{
+			bson.E{Key: "file_name", Value: fileName},
+			bson.E{Key: "file_size", Value: v.Size},
+			bson.E{Key: "file_hax", Value: v.Hex},
+		})
+	}
+
+	arrayValueUpdate := bson.D{
+		bson.E{
+			Key: "$addToSet", Value: bson.D{
+				bson.E{
+					Key: "detailed_information_on_filtering.list_files_found_result_filtering",
+					Value: bson.D{
+						bson.E{
+							Key:   "$each",
+							Value: arr,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	//обновление информации об отфильтрованном файле
+	if err := updateMany(connectDB, "isems-nih", "filter_task_list", bson.D{bson.E{Key: "task_id", Value: taskID}}, arrayValueUpdate); err != nil {
 		return err
 	}
 
@@ -141,6 +175,21 @@ func updateOne(
 
 	collection := connectDB.Database(nameDB).Collection(nameCollection)
 	if _, err := collection.UpdateOne(context.TODO(), searchElem, update); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func updateMany(
+	connectDB *mongo.Client,
+	nameDB, nameCollection string,
+	searchElem, update interface{}) error {
+
+	fmt.Println("===== UPDATE MANY ======")
+
+	collection := connectDB.Database(nameDB).Collection(nameCollection)
+	if _, err := collection.UpdateMany(context.TODO(), searchElem, update); err != nil {
 		return err
 	}
 
@@ -239,6 +288,32 @@ var _ = Describe("InteractionDataBase", func() {
 			}
 
 			err := updateFiltrationTaskParameters(conn, taskID, &parameters)
+
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
+	Context("Тест 4: Проверка записи информации о найденном файле, если информация о нем уже существует в БД", func() {
+		It("Информация о файле должна быть успешно обновлена", func() {
+			parameters := configure.FiltrationTaskParameters{
+				ID:                       189,
+				Status:                   "execute",
+				NumberFilesToBeFiltered:  331,
+				SizeFilesToBeFiltered:    472435353569055,
+				CountDirectoryFiltartion: 4,
+				NumberFilesProcessed:     22,
+				NumberFilesFound:         5,
+				SizeFilesFound:           32455311111,
+				PathStorageSource:        "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
+				FoundFilesInformation: map[string]*configure.FoundFilesInformation{
+					"1438535555_2015_08_02____20_10_11_644263.tdp": &configure.FoundFilesInformation{
+						Size: 98765432100,
+						Hex:  "ffffffff9339993",
+					},
+				},
+			}
+
+			err := updateFiltrationTaskParameters(conn, "ea9e9a0d2e9706bce846171379cbe020", &parameters)
 
 			Expect(err).ToNot(HaveOccurred())
 		})
