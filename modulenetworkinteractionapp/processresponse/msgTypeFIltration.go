@@ -10,11 +10,13 @@ import (
 
 //ProcessingReceivedMsgTypeFiltering обработка сообщений связанных с фильтрацией файлов
 func ProcessingReceivedMsgTypeFiltering(
-	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
+	cwtRes chan<- configure.MsgWsTransmission,
 	isl *configure.InformationSourcesList,
 	smt *configure.StoringMemoryTask,
 	message *[]byte,
 	sourceID int,
+	sourceIP string,
+	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
 	cwtReq <-chan configure.MsgWsTransmission) {
 
 	fmt.Println("START function 'ProcessingReceivedMsgTypeFilteringn'...")
@@ -28,115 +30,72 @@ func ProcessingReceivedMsgTypeFiltering(
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
 
-	switch resMsg.Info.TaskStatus {
-	case "execute":
-		/* Просто отправляем в ядро, а от туда в БД и клиенту API */
+	//записываем в память приложения информацию о выполняемой задаче
+	ffi := make(map[string]*configure.FoundFilesInformation, len(resMsg.Info.FoundFilesInformation))
+	for n, v := range resMsg.Info.FoundFilesInformation {
+		ffi[n] = &configure.FoundFilesInformation{
+			Size: v.Size,
+			Hex:  v.Hex,
+		}
+	}
 
-		chanInCore <- &configure.MsgBetweenCoreAndNI{
-			TaskID:          resMsg.Info.TaskID,
-			Section:         "filtration control",
-			Command:         "execute",
-			SourceID:        sourceID,
-			AdvancedOptions: resMsg,
+	ftp := configure.FiltrationTaskParameters{
+		ID:                              sourceID,
+		Status:                          resMsg.Info.TaskStatus,
+		NumberFilesMeetFilterParameters: resMsg.Info.NumberFilesMeetFilterParameters,
+		NumberProcessedFiles:            resMsg.Info.NumberProcessedFiles,
+		NumberFilesFoundResultFiltering: resMsg.Info.NumberFilesFoundResultFiltering,
+		NumberDirectoryFiltartion:       resMsg.Info.NumberDirectoryFiltartion,
+		NumberErrorProcessedFiles:       resMsg.Info.NumberErrorProcessedFiles,
+		SizeFilesMeetFilterParameters:   resMsg.Info.SizeFilesMeetFilterParameters,
+		SizeFilesFoundResultFiltering:   resMsg.Info.SizeFilesFoundResultFiltering,
+		PathStorageSource:               resMsg.Info.PathStorageSource,
+		FoundFilesInformation:           ffi,
+	}
+
+	//обновляем информацию о выполняемой задаче в памяти приложения
+	smt.UpdateTaskFiltrationAllParameters(resMsg.Info.TaskID, ftp)
+
+	msg := &configure.MsgBetweenCoreAndNI{
+		TaskID:   resMsg.Info.TaskID,
+		Section:  "filtration control",
+		Command:  resMsg.Info.TaskStatus,
+		SourceID: sourceID,
+	}
+
+	if resMsg.Info.TaskStatus == "execute" {
+		//Просто отправляем в ядро, а от туда в БД и клиенту API
+		chanInCore <- msg
+
+		return
+	}
+
+	//если тип сообщения "stop" или "complite"
+
+	//отправка информации только после получения всех частей
+	if resMsg.Info.NumberMessagesParts[0] == resMsg.Info.NumberMessagesParts[1] {
+		//Просто отправляем в ядро, а от туда в БД и клиенту API
+		chanInCore <- msg
+
+		resConfirmComplite := configure.MsgTypeFiltrationControl{
+			MsgType: "filtration",
+			Info: configure.SettingsFiltrationControl{
+				TaskID:  resMsg.Info.TaskID,
+				Command: "confirm complite",
+			},
 		}
 
-	case "stop":
+		msgJSON, err := json.Marshal(resConfirmComplite)
+		if err != nil {
+			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-		ffi := make(map[string]*configure.FoundFilesInformation{}, len(resMsg.Info.FoundFilesInformation))
-		for n, v := range resMsg.Info.FoundFilesInformation {
-			ffi[n] = &configure.FoundFilesInformation{
-				Size: v.Size,
-				Hex:  v.Hex,
-			}
+			return
 		}
 
-		if resMsg.Info.NumberMessagesParts[1] > 0 {
-			smt.UpdateTaskFiltrationFilesList(resMsg.Info.TaskID, ffi)
+		//отправляем источнику сообщение типа 'confirm complite' для того что бы подтвердить останов задачи
+		cwtRes <- configure.MsgWsTransmission{
+			DestinationHost: sourceIP,
+			Data:            &msgJSON,
 		}
-
-		if resMsg.Info.NumberMessagesParts[0] == resMsg.Info.NumberMessagesParts[1] {
-			td, ok := smt.GetStoringMemoryTask(resMsg.Info.TaskID)
-			if !ok {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", resMsg.Info.TaskID))
-
-				return
-			}
-
-			//проверяем общее кол-во найденных файлов
-			if len(td.TaskParameter.FiltrationTask.FoundFilesInformation) != resMsg.Info.NumberFilesFoundResultFiltering {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("the number of files in the list does not match the total number of files found as a result of filtering (task ID %v)", resMsg.Info.TaskID))
-			}
-
-		}
-
-		/*
-		   Тоже самое что и при 'execute', но с начала объединяем все списки
-		   файлов найденных в результате фильтрации в один и отправляем сообщение
-		   'confirm complite'
-		*/
-
-	case "complite":
-
-		/*
-			Тоже самое что и при 'execute', но с начала объединяем все списки
-			файлов найденных в результате фильтрации в один и отправляем сообщение
-			'confirm complite'
-		*/
-
 	}
 }
-
-/*
-
-	!!! ВНИМАНИЕ !!!
-	При получении сообщения о завершении фильтрации, 'stop' или 'complite'
-	и сборке всего списка файлов полученного в результате фильтрации,
-	то есть обработать параметр 'NumberMessagesFrom' [2]int
-	ОТПРАВИТЬ сообщение "confirm complite" что бы удалить задачу на
-	стороне ISEMS-NIH_slave
-
-		//конвертирование принятой информации из формата JSON
-
-						//запись информации о ходе выполнения задачи в память
-						smt.UpdateTaskFiltrationAllParameters(taskID, configure.FiltrationTaskParameters{
-							ID:                       190,
-							Status:                   "execute",
-							NumberFilesToBeFiltered:  231,
-							SizeFilesToBeFiltered:    4738959669055,
-							CountDirectoryFiltartion: 3,
-							NumberFilesProcessed:     12,
-							NumberFilesFound:         3,
-							SizeFilesFound:           0,
-							PathStorageSource:        "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
-							FoundFilesInformation: map[string]*configure.FoundFilesInformation{
-								"1438535410_2015_08_02____20_10_10_644263.tdp": &configure.FoundFilesInformation{
-									Size: 1448375,
-									Hex:  "fj9j939j9t88232",
-								},
-							},
-						})
-
-						//формируем из ответа от ISEMS_NIH_slave
-					dif := configure.DetailedInformationFiltering{
-						TaskStatus                      string
-						TimeIntervalTaskExecution       TimeInterval
-						WasIndexUsed                    bool
-						NumberFilesMeetFilterParameters int
-						NumberProcessedFiles            int
-						NumberFilesFoundResultFiltering int
-						NumberDirectoryFiltartion       int
-						SizeFilesMeetFilterParameters   int64
-						SizeFilesFoundResultFiltering   int64
-						PathDirectoryForFilteredFiles   string
-						ListFilesFoundResultFiltering   []*InformationFilesFoundResultFiltering
-					}
-
-						//отправка инофрмации на запись в БД
-						chanInCore<-&configure.MsgBetweenCoreAndDB{
-							Section:         "filtration",
-						Command:         "update",
-						SourceID:        sourceID,
-						TaskID: "получаем из ответа ISEMS_NIH_slave",
-						AdvancedOptions: dif,
-						}
-*/

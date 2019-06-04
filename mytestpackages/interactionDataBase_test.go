@@ -116,14 +116,14 @@ func updateFiltrationTaskParameters(
 		bson.E{Key: "$set", Value: bson.D{
 			bson.E{Key: "detailed_information_on_filtering.task_status", Value: ftp.Status},
 			bson.E{Key: "detailed_information_on_filtering.time_interval_task_execution.end", Value: time.Now().Unix()},
-			bson.E{Key: "detailed_information_on_filtering.number_files_meet_filter_parameters", Value: ftp.NumberFilesToBeFiltered},
-			bson.E{Key: "detailed_information_on_filtering.number_processed_files", Value: ftp.NumberFilesProcessed},
-			bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: ftp.NumberFilesFound},
-			bson.E{Key: "detailed_information_on_filtering.number_directory_filtartion", Value: ftp.CountDirectoryFiltartion},
-			bson.E{Key: "detailed_information_on_filtering.size_files_meet_filter_parameters", Value: ftp.SizeFilesToBeFiltered},
-			bson.E{Key: "detailed_information_on_filtering.size_files_found_result_filtering", Value: ftp.SizeFilesFound},
+			bson.E{Key: "detailed_information_on_filtering.number_files_meet_filter_parameters", Value: ftp.NumberFilesMeetFilterParameters},
+			bson.E{Key: "detailed_information_on_filtering.number_processed_files", Value: ftp.NumberProcessedFiles},
+			bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: ftp.NumberFilesFoundResultFiltering},
+			bson.E{Key: "detailed_information_on_filtering.number_directory_filtartion", Value: ftp.NumberDirectoryFiltartion},
+			bson.E{Key: "detailed_information_on_filtering.number_error_processed_files", Value: ftp.NumberErrorProcessedFiles},
+			bson.E{Key: "detailed_information_on_filtering.size_files_meet_filter_parameters", Value: ftp.SizeFilesMeetFilterParameters},
+			bson.E{Key: "detailed_information_on_filtering.size_files_found_result_filtering", Value: ftp.SizeFilesFoundResultFiltering},
 			bson.E{Key: "detailed_information_on_filtering.path_directory_for_filtered_files", Value: ftp.PathStorageSource},
-
 			//			bson.E{Key: "detailed_information_on_filtering.list_files_found_result_filtering", Value: ftp.FoundFilesInformation},
 		}}}
 
@@ -247,26 +247,17 @@ var _ = Describe("InteractionDataBase", func() {
 
 	Context("Тест 3: Обновление информации о параметрах по задачи на фильтрацию сет. трафика", func() {
 		It("Информация о параметрах фильтрации должна быть успешно обновлена", func() {
-
-			// NumberFilesMeetFilterParameters - кол-во файлов удовлетворяющих параметрам фильтрации
-			// NumberProcessedFiles - кол-во обработанных файлов
-			// NumberFilesFoundResultFiltering - кол-во найденных, в результате фильтрации, файлов
-			// NumberDirectoryFiltartion - кол-во директорий по которым выполняется фильтрация
-			// SizeFilesMeetFilterParameters - общий размер файлов (в байтах) удовлетворяющих параметрам фильтрации
-			// SizeFilesFoundResultFiltering - общий размер найденных, в результате фильтрации, файлов (в байтах)
-			// PathDirectoryForFilteredFiles - путь к директории в которой хранятся отфильтрованные файлы
-			// ListFilesFoundResultFiltering - список файлов найденных в результате фильтрации
-
 			parameters := configure.FiltrationTaskParameters{
-				ID:                       189,
-				Status:                   "execute",
-				NumberFilesToBeFiltered:  331,
-				SizeFilesToBeFiltered:    472435353569055,
-				CountDirectoryFiltartion: 4,
-				NumberFilesProcessed:     22,
-				NumberFilesFound:         5,
-				SizeFilesFound:           32455311111,
-				PathStorageSource:        "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
+				ID:                              189,
+				Status:                          "execute",
+				NumberFilesMeetFilterParameters: 331,
+				SizeFilesMeetFilterParameters:   472435353569055,
+				NumberDirectoryFiltartion:       4,
+				NumberProcessedFiles:            22,
+				NumberFilesFoundResultFiltering: 5,
+				NumberErrorProcessedFiles:       0,
+				SizeFilesFoundResultFiltering:   32455311111,
+				PathStorageSource:               "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
 				FoundFilesInformation: map[string]*configure.FoundFilesInformation{
 					"1438535410_2015_08_02____20_10_10_644263.tdp": &configure.FoundFilesInformation{
 						Size: 456577876,
@@ -296,15 +287,16 @@ var _ = Describe("InteractionDataBase", func() {
 	Context("Тест 4: Проверка записи информации о найденном файле, если информация о нем уже существует в БД", func() {
 		It("Информация о файле должна быть успешно обновлена", func() {
 			parameters := configure.FiltrationTaskParameters{
-				ID:                       189,
-				Status:                   "execute",
-				NumberFilesToBeFiltered:  331,
-				SizeFilesToBeFiltered:    472435353569055,
-				CountDirectoryFiltartion: 4,
-				NumberFilesProcessed:     22,
-				NumberFilesFound:         5,
-				SizeFilesFound:           32455311111,
-				PathStorageSource:        "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
+				ID:                              189,
+				Status:                          "execute",
+				NumberFilesMeetFilterParameters: 331,
+				SizeFilesMeetFilterParameters:   472435353569055,
+				NumberDirectoryFiltartion:       4,
+				NumberProcessedFiles:            22,
+				NumberFilesFoundResultFiltering: 5,
+				NumberErrorProcessedFiles:       0,
+				SizeFilesFoundResultFiltering:   32455311111,
+				PathStorageSource:               "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
 				FoundFilesInformation: map[string]*configure.FoundFilesInformation{
 					"1438535555_2015_08_02____20_10_11_644263.tdp": &configure.FoundFilesInformation{
 						Size: 98765432100,

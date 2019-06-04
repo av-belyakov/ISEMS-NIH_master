@@ -133,7 +133,8 @@ func CreateNewFiltrationTask(
 func UpdateParametersFiltrationTask(
 	chanIn chan<- *configure.MsgBetweenCoreAndDB,
 	req *configure.MsgBetweenCoreAndDB,
-	qp QueryParameters) {
+	qp QueryParameters,
+	smt *configure.StoringMemoryTask) {
 
 	fmt.Println("START function 'UpdateParametersFiltrationTask'...")
 
@@ -148,7 +149,6 @@ func UpdateParametersFiltrationTask(
 		return
 	}
 
-	//обновление основной информации
 	commonValueUpdate := bson.D{
 		bson.E{Key: "$set", Value: bson.D{
 			bson.E{Key: "detailed_information_on_filtering.task_status", Value: ao.TaskStatus},
@@ -172,13 +172,46 @@ func UpdateParametersFiltrationTask(
 
 	arr := []interface{}{}
 
-	for fileName, v := range ao.FoundFilesInformation {
-		arr = append(arr, bson.D{
-			bson.E{Key: "file_name", Value: fileName},
-			bson.E{Key: "file_size", Value: v.Size},
-			bson.E{Key: "file_hax", Value: v.Hex},
-		})
+	//если сообщение имеет статус 'execute'
+	if ao.TaskStatus == "execute" {
+		for fileName, v := range ao.FoundFilesInformation {
+			arr = append(arr, bson.D{
+				bson.E{Key: "file_name", Value: fileName},
+				bson.E{Key: "file_size", Value: v.Size},
+				bson.E{Key: "file_hax", Value: v.Hex},
+			})
+		}
 	}
+
+	//если сообщение имеет статусы 'stop' или 'complite'
+	if ao.TaskStatus == "stop" || ao.TaskStatus == "complite" {
+
+	}
+
+	/*
+
+	   td, ok := smt.GetStoringMemoryTask(resMsg.Info.TaskID)
+	   			if !ok {
+	   				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", resMsg.Info.TaskID))
+
+	   				return
+	   			}
+
+	   		numFoundFiles := len(td.TaskParameter.FiltrationTask.FoundFilesInformation)
+	   			//проверяем общее кол-во найденных файлов
+	   			if numFoundFiles != resMsg.Info.NumberFilesFoundResultFiltering {
+	   				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("the number of files in the list does not match the total number of files found as a result of filtering (task ID %v)", resMsg.Info.TaskID))
+	   			}
+	   		}
+
+	   //конвертируем список файлов в подходящий для записи в БД
+	   newListFoundFiles := make(map[string]*configure.InputFilesInformation, numFoundFiles)
+	   for n, v := range td.TaskParameter.FiltrationTask.FoundFilesInformation {
+	   	newListFoundFiles[n] = &configure.InputFilesInformation{
+	   		Size: v.Size,
+	   		Hex: v.Hex,
+	   	}
+	*/
 
 	arrayValueUpdate := bson.D{
 		bson.E{
@@ -202,4 +235,5 @@ func UpdateParametersFiltrationTask(
 
 		return
 	}
+
 }

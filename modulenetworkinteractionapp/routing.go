@@ -181,7 +181,7 @@ func RouteWssConnectionResponse(
 		case "filtration":
 			fmt.Println("RESIVED message type 'FILTRATION' from IP", sourceIP)
 
-			go processresponse.ProcessingReceivedMsgTypeFiltering(chanInCore, isl, smt, message, sourceID, cwtReq)
+			go processresponse.ProcessingReceivedMsgTypeFiltering(cwtRes, isl, smt, message, sourceID, sourceIP, chanInCore, cwtReq)
 
 		case "download files":
 

@@ -160,7 +160,7 @@ type TimeIntervalTaskExecution struct {
 
 //FoundFilesInformation подробная информация о файлах
 type FoundFilesInformation struct {
-	Size     uint64
+	Size     int64
 	Hex      string
 	IsLoaded bool
 }
@@ -169,26 +169,28 @@ type FoundFilesInformation struct {
 // ID - уникальный цифровой идентификатор источника
 // Status - статус задачи 'wait'/'refused'/'execute'/'completed'/'stop' ('ожидает' / 'отклонена' / 'выполняется' / 'завершена' / 'остановлена')
 // UseIndex - используется ли индекс для поиска файлов
-// NumberFilesToBeFiltered - количество файлов подходящих под параметры фильтрации
-// SizeFilesToBeFiltered — общий размер файлов подходящих под параметры фильтрации
-// CountDirectoryFiltartion — количество директорий по которым выполняется фильт.
-// NumberFilesProcessed — количество обработанных файлов
-// NumberFilesFound — количество найденных файлов
-// SizeFilesFound — общий размер найденных файлов
+// NumberFilesMeetFilterParameters - кол-во файлов удовлетворяющих параметрам фильтрации
+// NumberProcessedFiles - кол-во обработанных файлов
+// NumberFilesFoundResultFiltering - кол-во найденных, в результате фильтрации, файлов
+// NumberDirectoryFiltartion - кол-во директорий по которым выполняется фильтрация
+// NumberErrorProcessedFiles - кол-во не обработанных файлов или файлов обработанных с ошибками
+// SizeFilesMeetFilterParameters - общий размер файлов (в байтах) удовлетворяющих параметрам фильтрации
+// SizeFilesFoundResultFiltering - общий размер найденных, в результате фильтрации, файлов (в байтах)
 // PathStorageSource — путь до директории в которой сохраняются файлы при
 // FoundFilesInformation - информация о файлах, ключ - имя файла
 type FiltrationTaskParameters struct {
-	ID                       int
-	Status                   string
-	UseIndex                 bool
-	NumberFilesToBeFiltered  int
-	SizeFilesToBeFiltered    uint64
-	CountDirectoryFiltartion int
-	NumberFilesProcessed     int
-	NumberFilesFound         int
-	SizeFilesFound           uint64
-	PathStorageSource        string
-	FoundFilesInformation    map[string]*FoundFilesInformation
+	ID                              int
+	Status                          string
+	UseIndex                        bool
+	NumberFilesMeetFilterParameters int
+	NumberProcessedFiles            int
+	NumberFilesFoundResultFiltering int
+	NumberDirectoryFiltartion       int
+	NumberErrorProcessedFiles       int
+	SizeFilesMeetFilterParameters   int64
+	SizeFilesFoundResultFiltering   int64
+	PathStorageSource               string
+	FoundFilesInformation           map[string]*FoundFilesInformation
 }
 
 //DownloadTaskParameters параметры задачи по скачиванию файлов
@@ -250,9 +252,12 @@ func NewRepositorySMT() *StoringMemoryTask {
 			case "update task filtration all parameters":
 				smt.updateTaskFiltrationAllParameters(msg.TaskID, msg.Description)
 
-			case "update task filtration files list":
+				msg.ChannelRes <- channelResSettings{
+					TaskID: msg.TaskID,
+				}
+				/*case "update task filtration files list":
 				smt.updateTaskFiltrationFilesList(msg.TaskID, msg.Description)
-
+				*/
 			}
 		}
 	}()
@@ -328,20 +333,29 @@ func (smt StoringMemoryTask) GetAllStoringMemoryTask(clientID string) []string {
 }
 
 //UpdateTaskFiltrationAllParameters управление задачами по фильтрации
-func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, fp FiltrationTaskParameters) {
+func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, ftp FiltrationTaskParameters) {
+	chanRes := make(chan channelResSettings)
+
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "update task filtration all parameters",
 		TaskID:     taskID,
 		Description: &TaskDescription{
 			TaskParameter: DescriptionTaskParameters{
-				FiltrationTask: fp,
+				FiltrationTask: ftp,
 			},
 		},
+		ChannelRes: chanRes,
+	}
+
+	for task := range chanRes {
+		if task.TaskID == taskID {
+			break
+		}
 	}
 }
 
 //UpdateTaskFiltrationFilesList обновление списка файлов полученных в результате фильтрации
-func (smt *StoringMemoryTask) UpdateTaskFiltrationFilesList(taskID string, filesList map[string]*FoundFilesInformation) {
+/*func (smt *StoringMemoryTask) UpdateTaskFiltrationFilesList(taskID string, filesList map[string]*FoundFilesInformation) {
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "update task filtration files list",
 		TaskID:     taskID,
@@ -353,7 +367,7 @@ func (smt *StoringMemoryTask) UpdateTaskFiltrationFilesList(taskID string, files
 			},
 		},
 	}
-}
+}*/
 
 func (smt *StoringMemoryTask) updateTaskFiltrationAllParameters(taskID string, td *TaskDescription) {
 	if _, ok := smt.tasks[taskID]; !ok {
@@ -363,19 +377,31 @@ func (smt *StoringMemoryTask) updateTaskFiltrationAllParameters(taskID string, t
 	//изменяем время окончания задачи
 	smt.tasks[taskID].TimeInterval.End = time.Now().Unix()
 
-	//получаем список файлов
-	listFoundFiles := smt.tasks[taskID].TaskParameter.FiltrationTask.FoundFilesInformation
+	ft := smt.tasks[taskID].TaskParameter.FiltrationTask
+	nft := td.TaskParameter.FiltrationTask
 
-	foundFiles := td.TaskParameter.FiltrationTask.FoundFilesInformation
-	for fname, fsize := range foundFiles {
-		listFoundFiles[fname] = fsize
+	for n, v := range nft.FoundFilesInformation {
+		ft.FoundFilesInformation[n] = &FoundFilesInformation{
+			Size: v.Size,
+			Hex:  v.Hex,
+		}
 	}
 
-	td.TaskParameter.FiltrationTask.FoundFilesInformation = listFoundFiles
-	smt.tasks[taskID].TaskParameter.FiltrationTask = td.TaskParameter.FiltrationTask
+	ft.NumberFilesMeetFilterParameters = nft.NumberFilesMeetFilterParameters
+	ft.NumberFilesFoundResultFiltering = nft.NumberFilesFoundResultFiltering
+	ft.NumberErrorProcessedFiles = nft.NumberErrorProcessedFiles
+	ft.NumberDirectoryFiltartion = nft.NumberDirectoryFiltartion
+	ft.NumberProcessedFiles = nft.NumberProcessedFiles
+	ft.SizeFilesMeetFilterParameters = nft.SizeFilesMeetFilterParameters
+	ft.SizeFilesFoundResultFiltering = nft.SizeFilesFoundResultFiltering
+	ft.PathStorageSource = nft.PathStorageSource
+	ft.Status = nft.Status
+	ft.ID = nft.ID
+
+	smt.tasks[taskID].TaskParameter.FiltrationTask = ft
 }
 
-func (smt *StoringMemoryTask) updateTaskFiltrationFilesList(taskID string, td *TaskDescription) {
+/*func (smt *StoringMemoryTask) updateTaskFiltrationFilesList(taskID string, td *TaskDescription) {
 	if _, ok := smt.tasks[taskID]; !ok {
 		return
 	}
@@ -387,7 +413,7 @@ func (smt *StoringMemoryTask) updateTaskFiltrationFilesList(taskID string, td *T
 	for n, v := range filesList {
 		smt.tasks[taskID].TaskParameter.FiltrationTask.FoundFilesInformation[n] = v
 	}
-}
+}*/
 
 /* управление задачами по скачиванию файлов */
 
