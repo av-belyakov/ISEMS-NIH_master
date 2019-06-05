@@ -167,7 +167,6 @@ func handlerFiltrationControlTypeStart(
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
-
 	funcName := ", function 'handlerFiltrationControlTypeStart'"
 
 	if msg, ok := сheckParametersFiltration(&fcts.MsgOption); !ok {

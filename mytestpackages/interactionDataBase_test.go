@@ -159,7 +159,7 @@ func updateFiltrationTaskParameters(
 	}
 
 	//обновление информации об отфильтрованном файле
-	if err := updateMany(connectDB, "isems-nih", "filter_task_list", bson.D{bson.E{Key: "task_id", Value: taskID}}, arrayValueUpdate); err != nil {
+	if err := updateOne(connectDB, "isems-nih", "filter_task_list", bson.D{bson.E{Key: "task_id", Value: taskID}}, arrayValueUpdate); err != nil {
 		return err
 	}
 
@@ -184,7 +184,7 @@ func updateOne(
 func updateMany(
 	connectDB *mongo.Client,
 	nameDB, nameCollection string,
-	searchElem, update interface{}) error {
+	searchElem, update []interface{}) error {
 
 	fmt.Println("===== UPDATE MANY ======")
 

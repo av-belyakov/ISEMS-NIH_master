@@ -23,14 +23,12 @@ func ProcessingReceivedMsgTypeFiltering(
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
-
 	resMsg := configure.MsgTypeFiltration{}
 
 	if err := json.Unmarshal(*message, &resMsg); err != nil {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
 
-	//записываем в память приложения информацию о выполняемой задаче
 	ffi := make(map[string]*configure.FoundFilesInformation, len(resMsg.Info.FoundFilesInformation))
 	for n, v := range resMsg.Info.FoundFilesInformation {
 		ffi[n] = &configure.FoundFilesInformation{
@@ -74,7 +72,8 @@ func ProcessingReceivedMsgTypeFiltering(
 
 	//отправка информации только после получения всех частей
 	if resMsg.Info.NumberMessagesParts[0] == resMsg.Info.NumberMessagesParts[1] {
-		//Просто отправляем в ядро, а от туда в БД и клиенту API
+
+		//просто отправляем в ядро, а от туда в БД и клиенту API
 		chanInCore <- msg
 
 		resConfirmComplite := configure.MsgTypeFiltrationControl{

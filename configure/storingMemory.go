@@ -332,6 +332,27 @@ func (smt StoringMemoryTask) GetAllStoringMemoryTask(clientID string) []string {
 	return foundTask
 }
 
+//GetStoringMemoryTaskForClientID получить всю инофрмацию о задаче по ID клиента
+func (smt StoringMemoryTask) GetStoringMemoryTaskForClientID(clientID, ClientTaskID string) (string, *TaskDescription, bool) {
+	listTask := smt.GetAllStoringMemoryTask(clientID)
+	if len(listTask) == 0 {
+		return "", nil, false
+	}
+
+	for _, id := range listTask {
+		info, ok := smt.GetStoringMemoryTask(id)
+		if !ok {
+			continue
+		}
+
+		if info.ClientTaskID == ClientTaskID {
+			return id, info, true
+		}
+	}
+
+	return "", nil, false
+}
+
 //UpdateTaskFiltrationAllParameters управление задачами по фильтрации
 func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, ftp FiltrationTaskParameters) {
 	chanRes := make(chan channelResSettings)

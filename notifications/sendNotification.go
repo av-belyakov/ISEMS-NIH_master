@@ -7,6 +7,9 @@ import (
 )
 
 //NotificationSettingsToClientAPI параметры сообщения отправляемые клиенту API
+// MsgType - тип сообщения ('info'/'success'/'warning'/'danger')
+// MsgDescription - подробное описание сообщения
+// Sources - список ID источников к которым оно относится
 type NotificationSettingsToClientAPI struct {
 	MsgType, MsgDescription string
 	Sources                 []int

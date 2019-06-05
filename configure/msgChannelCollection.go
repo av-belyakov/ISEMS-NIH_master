@@ -93,11 +93,12 @@ type MsgBetweenCoreAndAPI struct {
 //  - 'message notification'
 //  - 'information search'
 // Insturction:
-//  - insert
-//  - find
-//  - find_all
-//  - update
-//  - delete
+//  - insert (Core->DB)
+//  - find (Core->DB)
+//  - find_all (Core->DB)
+//  - update (Core->DB)
+//  - delete (Core->DB)
+//  - 'filtration complite' (DB->Core)
 // IDClientAPI - уникальный идентификатор клиента API
 // TaskID - уникальный идентификатор задачи присвоенный ядром приложения
 type MsgBetweenCoreAndDB struct {

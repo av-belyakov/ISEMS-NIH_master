@@ -140,78 +140,46 @@ func UpdateParametersFiltrationTask(
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
-	funcName := ", function 'UpdateParametersFiltrationTask'"
 
-	ao, ok := req.AdvancedOptions.(configure.DetailInfoMsgFiltration)
+	//получаем всю информацию по выполняемой задаче
+	taskInfo, ok := smt.GetStoringMemoryTask(req.TaskID)
 	if !ok {
-		_ = saveMessageApp.LogMessage("error", "type conversion error"+funcName)
+		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", req.TaskID))
 
 		return
 	}
 
+	ti := taskInfo.TaskParameter.FiltrationTask
+
+	//обновление основной информации
 	commonValueUpdate := bson.D{
 		bson.E{Key: "$set", Value: bson.D{
-			bson.E{Key: "detailed_information_on_filtering.task_status", Value: ao.TaskStatus},
+			bson.E{Key: "detailed_information_on_filtering.task_status", Value: ti.Status},
 			bson.E{Key: "detailed_information_on_filtering.time_interval_task_execution.end", Value: time.Now().Unix()},
-			bson.E{Key: "detailed_information_on_filtering.number_files_meet_filter_parameters", Value: ao.NumberFilesMeetFilterParameters},
-			bson.E{Key: "detailed_information_on_filtering.number_processed_files", Value: ao.NumberProcessedFiles},
-			bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: ao.NumberFilesFoundResultFiltering},
-			bson.E{Key: "detailed_information_on_filtering.number_error_processed_files", Value: ao.NumberErrorProcessedFiles},
-			bson.E{Key: "detailed_information_on_filtering.number_directory_filtartion", Value: ao.NumberDirectoryFiltartion},
-			bson.E{Key: "detailed_information_on_filtering.size_files_meet_filter_parameters", Value: ao.SizeFilesMeetFilterParameters},
-			bson.E{Key: "detailed_information_on_filtering.size_files_found_result_filtering", Value: ao.SizeFilesFoundResultFiltering},
-			bson.E{Key: "detailed_information_on_filtering.path_directory_for_filtered_files", Value: ao.PathStorageSource},
+			bson.E{Key: "detailed_information_on_filtering.number_files_meet_filter_parameters", Value: ti.NumberFilesMeetFilterParameters},
+			bson.E{Key: "detailed_information_on_filtering.number_processed_files", Value: ti.NumberProcessedFiles},
+			bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: ti.NumberFilesFoundResultFiltering},
+			bson.E{Key: "detailed_information_on_filtering.number_directory_filtartion", Value: ti.NumberDirectoryFiltartion},
+			bson.E{Key: "detailed_information_on_filtering.number_error_processed_files", Value: ti.NumberErrorProcessedFiles},
+			bson.E{Key: "detailed_information_on_filtering.size_files_meet_filter_parameters", Value: ti.SizeFilesMeetFilterParameters},
+			bson.E{Key: "detailed_information_on_filtering.size_files_found_result_filtering", Value: ti.SizeFilesFoundResultFiltering},
+			bson.E{Key: "detailed_information_on_filtering.path_directory_for_filtered_files", Value: ti.PathStorageSource},
 		}}}
 
 	//обновляем детальную информацию о ходе фильтрации
-	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: ao.TaskID}}, commonValueUpdate); err != nil {
+	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, commonValueUpdate); err != nil {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-		return
 	}
 
 	arr := []interface{}{}
 
-	//если сообщение имеет статус 'execute'
-	if ao.TaskStatus == "execute" {
-		for fileName, v := range ao.FoundFilesInformation {
-			arr = append(arr, bson.D{
-				bson.E{Key: "file_name", Value: fileName},
-				bson.E{Key: "file_size", Value: v.Size},
-				bson.E{Key: "file_hax", Value: v.Hex},
-			})
-		}
+	for n, v := range ti.FoundFilesInformation {
+		arr = append(arr, bson.D{
+			bson.E{Key: "file_name", Value: n},
+			bson.E{Key: "file_size", Value: v.Size},
+			bson.E{Key: "file_hax", Value: v.Hex},
+		})
 	}
-
-	//если сообщение имеет статусы 'stop' или 'complite'
-	if ao.TaskStatus == "stop" || ao.TaskStatus == "complite" {
-
-	}
-
-	/*
-
-	   td, ok := smt.GetStoringMemoryTask(resMsg.Info.TaskID)
-	   			if !ok {
-	   				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", resMsg.Info.TaskID))
-
-	   				return
-	   			}
-
-	   		numFoundFiles := len(td.TaskParameter.FiltrationTask.FoundFilesInformation)
-	   			//проверяем общее кол-во найденных файлов
-	   			if numFoundFiles != resMsg.Info.NumberFilesFoundResultFiltering {
-	   				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("the number of files in the list does not match the total number of files found as a result of filtering (task ID %v)", resMsg.Info.TaskID))
-	   			}
-	   		}
-
-	   //конвертируем список файлов в подходящий для записи в БД
-	   newListFoundFiles := make(map[string]*configure.InputFilesInformation, numFoundFiles)
-	   for n, v := range td.TaskParameter.FiltrationTask.FoundFilesInformation {
-	   	newListFoundFiles[n] = &configure.InputFilesInformation{
-	   		Size: v.Size,
-	   		Hex: v.Hex,
-	   	}
-	*/
 
 	arrayValueUpdate := bson.D{
 		bson.E{
@@ -230,10 +198,20 @@ func UpdateParametersFiltrationTask(
 	}
 
 	//обновление информации об отфильтрованном файле
-	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: ao.TaskID}}, arrayValueUpdate); err != nil {
+	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, arrayValueUpdate); err != nil {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-		return
 	}
 
+	//если статус задачи "stop" или "complite" через ядро останавливаем задачу и оповещаем пользователя
+	if ti.Status == "stop" || ti.Status == "complite" {
+		chanIn <- &configure.MsgBetweenCoreAndDB{
+			MsgGenerator:    "DB module",
+			MsgRecipient:    "API module",
+			MsgSection:      "filtration control",
+			Instruction:     "filtration complite",
+			IDClientAPI:     req.IDClientAPI,
+			TaskID:          req.TaskID,
+			TaskIDClientAPI: taskInfo.ClientTaskID,
+		}
+	}
 }

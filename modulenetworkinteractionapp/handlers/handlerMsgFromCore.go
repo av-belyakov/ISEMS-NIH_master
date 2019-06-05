@@ -7,6 +7,7 @@ package handlers
 * */
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"ISEMS-NIH_master/configure"
@@ -222,7 +223,7 @@ func HandlerMsgFromCore(
 					TypeActionPerformed:          "perform actions on sources",
 					CriticalityMessage:           "warning",
 					Sources:                      *listInvalidSource,
-					HumanDescriptionNotification: "невозможно выполнить действия над сенсорами:" + strSourceID + ", приняты некорректные значения",
+					HumanDescriptionNotification: "Невозможно выполнить действия над сенсорами:" + strSourceID + ", приняты некорректные значения",
 				}
 
 				chanInCore <- &clientNotify
@@ -353,14 +354,44 @@ func HandlerMsgFromCore(
 		}
 
 		if msg.Command == "stop" {
-			/*
-				//снять отслеживание выполнения задачи
-					chanInCore <- &configure.MsgBetweenCoreAndNI{
-						TaskID:  msg.TaskID,
-						Section: "monitoring task performance",
-						Command: "complete task",
+			if si, ok := isl.GetSourceSetting(msg.SourceID); ok {
+				//проверяем наличие подключения для заданного источника
+				if !si.ConnectionStatus {
+					//отправляем сообщение пользователю
+					clientNotify.AdvancedOptions = configure.MessageNotification{
+						SourceReport:                 "NI module",
+						Section:                      "filtration control",
+						TypeActionPerformed:          "stop",
+						CriticalityMessage:           "warning",
+						HumanDescriptionNotification: fmt.Sprintf("Не возможно отправить запрос на фильтрацию, источник с ID %v не подключен", msg.SourceID),
 					}
-			*/
+
+					chanInCore <- &clientNotify
+
+					return
+				}
+
+				reqTypeStop := configure.MsgTypeFiltrationControl{
+					MsgType: "filtration",
+					Info: configure.SettingsFiltrationControl{
+						TaskID:  msg.TaskID,
+						Command: "stop",
+					},
+				}
+
+				msgJSON, err := json.Marshal(reqTypeStop)
+				if err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+					return
+				}
+
+				//отправляем источнику сообщение типа 'confirm complite' для того что бы подтвердить останов задачи
+				cwt <- configure.MsgWsTransmission{
+					DestinationHost: si.IP,
+					Data:            &msgJSON,
+				}
+			}
 		}
 
 	case "download control":
