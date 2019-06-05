@@ -26,7 +26,7 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	chanCheckTask := smt.CheckTimeUpdateStoringMemoryTask(55)
 
 	//запуск подпрограммы для взаимодействия с БД
-	chanOutCoreDB, chanInCoreDB := moduledbinteraction.MainDBInteraction(appConf.ConnectionDB.NameDB, linkConnection)
+	chanOutCoreDB, chanInCoreDB := moduledbinteraction.MainDBInteraction(appConf.ConnectionDB.NameDB, linkConnection, smt)
 
 	//инициализация модуля для взаимодействия с API (обработчик внешних запросов)
 	chanOutCoreAPI, chanInCoreAPI := moduleapiapp.MainAPIApp(appConf)

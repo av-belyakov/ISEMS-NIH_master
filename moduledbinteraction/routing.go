@@ -3,7 +3,7 @@ package moduledbinteraction
 /*
 * Маршрутизация запросов получаемых через канал
 *
-* Версия 0.1, дата релиза 05.03.2019
+* Версия 0.2, дата релиза 05.06.2019
 * */
 
 import (
@@ -15,7 +15,9 @@ import (
 //RouteRequest маршрутизатор запросов
 func RouteRequest(
 	chanIn chan *configure.MsgBetweenCoreAndDB,
-	nameDB string, linkConnection *configure.MongoDBConnect,
+	nameDB string,
+	linkConnection *configure.MongoDBConnect,
+	smt *configure.StoringMemoryTask,
 	chanOut <-chan *configure.MsgBetweenCoreAndDB) {
 
 	fmt.Println("START module 'RouteRequest' (module DBInteraction)...")
@@ -33,9 +35,9 @@ func RouteRequest(
 		case "source telemetry":
 
 		case "filtration":
-			go wrapperFunc.WrapperFuncFiltration(msg)
-		case "dawnload":
-			go wrapperFunc.WrapperFuncDownload(msg)
+			go wrapperFunc.WrapperFuncFiltration(msg, smt)
+		case "download":
+			go wrapperFunc.WrapperFuncDownload(msg, smt)
 		case "error notification":
 
 		case "information search":

@@ -197,7 +197,7 @@ func RouteWssConnectionResponse(
 				return
 			}
 
-			clientNotify := &configure.MsgBetweenCoreAndNI{
+			clientNotify := configure.MsgBetweenCoreAndNI{
 				TaskID:   notify.Info.TaskID,
 				Section:  "message notification",
 				Command:  "send client API",
@@ -212,21 +212,23 @@ func RouteWssConnectionResponse(
 				},
 			}
 
-			chanInCore <- clientNotify
+			fmt.Printf("----- Message type 'NOTIFICATION' ------\n%v\n", clientNotify)
+
+			chanInCore <- &clientNotify
 
 		case "error":
 			fmt.Println("--- RESIVED MESSAGE TYPE 'ERROR' ---")
 			fmt.Println("------------------------------------")
 
 			var errMsg configure.MsgTypeError
-			err := json.Unmarshal(*message, errMsg)
+			err := json.Unmarshal(*message, &errMsg)
 			if err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 				return
 			}
 
-			errNotify := &configure.MsgBetweenCoreAndNI{
+			errNotify := configure.MsgBetweenCoreAndNI{
 				TaskID:   errMsg.Info.TaskID,
 				Section:  "error notification",
 				SourceID: sourceID,
@@ -238,7 +240,9 @@ func RouteWssConnectionResponse(
 				},
 			}
 
-			chanInCore <- errNotify
+			fmt.Printf("----- Message type 'ERROR' ------\n%v\n", errNotify)
+
+			chanInCore <- &errNotify
 		}
 	}
 

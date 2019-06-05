@@ -232,6 +232,8 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 				break
 			}
 
+			fmt.Printf("|||--- RESIVED MSG FROM client name %v ---|||", clientSettings.ClientName)
+
 			chn.ChanIn <- &configure.MsgBetweenCoreAndAPI{
 				MsgGenerator: "API module",
 				MsgRecipient: "Core module",
