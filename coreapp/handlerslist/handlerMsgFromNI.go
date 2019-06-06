@@ -33,7 +33,7 @@ func HandlerMsgFromNI(
 		smt.TimerUpdateStoringMemoryTask(msg.TaskID)
 	}
 
-	//	fmt.Printf("%v\n", msg)
+	fmt.Printf("%v\n", msg)
 
 	switch msg.Section {
 	case "source control":
@@ -156,9 +156,13 @@ func HandlerMsgFromNI(
 		fmt.Println("func 'HandlerMsgFromNI', section DOWNLOAD CONTROL")
 
 	case "error notification":
-		fmt.Println("func 'HandlerMsgFromNI', section ERROR NOTIFICATION")
+		fmt.Println("///******* func 'HandlerMsgFromNI', section ERROR NOTIFICATION /////")
+		fmt.Printf("++++ msg:%v, taskID: '%v'\n", msg, msg.TaskID)
 
 		if taskInfo == nil {
+
+			fmt.Printf("-------- ======= error notification, task ID == nil")
+
 			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", msg.TaskID))
 
 			return
@@ -166,32 +170,28 @@ func HandlerMsgFromNI(
 
 		ao, ok := msg.AdvancedOptions.(configure.ErrorNotification)
 		if !ok {
+
+			fmt.Printf("-------- ======= error notification, task ID == 'type conversion error'")
+
 			_ = saveMessageApp.LogMessage("error", "type conversion error"+funcName)
 
 			return
 		}
 
-		/*
-			!!! ВНИМАНИЕ !!!
-			Обработку ошибок я не доделал, по этому информация об ошибках не отправляется
-					   Обработка ошибок в зависимости от типов ошибок
-		*/
-		switch ao.ErrorName {
-		case "":
+		//записываем информацию об ошибках в лог приложения
+		_ = saveMessageApp.LogMessage("error", ao.HumanDescriptionError)
 
-		default:
-			//останавливаем выполнение задачи
-			smt.CompleteStoringMemoryTask(msg.TaskID)
-
-			//информационное сообщение пользователю
-			ns := notifications.NotificationSettingsToClientAPI{
-				MsgType:        "danger",
-				MsgDescription: ao.HumanDescriptionError,
-				Sources:        ao.Sources,
-			}
-
-			notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
+		//стандартное информационное сообщение пользователю
+		ns := notifications.NotificationSettingsToClientAPI{
+			MsgType:        "danger",
+			MsgDescription: "Непредвиденная ошибка, выполнение задачи остановлено. Подробнее о возникшей проблеме в логах администратора приложения.",
+			Sources:        ao.Sources,
 		}
+
+		notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
+
+		//останавливаем выполнение задачи
+		smt.CompleteStoringMemoryTask(msg.TaskID)
 
 	case "message notification":
 		fmt.Println("func 'HandlerMsgFromNI', section MESSAGE NOTIFICATION")

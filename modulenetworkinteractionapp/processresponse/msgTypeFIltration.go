@@ -61,8 +61,9 @@ func ProcessingReceivedMsgTypeFiltering(
 		SourceID: sourceID,
 	}
 
-	if resMsg.Info.TaskStatus == "execute" {
-		//Просто отправляем в ядро, а от туда в БД и клиенту API
+	//обычный ответ по задаче фильтрации
+	if (resMsg.Info.TaskStatus == "execute") || (resMsg.Info.TaskStatus == "rejected") {
+		//отправляем в ядро, а от туда в БД и клиенту API
 		chanInCore <- msg
 
 		return
@@ -73,7 +74,7 @@ func ProcessingReceivedMsgTypeFiltering(
 	//отправка информации только после получения всех частей
 	if resMsg.Info.NumberMessagesParts[0] == resMsg.Info.NumberMessagesParts[1] {
 
-		//просто отправляем в ядро, а от туда в БД и клиенту API
+		//отправляем в ядро, а от туда в БД и клиенту API
 		chanInCore <- msg
 
 		resConfirmComplite := configure.MsgTypeFiltrationControl{

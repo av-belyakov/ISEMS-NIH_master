@@ -228,6 +228,8 @@ func RouteWssConnectionResponse(
 				return
 			}
 
+			fmt.Printf("-+*+-+-*+\n%v\n-+*+-+-*+\n", errMsg)
+
 			errNotify := configure.MsgBetweenCoreAndNI{
 				TaskID:   errMsg.Info.TaskID,
 				Section:  "error notification",

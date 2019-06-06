@@ -202,16 +202,25 @@ func UpdateParametersFiltrationTask(
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
 
+	infoMsg := configure.MsgBetweenCoreAndDB{
+		MsgGenerator:    "DB module",
+		MsgRecipient:    "API module",
+		MsgSection:      "filtration control",
+		Instruction:     "filtration rejected",
+		IDClientAPI:     req.IDClientAPI,
+		TaskID:          req.TaskID,
+		TaskIDClientAPI: taskInfo.ClientTaskID,
+	}
+
 	//если статус задачи "stop" или "complite" через ядро останавливаем задачу и оповещаем пользователя
 	if ti.Status == "stop" || ti.Status == "complite" {
-		chanIn <- &configure.MsgBetweenCoreAndDB{
-			MsgGenerator:    "DB module",
-			MsgRecipient:    "API module",
-			MsgSection:      "filtration control",
-			Instruction:     "filtration complite",
-			IDClientAPI:     req.IDClientAPI,
-			TaskID:          req.TaskID,
-			TaskIDClientAPI: taskInfo.ClientTaskID,
-		}
+		chanIn <- &infoMsg
+	}
+
+	//если статус задачи "rejected" то есть, задача была отклонена
+	if ti.Status == "rejected" {
+		infoMsg.Instruction = "filtration rejected"
+
+		chanIn <- &infoMsg
 	}
 }

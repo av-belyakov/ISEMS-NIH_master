@@ -237,7 +237,13 @@ func NewRepositorySMT() *StoringMemoryTask {
 				smt.tasks[msg.TaskID].TaskParameter.DownloadTask = DownloadTaskParameters{}
 
 			case "complete":
+
+				fmt.Println("_______ complete _______")
+
 				if _, ok := smt.GetStoringMemoryTask(msg.TaskID); ok {
+
+					fmt.Println("________ SUCCESS COMPLETE ______")
+
 					smt.tasks[msg.TaskID].TaskStatus = true
 				}
 
@@ -290,6 +296,8 @@ func (smt StoringMemoryTask) delStoringMemoryTask(taskID string) {
 
 //CompleteStoringMemoryTask установить статус выполненно для задачи
 func (smt *StoringMemoryTask) CompleteStoringMemoryTask(taskID string) {
+	fmt.Println("\tfunction 'CompleteStoringMemoryTask' START...")
+
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "complete",
 		TaskID:     taskID,
@@ -461,28 +469,29 @@ func (smt *StoringMemoryTask) CheckTimeUpdateStoringMemoryTask(sec int) chan Msg
 
 				for id, t := range smt.tasks {
 
-					//fmt.Printf("Next Tick %v\n task status:%v, time:%v < %v (%v)\n", time.Now(), t.TaskStatus, (t.TimeUpdate + 60), timeNow, ((t.TimeUpdate + 60) < timeNow))
+					fmt.Printf("Next Tick %v\n task status:%v, time task:%v < time now:%v (%v)\n", time.Now(), t.TaskStatus, (t.TimeUpdate + 60), timeNow, ((t.TimeUpdate + 60) < timeNow))
 
 					if t.TaskStatus && ((t.TimeUpdate + 60) < timeNow) {
 
 						fmt.Println("delete task ID -", id)
+
+						chanOut <- MsgChanStoringMemoryTask{
+							ID:          id,
+							Type:        "danger",
+							Description: fmt.Sprintf("обработка задачи с ID %v была прервана", id),
+						}
+
 						//если задача выполнена и прошло какое то время удаляем ее
 						smt.delStoringMemoryTask(id)
 					} else {
 						if (t.TimeUpdate + 60) < timeNow {
+							smt.CompleteStoringMemoryTask(id)
+
 							chanOut <- MsgChanStoringMemoryTask{
 								ID:          id,
 								Type:        "warning",
 								Description: "информация по задаче с ID " + id + " достаточно долго не обновлялась, возможно выполнение задачи было приостановленно",
 							}
-						} else if (t.TimeUpdate + 180) < timeNow {
-							chanOut <- MsgChanStoringMemoryTask{
-								ID:          id,
-								Type:        "danger",
-								Description: "обработка задачи с ID " + id + " была прервана",
-							}
-
-							smt.CompleteStoringMemoryTask(id)
 						}
 					}
 				}

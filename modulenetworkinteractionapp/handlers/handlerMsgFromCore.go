@@ -299,57 +299,87 @@ func HandlerMsgFromCore(
 			fmt.Printf("|-|-|-|-|-| RESIVED MESSAGE 'filtration control', 'START'\n%v\n", msg)
 
 			//проверяем наличие подключения для заданного источника
-			if si, ok := isl.GetSourceSetting(msg.SourceID); ok {
-				if !si.ConnectionStatus {
-					if ti, ok := smt.GetStoringMemoryTask(msg.TaskID); !ok {
-						//останавливаем передачу списка файлов (найденных в результате поиска по индексам)
-						ti.ChanStopTransferListFiles <- struct{}{}
-					}
+			si, ok := isl.GetSourceSetting(msg.SourceID)
+			if !ok {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v not found", msg.SourceID))
 
-					//отправляем сообщение пользователю
-					clientNotify.AdvancedOptions = configure.MessageNotification{
-						SourceReport:                 "NI module",
-						Section:                      "filtration control",
-						TypeActionPerformed:          "start",
-						CriticalityMessage:           "warning",
-						HumanDescriptionNotification: fmt.Sprintf("Не возможно отправить запрос на фильтрацию, источник с ID %v не подключен", msg.SourceID),
-					}
-
-					chanInCore <- &clientNotify
-
-					//обновляем информацию о задаче фильтрации в памяти приложения
-					smt.UpdateTaskFiltrationAllParameters(msg.TaskID, configure.FiltrationTaskParameters{Status: "refused"})
-
-					//отправляем сообщение в БД информирующее о необходимости записи новых параметров
-					chanInCore <- &configure.MsgBetweenCoreAndNI{
-						TaskID:   msg.TaskID,
-						Section:  "filtration control",
-						Command:  "update",
-						SourceID: msg.SourceID,
-					}
-
-					//снимаем отслеживание выполнения задачи
-					chanInCore <- &configure.MsgBetweenCoreAndNI{
-						TaskID:  msg.TaskID,
-						Section: "monitoring task performance",
-						Command: "complete task",
-					}
-
-					return
+				//отправляем пользователю 'источник с ID переданным не найден'
+				clientNotify.AdvancedOptions = configure.MessageNotification{
+					SourceReport:                 "NI module",
+					Section:                      "filtration control",
+					TypeActionPerformed:          "start",
+					CriticalityMessage:           "warning",
+					HumanDescriptionNotification: fmt.Sprintf("Источник с ID %v не найден", msg.SourceID),
 				}
 
-				msgJSON, ok := msg.AdvancedOptions.([]byte)
-				if !ok {
-					_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
+				chanInCore <- &clientNotify
 
-					return
+				return
+			}
+
+			if !si.ConnectionStatus {
+				fmt.Printf("\t!!! Внимание, источник с ID %v не подключен\n", msg.SourceID)
+
+				if ti, ok := smt.GetStoringMemoryTask(msg.TaskID); !ok {
+					fmt.Println("\t!!!  останавливаем передачу списка файлов (найденных в результате поиска по индексам)")
+
+					//останавливаем передачу списка файлов (найденных в результате поиска по индексам)
+					ti.ChanStopTransferListFiles <- struct{}{}
 				}
 
-				//передаем задачу источнику
-				cwt <- configure.MsgWsTransmission{
-					DestinationHost: si.IP,
-					Data:            &msgJSON,
+				fmt.Println("\t!!! отправляем сообщение пользователю")
+
+				//отправляем сообщение пользователю
+				clientNotify.AdvancedOptions = configure.MessageNotification{
+					SourceReport:                 "NI module",
+					Section:                      "filtration control",
+					TypeActionPerformed:          "start",
+					CriticalityMessage:           "warning",
+					HumanDescriptionNotification: fmt.Sprintf("Не возможно отправить запрос на фильтрацию, источник с ID %v не подключен", msg.SourceID),
 				}
+
+				chanInCore <- &clientNotify
+
+				fmt.Println("\t!!! обновляем информацию о задаче фильтрации в памяти приложения")
+
+				//обновляем информацию о задаче фильтрации в памяти приложения
+				smt.UpdateTaskFiltrationAllParameters(msg.TaskID, configure.FiltrationTaskParameters{Status: "refused"})
+
+				fmt.Println("\t!!! отправляем сообщение в БД информирующее о необходимости записи новых параметров")
+
+				//отправляем сообщение в БД информирующее о необходимости записи новых параметров
+				chanInCore <- &configure.MsgBetweenCoreAndNI{
+					TaskID:   msg.TaskID,
+					Section:  "filtration control",
+					Command:  "update",
+					SourceID: msg.SourceID,
+				}
+
+				fmt.Println("\t!!! снимаем отслеживание выполнения задачи")
+
+				//снимаем отслеживание выполнения задачи
+				chanInCore <- &configure.MsgBetweenCoreAndNI{
+					TaskID:  msg.TaskID,
+					Section: "monitoring task performance",
+					Command: "complete task",
+				}
+
+				return
+			}
+
+			fmt.Printf("\t!!! Начало выполнения задачи по фильтрайии на источнике ID %v\n", msg.SourceID)
+
+			msgJSON, ok := msg.AdvancedOptions.([]byte)
+			if !ok {
+				_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
+
+				return
+			}
+
+			//передаем задачу источнику
+			cwt <- configure.MsgWsTransmission{
+				DestinationHost: si.IP,
+				Data:            &msgJSON,
 			}
 		}
 

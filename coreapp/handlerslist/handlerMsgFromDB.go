@@ -58,6 +58,12 @@ func HandlerMsgFromDB(
 				smt.CompleteStoringMemoryTask(res.TaskID)
 			}
 
+			//если фильтрация была отклонена
+			if res.Instruction == "filtration rejected" {
+				//устанавливаем статус задачи в "complite" для ее последующего удаления
+				smt.CompleteStoringMemoryTask(res.TaskID)
+			}
+
 		case "download control":
 			//пока заглушка
 
