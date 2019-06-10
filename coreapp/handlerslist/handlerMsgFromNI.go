@@ -3,7 +3,7 @@ package handlerslist
 /*
 * Обработчик запросов поступающих от модуля сетевого взаимодействия
 *
-* Версия 0.2, дата релиза 26.03.2019
+* Версия 0.3, дата релиза 10.06.2019
 * */
 
 import (
@@ -22,7 +22,7 @@ func HandlerMsgFromNI(
 	smt *configure.StoringMemoryTask,
 	chanToDB chan<- *configure.MsgBetweenCoreAndDB) {
 
-	//	fmt.Printf("--- START function 'HandlerMsgFromNI'... (Core module) %v\n", msg.Command)
+	fmt.Printf("--- START function 'HandlerMsgFromNI'... (Core module), Section:'%v', Command:'%v', TASK ID = %v\n", msg.Section, msg.Command, msg.TaskID)
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
@@ -33,7 +33,7 @@ func HandlerMsgFromNI(
 		smt.TimerUpdateStoringMemoryTask(msg.TaskID)
 	}
 
-	fmt.Printf("%v\n", msg)
+	fmt.Printf("*****************%v*****************\n", taskInfo)
 
 	switch msg.Section {
 	case "source control":
@@ -137,15 +137,19 @@ func HandlerMsgFromNI(
 	case "filtration control":
 		fmt.Println("func 'HandlerMsgFromNI', section FILTRATION CONTROL")
 
-		//отправляем иформацию о ходе фильтрации в БД
-		chanToDB <- &configure.MsgBetweenCoreAndDB{
+		msgChan := configure.MsgBetweenCoreAndDB{
 			MsgGenerator:    "NI module",
 			MsgRecipient:    "DB module",
 			MsgSection:      "filtration",
-			Instruction:     "update",
+			Instruction:     msg.Command,
 			TaskID:          msg.TaskID,
 			AdvancedOptions: msg.AdvancedOptions,
 		}
+
+		fmt.Printf("_==_ MSG:%v\n", msgChan)
+
+		//отправляем иформацию о ходе фильтрации в БД
+		chanToDB <- &msgChan
 
 		/* упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
 		при чем если статус 'execute', то отправляем еще и содержимое поля 'FoundFilesInformation',
@@ -216,7 +220,7 @@ func HandlerMsgFromNI(
 				Sources:        ao.Sources,
 			}
 
-			fmt.Printf("TASK INFO ClientID: %v", taskInfo)
+			fmt.Printf("TASK INFO ClientID: %v\n", taskInfo)
 
 			notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
 		}

@@ -62,13 +62,13 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 	}
 
 	checkIPOrPortOrNetwork := func(paramType string, param *[]string) error {
-		changeIP := func(item string) bool {
+		checkIP := func(item string) bool {
 			ok, _ := common.CheckStringIP(item)
 
 			return ok
 		}
 
-		changePort := func(item string) bool {
+		checkPort := func(item string) bool {
 			p, err := strconv.Atoi(item)
 			if err != nil {
 				return false
@@ -81,7 +81,7 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 			return true
 		}
 
-		changeNetwork := func(item string) bool {
+		checkNetwork := func(item string) bool {
 			ok, _ := common.CheckStringNetwork(item)
 
 			return ok
@@ -105,17 +105,17 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 
 		switch paramType {
 		case "IP":
-			if ok := iteration(param, changeIP); !ok {
+			if ok := iteration(param, checkIP); !ok {
 				return errors.New("неверные параметры фильтрации, один или более переданных пользователем IP адресов имеет некорректное значение")
 			}
 
 		case "Port":
-			if ok := iteration(param, changePort); !ok {
+			if ok := iteration(param, checkPort); !ok {
 				return errors.New("неверные параметры фильтрации, один или более из заданных пользователем портов имеет некорректное значение")
 			}
 
 		case "Network":
-			if ok := iteration(param, changeNetwork); !ok {
+			if ok := iteration(param, checkNetwork); !ok {
 				return errors.New("неверные параметры фильтрации, некорректное значение маски подсети заданное пользователем")
 			}
 
@@ -149,7 +149,7 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 
 	//проверяем параметры свойства 'Filters' на пустоту
 	if isEmpty {
-		return "невозможно начать фильтрацию, необходимо указать хотябы один искомый ip адрес, порт или подсеть", false
+		return "невозможно начать фильтрацию, необходимо указать хотя бы один искомый ip адрес, порт или подсеть", false
 	}
 
 	return "", true
@@ -196,7 +196,17 @@ func handlerFiltrationControlTypeStart(
 			Start: time.Now().Unix(),
 			End:   time.Now().Unix(),
 		},
+		TaskParameter: configure.DescriptionTaskParameters{
+			FiltrationTask: configure.FiltrationTaskParameters{
+				ID:     fcts.MsgOption.ID,
+				Status: "wait",
+			},
+		},
 	})
+
+	ti, _ := smt.GetStoringMemoryTask(taskID)
+
+	fmt.Printf("\t===== Create NEW Storing MEmory Task with ID: %v\nParameters: %v\n", taskID, ti)
 
 	//сохранение параметров задачи в БД
 	chanToDB <- &configure.MsgBetweenCoreAndDB{

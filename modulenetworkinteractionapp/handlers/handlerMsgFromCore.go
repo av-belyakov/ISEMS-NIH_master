@@ -23,6 +23,7 @@ func HandlerMsgFromCore(
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI) {
 
 	fmt.Println("START func HandlerMsgFromCore... (NI module)")
+
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'HandlerMsgFromCore'"
@@ -296,11 +297,17 @@ func HandlerMsgFromCore(
 	case "filtration control":
 		if msg.Command == "start" {
 
-			fmt.Printf("|-|-|-|-|-| RESIVED MESSAGE 'filtration control', 'START'\n%v\n", msg)
+			fmt.Printf("|-|-|-|-|-| RESIVED MESSAGE 'filtration control', 'START'\n")
 
 			//проверяем наличие подключения для заданного источника
 			si, ok := isl.GetSourceSetting(msg.SourceID)
-			if !ok {
+
+			//			fmt.Printf("--------____________ %v ___________----------\n", si)
+
+			/*if !ok {
+
+				fmt.Printf("\tВнимание!!! Источника с ID %v НЕ СУЩЕСТВУЕТ", msg.SourceID)
+
 				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v not found", msg.SourceID))
 
 				//отправляем пользователю 'источник с ID переданным не найден'
@@ -315,9 +322,14 @@ func HandlerMsgFromCore(
 				chanInCore <- &clientNotify
 
 				return
-			}
+			}*/
 
-			if !si.ConnectionStatus {
+			if !ok || !si.ConnectionStatus {
+				humanNotify := fmt.Sprintf("Не возможно отправить запрос на фильтрацию, источник с ID %v не подключен", msg.SourceID)
+				if !ok {
+					humanNotify = fmt.Sprintf("Источник с ID %v не найден", msg.SourceID)
+				}
+
 				fmt.Printf("\t!!! Внимание, источник с ID %v не подключен\n", msg.SourceID)
 
 				if ti, ok := smt.GetStoringMemoryTask(msg.TaskID); !ok {
@@ -335,12 +347,16 @@ func HandlerMsgFromCore(
 					Section:                      "filtration control",
 					TypeActionPerformed:          "start",
 					CriticalityMessage:           "warning",
-					HumanDescriptionNotification: fmt.Sprintf("Не возможно отправить запрос на фильтрацию, источник с ID %v не подключен", msg.SourceID),
+					HumanDescriptionNotification: humanNotify,
 				}
 
 				chanInCore <- &clientNotify
 
 				fmt.Println("\t!!! обновляем информацию о задаче фильтрации в памяти приложения")
+
+				fi, _ := smt.GetStoringMemoryTask(msg.TaskID)
+
+				fmt.Printf("\t Параметры фильтрации %v\n", fi)
 
 				//обновляем информацию о задаче фильтрации в памяти приложения
 				smt.UpdateTaskFiltrationAllParameters(msg.TaskID, configure.FiltrationTaskParameters{Status: "refused"})

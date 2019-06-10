@@ -109,25 +109,19 @@ func sendInformationFiltrationTask(
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
-	ao, ok := msg.AdvancedOptions.(configure.DetailInfoMsgFiltration)
-	if !ok {
-		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", msg.TaskID))
-
-		return
-	}
-
+	ti := taskInfo.TaskParameter.FiltrationTask
 	resMsg := configure.FiltrationControlTypeInfo{
 		MsgOption: configure.FiltrationControlMsgTypeInfo{
 			ID:                              msg.SourceID,
-			Status:                          ao.TaskStatus,
-			NumberFilesMeetFilterParameters: ao.NumberFilesMeetFilterParameters,
-			NumberProcessedFiles:            ao.NumberProcessedFiles,
-			NumberFilesFoundResultFiltering: ao.NumberFilesFoundResultFiltering,
-			NumberErrorProcessedFiles:       ao.NumberErrorProcessedFiles,
-			NumberDirectoryFiltartion:       ao.NumberDirectoryFiltartion,
-			SizeFilesMeetFilterParameters:   ao.SizeFilesMeetFilterParameters,
-			SizeFilesFoundResultFiltering:   ao.SizeFilesFoundResultFiltering,
-			PathStorageSource:               ao.PathStorageSource,
+			Status:                          ti.Status,
+			NumberFilesMeetFilterParameters: ti.NumberFilesMeetFilterParameters,
+			NumberProcessedFiles:            ti.NumberProcessedFiles,
+			NumberFilesFoundResultFiltering: ti.NumberFilesFoundResultFiltering,
+			NumberErrorProcessedFiles:       ti.NumberErrorProcessedFiles,
+			NumberDirectoryFiltartion:       ti.NumberDirectoryFiltartion,
+			SizeFilesMeetFilterParameters:   ti.SizeFilesMeetFilterParameters,
+			SizeFilesFoundResultFiltering:   ti.SizeFilesFoundResultFiltering,
+			PathStorageSource:               ti.PathStorageSource,
 		},
 	}
 
@@ -136,8 +130,16 @@ func sendInformationFiltrationTask(
 	resMsg.MsgInsturction = "task processing"
 	resMsg.ClientTaskID = taskInfo.ClientTaskID
 
-	if ao.TaskStatus == "execute" {
-		resMsg.MsgOption.FoundFilesInformation = ao.FoundFilesInformation
+	nffi := make(map[string]*configure.InputFilesInformation, len(ti.FoundFilesInformation))
+	for n, v := range ti.FoundFilesInformation {
+		nffi[n] = &configure.InputFilesInformation{
+			Size: v.Size,
+			Hex:  v.Hex,
+		}
+	}
+
+	if ti.Status == "execute" {
+		resMsg.MsgOption.FoundFilesInformation = nffi
 	}
 
 	msgJSON, err := json.Marshal(resMsg)

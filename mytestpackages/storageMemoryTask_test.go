@@ -30,13 +30,21 @@ var _ = Describe("StorageMemoryTask", func() {
 			Start: time.Now().Unix(),
 			End:   time.Now().Unix(),
 		},
+		TaskParameter: configure.DescriptionTaskParameters{
+			FiltrationTask: configure.FiltrationTaskParameters{
+				ID:     190,
+				Status: "wait",
+			},
+		},
 	})
 
 	Context("Тест 1: Добавляем новую задачу и проверяем ее наличие", func() {
-		It("Задача должна существовать", func() {
-			_, isFound := smt.GetStoringMemoryTask(taskID)
+		It("Задача должна существовать, а так же должен быть ID источника и статус", func() {
+			ti, isFound := smt.GetStoringMemoryTask(taskID)
 
 			Expect(isFound).To(Equal(true))
+			Expect(ti.TaskParameter.FiltrationTask.ID).Should(Equal(190))
+			Expect(ti.TaskParameter.FiltrationTask.Status).Should(Equal("wait"))
 		})
 	})
 

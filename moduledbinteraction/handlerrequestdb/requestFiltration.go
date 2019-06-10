@@ -144,7 +144,7 @@ func UpdateParametersFiltrationTask(
 	//получаем всю информацию по выполняемой задаче
 	taskInfo, ok := smt.GetStoringMemoryTask(req.TaskID)
 	if !ok {
-		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", req.TaskID))
+		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found (DB module)", req.TaskID))
 
 		return
 	}
@@ -168,6 +168,7 @@ func UpdateParametersFiltrationTask(
 
 	//обновляем детальную информацию о ходе фильтрации
 	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, commonValueUpdate); err != nil {
+
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
 
@@ -206,7 +207,7 @@ func UpdateParametersFiltrationTask(
 		MsgGenerator:    "DB module",
 		MsgRecipient:    "API module",
 		MsgSection:      "filtration control",
-		Instruction:     "filtration rejected",
+		Instruction:     "filtration complite",
 		IDClientAPI:     req.IDClientAPI,
 		TaskID:          req.TaskID,
 		TaskIDClientAPI: taskInfo.ClientTaskID,
@@ -218,8 +219,8 @@ func UpdateParametersFiltrationTask(
 	}
 
 	//если статус задачи "rejected" то есть, задача была отклонена
-	if ti.Status == "rejected" {
-		infoMsg.Instruction = "filtration rejected"
+	if ti.Status == "refused" {
+		infoMsg.Instruction = "filtration refused"
 
 		chanIn <- &infoMsg
 	}

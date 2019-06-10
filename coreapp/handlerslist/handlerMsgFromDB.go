@@ -19,7 +19,6 @@ func HandlerMsgFromDB(
 	chanToNI chan<- *configure.MsgBetweenCoreAndNI) {
 
 	fmt.Println("START function 'HandlerMsgFromDB' module coreapp")
-	//	fmt.Printf("%v", res)
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
@@ -27,9 +26,24 @@ func HandlerMsgFromDB(
 
 	taskInfo, taskIDIsExist := smt.GetStoringMemoryTask(res.TaskID)
 
-	if res.MsgRecipient == "API module" {
+	switch res.MsgRecipient {
+	case "Core module":
+		fmt.Printf("RESIPENT MSG FOR CORE %v", res)
+
+		if res.MsgSection == "error notification" {
+			//если сообщение об ошибке только для ядра приложения
+			if en, ok := res.AdvancedOptions.(configure.ErrorNotification); ok {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(en.ErrorBody))
+
+				return
+			}
+		}
+
+	case "API module":
 		if !taskIDIsExist {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found%v", res.TaskID, funcName))
+
+			return
 		}
 
 		switch res.MsgSection {
@@ -59,7 +73,7 @@ func HandlerMsgFromDB(
 			}
 
 			//если фильтрация была отклонена
-			if res.Instruction == "filtration rejected" {
+			if res.Instruction == "filtration refused" {
 				//устанавливаем статус задачи в "complite" для ее последующего удаления
 				smt.CompleteStoringMemoryTask(res.TaskID)
 			}
@@ -103,7 +117,7 @@ func HandlerMsgFromDB(
 
 			notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, res.IDClientAPI)
 		}
-	} else if res.MsgRecipient == "NI module" {
+	case "NI module":
 		switch res.MsgSection {
 		case "source list":
 			chanToNI <- &configure.MsgBetweenCoreAndNI{
@@ -153,6 +167,7 @@ func HandlerMsgFromDB(
 
 				//если индексы не найдены
 				msg.AdvancedOptions = msgJSON
+
 				chanToNI <- &msg
 
 				return
@@ -186,6 +201,7 @@ func HandlerMsgFromDB(
 			}
 
 			msg.AdvancedOptions = msgJSON
+
 			chanToNI <- &msg
 
 			//информация о задаче по заданному ID
@@ -227,18 +243,7 @@ func HandlerMsgFromDB(
 			//пока заглушка
 
 		}
-	} else if res.MsgRecipient == "Core module" {
-		fmt.Printf("RESIPENT MSG FOR CORE %v", res)
-
-		if res.MsgSection == "error notification" {
-			//если сообщение об ошибке только для ядра приложения
-			if en, ok := res.AdvancedOptions.(configure.ErrorNotification); ok {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(en.ErrorBody))
-
-				return
-			}
-		}
-	} else {
+	default:
 		_ = saveMessageApp.LogMessage("error", "the module receiver is not defined, request processing is impossible"+funcName)
 	}
 }

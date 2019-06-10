@@ -229,28 +229,48 @@ func NewRepositorySMT() *StoringMemoryTask {
 					Description: task,
 				}
 
+				defer close(msg.ChannelRes)
+
 			case "add":
 				smt.tasks[msg.TaskID] = msg.Description
-				smt.tasks[msg.TaskID].TaskParameter.FiltrationTask = FiltrationTaskParameters{
-					FoundFilesInformation: map[string]*FoundFilesInformation{},
-				}
+				smt.tasks[msg.TaskID].TaskParameter.FiltrationTask.FoundFilesInformation = map[string]*FoundFilesInformation{}
 				smt.tasks[msg.TaskID].TaskParameter.DownloadTask = DownloadTaskParameters{}
 
 			case "complete":
 
-				fmt.Println("_______ complete _______")
+				//fmt.Println("_______ complete _______")
+				//fmt.Println("+++ COMPLETE TASK, BEFORE")
 
-				if _, ok := smt.GetStoringMemoryTask(msg.TaskID); ok {
+				if _, ok := smt.tasks[msg.TaskID]; ok {
 
-					fmt.Println("________ SUCCESS COMPLETE ______")
+					//fmt.Println("________ SUCCESS COMPLETE ______")
 
 					smt.tasks[msg.TaskID].TaskStatus = true
 				}
 
+				msg.ChannelRes <- channelResSettings{
+					TaskID: msg.TaskID,
+				}
+
+				defer close(msg.ChannelRes)
+
+				//fmt.Println("+++ COMPLETE TASK, AFTER")
+
 			case "timer update":
-				if _, ok := smt.GetStoringMemoryTask(msg.TaskID); ok {
+
+				//fmt.Println("+++ TIMER UPDATE TASK, BEFORE")
+
+				if _, ok := smt.tasks[msg.TaskID]; ok {
 					smt.tasks[msg.TaskID].TimeUpdate = time.Now().Unix()
 				}
+
+				msg.ChannelRes <- channelResSettings{
+					TaskID: msg.TaskID,
+				}
+
+				defer close(msg.ChannelRes)
+
+				//fmt.Println("+++ TIMER UPDATE TASK, AFTER")
 
 			case "delete":
 				delete(smt.tasks, msg.TaskID)
@@ -261,6 +281,9 @@ func NewRepositorySMT() *StoringMemoryTask {
 				msg.ChannelRes <- channelResSettings{
 					TaskID: msg.TaskID,
 				}
+
+				defer close(msg.ChannelRes)
+
 				/*case "update task filtration files list":
 				smt.updateTaskFiltrationFilesList(msg.TaskID, msg.Description)
 				*/
@@ -298,23 +321,35 @@ func (smt StoringMemoryTask) delStoringMemoryTask(taskID string) {
 func (smt *StoringMemoryTask) CompleteStoringMemoryTask(taskID string) {
 	fmt.Println("\tfunction 'CompleteStoringMemoryTask' START...")
 
+	chanRes := make(chan channelResSettings)
+
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "complete",
 		TaskID:     taskID,
+		ChannelRes: chanRes,
 	}
+
+	<-chanRes
 }
 
 //TimerUpdateStoringMemoryTask обновить значение таймера в задачи
 func (smt *StoringMemoryTask) TimerUpdateStoringMemoryTask(taskID string) {
+	chanRes := make(chan channelResSettings)
+
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "timer update",
 		TaskID:     taskID,
+		ChannelRes: chanRes,
 	}
+
+	<-chanRes
 }
 
 //GetStoringMemoryTask получить информацию о задаче по ее ID
 func (smt StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescription, bool) {
 	chanRes := make(chan channelResSettings)
+
+	//fmt.Println("+++ GET INFO TASK, BEFORE")
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "get task info",
@@ -323,6 +358,8 @@ func (smt StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescripti
 	}
 
 	info := <-chanRes
+
+	//fmt.Println("+++ GET INFO TASK, AFTER")
 
 	return info.Description, info.IsExist
 }
