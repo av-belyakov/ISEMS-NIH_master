@@ -413,11 +413,13 @@ func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, f
 		ChannelRes: chanRes,
 	}
 
-	for task := range chanRes {
+	/*for task := range chanRes {
 		if task.TaskID == taskID {
 			break
 		}
-	}
+	}*/
+
+	<-chanRes
 }
 
 //UpdateTaskFiltrationFilesList обновление списка файлов полученных в результате фильтрации
@@ -446,12 +448,12 @@ func (smt *StoringMemoryTask) updateTaskFiltrationAllParameters(taskID string, t
 	ft := smt.tasks[taskID].TaskParameter.FiltrationTask
 	nft := td.TaskParameter.FiltrationTask
 
-	for n, v := range nft.FoundFilesInformation {
+	/*for n, v := range nft.FoundFilesInformation {
 		ft.FoundFilesInformation[n] = &FoundFilesInformation{
 			Size: v.Size,
 			Hex:  v.Hex,
 		}
-	}
+	}*/
 
 	ft.NumberFilesMeetFilterParameters = nft.NumberFilesMeetFilterParameters
 	ft.NumberFilesFoundResultFiltering = nft.NumberFilesFoundResultFiltering
@@ -463,6 +465,7 @@ func (smt *StoringMemoryTask) updateTaskFiltrationAllParameters(taskID string, t
 	ft.PathStorageSource = nft.PathStorageSource
 	ft.Status = nft.Status
 	ft.ID = nft.ID
+	ft.FoundFilesInformation = nft.FoundFilesInformation
 
 	smt.tasks[taskID].TaskParameter.FiltrationTask = ft
 }

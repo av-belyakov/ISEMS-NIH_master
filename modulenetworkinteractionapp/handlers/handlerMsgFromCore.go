@@ -301,29 +301,6 @@ func HandlerMsgFromCore(
 
 			//проверяем наличие подключения для заданного источника
 			si, ok := isl.GetSourceSetting(msg.SourceID)
-
-			//			fmt.Printf("--------____________ %v ___________----------\n", si)
-
-			/*if !ok {
-
-				fmt.Printf("\tВнимание!!! Источника с ID %v НЕ СУЩЕСТВУЕТ", msg.SourceID)
-
-				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v not found", msg.SourceID))
-
-				//отправляем пользователю 'источник с ID переданным не найден'
-				clientNotify.AdvancedOptions = configure.MessageNotification{
-					SourceReport:                 "NI module",
-					Section:                      "filtration control",
-					TypeActionPerformed:          "start",
-					CriticalityMessage:           "warning",
-					HumanDescriptionNotification: fmt.Sprintf("Источник с ID %v не найден", msg.SourceID),
-				}
-
-				chanInCore <- &clientNotify
-
-				return
-			}*/
-
 			if !ok || !si.ConnectionStatus {
 				humanNotify := fmt.Sprintf("Не возможно отправить запрос на фильтрацию, источник с ID %v не подключен", msg.SourceID)
 				if !ok {

@@ -130,15 +130,15 @@ func sendInformationFiltrationTask(
 	resMsg.MsgInsturction = "task processing"
 	resMsg.ClientTaskID = taskInfo.ClientTaskID
 
-	nffi := make(map[string]*configure.InputFilesInformation, len(ti.FoundFilesInformation))
-	for n, v := range ti.FoundFilesInformation {
-		nffi[n] = &configure.InputFilesInformation{
-			Size: v.Size,
-			Hex:  v.Hex,
-		}
-	}
-
 	if ti.Status == "execute" {
+		nffi := make(map[string]*configure.InputFilesInformation, len(ti.FoundFilesInformation))
+		for n, v := range ti.FoundFilesInformation {
+			nffi[n] = &configure.InputFilesInformation{
+				Size: v.Size,
+				Hex:  v.Hex,
+			}
+		}
+
 		resMsg.MsgOption.FoundFilesInformation = nffi
 	}
 

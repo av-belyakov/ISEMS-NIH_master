@@ -34,9 +34,9 @@ func RouteRequest(
 			go wrapperFunc.WrapperFuncSourceControl(msg)
 		case "source telemetry":
 
-		case "filtration":
+		case "filtration control":
 			go wrapperFunc.WrapperFuncFiltration(msg, smt)
-		case "download":
+		case "download control":
 			go wrapperFunc.WrapperFuncDownload(msg, smt)
 		case "error notification":
 

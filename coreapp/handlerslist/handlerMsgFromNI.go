@@ -140,8 +140,8 @@ func HandlerMsgFromNI(
 		msgChan := configure.MsgBetweenCoreAndDB{
 			MsgGenerator:    "NI module",
 			MsgRecipient:    "DB module",
-			MsgSection:      "filtration",
-			Instruction:     msg.Command,
+			MsgSection:      "filtration control",
+			Instruction:     "update",
 			TaskID:          msg.TaskID,
 			AdvancedOptions: msg.AdvancedOptions,
 		}

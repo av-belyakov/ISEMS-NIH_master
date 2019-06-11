@@ -29,6 +29,8 @@ func ProcessingReceivedMsgTypeFiltering(
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
 
+	fmt.Printf("\t_____ %v _____\n", resMsg)
+
 	ffi := make(map[string]*configure.FoundFilesInformation, len(resMsg.Info.FoundFilesInformation))
 	for n, v := range resMsg.Info.FoundFilesInformation {
 		ffi[n] = &configure.FoundFilesInformation{
@@ -54,6 +56,18 @@ func ProcessingReceivedMsgTypeFiltering(
 	//обновляем информацию о выполняемой задаче в памяти приложения
 	smt.UpdateTaskFiltrationAllParameters(resMsg.Info.TaskID, ftp)
 
+	//------
+	fmt.Println("++++++ обновляем информацию о выполняемой задаче в памяти приложения ++++++")
+	ti, _ := smt.GetStoringMemoryTask(resMsg.Info.TaskID)
+	fmt.Println(ti)
+	//------
+
+	msgCompliteTask := configure.MsgBetweenCoreAndNI{
+		TaskID:  resMsg.Info.TaskID,
+		Section: "monitoring task performance",
+		Command: "complete task",
+	}
+
 	msg := &configure.MsgBetweenCoreAndNI{
 		TaskID:   resMsg.Info.TaskID,
 		Section:  "filtration control",
@@ -61,10 +75,19 @@ func ProcessingReceivedMsgTypeFiltering(
 		SourceID: sourceID,
 	}
 
-	//обычный ответ по задаче фильтрации
-	if (resMsg.Info.TaskStatus == "execute") || (resMsg.Info.TaskStatus == "rejected") {
+	if resMsg.Info.TaskStatus == "execute" {
 		//отправляем в ядро, а от туда в БД и клиенту API
 		chanInCore <- msg
+
+		return
+	}
+
+	if resMsg.Info.TaskStatus == "refused" {
+		//отправляем в ядро, а от туда в БД и клиенту API
+		chanInCore <- msg
+
+		//отправляем сообщение о снятии контроля за выполнением задачи
+		chanInCore <- &msgCompliteTask
 
 		return
 	}
@@ -73,9 +96,11 @@ func ProcessingReceivedMsgTypeFiltering(
 
 	//отправка информации только после получения всех частей
 	if resMsg.Info.NumberMessagesParts[0] == resMsg.Info.NumberMessagesParts[1] {
-
 		//отправляем в ядро, а от туда в БД и клиенту API
 		chanInCore <- msg
+
+		//отправляем сообщение о снятии контроля за выполнением задачи
+		chanInCore <- &msgCompliteTask
 
 		resConfirmComplite := configure.MsgTypeFiltrationControl{
 			MsgType: "filtration",

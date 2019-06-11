@@ -1,6 +1,7 @@
 package handlerslist
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -170,6 +171,9 @@ func handlerFiltrationControlTypeStart(
 	funcName := ", function 'handlerFiltrationControlTypeStart'"
 
 	if msg, ok := сheckParametersFiltration(&fcts.MsgOption); !ok {
+		_ = saveMessageApp.LogMessage("error", "incorrect parameters for filtering are set"+funcName)
+
+		//отправляем информационное сообщение
 		notifications.SendNotificationToClientAPI(
 			chanToAPI,
 			notifications.NotificationSettingsToClientAPI{
@@ -179,7 +183,31 @@ func handlerFiltrationControlTypeStart(
 			fcts.ClientTaskID,
 			clientID)
 
-		_ = saveMessageApp.LogMessage("error", "incorrect parameters for filtering are set"+funcName)
+		//отправляем сообщение о том что задача была отклонена
+		resMsg := configure.FiltrationControlTypeInfo{
+			MsgOption: configure.FiltrationControlMsgTypeInfo{
+				ID:     fcts.MsgOption.ID,
+				Status: "refused",
+			},
+		}
+		resMsg.MsgType = "information"
+		resMsg.MsgSection = "filtration control"
+		resMsg.MsgInsturction = "task processing"
+		resMsg.ClientTaskID = fcts.ClientTaskID
+
+		msgJSON, err := json.Marshal(resMsg)
+		if err != nil {
+			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+			return
+		}
+
+		chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+			MsgGenerator: "Core module",
+			MsgRecipient: "API module",
+			IDClientAPI:  clientID,
+			MsgJSON:      msgJSON,
+		}
 
 		return
 	}
@@ -212,7 +240,7 @@ func handlerFiltrationControlTypeStart(
 	chanToDB <- &configure.MsgBetweenCoreAndDB{
 		MsgGenerator:    "Core module",
 		MsgRecipient:    "DB module",
-		MsgSection:      "filtration",
+		MsgSection:      "filtration control",
 		Instruction:     "insert",
 		IDClientAPI:     clientID,
 		TaskID:          taskID,
