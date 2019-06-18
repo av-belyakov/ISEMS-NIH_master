@@ -95,6 +95,9 @@ func CreateNewFiltrationTask(
 			TaskStatus:                    "wait",
 			ListFilesFoundResultFiltering: []*configure.InformationFilesFoundResultFiltering{},
 			WasIndexUsed:                  isFound,
+			TimeIntervalTaskExecution: configure.TimeInterval{
+				Start: time.Now().Unix(),
+			},
 		},
 	}
 
@@ -178,7 +181,7 @@ func UpdateParametersFiltrationTask(
 		arr = append(arr, bson.D{
 			bson.E{Key: "file_name", Value: n},
 			bson.E{Key: "file_size", Value: v.Size},
-			bson.E{Key: "file_hax", Value: v.Hex},
+			bson.E{Key: "file_hex", Value: v.Hex},
 		})
 	}
 
@@ -218,7 +221,7 @@ func UpdateParametersFiltrationTask(
 		chanIn <- &infoMsg
 	}
 
-	//если статус задачи "rejected" то есть, задача была отклонена
+	//если статус задачи "refused" то есть, задача была отклонена
 	if ti.Status == "refused" {
 		infoMsg.Instruction = "filtration refused"
 

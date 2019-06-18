@@ -149,6 +149,10 @@ func sendInformationFiltrationTask(
 		return
 	}
 
+	if ti.Status == "complite" {
+		fmt.Println("-+-++--+--+-+ SEND FILTRATION MSG 'COMPLITE'")
+	}
+
 	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
 		MsgGenerator: "Core module",
 		MsgRecipient: "API module",

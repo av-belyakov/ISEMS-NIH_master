@@ -102,6 +102,8 @@ func ProcessingReceivedMsgTypeFiltering(
 		//отправляем сообщение о снятии контроля за выполнением задачи
 		chanInCore <- &msgCompliteTask
 
+		fmt.Println("_+_+_+_+_+_+_+_+_++_CONFIRM COMPLITE ---")
+
 		resConfirmComplite := configure.MsgTypeFiltrationControl{
 			MsgType: "filtration",
 			Info: configure.SettingsFiltrationControl{

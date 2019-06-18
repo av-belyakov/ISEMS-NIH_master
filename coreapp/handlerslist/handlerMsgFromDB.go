@@ -57,26 +57,8 @@ func HandlerMsgFromDB(
 			//пока заглушка
 
 		case "filtration control":
-			//если фильтрация завершилась, то есть статус задачи "stop" или "complite"
-			if res.Instruction == "filtration complite" {
-				ns := notifications.NotificationSettingsToClientAPI{
-					MsgType:        "success",
-					MsgDescription: "Задача по фильтрации сетевого трафика завершена",
-					Sources:        []int{taskInfo.TaskParameter.FiltrationTask.ID},
-				}
-
-				//отправляем информационное сообщение пользователю
-				notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, res.IDClientAPI)
-
-				//устанавливаем статус задачи в "complite" для ее последующего удаления
-				smt.CompleteStoringMemoryTask(res.TaskID)
-			}
-
-			//если фильтрация была отклонена
-			if res.Instruction == "filtration refused" {
-				//устанавливаем статус задачи в "complite" для ее последующего удаления
-				smt.CompleteStoringMemoryTask(res.TaskID)
-			}
+			//устанавливаем статус задачи в "complite" для ее последующего удаления
+			smt.CompleteStoringMemoryTask(res.TaskID)
 
 		case "download control":
 			//пока заглушка

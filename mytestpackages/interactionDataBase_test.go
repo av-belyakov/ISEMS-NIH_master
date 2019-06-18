@@ -86,6 +86,9 @@ func createNewFiltrationTask(
 			TaskStatus:                    "wait",
 			ListFilesFoundResultFiltering: []*configure.InformationFilesFoundResultFiltering{},
 			WasIndexUsed:                  true,
+			TimeIntervalTaskExecution: configure.TimeInterval{
+				Start: time.Now().Unix(),
+			},
 		},
 	}
 
@@ -138,7 +141,7 @@ func updateFiltrationTaskParameters(
 		arr = append(arr, bson.D{
 			bson.E{Key: "file_name", Value: fileName},
 			bson.E{Key: "file_size", Value: v.Size},
-			bson.E{Key: "file_hax", Value: v.Hex},
+			bson.E{Key: "file_hex", Value: v.Hex},
 		})
 	}
 
