@@ -27,8 +27,6 @@ func connClose(
 	id int,
 	ip string) {
 
-	fmt.Println("CLOSE WSS LINK")
-
 	c.Close()
 
 	//изменяем статус подключения клиента
@@ -42,8 +40,6 @@ func connClose(
 
 //MainNetworkInteraction осуществляет общее управление
 func MainNetworkInteraction(appConf *configure.AppConfig, smt *configure.StoringMemoryTask) (chanOutCore, chanInCore chan *configure.MsgBetweenCoreAndNI) {
-	fmt.Println("START module 'MainNetworkInteraction'...")
-
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 

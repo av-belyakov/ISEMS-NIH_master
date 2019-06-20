@@ -2,7 +2,6 @@ package notifications
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"ISEMS-NIH_master/configure"
 )
@@ -36,8 +35,6 @@ func SendNotificationToClientAPI(
 	notify.MsgSection = "user notification"
 	notify.MsgInsturction = "send notification"
 	notify.ClientTaskID = clientTaskID
-
-	fmt.Printf("___ ___ ___ SEND NOTIFY ___ ___ ___\n%v\n", notify)
 
 	msgjson, _ := json.Marshal(&notify)
 

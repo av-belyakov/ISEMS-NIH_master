@@ -8,28 +8,27 @@ import (
 	"ISEMS-NIH_master/savemessageapp"
 )
 
+//ParametersProcessingReceivedMsgTypeFiltering набор параметров для функции ProcessingReceivedMsgTypeFiltering
+type ParametersProcessingReceivedMsgTypeFiltering struct {
+	CwtRes     chan<- configure.MsgWsTransmission
+	ChanInCore chan<- *configure.MsgBetweenCoreAndNI
+	CwtReq     <-chan configure.MsgWsTransmission
+	Isl        *configure.InformationSourcesList
+	Smt        *configure.StoringMemoryTask
+	Message    *[]byte
+	SourceID   int
+	SourceIP   string
+}
+
 //ProcessingReceivedMsgTypeFiltering обработка сообщений связанных с фильтрацией файлов
-func ProcessingReceivedMsgTypeFiltering(
-	cwtRes chan<- configure.MsgWsTransmission,
-	isl *configure.InformationSourcesList,
-	smt *configure.StoringMemoryTask,
-	message *[]byte,
-	sourceID int,
-	sourceIP string,
-	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
-	cwtReq <-chan configure.MsgWsTransmission) {
-
-	fmt.Println("START function 'ProcessingReceivedMsgTypeFilteringn'...")
-
+func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTypeFiltering) {
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 	resMsg := configure.MsgTypeFiltration{}
 
-	if err := json.Unmarshal(*message, &resMsg); err != nil {
+	if err := json.Unmarshal(*pprmtf.Message, &resMsg); err != nil {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
-
-	fmt.Printf("\t_____ %v _____\n", resMsg)
 
 	ffi := make(map[string]*configure.FoundFilesInformation, len(resMsg.Info.FoundFilesInformation))
 	for n, v := range resMsg.Info.FoundFilesInformation {
@@ -40,7 +39,7 @@ func ProcessingReceivedMsgTypeFiltering(
 	}
 
 	ftp := configure.FiltrationTaskParameters{
-		ID:                              sourceID,
+		ID:                              pprmtf.SourceID,
 		Status:                          resMsg.Info.TaskStatus,
 		NumberFilesMeetFilterParameters: resMsg.Info.NumberFilesMeetFilterParameters,
 		NumberProcessedFiles:            resMsg.Info.NumberProcessedFiles,
@@ -54,13 +53,7 @@ func ProcessingReceivedMsgTypeFiltering(
 	}
 
 	//обновляем информацию о выполняемой задаче в памяти приложения
-	smt.UpdateTaskFiltrationAllParameters(resMsg.Info.TaskID, ftp)
-
-	//------
-	fmt.Println("++++++ обновляем информацию о выполняемой задаче в памяти приложения ++++++")
-	ti, _ := smt.GetStoringMemoryTask(resMsg.Info.TaskID)
-	fmt.Println(ti)
-	//------
+	pprmtf.Smt.UpdateTaskFiltrationAllParameters(resMsg.Info.TaskID, ftp)
 
 	msgCompliteTask := configure.MsgBetweenCoreAndNI{
 		TaskID:  resMsg.Info.TaskID,
@@ -72,22 +65,24 @@ func ProcessingReceivedMsgTypeFiltering(
 		TaskID:   resMsg.Info.TaskID,
 		Section:  "filtration control",
 		Command:  resMsg.Info.TaskStatus,
-		SourceID: sourceID,
+		SourceID: pprmtf.SourceID,
 	}
+
+	fmt.Printf("\tпринята информация о задаче с ID '%v', статус задачи - %v\n", resMsg.Info.TaskID, resMsg.Info.TaskStatus)
 
 	if resMsg.Info.TaskStatus == "execute" {
 		//отправляем в ядро, а от туда в БД и клиенту API
-		chanInCore <- msg
+		pprmtf.ChanInCore <- msg
 
 		return
 	}
 
 	if resMsg.Info.TaskStatus == "refused" {
 		//отправляем в ядро, а от туда в БД и клиенту API
-		chanInCore <- msg
+		pprmtf.ChanInCore <- msg
 
 		//отправляем сообщение о снятии контроля за выполнением задачи
-		chanInCore <- &msgCompliteTask
+		pprmtf.ChanInCore <- &msgCompliteTask
 
 		return
 	}
@@ -97,12 +92,10 @@ func ProcessingReceivedMsgTypeFiltering(
 	//отправка информации только после получения всех частей
 	if resMsg.Info.NumberMessagesParts[0] == resMsg.Info.NumberMessagesParts[1] {
 		//отправляем в ядро, а от туда в БД и клиенту API
-		chanInCore <- msg
+		pprmtf.ChanInCore <- msg
 
 		//отправляем сообщение о снятии контроля за выполнением задачи
-		chanInCore <- &msgCompliteTask
-
-		fmt.Println("_+_+_+_+_+_+_+_+_++_CONFIRM COMPLITE ---")
+		pprmtf.ChanInCore <- &msgCompliteTask
 
 		resConfirmComplite := configure.MsgTypeFiltrationControl{
 			MsgType: "filtration",
@@ -120,8 +113,8 @@ func ProcessingReceivedMsgTypeFiltering(
 		}
 
 		//отправляем источнику сообщение типа 'confirm complite' для того что бы подтвердить останов задачи
-		cwtRes <- configure.MsgWsTransmission{
-			DestinationHost: sourceIP,
+		pprmtf.CwtRes <- configure.MsgWsTransmission{
+			DestinationHost: pprmtf.SourceIP,
 			Data:            &msgJSON,
 		}
 	}

@@ -35,20 +35,12 @@ func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetwe
 		handlerrequestdb.GetAllSourcesList(wr.ChanIn, msg, qp)
 
 	case "insert":
-		fmt.Println("func 'WrapperFuncSourceControl' RESIVED COMMAND 'INSERT'")
-
 		handlerrequestdb.InsertListSources(wr.ChanIn, msg, qp)
 
 	case "update":
-		fmt.Println("func 'WrapperFuncSourceControl' RESIVED COMMAND 'UPDATE'")
-
-		fmt.Printf("%v\n", msg.AdvancedOptions)
-
 		handlerrequestdb.UpdateSourceToSourcesList(wr.ChanIn, msg, qp)
 
 	case "delete":
-		fmt.Println("func 'WrapperFuncSourceControl' RESIVED COMMAND 'DELETE'")
-
 		handlerrequestdb.DelSourceToSourcesList(wr.ChanIn, msg, qp)
 
 	}
@@ -64,8 +56,6 @@ func (wr *WrappersRouteRequest) WrapperFuncFiltration(msg *configure.MsgBetweenC
 
 	switch msg.Instruction {
 	case "insert":
-		fmt.Println("func 'WrapperFuncFiltration' RESIVED COMMAND 'INSERT'")
-
 		handlerrequestdb.CreateNewFiltrationTask(wr.ChanIn, msg, qp)
 
 	case "find":
@@ -75,8 +65,6 @@ func (wr *WrappersRouteRequest) WrapperFuncFiltration(msg *configure.MsgBetweenC
 		fmt.Println("func 'WrapperFuncFiltration' RESIVED COMMAND 'FIND_ALL'")
 
 	case "update":
-		fmt.Println("func 'WrapperFuncFiltration' RESIVED COMMAND 'UPDATE'")
-
 		handlerrequestdb.UpdateParametersFiltrationTask(wr.ChanIn, msg, qp, smt)
 	}
 

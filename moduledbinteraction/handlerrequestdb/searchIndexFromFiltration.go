@@ -1,8 +1,6 @@
 package handlerrequestdb
 
 import (
-	"fmt"
-
 	"ISEMS-NIH_master/configure"
 
 	"github.com/mongodb/mongo-go-driver/bson"
@@ -13,8 +11,6 @@ func searchIndexFormFiltration(
 	cn string,
 	tf *configure.FiltrationControlCommonParametersFiltration,
 	qp QueryParameters) (bool, *map[string][]string, error) {
-
-	fmt.Println("START function 'searchIndexFormFiltration'...")
 
 	qp.CollectionName = cn
 

@@ -130,6 +130,7 @@ type StoringMemoryTask struct {
 // ModuleThatSetTask - модуль от которого поступила задача
 // ModuleResponsibleImplementation - модуль который должен выполнить обработку
 // TimeUpdate - время последнего обновления в формате Unix
+// TimeInsertDB - время последней вставки в БД
 // TimeInterval - интервал времени выполнения задачи
 // TaskParameter - дополнительные параметры
 // ChanStopTransferListFiles - останов передачи списка файлов (полученных в
@@ -142,6 +143,7 @@ type TaskDescription struct {
 	ModuleThatSetTask               string
 	ModuleResponsibleImplementation string
 	TimeUpdate                      int64
+	TimeInsertDB                    int64
 	TimeInterval                    TimeIntervalTaskExecution
 	TaskParameter                   DescriptionTaskParameters
 	ChanStopTransferListFiles       chan struct{}
@@ -237,14 +239,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 				smt.tasks[msg.TaskID].TaskParameter.DownloadTask = DownloadTaskParameters{}
 
 			case "complete":
-
-				//fmt.Println("_______ complete _______")
-				//fmt.Println("+++ COMPLETE TASK, BEFORE")
-
 				if _, ok := smt.tasks[msg.TaskID]; ok {
-
-					//fmt.Println("________ SUCCESS COMPLETE ______")
-
 					smt.tasks[msg.TaskID].TaskStatus = true
 				}
 
@@ -254,12 +249,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 
 				defer close(msg.ChannelRes)
 
-				//fmt.Println("+++ COMPLETE TASK, AFTER")
-
 			case "timer update":
-
-				//fmt.Println("+++ TIMER UPDATE TASK, BEFORE")
-
 				if _, ok := smt.tasks[msg.TaskID]; ok {
 					smt.tasks[msg.TaskID].TimeUpdate = time.Now().Unix()
 				}
@@ -270,7 +260,16 @@ func NewRepositorySMT() *StoringMemoryTask {
 
 				defer close(msg.ChannelRes)
 
-				//fmt.Println("+++ TIMER UPDATE TASK, AFTER")
+			case "timer insert DB":
+				if _, ok := smt.tasks[msg.TaskID]; ok {
+					smt.tasks[msg.TaskID].TimeInsertDB = time.Now().Unix()
+				}
+
+				msg.ChannelRes <- channelResSettings{
+					TaskID: msg.TaskID,
+				}
+
+				defer close(msg.ChannelRes)
 
 			case "delete":
 				delete(smt.tasks, msg.TaskID)
@@ -284,9 +283,6 @@ func NewRepositorySMT() *StoringMemoryTask {
 
 				defer close(msg.ChannelRes)
 
-				/*case "update task filtration files list":
-				smt.updateTaskFiltrationFilesList(msg.TaskID, msg.Description)
-				*/
 			}
 		}
 	}()
@@ -319,8 +315,6 @@ func (smt StoringMemoryTask) delStoringMemoryTask(taskID string) {
 
 //CompleteStoringMemoryTask установить статус выполненно для задачи
 func (smt *StoringMemoryTask) CompleteStoringMemoryTask(taskID string) {
-	fmt.Println("\tfunction 'CompleteStoringMemoryTask' START...")
-
 	chanRes := make(chan channelResSettings)
 
 	smt.channelReq <- ChanStoringMemoryTask{
@@ -345,11 +339,22 @@ func (smt *StoringMemoryTask) TimerUpdateStoringMemoryTask(taskID string) {
 	<-chanRes
 }
 
+//TimerUpdateTaskInsertDB обновить значение таймера в задачи
+func (smt *StoringMemoryTask) TimerUpdateTaskInsertDB(taskID string) {
+	chanRes := make(chan channelResSettings)
+
+	smt.channelReq <- ChanStoringMemoryTask{
+		ActionType: "timer insert DB",
+		TaskID:     taskID,
+		ChannelRes: chanRes,
+	}
+
+	<-chanRes
+}
+
 //GetStoringMemoryTask получить информацию о задаче по ее ID
 func (smt StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescription, bool) {
 	chanRes := make(chan channelResSettings)
-
-	//fmt.Println("+++ GET INFO TASK, BEFORE")
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "get task info",
@@ -358,8 +363,6 @@ func (smt StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescripti
 	}
 
 	info := <-chanRes
-
-	//fmt.Println("+++ GET INFO TASK, AFTER")
 
 	return info.Description, info.IsExist
 }
@@ -413,12 +416,6 @@ func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, f
 		ChannelRes: chanRes,
 	}
 
-	/*for task := range chanRes {
-		if task.TaskID == taskID {
-			break
-		}
-	}*/
-
 	<-chanRes
 }
 
@@ -448,13 +445,6 @@ func (smt *StoringMemoryTask) updateTaskFiltrationAllParameters(taskID string, t
 	ft := smt.tasks[taskID].TaskParameter.FiltrationTask
 	nft := td.TaskParameter.FiltrationTask
 
-	/*for n, v := range nft.FoundFilesInformation {
-		ft.FoundFilesInformation[n] = &FoundFilesInformation{
-			Size: v.Size,
-			Hex:  v.Hex,
-		}
-	}*/
-
 	ft.NumberFilesMeetFilterParameters = nft.NumberFilesMeetFilterParameters
 	ft.NumberFilesFoundResultFiltering = nft.NumberFilesFoundResultFiltering
 	ft.NumberErrorProcessedFiles = nft.NumberErrorProcessedFiles
@@ -469,20 +459,6 @@ func (smt *StoringMemoryTask) updateTaskFiltrationAllParameters(taskID string, t
 
 	smt.tasks[taskID].TaskParameter.FiltrationTask = ft
 }
-
-/*func (smt *StoringMemoryTask) updateTaskFiltrationFilesList(taskID string, td *TaskDescription) {
-	if _, ok := smt.tasks[taskID]; !ok {
-		return
-	}
-
-	//получаем список файлов
-	//		listFoundFiles := smt.tasks[taskID].TaskParameter.FiltrationTask.FoundFilesInformation
-	filesList := td.TaskParameter.FiltrationTask.FoundFilesInformation
-
-	for n, v := range filesList {
-		smt.tasks[taskID].TaskParameter.FiltrationTask.FoundFilesInformation[n] = v
-	}
-}*/
 
 /* управление задачами по скачиванию файлов */
 
@@ -509,11 +485,11 @@ func (smt *StoringMemoryTask) CheckTimeUpdateStoringMemoryTask(sec int) chan Msg
 
 				for id, t := range smt.tasks {
 
-					fmt.Printf("Next Tick %v\n task status:%v, time task:%v < time now:%v (%v)\n", time.Now(), t.TaskStatus, (t.TimeUpdate + 60), timeNow, ((t.TimeUpdate + 60) < timeNow))
+					//fmt.Printf("Next Tick %v\n task status:%v, time task:%v < time now:%v (%v)\n", time.Now(), t.TaskStatus, (t.TimeUpdate + 60), timeNow, ((t.TimeUpdate + 60) < timeNow))
 
 					if t.TaskStatus && ((t.TimeUpdate + 60) < timeNow) {
 
-						fmt.Println("delete task ID -", id)
+						//fmt.Println("delete task ID -", id)
 
 						chanOut <- MsgChanStoringMemoryTask{
 							ID:          id,

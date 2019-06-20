@@ -7,8 +7,6 @@ package coreapp
 * */
 
 import (
-	"fmt"
-
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/moduleapiapp"
 	"ISEMS-NIH_master/moduledbinteraction"
@@ -17,8 +15,6 @@ import (
 
 //CoreApp запускает все обработчики уровня ядра
 func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConnect) {
-	fmt.Println("START module 'CoreAppMain'...")
-
 	//инициализация хранилища для учета выполняемых задач
 	smt := configure.NewRepositorySMT()
 

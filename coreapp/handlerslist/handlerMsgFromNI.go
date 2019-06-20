@@ -22,8 +22,6 @@ func HandlerMsgFromNI(
 	smt *configure.StoringMemoryTask,
 	chanToDB chan<- *configure.MsgBetweenCoreAndDB) {
 
-	fmt.Printf("--- START function 'HandlerMsgFromNI'... (Core module), Section:'%v', Command:'%v', TASK ID = %v\n", msg.Section, msg.Command, msg.TaskID)
-
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'HandlerMsgFromNI'"
@@ -33,12 +31,8 @@ func HandlerMsgFromNI(
 		smt.TimerUpdateStoringMemoryTask(msg.TaskID)
 	}
 
-	fmt.Printf("*****************%v*****************\n", taskInfo)
-
 	switch msg.Section {
 	case "source control":
-		fmt.Printf("func 'HandlerMsgFromNI', section SOURCE CONTROL '%v'\n", msg.Command)
-
 		switch msg.Command {
 		case "keep list sources in database":
 			//в БД
@@ -85,15 +79,10 @@ func HandlerMsgFromNI(
 
 		case "change connection status source":
 			//клиенту API
-			fmt.Println("MSG Core module 'change connection status source'")
-			fmt.Printf("%v\n", msg.AdvancedOptions)
-
 			sendChanStatusSourceForAPI(chanToAPI, msg)
 
 		case "telemetry":
 			//клиенту API
-			fmt.Println("TELEMETRY func 'handlerMsgFromNI'")
-
 			jsonIn, ok := msg.AdvancedOptions.(*[]byte)
 			if !ok {
 				_ = saveMessageApp.LogMessage("error", "type conversion error"+funcName)
@@ -135,8 +124,6 @@ func HandlerMsgFromNI(
 		}
 
 	case "filtration control":
-		fmt.Println("func 'HandlerMsgFromNI', section FILTRATION CONTROL")
-
 		msgChan := configure.MsgBetweenCoreAndDB{
 			MsgGenerator:    "NI module",
 			MsgRecipient:    "DB module",
@@ -145,8 +132,6 @@ func HandlerMsgFromNI(
 			TaskID:          msg.TaskID,
 			AdvancedOptions: msg.AdvancedOptions,
 		}
-
-		fmt.Printf("_==_ MSG:%v\n", msgChan)
 
 		//отправляем иформацию о ходе фильтрации в БД
 		chanToDB <- &msgChan
@@ -160,13 +145,7 @@ func HandlerMsgFromNI(
 		fmt.Println("func 'HandlerMsgFromNI', section DOWNLOAD CONTROL")
 
 	case "error notification":
-		fmt.Println("///******* func 'HandlerMsgFromNI', section ERROR NOTIFICATION /////")
-		fmt.Printf("++++ msg:%v, taskID: '%v'\n", msg, msg.TaskID)
-
 		if taskInfo == nil {
-
-			fmt.Printf("-------- ======= error notification, task ID == nil")
-
 			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", msg.TaskID))
 
 			return
@@ -174,9 +153,6 @@ func HandlerMsgFromNI(
 
 		ao, ok := msg.AdvancedOptions.(configure.ErrorNotification)
 		if !ok {
-
-			fmt.Printf("-------- ======= error notification, task ID == 'type conversion error'")
-
 			_ = saveMessageApp.LogMessage("error", "type conversion error"+funcName)
 
 			return
@@ -198,8 +174,6 @@ func HandlerMsgFromNI(
 		smt.CompleteStoringMemoryTask(msg.TaskID)
 
 	case "message notification":
-		fmt.Println("func 'HandlerMsgFromNI', section MESSAGE NOTIFICATION")
-
 		if msg.Command == "send client API" {
 			ao, ok := msg.AdvancedOptions.(configure.MessageNotification)
 			if !ok {
@@ -220,71 +194,12 @@ func HandlerMsgFromNI(
 				Sources:        ao.Sources,
 			}
 
-			fmt.Printf("TASK INFO ClientID: %v\n", taskInfo)
-
 			notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
 		}
 
 	case "monitoring task performance":
-		fmt.Println("func 'HandlerMsgFromNI', section MESSAGE MONITORING TASKPERFORMANCE")
-
 		if msg.Command == "complete task" {
 			smt.CompleteStoringMemoryTask(msg.TaskID)
 		}
 	}
 }
-
-//getSourceListToLoadDB подготаваливаем список источников полученный от модуля
-//NI для загрузки его в БД
-/*func getSourceListToLoadDB(l interface{}) (*[]configure.MainOperatingParametersSource, error) {
-	ls, ok := l.(*map[int]configure.SourceSetting)
-	if !ok {
-		return nil, errors.New("type conversion error, function 'getSourceListToLoadDB'")
-	}
-
-	list := make([]configure.MainOperatingParametersSource, 0, len(*ls))
-
-	for id, s := range *ls {
-		list = append(list, configure.MainOperatingParametersSource{
-			ID:       id,
-			IP:       s.IP,
-			Token:    s.Token,
-			AsServer: s.AsServer,
-			Options: configure.SourceDetailedInformation{
-				StorageFolders:            s.Settings.StorageFolders,
-				EnableTelemetry:           s.Settings.EnableTelemetry,
-				MaxCountProcessFiltration: s.Settings.MaxCountProcessFiltration,
-			},
-		})
-	}
-
-	return &list, nil
-}
-
-//getSourceListToAPI подготавливаем списко источников отправляемых пользователю
-func getSourceListToAPI(l interface{}) (*[]configure.DetailedListSources, error) {
-	ls, ok := l.(*map[int]configure.SourceSetting)
-	if !ok {
-		return nil, errors.New("type conversion error, function 'getSourceListToAPI'")
-	}
-
-	list := make([]configure.DetailedListSources, 0, len(*ls))
-	for id, s := range *ls {
-		list = append(list, configure.DetailedListSources{
-			ID:         id,
-			ActionType: "none",
-			Argument: configure.SourceArguments{
-				IP:    s.IP,
-				Token: "", //думаю что токен не стоит возвращать, особенно если он пойдет не тому клиенту
-				Settings: configure.SourceSettings{
-					AsServer:                  s.AsServer,
-					EnableTelemetry:           s.Settings.EnableTelemetry,
-					MaxCountProcessFiltration: s.Settings.MaxCountProcessFiltration,
-					StorageFolders:            s.Settings.StorageFolders,
-				},
-			},
-		})
-	}
-
-	return &list, nil
-}*/

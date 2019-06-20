@@ -22,8 +22,6 @@ func HandlerMsgFromCore(
 	smt *configure.StoringMemoryTask,
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI) {
 
-	fmt.Println("START func HandlerMsgFromCore... (NI module)")
-
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'HandlerMsgFromCore'"
@@ -40,9 +38,6 @@ func HandlerMsgFromCore(
 	switch msg.Section {
 	case "source control":
 		if msg.Command == "create list" {
-
-			//fmt.Println("====== CREATE LIST RESIVED FROM DB =======")
-
 			sl, ok := msg.AdvancedOptions.([]configure.InformationAboutSource)
 			if !ok {
 				_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
@@ -51,14 +46,9 @@ func HandlerMsgFromCore(
 			}
 
 			createSourceList(isl, sl)
-
-			//fmt.Printf("curent list %v \n=======================\n", isl.GetSourceList())
 		}
 
 		if msg.Command == "load list" {
-
-			//fmt.Println("====== CREATE LIST RESIVED FROM CLIENT API =======", msg.ClientName, "====")
-
 			ado, ok := msg.AdvancedOptions.(configure.SourceControlMsgTypeFromAPI)
 			if !ok {
 				_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
@@ -174,8 +164,6 @@ func HandlerMsgFromCore(
 		}
 
 		if msg.Command == "perform actions on sources" {
-			fmt.Println("====== PERFOM ACTIONS ON SOURCES RESIVED FROM CLIENT API =======", msg.ClientName, "====")
-
 			ado, ok := msg.AdvancedOptions.(configure.SourceControlMsgOptions)
 			if !ok {
 				_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
@@ -189,8 +177,6 @@ func HandlerMsgFromCore(
 
 				return
 			}
-
-			//fmt.Printf("BEFORE update MEMORY: %v\n", isl.GetSourceList())
 
 			//проверяем прислал ли пользователь данные по источникам
 			if len(ado.MsgOptions.SourceList) == 0 {
@@ -237,10 +223,6 @@ func HandlerMsgFromCore(
 				}
 				return
 			}
-
-			//fmt.Printf("\nLIST SOURCES IN MEMORY\n%v\n", isl.GetSourceList())
-
-			//fmt.Println("List Action Type", listActionType)
 
 			// получаем ID источников по которым нужно обновить информацию
 			// в БД, к ним относятся источники для которых выполненно действие
@@ -296,9 +278,6 @@ func HandlerMsgFromCore(
 
 	case "filtration control":
 		if msg.Command == "start" {
-
-			fmt.Printf("|-|-|-|-|-| RESIVED MESSAGE 'filtration control', 'START'\n")
-
 			//проверяем наличие подключения для заданного источника
 			si, ok := isl.GetSourceSetting(msg.SourceID)
 			if !ok || !si.ConnectionStatus {
@@ -307,16 +286,10 @@ func HandlerMsgFromCore(
 					humanNotify = fmt.Sprintf("Источник с ID %v не найден", msg.SourceID)
 				}
 
-				fmt.Printf("\t!!! Внимание, источник с ID %v не подключен\n", msg.SourceID)
-
 				if ti, ok := smt.GetStoringMemoryTask(msg.TaskID); !ok {
-					fmt.Println("\t!!!  останавливаем передачу списка файлов (найденных в результате поиска по индексам)")
-
 					//останавливаем передачу списка файлов (найденных в результате поиска по индексам)
 					ti.ChanStopTransferListFiles <- struct{}{}
 				}
-
-				fmt.Println("\t!!! отправляем сообщение пользователю")
 
 				//отправляем сообщение пользователю
 				clientNotify.AdvancedOptions = configure.MessageNotification{
@@ -329,16 +302,8 @@ func HandlerMsgFromCore(
 
 				chanInCore <- &clientNotify
 
-				fmt.Println("\t!!! обновляем информацию о задаче фильтрации в памяти приложения")
-
-				fi, _ := smt.GetStoringMemoryTask(msg.TaskID)
-
-				fmt.Printf("\t Параметры фильтрации %v\n", fi)
-
 				//обновляем информацию о задаче фильтрации в памяти приложения
 				smt.UpdateTaskFiltrationAllParameters(msg.TaskID, configure.FiltrationTaskParameters{Status: "refused"})
-
-				fmt.Println("\t!!! отправляем сообщение в БД информирующее о необходимости записи новых параметров")
 
 				//отправляем сообщение в БД информирующее о необходимости записи новых параметров
 				chanInCore <- &configure.MsgBetweenCoreAndNI{
@@ -347,8 +312,6 @@ func HandlerMsgFromCore(
 					Command:  "update",
 					SourceID: msg.SourceID,
 				}
-
-				fmt.Println("\t!!! снимаем отслеживание выполнения задачи")
 
 				//снимаем отслеживание выполнения задачи
 				chanInCore <- &configure.MsgBetweenCoreAndNI{
@@ -359,8 +322,6 @@ func HandlerMsgFromCore(
 
 				return
 			}
-
-			fmt.Printf("\t!!! Начало выполнения задачи по фильтрайии на источнике ID %v\n", msg.SourceID)
 
 			msgJSON, ok := msg.AdvancedOptions.([]byte)
 			if !ok {
@@ -374,6 +335,8 @@ func HandlerMsgFromCore(
 				DestinationHost: si.IP,
 				Data:            &msgJSON,
 			}
+
+			fmt.Println("\tЗадача по фильтрации сет. трафика ушла на источник...")
 		}
 
 		if msg.Command == "stop" {
@@ -423,14 +386,7 @@ func HandlerMsgFromCore(
 		}
 
 		if msg.Command == "stop" {
-			/*
-				//снять отслеживание выполнения задачи
-					chanInCore <- &configure.MsgBetweenCoreAndNI{
-						TaskID:  msg.TaskID,
-						Section: "monitoring task performance",
-						Command: "complete task",
-					}
-			*/
+
 		}
 
 	}

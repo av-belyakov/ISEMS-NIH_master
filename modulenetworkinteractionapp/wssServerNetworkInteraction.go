@@ -46,8 +46,6 @@ func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWrit
 		<body><h1>Access denied. For additional information, please contact the webmaster.</h1></body>
 		</html>`)
 
-	fmt.Printf("_____________ RESIVED HTTP REQUEST FROM IP:%v _______________\n %v\n", req.RemoteAddr, req.Header)
-
 	stringToken := ""
 	for headerName := range req.Header {
 		if headerName == "Token" {
@@ -95,8 +93,6 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 
 	remoteIP := strings.Split(req.RemoteAddr, ":")[0]
 
-	fmt.Printf("*-*-*--**- WSS connect IP %v\n", remoteIP)
-
 	clientID, idIsExist := sws.SourceList.GetSourceIDOnIP(remoteIP)
 	if !idIsExist {
 		w.WriteHeader(401)
@@ -136,8 +132,6 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
 	defer connClose(sws.COut, c, sws.SourceList, clientID, remoteIP)
-
-	fmt.Printf("********* WSS SERVER SUCCESS ESTABLISHED client IP %v\n", remoteIP)
 
 	//изменяем состояние соединения для данного источника
 	_ = sws.SourceList.ChangeSourceConnectionStatus(clientID, true)
@@ -193,7 +187,7 @@ func WssServerNetworkInteraction(
 	}
 
 	/* инициализируем HTTPS сервер */
-	log.Println("\tThe HTTPS server Network Integration is running on ip address " + appConf.ServerHTTPS.Host + ", port " + port + "\n")
+	fmt.Printf("\tThe HTTPS server Network Integration is running, %v:%v\n", appConf.ServerHTTPS.Host, port)
 
 	http.HandleFunc("/", settingsHTTPServer.HandlerRequest)
 	http.HandleFunc("/wss", settingsWssServer.ServerWss)

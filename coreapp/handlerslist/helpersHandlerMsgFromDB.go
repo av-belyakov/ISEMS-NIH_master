@@ -14,8 +14,6 @@ func getCurrentSourceListForAPI(
 	res *configure.MsgBetweenCoreAndDB,
 	smt *configure.StoringMemoryTask) {
 
-	fmt.Println("START function 'getCurrentSourceListForAPI'")
-
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'getCurrentSourceListForAPI'"

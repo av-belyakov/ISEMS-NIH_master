@@ -18,8 +18,6 @@ func HandlerMsgFromDB(
 	chanDropNI <-chan string,
 	chanToNI chan<- *configure.MsgBetweenCoreAndNI) {
 
-	fmt.Println("START function 'HandlerMsgFromDB' module coreapp")
-
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'HandlerMsgFromDB'"
@@ -28,8 +26,6 @@ func HandlerMsgFromDB(
 
 	switch res.MsgRecipient {
 	case "Core module":
-		fmt.Printf("RESIPENT MSG FOR CORE %v", res)
-
 		if res.MsgSection == "error notification" {
 			//если сообщение об ошибке только для ядра приложения
 			if en, ok := res.AdvancedOptions.(configure.ErrorNotification); ok {
@@ -112,10 +108,6 @@ func HandlerMsgFromDB(
 			//пока заглушка
 
 		case "filtration control":
-
-			fmt.Println(" ***** CORE MODULE (handlerMsgFromDB), Resived MSG 'filtration' ****")
-			fmt.Printf("%v\n", res)
-
 			tfmfi, ok := res.AdvancedOptions.(configure.TypeFiltrationMsgFoundIndex)
 			if !ok {
 				_ = saveMessageApp.LogMessage("error", "type conversion error section type 'message notification'"+funcName)

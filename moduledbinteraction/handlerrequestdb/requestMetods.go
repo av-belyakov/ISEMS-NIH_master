@@ -3,6 +3,7 @@ package handlerrequestdb
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/mongo"
@@ -28,7 +29,7 @@ type QueryParameters struct {
 //InsertData добавляет все данные
 func (qp *QueryParameters) InsertData(list []interface{}) (bool, error) {
 
-	fmt.Println("===== INSERT DATA ======")
+	//fmt.Println("\t===== REQUEST TO DB 'INSERT DATA' ======")
 
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
 	if _, err := collection.InsertMany(context.TODO(), list); err != nil {
@@ -41,7 +42,7 @@ func (qp *QueryParameters) InsertData(list []interface{}) (bool, error) {
 //DeleteOneData удаляет елемент
 func (qp *QueryParameters) DeleteOneData(elem interface{}) error {
 
-	fmt.Println("===== DELETE DATA ONE ======")
+	//fmt.Println("\t===== REQUEST TO DB 'DELETE DATA ONE' ======")
 
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
 	if _, err := collection.DeleteOne(context.TODO(), elem); err != nil {
@@ -54,7 +55,7 @@ func (qp *QueryParameters) DeleteOneData(elem interface{}) error {
 //DeleteManyData удаляет группу элементов
 func (qp *QueryParameters) DeleteManyData(list []interface{}) error {
 
-	fmt.Println("===== DELETE DATA MANY ======")
+	//fmt.Println("\t===== REQUEST TO DB 'DELETE DATA MANY' ======")
 
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
 	if _, err := collection.DeleteMany(context.TODO(), list); err != nil {
@@ -67,7 +68,7 @@ func (qp *QueryParameters) DeleteManyData(list []interface{}) error {
 //UpdateOne обновляет параметры в элементе
 func (qp *QueryParameters) UpdateOne(searchElem, update interface{}) error {
 
-	fmt.Println("===== UPDATE ONE ======")
+	fmt.Printf("\t===== REQUEST TO DB 'UPDATE ONE' current time: %v ======\n", time.Now())
 
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
 	if _, err := collection.UpdateOne(context.TODO(), searchElem, update); err != nil {
@@ -79,7 +80,8 @@ func (qp *QueryParameters) UpdateOne(searchElem, update interface{}) error {
 
 //UpdateMany обновляет множественные параметры в элементе
 func (qp *QueryParameters) UpdateMany(searchElem, update []interface{}) error {
-	fmt.Println("===== UPDATE MANY ======")
+
+	//fmt.Println("\t===== REQUEST TO DB 'UPDATE MANY' ======")
 
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
 	if _, err := collection.UpdateMany(context.TODO(), searchElem, update); err != nil {
@@ -92,7 +94,7 @@ func (qp *QueryParameters) UpdateMany(searchElem, update []interface{}) error {
 //Find найти всю информацию по заданному элементы
 func (qp QueryParameters) Find(elem interface{}) (*mongo.Cursor, error) {
 
-	fmt.Println("===== FIND ======")
+	//fmt.Println("\t===== REQUEST TO DB 'FIND' ======")
 
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
 	options := options.Find()
@@ -103,7 +105,7 @@ func (qp QueryParameters) Find(elem interface{}) (*mongo.Cursor, error) {
 //FindAlltoCollection найти всю информацию в коллекции
 func (qp QueryParameters) FindAlltoCollection() (*mongo.Cursor, error) {
 
-	fmt.Println("===== FIND ALL COLLECTION ======")
+	//fmt.Println("\t===== REQUEST TO DB 'FIND ALL COLLECTION' ======")
 
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
 	options := options.Find()
@@ -114,7 +116,7 @@ func (qp QueryParameters) FindAlltoCollection() (*mongo.Cursor, error) {
 //CountDocuments подсчитать количество документов в коллекции
 func (qp QueryParameters) CountDocuments(filter interface{}) (int64, error) {
 
-	fmt.Println("===== COUNT DOCUMENTS ======")
+	//fmt.Println("\t===== REQUEST TO DB 'COUNT DOCUMENTS' ======")
 
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
 	options := options.Count()

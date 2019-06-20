@@ -1,8 +1,6 @@
 package handlerslist
 
 import (
-	"fmt"
-
 	"ISEMS-NIH_master/configure"
 )
 
@@ -23,9 +21,9 @@ func senderMsgToAPI(
 	//устанавливаем статус задачи как выполненую
 	smt.CompleteStoringMemoryTask(taskID)
 
-	if ti, ok := smt.GetStoringMemoryTask(taskID); ok {
+	/*if ti, ok := smt.GetStoringMemoryTask(taskID); ok {
 		fmt.Printf("new status task with task ID %q - %v\n", taskID, ti.TaskStatus)
-	}
+	}*/
 
 	return nil
 }

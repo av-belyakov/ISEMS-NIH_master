@@ -13,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -34,7 +33,6 @@ type clientSetting struct {
 }
 
 func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request) error {
-	fmt.Println("start function REDIRECT")
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
@@ -75,8 +73,6 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 			for {
 				_, message, err := c.ReadMessage()
 				if err != nil {
-
-					fmt.Println("ERROR WSS CONNECT", err)
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 					break
@@ -102,7 +98,7 @@ func WssClientNetworkInteraction(
 	cwt chan<- configure.MsgWsTransmission) {
 
 	/* инициализируем HTTPS клиента */
-	log.Println("\tThe HTTPS client Network Integration is running")
+	fmt.Println("\tThe HTTPS client Network Integration is running")
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
@@ -139,16 +135,12 @@ func WssClientNetworkInteraction(
 	for range ticker.C {
 		sl := isl.GetSourceList()
 
-		fmt.Println("*** count sources to connect:", len(*sl))
-
 		if len(*sl) == 0 {
 			continue
 		}
 
 		for id, s := range *sl {
 			if s.AsServer && !s.ConnectionStatus {
-				fmt.Printf("connection attempt with source IP: %v, ID %v\n", s.IP, id)
-
 				port := strconv.Itoa(s.Settings.IfAsServerThenPort)
 
 				cs := clientSetting{

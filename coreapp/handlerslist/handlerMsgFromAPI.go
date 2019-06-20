@@ -18,8 +18,6 @@ func HandlerMsgFromAPI(
 	chanToDB chan<- *configure.MsgBetweenCoreAndDB,
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) {
 
-	fmt.Println("--- START function 'HandlerMsgFromAPI'...")
-
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'HeaderMsgFromAPI'"
@@ -160,12 +158,8 @@ func HandlerMsgFromAPI(
 
 		// УПРАВЛЕНИЕ ФИЛЬТРАЦИЕЙ
 		case "filtration control":
-			fmt.Println("func 'HandlerMsgFromAPI' MsgType: 'command', MsgSection: 'filtration control'")
-
 			//обработка команды на запуск фильтрации
 			if msgc.MsgInsturction == "to start filtering" {
-				fmt.Printf("*-*-*-*-*-*--*-*- resive instracion to START filtration '%v'\n", msgc.MsgInsturction)
-
 				var fcts configure.FiltrationControlTypeStart
 				if err := json.Unmarshal(msgJSON, &fcts); err != nil {
 					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
@@ -181,8 +175,6 @@ func HandlerMsgFromAPI(
 
 			//команда на останов фильтрации
 			if msgc.MsgInsturction == "to cancel the filtering" {
-				fmt.Printf("*-*-*-*-*-*--*-*- resive instracion to STOP filtration '%v'\n", msgc.MsgInsturction)
-
 				//ищем выполняемую задачу по ClientTaskID (уникальный ID задачи на стороне клиента)
 				taskID, ti, isExist := smt.GetStoringMemoryTaskForClientID(msg.IDClientAPI, msgc.ClientTaskID)
 				if !isExist {

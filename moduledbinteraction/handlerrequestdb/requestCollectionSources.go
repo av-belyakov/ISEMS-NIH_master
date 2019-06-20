@@ -16,8 +16,6 @@ func GetAllSourcesList(
 	req *configure.MsgBetweenCoreAndDB,
 	qp QueryParameters) {
 
-	fmt.Println("START function 'GetAllSourcesList'")
-
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
 		MsgRecipient: req.MsgGenerator,
@@ -131,8 +129,6 @@ func UpdateSourceToSourcesList(
 	req *configure.MsgBetweenCoreAndDB,
 	qp QueryParameters) {
 
-	fmt.Println("requestCollectionSources - func UpdateSourceToSourcesList")
-
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
 		MsgRecipient: req.MsgGenerator,
@@ -196,8 +192,6 @@ func DelSourceToSourcesList(
 	req *configure.MsgBetweenCoreAndDB,
 	qp QueryParameters) {
 
-	fmt.Println("requestCollectionSources - func DelSourceToSourcesList")
-
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
 		MsgRecipient: req.MsgGenerator,
@@ -255,35 +249,3 @@ func findAll(qp QueryParameters) ([]configure.InformationAboutSource, error) {
 
 	return listSources, nil
 }
-
-/*func (qcs *QueryCollectionSources) find(elem interface{}) ([]configure.InformationAboutSource, error) {
-	collection := qcs.ConnectDB.Database(qcs.NameDB).Collection(qcs.CollectionName)
-	options := options.Find()
-
-	cur, err := collection.Find(context.TODO(), elem, options)
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Println(cur)
-
-	listSources := []configure.InformationAboutSource{}
-	//получаем все ID источников
-	for cur.Next(context.TODO()) {
-		var model configure.InformationAboutSource
-		err := cur.Decode(&model)
-		if err != nil {
-			return nil, err
-		}
-
-		listSources = append(listSources, model)
-	}
-
-	if err := cur.Err(); err != nil {
-		return nil, err
-	}
-
-	cur.Close(context.TODO())
-
-	return listSources, nil
-}*/

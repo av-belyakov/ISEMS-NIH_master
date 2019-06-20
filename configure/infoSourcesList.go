@@ -8,7 +8,6 @@ package configure
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -122,16 +121,12 @@ func (isl *InformationSourcesList) ChangeSourceConnectionStatus(id int, status b
 	if s, ok := isl.sourcesListSetting[id]; ok {
 		s.ConnectionStatus = status
 
-		fmt.Println("function 'ChangeSourceConnectionStatus' connection status:", s.ConnectionStatus)
-
 		if status {
 			s.DateLastConnected = time.Now().Unix()
 		} else {
-
-			fmt.Println("function 'ChangeSourceConnectionStatus' set status FALSE")
-
 			s.AccessIsAllowed = false
 		}
+
 		isl.sourcesListSetting[id] = s
 
 		return true

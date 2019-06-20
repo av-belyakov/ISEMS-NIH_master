@@ -8,8 +8,6 @@ package coreapp
 * */
 
 import (
-	"fmt"
-
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/coreapp/handlerslist"
 	"ISEMS-NIH_master/notifications"
@@ -21,8 +19,6 @@ func Routing(
 	cc *configure.ChannelCollectionCoreApp,
 	smt *configure.StoringMemoryTask,
 	chanCheckTask <-chan configure.MsgChanStoringMemoryTask) {
-
-	fmt.Println("START ROUTE module 'CoreApp'...")
 
 	//при старте приложения запрашиваем список источников
 	//отправляем запрос в БД
@@ -38,26 +34,18 @@ func Routing(
 		select {
 		//CHANNEL FROM DATABASE
 		case data := <-cc.InCoreChanDB:
-			fmt.Println("MESSAGE FROM module DBInteraction (route Core module)")
-
 			go handlerslist.HandlerMsgFromDB(cc.OutCoreChanAPI, data, smt, cc.ChanDropNI, cc.OutCoreChanNI)
 
 		//CHANNEL FROM API
 		case data := <-cc.InCoreChanAPI:
-			fmt.Println("MESSAGE FROM module API (route Core module)")
-
 			go handlerslist.HandlerMsgFromAPI(cc.OutCoreChanNI, data, smt, cc.OutCoreChanDB, cc.OutCoreChanAPI)
 
 		//CHANNEL FROM NETWORK INTERACTION
 		case data := <-cc.InCoreChanNI:
-			fmt.Println("MESSAGE FROM module NetworkInteraction (route Core module)")
-
 			go handlerslist.HandlerMsgFromNI(cc.OutCoreChanAPI, data, smt, cc.OutCoreChanDB)
 
 		//сообщение клиенту API о том что задача с указанным ID долго выполняется
 		case infoHungTask := <-chanCheckTask:
-			fmt.Println("сообщение клиенту о том что данная задача долго выполняется")
-
 			if ti, ok := smt.GetStoringMemoryTask(infoHungTask.ID); ok {
 				nsErrJSON := notifications.NotificationSettingsToClientAPI{
 					MsgType:        infoHungTask.Type,

@@ -26,8 +26,6 @@ func RouteCoreRequest(
 	chanColl map[string]chan [2]string,
 	chanOutCore <-chan *configure.MsgBetweenCoreAndNI) {
 
-	fmt.Println("START module 'RouteCoreRequest' (network interaction)...")
-
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
@@ -41,8 +39,7 @@ func RouteCoreRequest(
 		case msg := <-chanColl["outWssModuleServer"]:
 			sourceIP, action := msg[0], msg[1]
 
-			fmt.Println("--- SERVER: SOURCE WITH IP", sourceIP, " has success ", action)
-			fmt.Println(action, sourceIP)
+			_ = saveMessageApp.LogMessage("info", fmt.Sprintf("SERVER: source with IP %v has success %v", sourceIP, action))
 
 			sourceID, ok := isl.GetSourceIDOnIP(sourceIP)
 			if !ok {
@@ -68,7 +65,7 @@ func RouteCoreRequest(
 						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 					}
 
-					fmt.Printf("send msg type PING source %v (action SERVER)\n", id)
+					_ = saveMessageApp.LogMessage("info", fmt.Sprintf("SERVER: send msg type PING source %v", id))
 
 					//отправляем источнику запрос типа Ping
 					cwt <- configure.MsgWsTransmission{
@@ -82,8 +79,7 @@ func RouteCoreRequest(
 		case msg := <-chanColl["outWssModuleClient"]:
 			sourceIP, action := msg[0], msg[1]
 
-			fmt.Println("--- CLIENT: SOURCE WITH IP", sourceIP, " has success ", action)
-			fmt.Println(action, sourceIP)
+			_ = saveMessageApp.LogMessage("info", fmt.Sprintf("CLIENT: source with IP %v has success %v", sourceIP, action))
 
 			sourceID, ok := isl.GetSourceIDOnIP(sourceIP)
 			if !ok {
@@ -109,7 +105,7 @@ func RouteCoreRequest(
 						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 					}
 
-					fmt.Println("send msg type PING (action CLIENT)")
+					_ = saveMessageApp.LogMessage("info", fmt.Sprintf("CLIENT: send msg type PING source %v", id))
 
 					//отправляем источнику запрос типа Ping
 					cwt <- configure.MsgWsTransmission{
@@ -134,8 +130,6 @@ func RouteWssConnectionResponse(
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
 	cwtReq <-chan configure.MsgWsTransmission) {
 
-	fmt.Println("START module 'RouteWssConnectionResponse' (network interaction)...")
-
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
@@ -153,9 +147,6 @@ func RouteWssConnectionResponse(
 		sourceIP := msg.DestinationHost
 		message := msg.Data
 
-		fmt.Println("RESIVED source ip", sourceIP)
-		//fmt.Printf("%v\n", *message)
-
 		sourceID, _ := isl.GetSourceIDOnIP(sourceIP)
 
 		if err := json.Unmarshal(*message, &messageType); err != nil {
@@ -164,13 +155,9 @@ func RouteWssConnectionResponse(
 
 		switch messageType.Type {
 		case "pong":
-
-			fmt.Println("RESIVED message type 'PONG' from IP", sourceIP)
+			_ = saveMessageApp.LogMessage("info", fmt.Sprintf("resived message type 'PONG' from IP %v", sourceIP))
 
 		case "telemetry":
-			fmt.Println("RESIVED message type 'TELEMETRY' from IP", sourceIP)
-			fmt.Printf("%v\n", messageType)
-
 			chanInCore <- &configure.MsgBetweenCoreAndNI{
 				Section:         "source control",
 				Command:         "telemetry",
@@ -179,16 +166,22 @@ func RouteWssConnectionResponse(
 			}
 
 		case "filtration":
-			fmt.Println("RESIVED message type 'FILTRATION' from IP", sourceIP)
+			pprmtf := processresponse.ParametersProcessingReceivedMsgTypeFiltering{
+				CwtRes:     cwtRes,
+				ChanInCore: chanInCore,
+				CwtReq:     cwtReq,
+				Isl:        isl,
+				Smt:        smt,
+				Message:    message,
+				SourceID:   sourceID,
+				SourceIP:   sourceIP,
+			}
 
-			go processresponse.ProcessingReceivedMsgTypeFiltering(cwtRes, isl, smt, message, sourceID, sourceIP, chanInCore, cwtReq)
+			go processresponse.ProcessingReceivedMsgTypeFiltering(pprmtf)
 
 		case "download files":
 
 		case "notification":
-			fmt.Println("--- RESIVED MESSAGE TYPE 'NOTIFICATION' ---")
-			fmt.Println("------------------------------------")
-
 			var notify configure.MsgTypeNotification
 			err := json.Unmarshal(*message, &notify)
 			if err != nil {
@@ -217,9 +210,6 @@ func RouteWssConnectionResponse(
 			chanInCore <- &clientNotify
 
 		case "error":
-			fmt.Println("--- RESIVED MESSAGE TYPE 'ERROR' ---")
-			fmt.Println("------------------------------------")
-
 			var errMsg configure.MsgTypeError
 			err := json.Unmarshal(*message, &errMsg)
 			if err != nil {
@@ -227,8 +217,6 @@ func RouteWssConnectionResponse(
 
 				return
 			}
-
-			fmt.Printf("-+*+-+-*+\n%v\n-+*+-+-*+\n", errMsg)
 
 			errNotify := configure.MsgBetweenCoreAndNI{
 				TaskID:   errMsg.Info.TaskID,
@@ -242,49 +230,7 @@ func RouteWssConnectionResponse(
 				},
 			}
 
-			fmt.Printf("----- Message type 'ERROR' ------\n%v\n", errNotify)
-
 			chanInCore <- &errNotify
 		}
 	}
-
-	/*for _, c := range sourcesListConnection {
-
-	sourceIP := c.Link.RemoteAddr().String()
-
-	_, message, err := c.Link.ReadMessage()
-	if err != nil {
-		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-		break
-	}
-	if err = json.Unmarshal(message, &messageType); err != nil {
-		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-	}
-
-	switch messageType.Type {
-	case "ping":
-		if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
-			sourceSettings, _ := isl.GetSourceSetting(id)
-			formatJSON, err := processrequest.SendMsgPingPong("pong", sourceSettings.Settings.MaxCountProcessFiltration)
-			if err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-			}
-
-			//отправляем источнику запрос типа Ping
-			cwtRes <- configure.MsgWsTransmission{
-				DestinationHost: sourceIP,
-				Data:            formatJSON,
-			}
-		}
-
-	case "pong":
-		/* Нужно отправить сообщение в RouteCore о том что связь установленна */
-	/*case "source_telemetry":
-
-		case "filtration":
-
-		case "download files":
-
-		}
-	}*/
 }

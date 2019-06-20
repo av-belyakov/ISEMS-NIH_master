@@ -21,8 +21,6 @@ func CreateNewFiltrationTask(
 	req *configure.MsgBetweenCoreAndDB,
 	qp QueryParameters) {
 
-	fmt.Println("START function 'CreateNewFiltrationTask'...")
-
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
 		MsgRecipient: req.MsgGenerator,
@@ -104,8 +102,6 @@ func CreateNewFiltrationTask(
 	insertData := make([]interface{}, 0, 1)
 	insertData = append(insertData, itf)
 
-	fmt.Printf("------- %v --------\n", insertData)
-
 	//запись информации по задачи фильтрации в коллекцию 'filter_task_list'
 	if _, err := qp.InsertData(insertData); err != nil {
 		msgRes.MsgRecipient = "Core module"
@@ -139,8 +135,6 @@ func UpdateParametersFiltrationTask(
 	qp QueryParameters,
 	smt *configure.StoringMemoryTask) {
 
-	fmt.Println("START function 'UpdateParametersFiltrationTask'...")
-
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
@@ -153,6 +147,12 @@ func UpdateParametersFiltrationTask(
 	}
 
 	ti := taskInfo.TaskParameter.FiltrationTask
+
+	//выполнять обновление информации в БД для сообщения типа 'complite'
+	// всегда, для сообщения типа 'execute' только раз 31 секунду
+	if (ti.Status == "execute") && ((time.Now().Unix() - taskInfo.TimeInsertDB) < 30) {
+		return
+	}
 
 	//обновление основной информации
 	commonValueUpdate := bson.D{
@@ -205,6 +205,9 @@ func UpdateParametersFiltrationTask(
 	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, arrayValueUpdate); err != nil {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
+
+	//обновление таймера вставки информации в БД
+	smt.TimerUpdateTaskInsertDB(req.TaskID)
 
 	infoMsg := configure.MsgBetweenCoreAndDB{
 		MsgGenerator:    "DB module",

@@ -89,8 +89,6 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Content-Language", "en")
 
-	fmt.Println(req.Header)
-
 	if req.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
 
@@ -127,8 +125,6 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 }
 
 func serverWss(w http.ResponseWriter, req *http.Request) {
-	fmt.Println("START SERVER WSS API")
-
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
@@ -186,9 +182,6 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 	//обработка ответов получаемых от ядра приложения
 	go func() {
 		for msg := range chn.ChanOut {
-			fmt.Println("resived message from Core to API")
-			//			fmt.Println("Storage ClientID:", clientID, ", resived ClientID:", msg.IDClientAPI)
-
 			if msg.MsgGenerator == "Core module" && msg.MsgRecipient == "API module" {
 				msgjson, ok := msg.MsgJSON.([]byte)
 				if !ok {
@@ -229,10 +222,9 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 				_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
 
 				log.Println("Client API whis ip", remoteIP, "is disconnect")
+
 				break
 			}
-
-			fmt.Printf("|||--- RESIVED MSG FROM client name %v ---|||", clientSettings.ClientName)
 
 			chn.ChanIn <- &configure.MsgBetweenCoreAndAPI{
 				MsgGenerator: "API module",
@@ -257,8 +249,6 @@ func init() {
 
 //MainAPIApp обработчик запросов поступающих через API
 func MainAPIApp(appConfig *configure.AppConfig) (chanOut, chanIn chan *configure.MsgBetweenCoreAndAPI) {
-	fmt.Println("START module 'MainAppAPI'...")
-
 	settingsServerAPI := settingsServerAPI{
 		IP:     appConfig.ServerAPI.Host,
 		Port:   strconv.Itoa(appConfig.ServerAPI.Port),
@@ -276,7 +266,8 @@ func MainAPIApp(appConfig *configure.AppConfig) (chanOut, chanIn chan *configure
 			os.Exit(1)
 		}
 	}()
-	log.Println("\tAPI server successfully started at", settingsServerAPI.IP+":"+settingsServerAPI.Port)
+
+	fmt.Printf("\tAPI server successfully started at %v:%v\n", settingsServerAPI.IP, settingsServerAPI.Port)
 
 	return chn.ChanOut, chn.ChanIn
 }

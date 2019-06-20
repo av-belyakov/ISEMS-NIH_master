@@ -7,8 +7,6 @@ package moduledbinteraction
 * */
 
 import (
-	"fmt"
-
 	"ISEMS-NIH_master/configure"
 )
 
@@ -20,8 +18,6 @@ func RouteRequest(
 	smt *configure.StoringMemoryTask,
 	chanOut <-chan *configure.MsgBetweenCoreAndDB) {
 
-	fmt.Println("START module 'RouteRequest' (module DBInteraction)...")
-
 	wrapperFunc := WrappersRouteRequest{
 		NameDB:    nameDB,
 		ConnectDB: linkConnection.Connect,
@@ -32,12 +28,15 @@ func RouteRequest(
 		switch msg.MsgSection {
 		case "source control":
 			go wrapperFunc.WrapperFuncSourceControl(msg)
+
 		case "source telemetry":
 
 		case "filtration control":
 			go wrapperFunc.WrapperFuncFiltration(msg, smt)
+
 		case "download control":
 			go wrapperFunc.WrapperFuncDownload(msg, smt)
+
 		case "error notification":
 
 		case "information search":

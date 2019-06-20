@@ -16,8 +16,6 @@ import (
 
 //checkParametersFiltration проверяет параметры фильтрации
 func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParametersFiltration) (string, bool) {
-	fmt.Println("START function 'checkParametersFiltration'...")
-
 	//проверяем наличие ID источника
 	if fccpf.ID == 0 {
 		return "отсутствует идентификатор источника", false
@@ -164,8 +162,6 @@ func handlerFiltrationControlTypeStart(
 	clientID string,
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) {
 
-	fmt.Println("START function 'handlerFiltrationControlTypeStart'...")
-
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'handlerFiltrationControlTypeStart'"
@@ -231,10 +227,6 @@ func handlerFiltrationControlTypeStart(
 			},
 		},
 	})
-
-	ti, _ := smt.GetStoringMemoryTask(taskID)
-
-	fmt.Printf("\t===== Create NEW Storing MEmory Task with ID: %v\nParameters: %v\n", taskID, ti)
 
 	//сохранение параметров задачи в БД
 	chanToDB <- &configure.MsgBetweenCoreAndDB{

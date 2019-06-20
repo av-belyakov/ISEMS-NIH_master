@@ -7,8 +7,6 @@ package moduledbinteraction
 * */
 
 import (
-	"fmt"
-
 	"ISEMS-NIH_master/configure"
 )
 
@@ -17,8 +15,6 @@ func MainDBInteraction(
 	nameDB string,
 	linkConnection *configure.MongoDBConnect,
 	smt *configure.StoringMemoryTask) (chanOut, chanIn chan *configure.MsgBetweenCoreAndDB) {
-
-	fmt.Println("START module 'MainDBInteraction'...")
 
 	//инициализируем каналы для обмена данными между БД м ядром приложения
 	chanOut = make(chan *configure.MsgBetweenCoreAndDB) //->БД

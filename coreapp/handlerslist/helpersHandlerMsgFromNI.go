@@ -15,8 +15,6 @@ func getConfirmActionSourceListForAPI(
 	res *configure.MsgBetweenCoreAndNI,
 	smt *configure.StoringMemoryTask) {
 
-	fmt.Println("START function 'getConfirmActionSourceListForAPI'")
-
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'getConfirmActionSourceListForAPI'"
@@ -147,10 +145,6 @@ func sendInformationFiltrationTask(
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 		return
-	}
-
-	if ti.Status == "complite" {
-		fmt.Println("-+-++--+--+-+ SEND FILTRATION MSG 'COMPLITE'")
 	}
 
 	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
