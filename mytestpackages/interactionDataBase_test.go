@@ -186,45 +186,42 @@ func updateFiltrationTaskParameters(
 	return nil
 }
 
-func getInfoFiltrationTaskForID(connectDB *mongo.Client, taskID string) (configure.InformationAboutTaskFiltration, error) {
+func getInfoFiltrationTaskForID(connectDB *mongo.Client, taskID string) ([]configure.InformationAboutTaskFiltration, error) {
+	fmt.Println("START function 'getInfoFiltrationTaskForID'...")
+
 	qp := QueryParameters{
 		NameDB:         "isems-nih",
 		CollectionName: "filter_task_list",
 		ConnectDB:      connectDB,
 	}
 
-	itf := configure.InformationAboutTaskFiltration{}
+	itf := []configure.InformationAboutTaskFiltration{}
 
-	cur, err := qp.Find(taskID)
+	cur, err := qp.Find(bson.D{bson.E{Key: "task_id", Value: "ff644a6faed4bbfec3a31cf8826a5587"}})
 	if err != nil {
+		fmt.Printf("---------1 ERROR: %v\n", err)
+
 		return itf, err
 	}
 
-	err = cur.Decode(&itf)
-	if err != nil {
-		return itf, err
+	for cur.Next(context.TODO()) {
+		var model configure.InformationAboutTaskFiltration
+		err := cur.Decode(&model)
+		if err != nil {
+			fmt.Printf("---------2 ERROR: %v\n", err)
+
+			return itf, err
+		}
+
+		itf = append(itf, model)
 	}
 
 	if err := cur.Err(); err != nil {
+		fmt.Printf("---------3 ERROR: %v\n", err)
+
 		return itf, err
 	}
-	/*
-		listSources := []configure.InformationAboutSource{}
-		//получаем все ID источников
-		for cur.Next(context.TODO()) {
-			var model configure.InformationAboutSource
-			err := cur.Decode(&model)
-			if err != nil {
-				return nil, err
-			}
 
-			listSources = append(listSources, model)
-		}
-
-		if err := cur.Err(); err != nil {
-			return nil, err
-		}
-	*/
 	cur.Close(context.TODO())
 
 	return itf, nil
@@ -379,6 +376,7 @@ var _ = Describe("InteractionDataBase", func() {
 		It("В результате должна быть получена вся информация о задачи фильтрации по ее ID", func() {
 			ti, err := getInfoFiltrationTaskForID(conn, taskID)
 
+			fmt.Println(err)
 			fmt.Printf("---------- All information about task -----\n%v\n", ti)
 
 			Expect(err).ToNot(HaveOccurred())

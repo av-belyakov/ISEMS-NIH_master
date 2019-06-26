@@ -139,7 +139,11 @@ func HandlerMsgFromNI(
 		/* упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
 		при чем если статус 'execute', то отправляем еще и содержимое поля 'FoundFilesInformation',
 		а если статус фильтрации 'stop' или 'complite' то данное поле не заполняем */
-		sendInformationFiltrationTask(chanToAPI, taskInfo, msg)
+
+		//если задача найдена
+		if ok {
+			sendInformationFiltrationTask(chanToAPI, taskInfo, msg)
+		}
 
 	case "download control":
 		fmt.Println("func 'HandlerMsgFromNI', section DOWNLOAD CONTROL")

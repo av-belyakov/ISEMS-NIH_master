@@ -81,7 +81,7 @@ func (qp *QueryParameters) UpdateOne(searchElem, update interface{}) error {
 //UpdateMany обновляет множественные параметры в элементе
 func (qp *QueryParameters) UpdateMany(searchElem, update []interface{}) error {
 
-	//fmt.Println("\t===== REQUEST TO DB 'UPDATE MANY' ======")
+	fmt.Println("\t===== REQUEST TO DB 'UPDATE MANY' ======")
 
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
 	if _, err := collection.UpdateMany(context.TODO(), searchElem, update); err != nil {
@@ -91,7 +91,7 @@ func (qp *QueryParameters) UpdateMany(searchElem, update []interface{}) error {
 	return nil
 }
 
-//Find найти всю информацию по заданному элементы
+//Find найти всю информацию по заданному элементу
 func (qp QueryParameters) Find(elem interface{}) (*mongo.Cursor, error) {
 
 	//fmt.Println("\t===== REQUEST TO DB 'FIND' ======")

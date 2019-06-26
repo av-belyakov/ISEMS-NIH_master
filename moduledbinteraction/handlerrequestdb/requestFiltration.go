@@ -141,7 +141,52 @@ func UpdateParametersFiltrationTask(
 	//получаем всю информацию по выполняемой задаче
 	taskInfo, ok := smt.GetStoringMemoryTask(req.TaskID)
 	if !ok {
-		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found (DB module)", req.TaskID))
+		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with ID '%v' not found (DB module)", req.TaskID))
+
+		fmt.Println("\tвосстанавливаем задачу по ее ID")
+
+		//восстанавливаем задачу по ее ID
+		taskInfoFromDB, err := getInfoFiltrationTaskForID(qp, req.TaskID)
+		if err != nil {
+			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+			return
+		}
+
+		if len(taskInfoFromDB) == 0 {
+			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task ID '%v' not found in database (DB module)", req.TaskID))
+
+			return
+		}
+
+		itd := taskInfoFromDB[0]
+		smt.RecoverStoringMemoryTask(configure.TaskDescription{
+			ClientID:                        itd.ClientID,
+			ClientTaskID:                    itd.ClientTaskID,
+			TaskType:                        "filtration control",
+			ModuleThatSetTask:               "API module",
+			ModuleResponsibleImplementation: "NI module",
+			TimeUpdate:                      time.Now().Unix(),
+			TimeInterval: configure.TimeIntervalTaskExecution{
+				Start: itd.DetailedInformationOnFiltering.TimeIntervalTaskExecution.Start,
+				End:   itd.DetailedInformationOnFiltering.TimeIntervalTaskExecution.End,
+			},
+			TaskParameter: configure.DescriptionTaskParameters{
+				FiltrationTask: configure.FiltrationTaskParameters{
+					ID:                              itd.FilteringOption.ID,
+					Status:                          itd.DetailedInformationOnFiltering.TaskStatus,
+					UseIndex:                        itd.DetailedInformationOnFiltering.WasIndexUsed,
+					NumberFilesMeetFilterParameters: itd.DetailedInformationOnFiltering.NumberFilesMeetFilterParameters,
+					NumberProcessedFiles:            itd.DetailedInformationOnFiltering.NumberProcessedFiles,
+					NumberFilesFoundResultFiltering: itd.DetailedInformationOnFiltering.NumberFilesFoundResultFiltering,
+					NumberDirectoryFiltartion:       itd.DetailedInformationOnFiltering.NumberDirectoryFiltartion,
+					NumberErrorProcessedFiles:       itd.DetailedInformationOnFiltering.NumberErrorProcessedFiles,
+					SizeFilesMeetFilterParameters:   itd.DetailedInformationOnFiltering.SizeFilesMeetFilterParameters,
+					SizeFilesFoundResultFiltering:   itd.DetailedInformationOnFiltering.SizeFilesFoundResultFiltering,
+					PathStorageSource:               itd.DetailedInformationOnFiltering.PathDirectoryForFilteredFiles,
+				},
+			},
+		}, req.TaskID)
 
 		return
 	}

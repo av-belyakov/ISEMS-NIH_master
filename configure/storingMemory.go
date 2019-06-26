@@ -1,8 +1,11 @@
 package configure
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -46,7 +49,10 @@ func NewRepositorySMAPI() *StoringMemoryAPI {
 
 //AddNewClient добавляет нового клиента
 func (smapi *StoringMemoryAPI) AddNewClient(clientIP, clientName string) string {
-	hsum := common.GetUniqIDFormatMD5(clientIP)
+	h := md5.New()
+	io.WriteString(h, clientIP+" client API")
+
+	hsum := hex.EncodeToString(h.Sum(nil))
 
 	smapi.clientSettings[hsum] = &ClientSettings{
 		IP:         clientIP,
@@ -238,6 +244,11 @@ func NewRepositorySMT() *StoringMemoryTask {
 				smt.tasks[msg.TaskID].TaskParameter.FiltrationTask.FoundFilesInformation = map[string]*FoundFilesInformation{}
 				smt.tasks[msg.TaskID].TaskParameter.DownloadTask = DownloadTaskParameters{}
 
+			case "recover":
+				smt.tasks[msg.TaskID] = msg.Description
+				smt.tasks[msg.TaskID].TaskParameter.FiltrationTask.FoundFilesInformation = map[string]*FoundFilesInformation{}
+				smt.tasks[msg.TaskID].TaskParameter.DownloadTask = DownloadTaskParameters{}
+
 			case "complete":
 				if _, ok := smt.tasks[msg.TaskID]; ok {
 					smt.tasks[msg.TaskID].TaskStatus = true
@@ -303,6 +314,15 @@ func (smt StoringMemoryTask) AddStoringMemoryTask(td TaskDescription) string {
 	}
 
 	return taskID
+}
+
+//RecoverStoringMemoryTask восстанавливает всю информацию о выполяемой задаче
+func (smt StoringMemoryTask) RecoverStoringMemoryTask(td TaskDescription, taskID string) {
+	smt.channelReq <- ChanStoringMemoryTask{
+		ActionType:  "recover",
+		TaskID:      taskID,
+		Description: &td,
+	}
 }
 
 //delStoringMemoryTask удалить задачу
