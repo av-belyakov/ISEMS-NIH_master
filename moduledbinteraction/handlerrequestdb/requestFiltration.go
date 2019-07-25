@@ -64,7 +64,7 @@ func CreateNewFiltrationTask(
 		TaskID:       req.TaskID,
 		ClientID:     req.IDClientAPI,
 		ClientTaskID: req.TaskIDClientAPI,
-		FilteringOption: configure.FiletringOption{
+		FilteringOption: configure.FilteringOption{
 			ID: tf.ID,
 			DateTime: configure.TimeInterval{
 				Start: tf.DateTime.Start,
@@ -90,13 +90,16 @@ func CreateNewFiltrationTask(
 			},
 		},
 		DetailedInformationOnFiltering: configure.DetailedInformationFiltering{
-			TaskStatus:                    "wait",
-			ListFilesFoundResultFiltering: []*configure.InformationFilesFoundResultFiltering{},
-			WasIndexUsed:                  isFound,
+			TaskStatus:   "wait",
+			WasIndexUsed: isFound,
 			TimeIntervalTaskExecution: configure.TimeInterval{
 				Start: time.Now().Unix(),
 			},
 		},
+		DetailedInformationOnDownloading: configure.DetailedInformationDownloading{
+			TaskStatus: "not executed",
+		},
+		ListFilesResultTaskExecution: []*configure.FilesInformation{},
 	}
 
 	insertData := make([]interface{}, 0, 1)
@@ -227,6 +230,7 @@ func UpdateParametersFiltrationTask(
 			bson.E{Key: "file_name", Value: n},
 			bson.E{Key: "file_size", Value: v.Size},
 			bson.E{Key: "file_hex", Value: v.Hex},
+			bson.E{Key: "file_loaded", Value: false},
 		})
 	}
 
@@ -234,7 +238,7 @@ func UpdateParametersFiltrationTask(
 		bson.E{
 			Key: "$addToSet", Value: bson.D{
 				bson.E{
-					Key: "detailed_information_on_filtering.list_files_found_result_filtering",
+					Key: "list_files_result_task_execution",
 					Value: bson.D{
 						bson.E{
 							Key:   "$each",

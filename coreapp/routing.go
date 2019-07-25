@@ -4,13 +4,17 @@ package coreapp
 * Ядро приложения
 * Маршрутизация сообщений получаемых через каналы
 *
-* Версия 0.3, дата релиза 13.03.2019
+* Версия 0.4, дата релиза 01.08.2019
 * */
 
 import (
+	"fmt"
+
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/coreapp/handlerslist"
+	"ISEMS-NIH_master/directorypathshaper"
 	"ISEMS-NIH_master/notifications"
+	"ISEMS-NIH_master/savemessageapp"
 )
 
 //Routing маршрутизирует данные поступающие в ядро из каналов
@@ -18,16 +22,86 @@ func Routing(
 	appConf *configure.AppConfig,
 	cc *configure.ChannelCollectionCoreApp,
 	smt *configure.StoringMemoryTask,
-	chanCheckTask <-chan configure.MsgChanStoringMemoryTask) {
+	qts *configure.QueueTaskStorage,
+	chanCheckTask <-chan configure.MsgChanStoringMemoryTask,
+	chanMsgInfoQueueTaskStorage <-chan configure.MessageInformationQueueTaskStorage) {
 
-	//при старте приложения запрашиваем список источников
-	//отправляем запрос в БД
+	//при старте приложения запрашиваем список источников в БД
 	cc.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 		MsgGenerator: "NI module",
 		MsgRecipient: "DB module",
 		MsgSection:   "source control",
 		Instruction:  "find_all",
 	}
+
+	/*
+		const logFileName = "memdumpfile"
+
+		fl, err := os.Create(logFileName)
+		if err != nil {
+			fmt.Printf("Create file %v, error: %v\n", logFileName, fmt.Sprint(err))
+		}
+		defer fl.Close()
+
+		pprof.Lookup("heap").WriteTo(fl, 0)
+	*/
+
+	//обработчик модуля очереди ожидающих задач QueueTaskStorage
+	go func() {
+		//инициализируем функцию конструктор для записи лог-файлов
+		saveMessageApp := savemessageapp.New()
+
+		for msg := range chanMsgInfoQueueTaskStorage {
+			qti, err := qts.GetQueueTaskStorage(msg.SourceID, msg.TaskID)
+			if err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+				continue
+			}
+
+			if qti.TaskType == "filteration" {
+				/*
+
+				   ФИльтрацию переделаем позже, после выполнения части
+				   раздела по выгрузки файлов
+
+				*/
+			}
+
+			if qti.TaskType == "download" {
+				//создание директорий куда будут сохранятся скачанные файлы
+				pathStorageDirectory, err := directorypathshaper.CreatePathDirectory()
+				if err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+					//отправить сообщение пользователю
+					nsErrJSON := notifications.NotificationSettingsToClientAPI{
+						MsgType:        "danger",
+						MsgDescription: "Внутренняя ошибка, невозможно создать директории для сохранения скаченных файлов",
+					}
+
+					notifications.SendNotificationToClientAPI(cc.OutCoreChanAPI, nsErrJSON, qti.TaskIDClientAPI, qti.IDClientAPI)
+
+					//удалить всю информацию о задаче из очереди
+					if e := qts.DelQueueTaskStorage(msg.SourceID, msg.TaskID); e != nil {
+						_ = saveMessageApp.LogMessage("error", fmt.Sprint(e))
+					}
+
+					continue
+				}
+
+				/*
+				   Сделать и протестировать модуль создания вложеных директорий для
+				   хранения скаченных файлов
+				*/
+
+				//добавление новой задачи в StoringMemoryTask
+
+				//изменение значений в таблице БД (статуса задачи и пути сохранения файлов)
+
+			}
+		}
+	}()
 
 	//обработчик запросов от модулей приложения
 	for {

@@ -14,13 +14,14 @@ import (
 func MainDBInteraction(
 	nameDB string,
 	linkConnection *configure.MongoDBConnect,
-	smt *configure.StoringMemoryTask) (chanOut, chanIn chan *configure.MsgBetweenCoreAndDB) {
+	smt *configure.StoringMemoryTask,
+	qts *configure.QueueTaskStorage) (chanOut, chanIn chan *configure.MsgBetweenCoreAndDB) {
 
 	//инициализируем каналы для обмена данными между БД м ядром приложения
 	chanOut = make(chan *configure.MsgBetweenCoreAndDB) //->БД
 	chanIn = make(chan *configure.MsgBetweenCoreAndDB)  //<-БД
 
-	go RouteRequest(chanIn, nameDB, linkConnection, smt, chanOut)
+	go RouteRequest(chanIn, nameDB, linkConnection, smt, qts, chanOut)
 
 	return chanOut, chanIn
 }

@@ -47,10 +47,10 @@ func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetwe
 }
 
 //WrapperFuncFiltration обработка запросов по фильтрации
-func (wr *WrappersRouteRequest) WrapperFuncFiltration(msg *configure.MsgBetweenCoreAndDB, smt *configure.StoringMemoryTask) {
+func (wr *WrappersRouteRequest) WrapperFuncFiltration(msg *configure.MsgBetweenCoreAndDB, smt *configure.StoringMemoryTask, qts *configure.QueueTaskStorage) {
 	qp := handlerrequestdb.QueryParameters{
 		NameDB:         wr.NameDB,
-		CollectionName: "filter_task_list",
+		CollectionName: "task_list",
 		ConnectDB:      wr.ConnectDB,
 	}
 
@@ -71,6 +71,6 @@ func (wr *WrappersRouteRequest) WrapperFuncFiltration(msg *configure.MsgBetweenC
 }
 
 //WrapperFuncDownload обработка запросов по скачиванию файлов
-func (wr *WrappersRouteRequest) WrapperFuncDownload(msg *configure.MsgBetweenCoreAndDB, smt *configure.StoringMemoryTask) {
+func (wr *WrappersRouteRequest) WrapperFuncDownload(msg *configure.MsgBetweenCoreAndDB, smt *configure.StoringMemoryTask, qts *configure.QueueTaskStorage) {
 
 }

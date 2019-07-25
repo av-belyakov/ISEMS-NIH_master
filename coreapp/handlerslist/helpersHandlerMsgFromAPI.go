@@ -208,6 +208,26 @@ func handlerFiltrationControlTypeStart(
 		return
 	}
 
+	/*
+	   После разработки и апробации StoringMemoryQueueTask
+	   в место
+	   taskID := smt.AddStoringMemoryTask(configure.TaskDescription...
+	   	chanToDB <- &configure.MsgBetweenCoreAndDB...
+
+	   	нужно добавить
+
+	   	taskID := qts.AddQueueTaskStorage(
+	   		fcts.MsgOption.ID, //это sourceID
+	   		configure.CommonTaskInfo{
+	   			IDClientAPI:     clientID,
+	   			TaskIDClientAPI: fcts.ClientTaskID,
+	   			TaskType:        "filtration",
+	   		},
+	   		&configure.DescriptionParametersReceivedFromUser{
+	   			FiltrationParameters: FiltrationOptions,
+	   		})
+	*/
+
 	//добавляем новую задачу
 	taskID := smt.AddStoringMemoryTask(configure.TaskDescription{
 		ClientID:                        clientID,

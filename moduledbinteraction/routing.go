@@ -16,6 +16,7 @@ func RouteRequest(
 	nameDB string,
 	linkConnection *configure.MongoDBConnect,
 	smt *configure.StoringMemoryTask,
+	qts *configure.QueueTaskStorage,
 	chanOut <-chan *configure.MsgBetweenCoreAndDB) {
 
 	wrapperFunc := WrappersRouteRequest{
@@ -32,10 +33,10 @@ func RouteRequest(
 		case "source telemetry":
 
 		case "filtration control":
-			go wrapperFunc.WrapperFuncFiltration(msg, smt)
+			go wrapperFunc.WrapperFuncFiltration(msg, smt, qts)
 
 		case "download control":
-			go wrapperFunc.WrapperFuncDownload(msg, smt)
+			go wrapperFunc.WrapperFuncDownload(msg, smt, qts)
 
 		case "error notification":
 

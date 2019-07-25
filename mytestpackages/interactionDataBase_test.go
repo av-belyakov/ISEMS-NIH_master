@@ -3,6 +3,10 @@ package mytestpackages_test
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+	"runtime"
+	"runtime/pprof"
 	"time"
 
 	"github.com/mongodb/mongo-go-driver/bson"
@@ -74,7 +78,7 @@ func createNewFiltrationTask(
 		TaskID:       taskID,
 		ClientID:     clientID,
 		ClientTaskID: clientTaskID,
-		FilteringOption: configure.FiletringOption{
+		FilteringOption: configure.FilteringOption{
 			ID: tf.ID,
 			DateTime: configure.TimeInterval{
 				Start: tf.DateTime.Start,
@@ -100,13 +104,16 @@ func createNewFiltrationTask(
 			},
 		},
 		DetailedInformationOnFiltering: configure.DetailedInformationFiltering{
-			TaskStatus:                    "wait",
-			ListFilesFoundResultFiltering: []*configure.InformationFilesFoundResultFiltering{},
-			WasIndexUsed:                  true,
+			TaskStatus:   "wait",
+			WasIndexUsed: true,
 			TimeIntervalTaskExecution: configure.TimeInterval{
 				Start: time.Now().Unix(),
 			},
 		},
+		DetailedInformationOnDownloading: configure.DetailedInformationDownloading{
+			TaskStatus: "not executed",
+		},
+		ListFilesResultTaskExecution: []*configure.FilesInformation{},
 	}
 
 	insertData := make([]interface{}, 0, 1)
@@ -117,7 +124,7 @@ func createNewFiltrationTask(
 	//InsertData добавляет все данные
 	fmt.Println("===== INSERT DATA ======")
 
-	collection := connectDB.Database("isems-nih").Collection("filter_task_list")
+	collection := connectDB.Database("isems-nih").Collection("task_list")
 	if _, err := collection.InsertMany(context.TODO(), insertData); err != nil {
 		return err
 	}
@@ -148,7 +155,7 @@ func updateFiltrationTaskParameters(
 		}}}
 
 	//обновляем детальную информацию о ходе фильтрации
-	if err := updateOne(connectDB, "isems-nih", "filter_task_list", bson.D{bson.E{Key: "task_id", Value: taskID}}, commonValueUpdate); err != nil {
+	if err := updateOne(connectDB, "isems-nih", "task_list", bson.D{bson.E{Key: "task_id", Value: taskID}}, commonValueUpdate); err != nil {
 		return err
 	}
 
@@ -159,6 +166,7 @@ func updateFiltrationTaskParameters(
 			bson.E{Key: "file_name", Value: fileName},
 			bson.E{Key: "file_size", Value: v.Size},
 			bson.E{Key: "file_hex", Value: v.Hex},
+			bson.E{Key: "file_loaded", Value: false},
 		})
 	}
 
@@ -166,7 +174,7 @@ func updateFiltrationTaskParameters(
 		bson.E{
 			Key: "$addToSet", Value: bson.D{
 				bson.E{
-					Key: "detailed_information_on_filtering.list_files_found_result_filtering",
+					Key: "list_files_result_task_execution",
 					Value: bson.D{
 						bson.E{
 							Key:   "$each",
@@ -178,8 +186,21 @@ func updateFiltrationTaskParameters(
 		},
 	}
 
+	func() {
+		f, err := os.Create("memdumpfile.out")
+		if err != nil {
+			log.Fatal("could not create memory profile: ", err)
+		}
+		defer f.Close()
+
+		runtime.GC() // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			log.Fatal("could not write memory profile: ", err)
+		}
+	}()
+
 	//обновление информации об отфильтрованном файле
-	if err := updateOne(connectDB, "isems-nih", "filter_task_list", bson.D{bson.E{Key: "task_id", Value: taskID}}, arrayValueUpdate); err != nil {
+	if err := updateOne(connectDB, "isems-nih", "task_list", bson.D{bson.E{Key: "task_id", Value: taskID}}, arrayValueUpdate); err != nil {
 		return err
 	}
 
@@ -191,7 +212,7 @@ func getInfoFiltrationTaskForID(connectDB *mongo.Client, taskID string) ([]confi
 
 	qp := QueryParameters{
 		NameDB:         "isems-nih",
-		CollectionName: "filter_task_list",
+		CollectionName: "task_list",
 		ConnectDB:      connectDB,
 	}
 

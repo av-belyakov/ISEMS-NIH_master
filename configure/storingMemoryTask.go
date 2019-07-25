@@ -1,125 +1,11 @@
 package configure
 
 import (
-	"crypto/md5"
-	"encoding/hex"
-	"errors"
 	"fmt"
-	"io"
-	"sync"
 	"time"
-
-	"github.com/gorilla/websocket"
 
 	"ISEMS-NIH_master/common"
 )
-
-//ClientSettings параметры подключения клиента
-// IP: ip адрес клиента
-// IsAllowed: разрешен ли доступ
-type ClientSettings struct {
-	IP         string
-	ClientName string
-	IsAllowed  bool
-	mu         sync.Mutex
-	Connection *websocket.Conn
-}
-
-//SendWsMessage используется для отправки сообщений через протокол websocket (применяется Mutex)
-func (cs *ClientSettings) SendWsMessage(t int, v []byte) error {
-	cs.mu.Lock()
-	defer cs.mu.Unlock()
-
-	return cs.Connection.WriteMessage(t, v)
-}
-
-//StoringMemoryAPI используется для хранения параметров клиентов
-// clientSettings: КЛЮЧ уникальный идентификатор клиента
-type StoringMemoryAPI struct {
-	clientSettings map[string]*ClientSettings
-}
-
-//NewRepositorySMAPI создание нового репозитория
-func NewRepositorySMAPI() *StoringMemoryAPI {
-	smapi := StoringMemoryAPI{}
-	smapi.clientSettings = map[string]*ClientSettings{}
-
-	return &smapi
-}
-
-//AddNewClient добавляет нового клиента
-func (smapi *StoringMemoryAPI) AddNewClient(clientIP, clientName string) string {
-	h := md5.New()
-	io.WriteString(h, clientIP+" client API")
-
-	hsum := hex.EncodeToString(h.Sum(nil))
-
-	smapi.clientSettings[hsum] = &ClientSettings{
-		IP:         clientIP,
-		ClientName: clientName,
-		IsAllowed:  true,
-	}
-
-	return hsum
-}
-
-//SearchClientForIP поиск информации о клиенте по его ip адресу
-func (smapi *StoringMemoryAPI) SearchClientForIP(ip string) (string, *ClientSettings, bool) {
-	for id, client := range smapi.clientSettings {
-		if client.IP == ip {
-			return id, smapi.clientSettings[id], true
-		}
-	}
-
-	return "", nil, false
-}
-
-//GetClientSettings получить все настройки клиента
-func (smapi *StoringMemoryAPI) GetClientSettings(id string) (*ClientSettings, bool) {
-	if _, ok := smapi.clientSettings[id]; !ok {
-		return nil, false
-	}
-
-	return smapi.clientSettings[id], true
-}
-
-//GetClientList получить весь список клиентов
-func (smapi *StoringMemoryAPI) GetClientList() map[string]*ClientSettings {
-	return smapi.clientSettings
-}
-
-//SaveWssClientConnection сохранить линк соединения с клиентом
-func (smapi *StoringMemoryAPI) SaveWssClientConnection(id string, conn *websocket.Conn) error {
-	if err := smapi.searchID(id); err != nil {
-		return err
-	}
-
-	smapi.clientSettings[id].Connection = conn
-
-	return nil
-}
-
-//GetWssClientConnection получить линк wss соединения
-func (smapi *StoringMemoryAPI) GetWssClientConnection(id string) (*websocket.Conn, error) {
-	if err := smapi.searchID(id); err != nil {
-		return nil, err
-	}
-
-	return smapi.clientSettings[id].Connection, nil
-}
-
-//DelClientAPI удалить всю информацию о клиенте
-func (smapi *StoringMemoryAPI) DelClientAPI(id string) {
-	delete(smapi.clientSettings, id)
-}
-
-func (smapi *StoringMemoryAPI) searchID(id string) error {
-	if _, ok := smapi.clientSettings[id]; !ok {
-		return errors.New("client with specified id not found")
-	}
-
-	return nil
-}
 
 //StoringMemoryTask описание типа в котором храняться описание и ID выполняемых задач
 // ключом отображения является уникальный идентификатор задачи
@@ -168,9 +54,26 @@ type TimeIntervalTaskExecution struct {
 
 //FoundFilesInformation подробная информация о файлах
 type FoundFilesInformation struct {
-	Size     int64
-	Hex      string
+	Size int64
+	Hex  string
+}
+
+//DownloadFilesInformation подробная информация о скачиваемых файлах
+type DownloadFilesInformation struct {
+	FoundFilesInformation
 	IsLoaded bool
+}
+
+//DetailedFileInformation подробная информация о передаваемом файле
+// Name - имя файла
+// Hex - хеш сумма
+// FullSizeByte - полный размер файла в байтах
+// AcceptedSizeByte - принятый размер файла в байтах
+// AcceptedSizePercent - принятый размер файла в процентах
+type DetailedFileInformation struct {
+	Name, Hex                      string
+	FullSizeByte, AcceptedSizeByte int64
+	AcceptedSizePercent            int
 }
 
 //FiltrationTaskParameters параметры задачи по фильтрации файлов
@@ -202,7 +105,22 @@ type FiltrationTaskParameters struct {
 }
 
 //DownloadTaskParameters параметры задачи по скачиванию файлов
+// ID - уникальный цифровой идентификатор источника
+// Status - статус задачи 'wait'/'refused'/'execute'/'completed'/'stop' ('ожидает' / 'отклонена' / 'выполняется' / 'завершена' / 'остановлена')
+// NumberFilesTotal - всего файлов предназначенных для скачивания
+// NumberFilesDownloaded - кол-во загруженных файлов
+// NumberFilesDownloadedError - кол-во загруженных с ошибкой файлов
+// FileInformation - подробная информация о передаваемом файле
+// DownloadingFilesInformation - информация о скачиваемых файлах, ключ - имя файла
 type DownloadTaskParameters struct {
+	ID                                  int
+	Status                              string
+	NumberFilesTotal                    int
+	NumberFilesDownloaded               int
+	NumberFilesDownloadedError          int
+	PathDirectoryStorageDownloadedFiles string
+	FileInformation                     DetailedFileInformation
+	DownloadingFilesInformation         map[string]*DownloadFilesInformation
 }
 
 //ChanStoringMemoryTask описание информации передаваемой через канал
@@ -242,12 +160,16 @@ func NewRepositorySMT() *StoringMemoryTask {
 			case "add":
 				smt.tasks[msg.TaskID] = msg.Description
 				smt.tasks[msg.TaskID].TaskParameter.FiltrationTask.FoundFilesInformation = map[string]*FoundFilesInformation{}
-				smt.tasks[msg.TaskID].TaskParameter.DownloadTask = DownloadTaskParameters{}
+				smt.tasks[msg.TaskID].TaskParameter.DownloadTask = DownloadTaskParameters{
+					Status: "not executed",
+				}
 
 			case "recover":
 				smt.tasks[msg.TaskID] = msg.Description
 				smt.tasks[msg.TaskID].TaskParameter.FiltrationTask.FoundFilesInformation = map[string]*FoundFilesInformation{}
-				smt.tasks[msg.TaskID].TaskParameter.DownloadTask = DownloadTaskParameters{}
+				smt.tasks[msg.TaskID].TaskParameter.DownloadTask = DownloadTaskParameters{
+					Status: "not executed",
+				}
 
 			case "complete":
 				if _, ok := smt.tasks[msg.TaskID]; ok {
@@ -439,21 +361,6 @@ func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, f
 	<-chanRes
 }
 
-//UpdateTaskFiltrationFilesList обновление списка файлов полученных в результате фильтрации
-/*func (smt *StoringMemoryTask) UpdateTaskFiltrationFilesList(taskID string, filesList map[string]*FoundFilesInformation) {
-	smt.channelReq <- ChanStoringMemoryTask{
-		ActionType: "update task filtration files list",
-		TaskID:     taskID,
-		Description: &TaskDescription{
-			TaskParameter: DescriptionTaskParameters{
-				FiltrationTask: FiltrationTaskParameters{
-					FoundFilesInformation: filesList,
-				},
-			},
-		},
-	}
-}*/
-
 func (smt *StoringMemoryTask) updateTaskFiltrationAllParameters(taskID string, td *TaskDescription) {
 	if _, ok := smt.tasks[taskID]; !ok {
 		return
@@ -479,8 +386,6 @@ func (smt *StoringMemoryTask) updateTaskFiltrationAllParameters(taskID string, t
 
 	smt.tasks[taskID].TaskParameter.FiltrationTask = ft
 }
-
-/* управление задачами по скачиванию файлов */
 
 //MsgChanStoringMemoryTask информация о подвисшей задачи
 type MsgChanStoringMemoryTask struct {

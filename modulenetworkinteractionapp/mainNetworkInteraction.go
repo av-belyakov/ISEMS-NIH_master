@@ -39,7 +39,12 @@ func connClose(
 }
 
 //MainNetworkInteraction осуществляет общее управление
-func MainNetworkInteraction(appConf *configure.AppConfig, smt *configure.StoringMemoryTask) (chanOutCore, chanInCore chan *configure.MsgBetweenCoreAndNI) {
+func MainNetworkInteraction(
+	appConf *configure.AppConfig,
+	smt *configure.StoringMemoryTask,
+	qts *configure.QueueTaskStorage,
+	isl *configure.InformationSourcesList) (chanOutCore, chanInCore chan *configure.MsgBetweenCoreAndNI) {
+
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
@@ -57,9 +62,6 @@ func MainNetworkInteraction(appConf *configure.AppConfig, smt *configure.Storing
 		"outWssModuleServer": make(chan [2]string, 10),
 		"outWssModuleClient": make(chan [2]string, 10),
 	}
-
-	//инициализируем хранилище для источников
-	isl := configure.NewRepositoryISL()
 
 	//маршрутизатор запросов получаемых от CoreApp
 	go RouteCoreRequest(cwtRes, chanInCore, isl, smt, chansStatSource, chanOutCore)

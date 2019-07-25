@@ -15,20 +15,29 @@ import (
 
 //CoreApp запускает все обработчики уровня ядра
 func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConnect) {
-	//инициализация хранилища для учета выполняемых задач
+	//инициализация репозитория для учета выполняемых задач
 	smt := configure.NewRepositorySMT()
 
-	//инициализируем отслеживания выполнения задач
+	//инициализация репозитория для хранения очередей задач
+	qts := configure.NewRepositoryQTS()
+
+	//инициализация репозитория для хранения информации по источникам
+	isl := configure.NewRepositoryISL()
+
+	//инициализация отслеживания выполнения задач
 	chanCheckTask := smt.CheckTimeUpdateStoringMemoryTask(55)
 
-	//запуск подпрограммы для взаимодействия с БД
-	chanOutCoreDB, chanInCoreDB := moduledbinteraction.MainDBInteraction(appConf.ConnectionDB.NameDB, linkConnection, smt)
+	//инициализация отслеживания очередности выполнения задач
+	chanMsgInfoQueueTaskStorage := qts.CheckTimeQueueTaskStorage(isl, 3)
+
+	//инициализация модуля для взаимодействия с БД
+	chanOutCoreDB, chanInCoreDB := moduledbinteraction.MainDBInteraction(appConf.ConnectionDB.NameDB, linkConnection, smt, qts)
 
 	//инициализация модуля для взаимодействия с API (обработчик внешних запросов)
 	chanOutCoreAPI, chanInCoreAPI := moduleapiapp.MainAPIApp(appConf)
 
 	//инициализация модуля сетевого взаимодействия (взаимодействие с сенсорами)
-	chanOutCoreNI, chanInCoreNI := modulenetworkinteractionapp.MainNetworkInteraction(appConf, smt)
+	chanOutCoreNI, chanInCoreNI := modulenetworkinteractionapp.MainNetworkInteraction(appConf, smt, qts, isl)
 
 	chanColl := configure.ChannelCollectionCoreApp{
 		OutCoreChanDB:  chanOutCoreDB,  //->БД
@@ -40,5 +49,5 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	}
 
 	//запуск подпрограммы для маршрутизации запросов внутри приложения
-	Routing(appConf, &chanColl, smt, chanCheckTask)
+	Routing(appConf, &chanColl, smt, qts, chanCheckTask, chanMsgInfoQueueTaskStorage)
 }

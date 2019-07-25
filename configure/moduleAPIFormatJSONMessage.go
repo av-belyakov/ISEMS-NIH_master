@@ -182,7 +182,7 @@ type TelemetryOptions struct {
 	Information TelemetryInformation `json:"i"`
 }
 
-/*--- ИНФОРМАЦИЯ ПО ФИЛЬТРАЦИИ  ---*/
+/*--- УПРАВЛЕНИЕ ФИЛЬТРАЦИЕЙ ---*/
 
 //FiltrationControlTypeStart общее описание запроса на начало фильтрации
 type FiltrationControlTypeStart struct {
@@ -251,22 +251,53 @@ type FiltrationControlMsgTypeInfo struct {
 	FoundFilesInformation           map[string]*InputFilesInformation `json:"ffi"`
 }
 
-//FiltrationControlMsgTypeCommand командные сообщения связанные с фильтрацией
-//MsgInsturction:
-//  - 'filtration start'
-//  - 'filtration stop'
-type FiltrationControlMsgTypeCommand struct {
-	MsgInsturction string `json:"msgInsturction"`
+/*--- УПРАВЛЕНИЕ СКАЧИВАНИЕМ ФАЙЛОВ ---*/
+
+//DownloadControlTypeStart общее описание запроса на начало скачивания файлов
+type DownloadControlTypeStart struct {
+	MsgCommon
+	MsgOption DownloadControlFileList `json:"o"`
+}
+
+//DownloadControlFileList список файлов на скачивание
+type DownloadControlFileList struct {
+	FileList []string `json:"fl"`
+}
+
+//DownloadControlTypeInfo общее описание сообщения о ходе скачивания файлов
+type DownloadControlTypeInfo struct {
+	MsgCommon
+	MsgOption DownloadControlMsgTypeInfo `json:"o"`
 }
 
 //DownloadControlMsgTypeInfo информационные сообщения о ходе скачивания файлов
-type DownloadControlMsgTypeInfo struct{}
+// ID - уникальный цифровой идентификатор источника
+// Status - статус выполняемой задачи
+// NumberFilesTotal — общее количество скачиваемых файлов
+// NumberFilesDownloaded — количество успешно скаченных файлов
+// NumberFilesDownloadedError — количество файлов скаченных с ошибкой
+// PathDirectoryStorageDownloadedFiles — путь до директории в файловом хранилище
+// DetailedFileInformation — подробная информация о скачиваемом файле
+type DownloadControlMsgTypeInfo struct {
+	ID                                  int                 `json:"id"`
+	Status                              string              `json:"s"`
+	NumberFilesTotal                    int                 `json:"nft"`
+	NumberFilesDownloaded               int                 `json:"nfd"`
+	NumberFilesDownloadedError          int                 `json:"nfde"`
+	PathDirectoryStorageDownloadedFiles string              `json:"pdsdf"`
+	DetailedFileInformation             MoreFileInformation `json:"dfi"`
+}
 
-//DownloadControlMsgTypeCommand командные сообщения связанные со скачиванием файлов
-//MsgInsturction:
-//  - 'download start'
-//  - 'download stop'
-//  - 'download resume'
-type DownloadControlMsgTypeCommand struct {
-	MsgInsturction string `json:"msgInsturction"`
+//MoreFileInformation подробная информация о скачиваемом файле
+// Name — название файла
+// Hex — хеш сумма
+// FullSizeByte — полный размер файла в байтах
+// AcceptedSizeByte — скаченный размер файла в байтах
+// AcceptedSizePercent — скаченный размер файла в процентах
+type MoreFileInformation struct {
+	Name                string `json:"n"`
+	Hex                 string `json:"h"`
+	FullSizeByte        int64  `json:"fsb"`
+	AcceptedSizeByte    int64  `json:"asb"`
+	AcceptedSizePercent int    `json:"asp"`
 }

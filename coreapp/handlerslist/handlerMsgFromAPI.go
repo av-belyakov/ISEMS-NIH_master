@@ -45,7 +45,7 @@ func HandlerMsgFromAPI(
 	}
 
 	//логируем запросы клиентов
-	_ = saveMessageApp.LogMessage("requests", "client name: '"+msg.ClientName+"' ("+msg.ClientIP+"), request: type = "+msgc.MsgType+", section = "+msgc.MsgSection+", instruction = "+msgc.MsgInsturction+", client task ID = "+msgc.ClientTaskID)
+	_ = saveMessageApp.LogMessage("requests", fmt.Sprintf("client name: '%v' (%v), request: type = %v, section = %v, instruction = %v, client task ID = %v", msg.ClientName, msg.ClientIP, msgc.MsgType, msgc.MsgSection, msgc.MsgInsturction, msgc.ClientTaskID))
 
 	if msgc.MsgType == "information" {
 		if msgc.MsgSection == "source control" {
@@ -174,7 +174,7 @@ func HandlerMsgFromAPI(
 			}
 
 			//команда на останов фильтрации
-			if msgc.MsgInsturction == "to cancel the filtering" {
+			if msgc.MsgInsturction == "to cancel filtering" {
 				//ищем выполняемую задачу по ClientTaskID (уникальный ID задачи на стороне клиента)
 				taskID, ti, isExist := smt.GetStoringMemoryTaskForClientID(msg.IDClientAPI, msgc.ClientTaskID)
 				if !isExist {
@@ -207,6 +207,44 @@ func HandlerMsgFromAPI(
 		// УПРАВЛЕНИЕ ВЫГРУЗКОЙ ФАЙЛОВ
 		case "download control":
 			fmt.Println("func 'HandlerMsgFromAPI' MsgType: 'command', MsgSection: 'download control'")
+
+			if msgc.MsgInsturction == "to start downloading" {
+				fmt.Println("START task 'DOWNLOADING'")
+
+				var dcts configure.DownloadControlTypeStart
+				if err := json.Unmarshal(msgJSON, &dcts); err != nil {
+					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
+					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
+
+					return
+				}
+
+				//				go handlerDownloadControlTypeStart(chanToDB, &fcts, smt, msg.IDClientAPI, chanToAPI)
+
+				//				return
+				/*
+					   1. Получаем список файлов для скачивания (dcts.MsgOption.FileList)
+					   2. Отправляем запрос в БД о наличии всей файлов, если
+					   	   массив dcts.MsgOption.FileList пуст, или наличии только тех файлов
+						   которые уазаны в в массиве dcts.MsgOption.FileList
+						    НАПИСАТЬ ТЕСТ!!!
+					   3. Принимаем ответ от БД в handlerMsgFromDB. Если запрашивали все файлы,
+					   	и они есть - запуск скачивания, если файлов нет - сообщение об ошибке,
+					   	если был передан список и некоторых файлов нет, сообщение с перечнем файлов
+					   	которые не были найдены
+					   4. Запуск скачивания - это добавление в очередь, из очереди берутся задания
+						   на скачивание
+
+						   Тест запроса к БД для получения списка файлов
+						   написал и выполнил
+				*/
+
+			}
+
+			if msgc.MsgInsturction == "to cancel downloading" {
+				fmt.Println("STOP task 'DOWNLOADING'")
+
+			}
 
 			return
 
