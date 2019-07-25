@@ -20,36 +20,41 @@ type MongoDBConnect struct {
 	CTX     context.Context
 }
 
-//SourceSetting параметры источника
-type SourceSetting struct {
-	ConnectionStatus  bool
-	IP                string
-	DateLastConnected int64 //Unix time
-	Token             string
-	ClientName        string            //имя клиента API (нужно для того чтобы контролировать управление определенным источником)
-	AccessIsAllowed   bool              //разрешен ли доступ, по умолчанию false (при проверке токена ставится true если он верен)
-	AsServer          bool              //false - как клиент, true - как сервер
-	CurrentTasks      map[string]string // задачи для данного источника,
-	//key - ID задачи, value - ее тип 'filtration' или 'download'
-	Settings InfoServiceSettings
-}
-
-//WssConnection дескриптор соединения по протоколу websocket
-type WssConnection struct {
-	Link *websocket.Conn
-	//mu   sync.Mutex
-}
-
 //sourcesListSetting настройки источников, ключ ID источника
 type sourcesListSetting map[int]SourceSetting
 
-//sourcesListConnection дескрипторы соединения с источниками по протоколу websocket
-type sourcesListConnection map[string]WssConnection
+//SourceSetting параметры источника
+// ConnectionStatus - статус соединения с источником
+// IP - ip адрес источника
+// DateLastConnected - время последнего соединения (в формате unix)
+// Token - токен для автризации
+// ClientName - имя клиента API (нужно для того чтобы контролировать управление определенным источником)
+// AccessIsAllowed - разрешен ли доступ, по умолчанию false (при проверке токена ставится true если он верен)
+// AsServer - false запуск как клиент, true запуск как сервер
+type SourceSetting struct {
+	ConnectionStatus  bool
+	IP                string
+	DateLastConnected int64
+	Token             string
+	ClientName        string
+	AccessIsAllowed   bool
+	AsServer          bool
+	Settings          InfoServiceSettings
+}
 
 //InformationSourcesList информация об источниках
 type InformationSourcesList struct {
 	sourcesListSetting
 	sourcesListConnection
+}
+
+//sourcesListConnection дескрипторы соединения с источниками по протоколу websocket
+type sourcesListConnection map[string]WssConnection
+
+//WssConnection дескриптор соединения по протоколу websocket
+type WssConnection struct {
+	Link *websocket.Conn
+	//mu   sync.Mutex
 }
 
 //NewRepositoryISL инициализация хранилища
@@ -66,6 +71,11 @@ func (isl *InformationSourcesList) AddSourceSettings(id int, settings SourceSett
 	isl.sourcesListSetting[id] = settings
 }
 
+//DelSourceSettings удаление информации об источнике
+func (isl *InformationSourcesList) DelSourceSettings(id int) {
+	delete(isl.sourcesListSetting, id)
+}
+
 //SearchSourceIPAndToken поиск id источника по его ip и токену
 func (isl *InformationSourcesList) SearchSourceIPAndToken(ip, token string) (int, bool) {
 	for id, s := range isl.sourcesListSetting {
@@ -80,11 +90,6 @@ func (isl *InformationSourcesList) SearchSourceIPAndToken(ip, token string) (int
 	return 0, false
 }
 
-//DelSourceSettings удаление информации об источнике
-func (isl *InformationSourcesList) DelSourceSettings(id int) {
-	delete(isl.sourcesListSetting, id)
-}
-
 //GetSourceIDOnIP получить ID источника по его IP
 func (isl *InformationSourcesList) GetSourceIDOnIP(ip string) (int, bool) {
 	for id, s := range isl.sourcesListSetting {
@@ -96,13 +101,13 @@ func (isl *InformationSourcesList) GetSourceIDOnIP(ip string) (int, bool) {
 	return 0, false
 }
 
-//GetSourceSetting получить все настройки источника по его id
+//GetSourceSetting получить все настройки источника по его ID
 func (isl *InformationSourcesList) GetSourceSetting(id int) (*SourceSetting, bool) {
 	if s, ok := isl.sourcesListSetting[id]; ok {
 		return &s, true
 	}
 
-	return &SourceSetting{}, false
+	return nil, false
 }
 
 //GetSourceList возвращает список источников
@@ -172,31 +177,6 @@ func (isl InformationSourcesList) GetListsConnectedAndDisconnectedSources() (lis
 	}
 
 	return listConnected, listDisconnected
-}
-
-//GetListSourcesWhichTaskExecuted возвращает список источников на которых выполняются задачи
-func (isl InformationSourcesList) GetListSourcesWhichTaskExecuted() (let map[int]string) {
-	for id, source := range isl.sourcesListSetting {
-		if len(source.CurrentTasks) > 0 {
-			let[id] = source.IP
-		}
-	}
-
-	return let
-}
-
-//GetListTasksPerformedSourceByType получить список выполняемых на источнике задач по типу
-func (isl InformationSourcesList) GetListTasksPerformedSourceByType(id int, taskType string) []string {
-	taskList := []string{}
-	if s, ok := isl.sourcesListSetting[id]; ok {
-		for tid, info := range s.CurrentTasks {
-			if info == taskType {
-				taskList = append(taskList, tid)
-			}
-		}
-	}
-
-	return taskList
 }
 
 //SendWsMessage используется для отправки сообщений через протокол websocket (применяется Mutex)

@@ -12,17 +12,16 @@ import (
 
 //HandlerMsgFromDB обработчик сообщений приходящих от модуля взаимодействия с базой данных
 func HandlerMsgFromDB(
-	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
+	outCoreChans HandlerOutChans,
 	res *configure.MsgBetweenCoreAndDB,
-	smt *configure.StoringMemoryTask,
-	chanDropNI <-chan string,
-	chanToNI chan<- *configure.MsgBetweenCoreAndNI) {
+	hsm HandlersStoringMemory,
+	chanDropNI <-chan string) {
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'HandlerMsgFromDB'"
 
-	taskInfo, taskIDIsExist := smt.GetStoringMemoryTask(res.TaskID)
+	taskInfo, taskIDIsExist := hsm.SMT.GetStoringMemoryTask(res.TaskID)
 
 	switch res.MsgRecipient {
 	case "Core module":
@@ -44,7 +43,7 @@ func HandlerMsgFromDB(
 
 		switch res.MsgSection {
 		case "source list":
-			getCurrentSourceListForAPI(chanToAPI, res, smt)
+			getCurrentSourceListForAPI(outCoreChans.OutCoreChanAPI, res, hsm.SMT)
 
 		case "source control":
 			//пока заглушка
@@ -54,7 +53,7 @@ func HandlerMsgFromDB(
 
 		case "filtration control":
 			//устанавливаем статус задачи в "complite" для ее последующего удаления
-			smt.CompleteStoringMemoryTask(res.TaskID)
+			hsm.SMT.CompleteStoringMemoryTask(res.TaskID)
 
 		case "download control":
 			//пока заглушка
@@ -77,7 +76,7 @@ func HandlerMsgFromDB(
 				MsgDescription: "Ошибка базы данных при обработке запроса",
 			}
 
-			notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, res.IDClientAPI)
+			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, taskInfo.ClientTaskID, res.IDClientAPI)
 
 		case "message notification":
 			mn, ok := res.AdvancedOptions.(configure.MessageNotification)
@@ -93,12 +92,12 @@ func HandlerMsgFromDB(
 				Sources:        mn.Sources,
 			}
 
-			notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, res.IDClientAPI)
+			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, taskInfo.ClientTaskID, res.IDClientAPI)
 		}
 	case "NI module":
 		switch res.MsgSection {
 		case "source list":
-			chanToNI <- &configure.MsgBetweenCoreAndNI{
+			outCoreChans.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{
 				Section:         "source control",
 				Command:         "create list",
 				AdvancedOptions: res.AdvancedOptions,
@@ -142,7 +141,7 @@ func HandlerMsgFromDB(
 				//если индексы не найдены
 				msg.AdvancedOptions = msgJSON
 
-				chanToNI <- &msg
+				outCoreChans.OutCoreChanNI <- &msg
 
 				return
 			}
@@ -176,10 +175,10 @@ func HandlerMsgFromDB(
 
 			msg.AdvancedOptions = msgJSON
 
-			chanToNI <- &msg
+			outCoreChans.OutCoreChanNI <- &msg
 
 			//информация о задаче по заданному ID
-			t, ok := smt.GetStoringMemoryTask(res.TaskID)
+			t, ok := hsm.SMT.GetStoringMemoryTask(res.TaskID)
 			if !ok {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found%v", res.TaskID, funcName))
 
@@ -208,7 +207,7 @@ func HandlerMsgFromDB(
 					}
 
 					msg.AdvancedOptions = msgJSON
-					chanToNI <- &msg
+					outCoreChans.OutCoreChanNI <- &msg
 
 				}
 			}

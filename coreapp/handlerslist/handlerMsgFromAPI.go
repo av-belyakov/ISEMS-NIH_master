@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/notifications"
 	"ISEMS-NIH_master/savemessageapp"
@@ -12,11 +13,9 @@ import (
 
 //HandlerMsgFromAPI обработчик сообщений приходящих от модуля API
 func HandlerMsgFromAPI(
-	chanToNI chan<- *configure.MsgBetweenCoreAndNI,
+	outCoreChans HandlerOutChans,
 	msg *configure.MsgBetweenCoreAndAPI,
-	smt *configure.StoringMemoryTask,
-	chanToDB chan<- *configure.MsgBetweenCoreAndDB,
-	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) {
+	hsm HandlersStoringMemory) {
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
@@ -31,14 +30,14 @@ func HandlerMsgFromAPI(
 
 	msgJSON, ok := msg.MsgJSON.([]byte)
 	if !ok {
-		notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
+		notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
 		_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 		return
 	}
 
 	if err := json.Unmarshal(msgJSON, &msgc); err != nil {
-		notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
+		notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
 		_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 		return
@@ -53,14 +52,16 @@ func HandlerMsgFromAPI(
 				var scmo configure.SourceControlMsgOptions
 
 				if err := json.Unmarshal(msgJSON, &scmo); err != nil {
-					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 					return
 				}
 
+				taskID := common.GetUniqIDFormatMD5(msg.IDClientAPI)
+
 				//добавляем новую задачу
-				taskID := smt.AddStoringMemoryTask(configure.TaskDescription{
+				hsm.SMT.AddStoringMemoryTask(taskID, configure.TaskDescription{
 					ClientID:                        msg.IDClientAPI,
 					ClientTaskID:                    msgc.ClientTaskID,
 					TaskType:                        msgc.MsgSection,
@@ -69,7 +70,7 @@ func HandlerMsgFromAPI(
 					TimeUpdate:                      time.Now().Unix(),
 				})
 
-				chanToNI <- &configure.MsgBetweenCoreAndNI{
+				outCoreChans.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{
 					TaskID:          taskID,
 					ClientName:      msg.ClientName,
 					Section:         "source control",
@@ -80,13 +81,13 @@ func HandlerMsgFromAPI(
 				return
 			}
 
-			notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
 			_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgSection'"+funcName)
 
 			return
 		}
 
-		notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+		notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
 		_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgSection'"+funcName)
 
 		return
@@ -99,8 +100,10 @@ func HandlerMsgFromAPI(
 		case "source control":
 			//получить актуальный список источников
 			if msgc.MsgInsturction == "get an updated list of sources" {
+				taskID := common.GetUniqIDFormatMD5(msg.IDClientAPI)
+
 				//добавляем новую задачу
-				taskID := smt.AddStoringMemoryTask(configure.TaskDescription{
+				hsm.SMT.AddStoringMemoryTask(taskID, configure.TaskDescription{
 					ClientID:                        msg.IDClientAPI,
 					ClientTaskID:                    msgc.ClientTaskID,
 					TaskType:                        msgc.MsgSection,
@@ -109,7 +112,7 @@ func HandlerMsgFromAPI(
 					TimeUpdate:                      time.Now().Unix(),
 				})
 
-				chanToDB <- &configure.MsgBetweenCoreAndDB{
+				outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 					MsgGenerator: "API module",
 					MsgRecipient: "DB module",
 					MsgSection:   "source control",
@@ -124,14 +127,16 @@ func HandlerMsgFromAPI(
 			if msgc.MsgInsturction == "performing an action" {
 				var scmo configure.SourceControlMsgOptions
 				if err := json.Unmarshal(msgJSON, &scmo); err != nil {
-					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 					return
 				}
 
+				taskID := common.GetUniqIDFormatMD5(msg.IDClientAPI)
+
 				//добавляем новую задачу
-				taskID := smt.AddStoringMemoryTask(configure.TaskDescription{
+				hsm.SMT.AddStoringMemoryTask(taskID, configure.TaskDescription{
 					ClientID:                        msg.IDClientAPI,
 					ClientTaskID:                    msgc.ClientTaskID,
 					TaskType:                        msgc.MsgSection,
@@ -140,7 +145,7 @@ func HandlerMsgFromAPI(
 					TimeUpdate:                      time.Now().Unix(),
 				})
 
-				chanToNI <- &configure.MsgBetweenCoreAndNI{
+				outCoreChans.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{
 					TaskID:          taskID,
 					ClientName:      msg.ClientName,
 					Section:         "source control",
@@ -151,7 +156,7 @@ func HandlerMsgFromAPI(
 				return
 			}
 
-			notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
 			_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgInstruction'"+funcName)
 
 			return
@@ -162,13 +167,13 @@ func HandlerMsgFromAPI(
 			if msgc.MsgInsturction == "to start filtering" {
 				var fcts configure.FiltrationControlTypeStart
 				if err := json.Unmarshal(msgJSON, &fcts); err != nil {
-					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 					return
 				}
 
-				go handlerFiltrationControlTypeStart(chanToDB, &fcts, smt, msg.IDClientAPI, chanToAPI)
+				go handlerFiltrationControlTypeStart(outCoreChans.OutCoreChanDB, &fcts, hsm, msg.IDClientAPI, outCoreChans.OutCoreChanAPI)
 
 				return
 			}
@@ -176,19 +181,19 @@ func HandlerMsgFromAPI(
 			//команда на останов фильтрации
 			if msgc.MsgInsturction == "to cancel filtering" {
 				//ищем выполняемую задачу по ClientTaskID (уникальный ID задачи на стороне клиента)
-				taskID, ti, isExist := smt.GetStoringMemoryTaskForClientID(msg.IDClientAPI, msgc.ClientTaskID)
+				taskID, ti, isExist := hsm.SMT.GetStoringMemoryTaskForClientID(msg.IDClientAPI, msgc.ClientTaskID)
 				if !isExist {
 					nsErr := notifications.NotificationSettingsToClientAPI{
 						MsgType:        "danger",
 						MsgDescription: fmt.Sprintf("Ошибка, по переданному идентификатору '%v' выполняемых задач не обнаружено", msgc.ClientTaskID),
 					}
-					notifications.SendNotificationToClientAPI(chanToAPI, nsErr, msgc.ClientTaskID, msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErr, msgc.ClientTaskID, msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 					return
 				}
 
-				chanToNI <- &configure.MsgBetweenCoreAndNI{
+				outCoreChans.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{
 					TaskID:     taskID,
 					ClientName: msg.ClientName,
 					Section:    "filtration control",
@@ -199,7 +204,7 @@ func HandlerMsgFromAPI(
 				return
 			}
 
-			notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
 			_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgInstruction'"+funcName)
 
 			return
@@ -213,12 +218,17 @@ func HandlerMsgFromAPI(
 
 				var dcts configure.DownloadControlTypeStart
 				if err := json.Unmarshal(msgJSON, &dcts); err != nil {
+<<<<<<< HEAD
 					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
+=======
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
+>>>>>>> ISEMS-NIH_master 06.08.2019
 					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 					return
 				}
 
+<<<<<<< HEAD
 				//				go handlerDownloadControlTypeStart(chanToDB, &fcts, smt, msg.IDClientAPI, chanToAPI)
 
 				//				return
@@ -239,6 +249,49 @@ func HandlerMsgFromAPI(
 						   написал и выполнил
 				*/
 
+=======
+				//ищем источник по указанному идентификатору
+				sourceInfo, ok := hsm.ISL.GetSourceSetting(dcts.MsgOption.ID)
+				if !ok {
+					nsErrJSON.MsgDescription = fmt.Sprintf("Ошибка, источника с ID %v не существует", dcts.MsgOption.ID)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
+					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v was not found%v", dcts.MsgOption.ID, funcName))
+
+					return
+				}
+
+				//проверяем подключение источника
+				if !sourceInfo.ConnectionStatus {
+					nsErrJSON.MsgDescription = fmt.Sprintf("Ошибка, источник с ID %v не подключен", dcts.MsgOption.ID)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
+					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v is not connected%v", dcts.MsgOption.ID, funcName))
+
+					return
+				}
+
+				//добавляем задачу в очередь
+				hsm.QTS.AddQueueTaskStorage(dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID, configure.CommonTaskInfo{
+					IDClientAPI:     msg.IDClientAPI,
+					TaskIDClientAPI: dcts.ClientTaskID,
+					TaskType:        "download",
+				}, &configure.DescriptionParametersReceivedFromUser{
+					DownloadList: dcts.MsgOption.FileList,
+				})
+
+				//устанавливаем статус источника для данной задачи как подключен
+				hsm.QTS.ChangeAvailabilityConnection(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp)
+
+				//запрос в БД о наличии задачи с указанным ID и файлов для скачивания
+				outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
+					MsgGenerator:    "Core module",
+					MsgRecipient:    "DB module",
+					MsgSection:      "download control",
+					Instruction:     "finding information about a task",
+					IDClientAPI:     msg.IDClientAPI,
+					TaskID:          dcts.MsgOption.TaskIDApp,
+					TaskIDClientAPI: dcts.ClientTaskID,
+				}
+>>>>>>> ISEMS-NIH_master 06.08.2019
 			}
 
 			if msgc.MsgInsturction == "to cancel downloading" {
@@ -255,7 +308,7 @@ func HandlerMsgFromAPI(
 			return
 
 		default:
-			notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
 			_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgInstruction'"+funcName)
 
 			return

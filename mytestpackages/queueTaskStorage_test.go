@@ -4,6 +4,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+<<<<<<< HEAD
+=======
+	"ISEMS-NIH_master/common"
+>>>>>>> ISEMS-NIH_master 06.08.2019
 	"ISEMS-NIH_master/configure"
 	//. "ISEMS-NIH_master/mytestpackages"
 )
@@ -14,7 +18,14 @@ var _ = Describe("QueueTaskStorage", func() {
 	sourceID := 100
 	clientID := "mifw77g6f63g"
 
+<<<<<<< HEAD
 	taskID := qts.AddQueueTaskStorage(
+=======
+	taskID := common.GetUniqIDFormatMD5("idwi99d92")
+
+	qts.AddQueueTaskStorage(
+		taskID,
+>>>>>>> ISEMS-NIH_master 06.08.2019
 		sourceID,
 		configure.CommonTaskInfo{
 			IDClientAPI:     clientID,

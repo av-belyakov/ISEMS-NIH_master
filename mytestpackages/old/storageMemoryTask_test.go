@@ -17,9 +17,10 @@ var _ = Describe("StorageMemoryTask", func() {
 	//генерируем хеш для clientID
 	clientID := common.GetUniqIDFormatMD5("client id")
 	clientTaskID := common.GetUniqIDFormatMD5("client_task id")
+	taskID := common.GetUniqIDFormatMD5("wdmw99d9jw9j")
 
 	//добавляем новую задачу
-	taskID := smt.AddStoringMemoryTask(configure.TaskDescription{
+	smt.AddStoringMemoryTask(taskID, configure.TaskDescription{
 		ClientID:                        clientID,
 		ClientTaskID:                    clientTaskID,
 		TaskType:                        "filtration control",

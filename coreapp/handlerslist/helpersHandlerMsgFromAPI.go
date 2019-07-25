@@ -158,7 +158,7 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 func handlerFiltrationControlTypeStart(
 	chanToDB chan<- *configure.MsgBetweenCoreAndDB,
 	fcts *configure.FiltrationControlTypeStart,
-	smt *configure.StoringMemoryTask,
+	hsm HandlersStoringMemory,
 	clientID string,
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) {
 
@@ -211,12 +211,20 @@ func handlerFiltrationControlTypeStart(
 	/*
 	   После разработки и апробации StoringMemoryQueueTask
 	   в место
+<<<<<<< HEAD
 	   taskID := smt.AddStoringMemoryTask(configure.TaskDescription...
+=======
+	   smt.AddStoringMemoryTask(configure.TaskDescription...
+>>>>>>> ISEMS-NIH_master 06.08.2019
 	   	chanToDB <- &configure.MsgBetweenCoreAndDB...
 
 	   	нужно добавить
 
+<<<<<<< HEAD
 	   	taskID := qts.AddQueueTaskStorage(
+=======
+	   	qts.AddQueueTaskStorage(
+>>>>>>> ISEMS-NIH_master 06.08.2019
 	   		fcts.MsgOption.ID, //это sourceID
 	   		configure.CommonTaskInfo{
 	   			IDClientAPI:     clientID,
@@ -228,8 +236,13 @@ func handlerFiltrationControlTypeStart(
 	   		})
 	*/
 
+<<<<<<< HEAD
+=======
+	taskID := common.GetUniqIDFormatMD5(clientID)
+
+>>>>>>> ISEMS-NIH_master 06.08.2019
 	//добавляем новую задачу
-	taskID := smt.AddStoringMemoryTask(configure.TaskDescription{
+	hsm.SMT.AddStoringMemoryTask(taskID, configure.TaskDescription{
 		ClientID:                        clientID,
 		ClientTaskID:                    fcts.ClientTaskID,
 		TaskType:                        fcts.MsgSection,
@@ -260,3 +273,4 @@ func handlerFiltrationControlTypeStart(
 		AdvancedOptions: fcts.MsgOption,
 	}
 }
+

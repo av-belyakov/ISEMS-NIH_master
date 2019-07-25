@@ -3,8 +3,11 @@ package configure
 import (
 	"fmt"
 	"time"
+<<<<<<< HEAD
 
 	"ISEMS-NIH_master/common"
+=======
+>>>>>>> ISEMS-NIH_master 06.08.2019
 )
 
 //QueueTaskStorage содержит очереди ожидающих и выполняющихся задач
@@ -191,7 +194,11 @@ func NewRepositoryQTS() *QueueTaskStorage {
 
 				msg.ChanRes <- msgRes
 
+<<<<<<< HEAD
 			case "chane availability connection":
+=======
+			case "change availability connection":
+>>>>>>> ISEMS-NIH_master 06.08.2019
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID", msg.SourceID)
 					msg.ChanRes <- msgRes
@@ -228,6 +235,7 @@ func (qts *QueueTaskStorage) GetAllSourcesQueueTaskStorage() map[int]map[string]
 }
 
 //GetAllTaskQueueTaskStorage получить все задачи выполняемые на выбранном источнике
+<<<<<<< HEAD
 func (qts *QueueTaskStorage) GetAllTaskQueueTaskStorage(sourceID int) map[string]*QueueTaskInformation {
 	i, ok := qts.StorageList[sourceID]
 	if !ok {
@@ -235,6 +243,28 @@ func (qts *QueueTaskStorage) GetAllTaskQueueTaskStorage(sourceID int) map[string
 	}
 
 	return i
+=======
+func (qts *QueueTaskStorage) GetAllTaskQueueTaskStorage(sourceID int) (map[string]*QueueTaskInformation, bool) {
+	i, ok := qts.StorageList[sourceID]
+
+	return i, ok
+}
+
+//IsExistTaskDownloadQueueTaskStorage есть ли задачи по скачиванию файлов на выбранном источнике
+func (qts QueueTaskStorage) IsExistTaskDownloadQueueTaskStorage(sourceID int) bool {
+	list, ok := qts.GetAllTaskQueueTaskStorage(sourceID)
+	if !ok {
+		return false
+	}
+
+	for _, info := range list {
+		if info.TaskType == "download" {
+			return true
+		}
+	}
+
+	return false
+>>>>>>> ISEMS-NIH_master 06.08.2019
 }
 
 //GetQueueTaskStorage получить информацию по задаче
@@ -267,9 +297,17 @@ func (qts *QueueTaskStorage) GetQueueTaskStorage(sourceID int, taskID string) (*
 }
 
 //AddQueueTaskStorage добавить информацию по задаче
+<<<<<<< HEAD
 func (qts *QueueTaskStorage) AddQueueTaskStorage(sourceID int, cti CommonTaskInfo, options *DescriptionParametersReceivedFromUser) string {
 	//	sourceID int, clientID, taskType string, options *DescriptionParametersReceivedFromUser) string {
 	taskID := common.GetUniqIDFormatMD5(cti.IDClientAPI)
+=======
+func (qts *QueueTaskStorage) AddQueueTaskStorage(
+	taskID string,
+	sourceID int,
+	cti CommonTaskInfo,
+	options *DescriptionParametersReceivedFromUser) {
+>>>>>>> ISEMS-NIH_master 06.08.2019
 
 	chanRes := make(chan chanResponse)
 	defer close(chanRes)
@@ -288,8 +326,11 @@ func (qts *QueueTaskStorage) AddQueueTaskStorage(sourceID int, cti CommonTaskInf
 	qts.ChannelReq <- cr
 
 	<-chanRes
+<<<<<<< HEAD
 
 	return taskID
+=======
+>>>>>>> ISEMS-NIH_master 06.08.2019
 }
 
 //DelQueueTaskStorage удалить задачу из очереди
@@ -329,7 +370,11 @@ func (qts *QueueTaskStorage) ChangeAvailabilityConnection(sourceID int, taskID s
 	defer close(chanRes)
 
 	qts.ChannelReq <- chanRequest{
+<<<<<<< HEAD
 		Action:   "chane availability connection",
+=======
+		Action:   "change availability connection",
+>>>>>>> ISEMS-NIH_master 06.08.2019
 		SourceID: sourceID,
 		TaskID:   taskID,
 		ChanRes:  chanRes,

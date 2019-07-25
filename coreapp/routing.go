@@ -23,6 +23,10 @@ func Routing(
 	cc *configure.ChannelCollectionCoreApp,
 	smt *configure.StoringMemoryTask,
 	qts *configure.QueueTaskStorage,
+<<<<<<< HEAD
+=======
+	isl *configure.InformationSourcesList,
+>>>>>>> ISEMS-NIH_master 06.08.2019
 	chanCheckTask <-chan configure.MsgChanStoringMemoryTask,
 	chanMsgInfoQueueTaskStorage <-chan configure.MessageInformationQueueTaskStorage) {
 
@@ -69,8 +73,20 @@ func Routing(
 			}
 
 			if qti.TaskType == "download" {
+<<<<<<< HEAD
 				//создание директорий куда будут сохранятся скачанные файлы
 				pathStorageDirectory, err := directorypathshaper.CreatePathDirectory()
+=======
+				//отправляем запрос к БД для получения следующей информации о задаче:
+				// - поиск задачи фильтрации по taskID
+				// (ID задачи присвоенном приложением в результате выполнения задачи по фильтрации)
+				// - наличие файлов для скачивания по заданному taskID
+				// - получение списка файлов для скачивания и сравнение со списком (если он есть)
+				// полученным от клиента API
+
+				//создание директорий куда будут сохранятся скачанные файлы
+				/*pathStorageDirectory, err := directorypathshaper.CreatePathDirectory()
+>>>>>>> ISEMS-NIH_master 06.08.2019
 				if err != nil {
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
@@ -103,20 +119,35 @@ func Routing(
 		}
 	}()
 
+<<<<<<< HEAD
+=======
+	hsm := handlerslist.HandlersStoringMemory{
+		SMT: smt,
+		QTS: qts,
+		ISL: isl,
+	}
+
+	OutCoreChans := handlerslist.HandlerOutChans{
+		OutCoreChanAPI: cc.OutCoreChanAPI,
+		OutCoreChanDB:  cc.OutCoreChanDB,
+		OutCoreChanNI:  cc.OutCoreChanNI,
+	}
+
+>>>>>>> ISEMS-NIH_master 06.08.2019
 	//обработчик запросов от модулей приложения
 	for {
 		select {
 		//CHANNEL FROM DATABASE
 		case data := <-cc.InCoreChanDB:
-			go handlerslist.HandlerMsgFromDB(cc.OutCoreChanAPI, data, smt, cc.ChanDropNI, cc.OutCoreChanNI)
+			go handlerslist.HandlerMsgFromDB(OutCoreChans, data, hsm, cc.ChanDropNI)
 
 		//CHANNEL FROM API
 		case data := <-cc.InCoreChanAPI:
-			go handlerslist.HandlerMsgFromAPI(cc.OutCoreChanNI, data, smt, cc.OutCoreChanDB, cc.OutCoreChanAPI)
+			go handlerslist.HandlerMsgFromAPI(OutCoreChans, data, hsm)
 
 		//CHANNEL FROM NETWORK INTERACTION
 		case data := <-cc.InCoreChanNI:
-			go handlerslist.HandlerMsgFromNI(cc.OutCoreChanAPI, data, smt, cc.OutCoreChanDB)
+			go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm)
 
 		//сообщение клиенту API о том что задача с указанным ID долго выполняется
 		case infoHungTask := <-chanCheckTask:

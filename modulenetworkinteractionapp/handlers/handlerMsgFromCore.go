@@ -20,6 +20,7 @@ func HandlerMsgFromCore(
 	isl *configure.InformationSourcesList,
 	msg *configure.MsgBetweenCoreAndNI,
 	smt *configure.StoringMemoryTask,
+	qts *configure.QueueTaskStorage,
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI) {
 
 	//инициализируем функцию конструктор для записи лог-файлов
@@ -85,7 +86,7 @@ func HandlerMsgFromCore(
 				return
 			}
 
-			executedSourcesList, listInvalidSource := updateSourceList(isl, ado.SourceList, msg.ClientName, mcpf)
+			executedSourcesList, listInvalidSource := updateSourceList(isl, qts, ado.SourceList, msg.ClientName, mcpf)
 			if len(listInvalidSource) != 0 {
 				strSourceID := createStringFromSourceList(listInvalidSource)
 
@@ -200,7 +201,7 @@ func HandlerMsgFromCore(
 				return
 			}
 
-			listActionType, listInvalidSource, err := performActionSelectedSources(isl, &ado.MsgOptions.SourceList, msg.ClientName, mcpf)
+			listActionType, listInvalidSource, err := performActionSelectedSources(isl, qts, &ado.MsgOptions.SourceList, msg.ClientName, mcpf)
 			if err != nil {
 				strSourceID := createStringFromSourceList(*listInvalidSource)
 

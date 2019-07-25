@@ -111,6 +111,7 @@ func sendInformationFiltrationTask(
 	resMsg := configure.FiltrationControlTypeInfo{
 		MsgOption: configure.FiltrationControlMsgTypeInfo{
 			ID:                              msg.SourceID,
+			TaskIDApp:                       msg.TaskID,
 			Status:                          ti.Status,
 			NumberFilesMeetFilterParameters: ti.NumberFilesMeetFilterParameters,
 			NumberProcessedFiles:            ti.NumberProcessedFiles,

@@ -4,6 +4,7 @@ import (
 	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
 	"errors"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -83,8 +84,14 @@ func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]configu
 	return &listTrastedSources, listInvalidSource
 }
 
-//updateSourceList при получении от клиента API обновляет информацию по источникам
-func updateSourceList(isl *configure.InformationSourcesList, l []configure.DetailedListSources, clientName string, mcpf int8) ([]int, []int) {
+//updateSourceList обновляет информацию по источникам
+func updateSourceList(
+	isl *configure.InformationSourcesList,
+	qts *configure.QueueTaskStorage,
+	l []configure.DetailedListSources,
+	clientName string,
+	mcpf int8) ([]int, []int) {
+
 	var listTaskExecuted []int
 
 	listTrastedSources, listInvalidSource := validateUserData(&l, mcpf)
@@ -123,7 +130,6 @@ func updateSourceList(isl *configure.InformationSourcesList, l []configure.Detai
 	var sourcesIsReconnect bool
 
 	_, listDisconnected := isl.GetListsConnectedAndDisconnectedSources()
-	sourceListTaskExecuted := isl.GetListSourcesWhichTaskExecuted()
 
 	for _, source := range l {
 		if strings.ToLower(source.Argument.Settings.TypeAreaNetwork) == "pppoe" {
@@ -150,11 +156,9 @@ func updateSourceList(isl *configure.InformationSourcesList, l []configure.Detai
 			continue
 		}
 
-		//если на источнике выполняется задача
-		if _, ok := sourceListTaskExecuted[source.ID]; ok {
+		//если на источнике ожидает выполнения или выполняется какая либо задача задача
+		if _, ok := qts.GetAllTaskQueueTaskStorage(source.ID); ok {
 			listTaskExecuted = append(listTaskExecuted, source.ID)
-
-			continue
 		}
 
 		//проверяем имеет ли право клиент делать какие либо изменения с информацией по источнику
@@ -250,7 +254,13 @@ func getSourceListToStoreDB(trastedSoures []int, l *[]configure.DetailedListSour
 }
 
 //performActionSelectedSources выполняет действия только с заданными источниками
-func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]configure.DetailedListSources, clientName string, mcpf int8) (*[]configure.ActionTypeListSources, *[]int, error) {
+func performActionSelectedSources(
+	isl *configure.InformationSourcesList,
+	qts *configure.QueueTaskStorage,
+	l *[]configure.DetailedListSources,
+	clientName string,
+	mcpf int8) (*[]configure.ActionTypeListSources, *[]int, error) {
+
 	listTrastedSources, listInvalidSource := validateUserData(l, mcpf)
 	listActionIsExecuted := make([]configure.ActionTypeListSources, 0, len(*l))
 
@@ -273,8 +283,6 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 		if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe" {
 			typeAreaNetwork = "pppoe"
 		}
-
-		strID := strconv.Itoa(s.ID)
 
 		//есть ли источник с таким ID
 		if sourceInfo, ok = isl.GetSourceSetting(s.ID); !ok {
@@ -316,7 +324,7 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 		//если источник найден
 		if s.ActionType == "add" {
 			aie.IsSuccess = false
-			aie.MessageFailure = "невозможно добавить сенсор, сенсор с ID " + strID + " уже существует"
+			aie.MessageFailure = fmt.Sprintf("невозможно добавить сенсор, сенсор с ID %v уже существует", s.ID)
 
 			listActionIsExecuted = append(listActionIsExecuted, aie)
 
@@ -327,22 +335,31 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 			//проверяем имеет ли право клиент делать какие либо изменения с информацией по источнику
 			if (clientName != sourceInfo.ClientName) && (clientName != "root token") {
 				aie.IsSuccess = false
-				aie.MessageFailure = "недостаточно прав для выполнения действий с сенсором ID " + strID + ", возможно данный сенсор был добавлен другим клиентом"
+				aie.MessageFailure = fmt.Sprintf("недостаточно прав для выполнения действий с сенсором ID %v, возможно данный сенсор был добавлен другим клиентом", s.ID)
 
 				listActionIsExecuted = append(listActionIsExecuted, aie)
 
 				continue
 			}
 
-			//проверяем выполняется ли на источнике задача
-			if len(sourceInfo.CurrentTasks) > 0 {
+			//проверяем ожидает или выполняется на источнике какая либо задача
+			if _, ok := qts.GetAllTaskQueueTaskStorage(s.ID); ok {
+				aie.IsSuccess = false
+				aie.MessageFailure = fmt.Sprintf("невозможно выполнить действия на сенсоре с ID %v, так как в настоящее время на данном сенсоре ожидает выполнения или уже выполняется какая либо задача", s.ID)
+
+				listActionIsExecuted = append(listActionIsExecuted, aie)
+
+				continue
+			}
+
+			/*if len(sourceInfo.CurrentTasks) > 0 {
 				aie.IsSuccess = false
 				aie.MessageFailure = "невозможно выполнить действия на сенсоре с ID " + strID + ", так как в настоящее время на данном сенсоре выполняется задача"
 
 				listActionIsExecuted = append(listActionIsExecuted, aie)
 
 				continue
-			}
+			}*/
 		}
 
 		if s.ActionType == "update" {
@@ -404,16 +421,17 @@ func performActionSelectedSources(isl *configure.InformationSourcesList, l *[]co
 		if s.ActionType == "reconnect" {
 			if !sourceInfo.ConnectionStatus {
 				aie.IsSuccess = false
-				aie.MessageFailure = "невозможно выполнить переподключение, сенсор с ID " + strID + " не подключен"
+				aie.MessageFailure = fmt.Sprintf("невозможно выполнить переподключение, сенсор с ID %v не подключен", s.ID)
 
 				listActionIsExecuted = append(listActionIsExecuted, aie)
 
 				continue
 			}
 
-			if len(isl.GetListTasksPerformedSourceByType(s.ID, "download")) > 0 {
+			//проверяем не ожидает ли или выполняется скачивание файлов с источника
+			if qts.IsExistTaskDownloadQueueTaskStorage(s.ID) {
 				aie.IsSuccess = false
-				aie.MessageFailure = "невозможно выполнить переподключение, с сенсора с ID " + strID + " осуществляется загрузка файлов"
+				aie.MessageFailure = fmt.Sprintf("невозможно выполнить переподключение, с сенсора с ID %v осуществляется загрузка файлов", s.ID)
 
 				listActionIsExecuted = append(listActionIsExecuted, aie)
 

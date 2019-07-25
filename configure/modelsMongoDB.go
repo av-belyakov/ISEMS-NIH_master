@@ -29,11 +29,16 @@ type InfoServiceSettings struct {
 // TaskID - уникальный идентификатор задачи полученный от приложения
 // ClientID - уникальный идентификатор клиента
 // ClientTaskID - уникальный идентификатор задачи полученный от клиента
+// SourceID - идентификатор источника на котором выполняется задача
 // FilteringOption - параметры фильтрации полученные от клиента
 type InformationAboutTaskFiltration struct {
 	TaskID                           string                         `json:"task_id" bson:"task_id"`
 	ClientID                         string                         `json:"client_id" bson:"client_id"`
 	ClientTaskID                     string                         `json:"client_task_id" bson:"client_task_id"`
+<<<<<<< HEAD
+=======
+	SourceID                         int                            `json:"source_id" bson:"source_id"`
+>>>>>>> ISEMS-NIH_master 06.08.2019
 	FilteringOption                  FilteringOption                `json:"filtering_option" bson:"filtering_option"`
 	DetailedInformationOnFiltering   DetailedInformationFiltering   `jsom:"detailed_information_on_filtering" bson:"detailed_information_on_filtering"`
 	DetailedInformationOnDownloading DetailedInformationDownloading `jsom:"detailed_information_on_downloading" bson:"detailed_information_on_downloading"`
@@ -42,7 +47,10 @@ type InformationAboutTaskFiltration struct {
 
 //FilteringOption опции фильтрации
 type FilteringOption struct {
+<<<<<<< HEAD
 	ID       int                  `json:"id" bson:"id"`
+=======
+>>>>>>> ISEMS-NIH_master 06.08.2019
 	DateTime TimeInterval         `json:"date_time_interval" bson:"date_time_interval"`
 	Protocol string               `json:"protocol" bson:"protocol"`
 	Filters  FilteringExpressions `json:"filters" bson:"filters"`

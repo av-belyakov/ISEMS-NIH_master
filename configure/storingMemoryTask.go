@@ -3,8 +3,11 @@ package configure
 import (
 	"fmt"
 	"time"
+<<<<<<< HEAD:configure/storingMemoryTask.go
 
 	"ISEMS-NIH_master/common"
+=======
+>>>>>>> ISEMS-NIH_master 06.08.2019:configure/storingMemory.go
 )
 
 //StoringMemoryTask описание типа в котором храняться описание и ID выполняемых задач
@@ -224,18 +227,12 @@ func NewRepositorySMT() *StoringMemoryTask {
 }
 
 //AddStoringMemoryTask добавить задачу
-// если задачи с заданным ID нет, то в ответ TRUE, если есть то задача не
-// изменяется, а в ответ приходит FALSE
-func (smt StoringMemoryTask) AddStoringMemoryTask(td TaskDescription) string {
-	taskID := common.GetUniqIDFormatMD5(td.ClientID)
-
+func (smt StoringMemoryTask) AddStoringMemoryTask(taskID string, td TaskDescription) {
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType:  "add",
 		TaskID:      taskID,
 		Description: &td,
 	}
-
-	return taskID
 }
 
 //RecoverStoringMemoryTask восстанавливает всю информацию о выполяемой задаче

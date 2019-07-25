@@ -64,7 +64,7 @@ func MainNetworkInteraction(
 	}
 
 	//маршрутизатор запросов получаемых от CoreApp
-	go RouteCoreRequest(cwtRes, chanInCore, isl, smt, chansStatSource, chanOutCore)
+	go RouteCoreRequest(cwtRes, chanInCore, isl, smt, qts, chansStatSource, chanOutCore)
 	//маршрутизатор запросов получаемых Wss
 	go RouteWssConnectionResponse(cwtRes, isl, smt, chanInCore, cwtReq)
 

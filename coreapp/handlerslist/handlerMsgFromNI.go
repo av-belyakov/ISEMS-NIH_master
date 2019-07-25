@@ -17,18 +17,17 @@ import (
 
 //HandlerMsgFromNI обработчик запросов поступающих от модуля сетевого взаимодействия
 func HandlerMsgFromNI(
-	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
+	outCoreChans HandlerOutChans,
 	msg *configure.MsgBetweenCoreAndNI,
-	smt *configure.StoringMemoryTask,
-	chanToDB chan<- *configure.MsgBetweenCoreAndDB) {
+	hsm HandlersStoringMemory) {
 
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'HandlerMsgFromNI'"
 
-	taskInfo, ok := smt.GetStoringMemoryTask(msg.TaskID)
+	taskInfo, ok := hsm.SMT.GetStoringMemoryTask(msg.TaskID)
 	if ok {
-		smt.TimerUpdateStoringMemoryTask(msg.TaskID)
+		hsm.SMT.TimerUpdateStoringMemoryTask(msg.TaskID)
 	}
 
 	switch msg.Section {
@@ -38,7 +37,7 @@ func HandlerMsgFromNI(
 			//в БД
 			fmt.Println(":INSERT (Core module)")
 
-			chanToDB <- &configure.MsgBetweenCoreAndDB{
+			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 				MsgGenerator:    "NI module",
 				MsgRecipient:    "DB module",
 				MsgSection:      "source control",
@@ -51,7 +50,7 @@ func HandlerMsgFromNI(
 			//в БД
 			fmt.Println(":DELETE (Core module)")
 
-			chanToDB <- &configure.MsgBetweenCoreAndDB{
+			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 				MsgGenerator:    "NI module",
 				MsgRecipient:    "DB module",
 				MsgSection:      "source control",
@@ -64,7 +63,7 @@ func HandlerMsgFromNI(
 			//в БД
 			fmt.Println(":UPDATE (Core module)")
 
-			chanToDB <- &configure.MsgBetweenCoreAndDB{
+			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 				MsgGenerator:    "NI module",
 				MsgRecipient:    "DB module",
 				MsgSection:      "source control",
@@ -75,11 +74,11 @@ func HandlerMsgFromNI(
 
 		case "confirm the action":
 			//клиенту API
-			getConfirmActionSourceListForAPI(chanToAPI, msg, smt)
+			getConfirmActionSourceListForAPI(outCoreChans.OutCoreChanAPI, msg, hsm.SMT)
 
 		case "change connection status source":
 			//клиенту API
-			sendChanStatusSourceForAPI(chanToAPI, msg)
+			sendChanStatusSourceForAPI(outCoreChans.OutCoreChanAPI, msg)
 
 		case "telemetry":
 			//клиенту API
@@ -116,7 +115,7 @@ func HandlerMsgFromNI(
 				return
 			}
 
-			chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+			outCoreChans.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
 				MsgGenerator: "Core module",
 				MsgRecipient: "API module",
 				MsgJSON:      jsonOut,
@@ -134,7 +133,7 @@ func HandlerMsgFromNI(
 		}
 
 		//отправляем иформацию о ходе фильтрации в БД
-		chanToDB <- &msgChan
+		outCoreChans.OutCoreChanDB <- &msgChan
 
 		/* упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
 		при чем если статус 'execute', то отправляем еще и содержимое поля 'FoundFilesInformation',
@@ -142,7 +141,7 @@ func HandlerMsgFromNI(
 
 		//если задача найдена
 		if ok {
-			sendInformationFiltrationTask(chanToAPI, taskInfo, msg)
+			sendInformationFiltrationTask(outCoreChans.OutCoreChanAPI, taskInfo, msg)
 		}
 
 	case "download control":
@@ -172,10 +171,10 @@ func HandlerMsgFromNI(
 			Sources:        ao.Sources,
 		}
 
-		notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
+		notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
 
 		//останавливаем выполнение задачи
-		smt.CompleteStoringMemoryTask(msg.TaskID)
+		hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
 
 	case "message notification":
 		if msg.Command == "send client API" {
@@ -198,12 +197,12 @@ func HandlerMsgFromNI(
 				Sources:        ao.Sources,
 			}
 
-			notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
+			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
 		}
 
 	case "monitoring task performance":
 		if msg.Command == "complete task" {
-			smt.CompleteStoringMemoryTask(msg.TaskID)
+			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
 		}
 	}
 }

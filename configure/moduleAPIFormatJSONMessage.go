@@ -226,6 +226,7 @@ type FiltrationControlTypeInfo struct {
 
 //FiltrationControlMsgTypeInfo информационные сообщения о ходе фильтрации
 // ID - уникальный цифровой идентификатор источника
+// TaskIDApp - уникальный цифровой идентификатор задачи присвоенный приложением
 // Status - статус выполняемой задачи
 // NumberFilesMeetFilterParameters - кол-во файлов удовлетворяющих параметрам фильтрации
 // NumberProcessedFiles - кол-во обработанных файлов
@@ -239,6 +240,7 @@ type FiltrationControlTypeInfo struct {
 // FoundFilesInformation - информация о файлах, ключ - имя файла
 type FiltrationControlMsgTypeInfo struct {
 	ID                              int                               `json:"id"`
+	TaskIDApp                       string                            `json:"tidapp"`
 	Status                          string                            `json:"s"`
 	NumberFilesMeetFilterParameters int                               `json:"nfmfp"`
 	NumberProcessedFiles            int                               `json:"npf"`
@@ -256,12 +258,26 @@ type FiltrationControlMsgTypeInfo struct {
 //DownloadControlTypeStart общее описание запроса на начало скачивания файлов
 type DownloadControlTypeStart struct {
 	MsgCommon
+<<<<<<< HEAD
 	MsgOption DownloadControlFileList `json:"o"`
 }
 
 //DownloadControlFileList список файлов на скачивание
 type DownloadControlFileList struct {
 	FileList []string `json:"fl"`
+=======
+	MsgOption DownloadControlAdditionalOption `json:"o"`
+}
+
+//DownloadControlAdditionalOption список файлов на скачивание
+// ID - уникальный идентификатор источника
+// TaskIDApp - уникальный идентификатор задачи по фильтрации
+// FileList - список файлов для скачивания полученных от клиента
+type DownloadControlAdditionalOption struct {
+	ID        int      `json:"id"`
+	TaskIDApp string   `json:"tidapp"`
+	FileList  []string `json:"fl"`
+>>>>>>> ISEMS-NIH_master 06.08.2019
 }
 
 //DownloadControlTypeInfo общее описание сообщения о ходе скачивания файлов
@@ -272,6 +288,10 @@ type DownloadControlTypeInfo struct {
 
 //DownloadControlMsgTypeInfo информационные сообщения о ходе скачивания файлов
 // ID - уникальный цифровой идентификатор источника
+<<<<<<< HEAD
+=======
+// TaskIDApp - уникальный цифровой идентификатор задачи присвоенный приложением при выполнении фильтрации
+>>>>>>> ISEMS-NIH_master 06.08.2019
 // Status - статус выполняемой задачи
 // NumberFilesTotal — общее количество скачиваемых файлов
 // NumberFilesDownloaded — количество успешно скаченных файлов
@@ -280,6 +300,10 @@ type DownloadControlTypeInfo struct {
 // DetailedFileInformation — подробная информация о скачиваемом файле
 type DownloadControlMsgTypeInfo struct {
 	ID                                  int                 `json:"id"`
+<<<<<<< HEAD
+=======
+	TaskIDApp                           string              `json:"tidapp"`
+>>>>>>> ISEMS-NIH_master 06.08.2019
 	Status                              string              `json:"s"`
 	NumberFilesTotal                    int                 `json:"nft"`
 	NumberFilesDownloaded               int                 `json:"nfd"`

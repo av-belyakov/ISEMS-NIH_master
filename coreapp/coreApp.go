@@ -49,5 +49,9 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	}
 
 	//запуск подпрограммы для маршрутизации запросов внутри приложения
+<<<<<<< HEAD
 	Routing(appConf, &chanColl, smt, qts, chanCheckTask, chanMsgInfoQueueTaskStorage)
+=======
+	Routing(appConf, &chanColl, smt, qts, isl, chanCheckTask, chanMsgInfoQueueTaskStorage)
+>>>>>>> ISEMS-NIH_master 06.08.2019
 }

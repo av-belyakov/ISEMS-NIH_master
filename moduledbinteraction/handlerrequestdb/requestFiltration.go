@@ -64,8 +64,13 @@ func CreateNewFiltrationTask(
 		TaskID:       req.TaskID,
 		ClientID:     req.IDClientAPI,
 		ClientTaskID: req.TaskIDClientAPI,
+<<<<<<< HEAD
 		FilteringOption: configure.FilteringOption{
 			ID: tf.ID,
+=======
+		SourceID:     tf.ID,
+		FilteringOption: configure.FilteringOption{
+>>>>>>> ISEMS-NIH_master 06.08.2019
 			DateTime: configure.TimeInterval{
 				Start: tf.DateTime.Start,
 				End:   tf.DateTime.End,
@@ -176,7 +181,7 @@ func UpdateParametersFiltrationTask(
 			},
 			TaskParameter: configure.DescriptionTaskParameters{
 				FiltrationTask: configure.FiltrationTaskParameters{
-					ID:                              itd.FilteringOption.ID,
+					ID:                              itd.SourceID,
 					Status:                          itd.DetailedInformationOnFiltering.TaskStatus,
 					UseIndex:                        itd.DetailedInformationOnFiltering.WasIndexUsed,
 					NumberFilesMeetFilterParameters: itd.DetailedInformationOnFiltering.NumberFilesMeetFilterParameters,
