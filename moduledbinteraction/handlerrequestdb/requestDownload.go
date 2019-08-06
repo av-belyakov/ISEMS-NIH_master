@@ -1,8 +1,9 @@
 package handlerrequestdb
 
 import (
-	"ISEMS-NIH_master/configure"
 	"fmt"
+
+	"ISEMS-NIH_master/configure"
 )
 
 //FindingInformationAboutTask поиск в БД информации по ID задачи
@@ -12,4 +13,5 @@ func FindingInformationAboutTask(
 	qp QueryParameters) {
 
 	fmt.Println("START function 'FindingInformationAboutTask'...")
+
 }
