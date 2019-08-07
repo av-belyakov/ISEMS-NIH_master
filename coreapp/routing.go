@@ -12,7 +12,6 @@ import (
 
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/coreapp/handlerslist"
-	"ISEMS-NIH_master/directorypathshaper"
 	"ISEMS-NIH_master/notifications"
 	"ISEMS-NIH_master/savemessageapp"
 )
@@ -23,10 +22,7 @@ func Routing(
 	cc *configure.ChannelCollectionCoreApp,
 	smt *configure.StoringMemoryTask,
 	qts *configure.QueueTaskStorage,
-<<<<<<< HEAD
-=======
 	isl *configure.InformationSourcesList,
->>>>>>> ISEMS-NIH_master 06.08.2019
 	chanCheckTask <-chan configure.MsgChanStoringMemoryTask,
 	chanMsgInfoQueueTaskStorage <-chan configure.MessageInformationQueueTaskStorage) {
 
@@ -73,10 +69,6 @@ func Routing(
 			}
 
 			if qti.TaskType == "download" {
-<<<<<<< HEAD
-				//создание директорий куда будут сохранятся скачанные файлы
-				pathStorageDirectory, err := directorypathshaper.CreatePathDirectory()
-=======
 				//отправляем запрос к БД для получения следующей информации о задаче:
 				// - поиск задачи фильтрации по taskID
 				// (ID задачи присвоенном приложением в результате выполнения задачи по фильтрации)
@@ -86,7 +78,6 @@ func Routing(
 
 				//создание директорий куда будут сохранятся скачанные файлы
 				/*pathStorageDirectory, err := directorypathshaper.CreatePathDirectory()
->>>>>>> ISEMS-NIH_master 06.08.2019
 				if err != nil {
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
@@ -119,8 +110,6 @@ func Routing(
 		}
 	}()
 
-<<<<<<< HEAD
-=======
 	hsm := handlerslist.HandlersStoringMemory{
 		SMT: smt,
 		QTS: qts,
@@ -133,7 +122,6 @@ func Routing(
 		OutCoreChanNI:  cc.OutCoreChanNI,
 	}
 
->>>>>>> ISEMS-NIH_master 06.08.2019
 	//обработчик запросов от модулей приложения
 	for {
 		select {

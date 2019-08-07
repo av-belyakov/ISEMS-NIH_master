@@ -218,38 +218,12 @@ func HandlerMsgFromAPI(
 
 				var dcts configure.DownloadControlTypeStart
 				if err := json.Unmarshal(msgJSON, &dcts); err != nil {
-<<<<<<< HEAD
-					notifications.SendNotificationToClientAPI(chanToAPI, nsErrJSON, "", msg.IDClientAPI)
-=======
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
->>>>>>> ISEMS-NIH_master 06.08.2019
 					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 					return
 				}
 
-<<<<<<< HEAD
-				//				go handlerDownloadControlTypeStart(chanToDB, &fcts, smt, msg.IDClientAPI, chanToAPI)
-
-				//				return
-				/*
-					   1. Получаем список файлов для скачивания (dcts.MsgOption.FileList)
-					   2. Отправляем запрос в БД о наличии всей файлов, если
-					   	   массив dcts.MsgOption.FileList пуст, или наличии только тех файлов
-						   которые уазаны в в массиве dcts.MsgOption.FileList
-						    НАПИСАТЬ ТЕСТ!!!
-					   3. Принимаем ответ от БД в handlerMsgFromDB. Если запрашивали все файлы,
-					   	и они есть - запуск скачивания, если файлов нет - сообщение об ошибке,
-					   	если был передан список и некоторых файлов нет, сообщение с перечнем файлов
-					   	которые не были найдены
-					   4. Запуск скачивания - это добавление в очередь, из очереди берутся задания
-						   на скачивание
-
-						   Тест запроса к БД для получения списка файлов
-						   написал и выполнил
-				*/
-
-=======
 				//ищем источник по указанному идентификатору
 				sourceInfo, ok := hsm.ISL.GetSourceSetting(dcts.MsgOption.ID)
 				if !ok {
@@ -291,7 +265,6 @@ func HandlerMsgFromAPI(
 					TaskID:          dcts.MsgOption.TaskIDApp,
 					TaskIDClientAPI: dcts.ClientTaskID,
 				}
->>>>>>> ISEMS-NIH_master 06.08.2019
 			}
 
 			if msgc.MsgInsturction == "to cancel downloading" {

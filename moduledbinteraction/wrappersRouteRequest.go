@@ -72,14 +72,11 @@ func (wr *WrappersRouteRequest) WrapperFuncFiltration(msg *configure.MsgBetweenC
 
 //WrapperFuncDownload обработка запросов по скачиванию файлов
 func (wr *WrappersRouteRequest) WrapperFuncDownload(msg *configure.MsgBetweenCoreAndDB, smt *configure.StoringMemoryTask, qts *configure.QueueTaskStorage) {
-<<<<<<< HEAD
-=======
 	qp := handlerrequestdb.QueryParameters{
 		NameDB:         wr.NameDB,
 		CollectionName: "task_list",
 		ConnectDB:      wr.ConnectDB,
 	}
->>>>>>> ISEMS-NIH_master 06.08.2019
 
 	switch msg.Instruction {
 	case "finding information about a task":

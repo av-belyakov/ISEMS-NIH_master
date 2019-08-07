@@ -209,38 +209,31 @@ func handlerFiltrationControlTypeStart(
 	}
 
 	/*
-	   После разработки и апробации StoringMemoryQueueTask
-	   в место
-<<<<<<< HEAD
-	   taskID := smt.AddStoringMemoryTask(configure.TaskDescription...
-=======
-	   smt.AddStoringMemoryTask(configure.TaskDescription...
->>>>>>> ISEMS-NIH_master 06.08.2019
-	   	chanToDB <- &configure.MsgBetweenCoreAndDB...
+			   После разработки и апробации StoringMemoryQueueTask
+			   в место
+		<<<<<<< HEAD
+			   taskID := smt.AddStoringMemoryTask(configure.TaskDescription...
+		=======
+			   smt.AddStoringMemoryTask(configure.TaskDescription...
+		>>>>>>> ISEMS-NIH_master 06.08.2019
+			   	chanToDB <- &configure.MsgBetweenCoreAndDB...
 
-	   	нужно добавить
+			   	нужно добавить
 
-<<<<<<< HEAD
-	   	taskID := qts.AddQueueTaskStorage(
-=======
-	   	qts.AddQueueTaskStorage(
->>>>>>> ISEMS-NIH_master 06.08.2019
-	   		fcts.MsgOption.ID, //это sourceID
-	   		configure.CommonTaskInfo{
-	   			IDClientAPI:     clientID,
-	   			TaskIDClientAPI: fcts.ClientTaskID,
-	   			TaskType:        "filtration",
-	   		},
-	   		&configure.DescriptionParametersReceivedFromUser{
-	   			FiltrationParameters: FiltrationOptions,
-	   		})
+			   	qts.AddQueueTaskStorage(
+			   		fcts.MsgOption.ID, //это sourceID
+			   		configure.CommonTaskInfo{
+			   			IDClientAPI:     clientID,
+			   			TaskIDClientAPI: fcts.ClientTaskID,
+			   			TaskType:        "filtration",
+			   		},
+			   		&configure.DescriptionParametersReceivedFromUser{
+			   			FiltrationParameters: FiltrationOptions,
+			   		})
 	*/
 
-<<<<<<< HEAD
-=======
 	taskID := common.GetUniqIDFormatMD5(clientID)
 
->>>>>>> ISEMS-NIH_master 06.08.2019
 	//добавляем новую задачу
 	hsm.SMT.AddStoringMemoryTask(taskID, configure.TaskDescription{
 		ClientID:                        clientID,
@@ -273,4 +266,3 @@ func handlerFiltrationControlTypeStart(
 		AdvancedOptions: fcts.MsgOption,
 	}
 }
-
