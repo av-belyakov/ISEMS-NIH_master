@@ -1,6 +1,7 @@
 package configure
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
@@ -30,11 +31,14 @@ type QueueTaskInformation struct {
 }
 
 //DescriptionParametersReceivedFromUser описание параметров задачи
-// FilterationParameters - параметры фильтрации\
+// FilterationParameters - параметры фильтрации
 // DownloadList - список файлов полученный от пользователя
+// ConfirmedListFiles - подтвержденный список файлов полученный из БД и прошедший сравнение
+// с пользовательским (если нужно)
 type DescriptionParametersReceivedFromUser struct {
 	FilterationParameters FilteringOption
 	DownloadList          []string
+	ConfirmedListFiles    []*DetailedFileInformation
 }
 
 //StatusItems пункты состояния задачи или источника
@@ -155,9 +159,18 @@ func NewRepositoryQTS() *QueueTaskStorage {
 
 				msg.ChanRes <- msgRes
 
-			case "delete task":
-				defer close(msg.ChanRes)
+			case "add confirmed list of files":
+				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
+					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID", msg.SourceID)
+					msg.ChanRes <- msgRes
 
+					break
+				}
+
+				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles = msg.AdditionalOption.ConfirmedListFiles
+				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.DownloadList = []string{}
+
+			case "delete task":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID", msg.SourceID)
 					msg.ChanRes <- msgRes
@@ -246,6 +259,53 @@ func (qts QueueTaskStorage) IsExistTaskDownloadQueueTaskStorage(sourceID int) bo
 	}
 
 	return false
+}
+
+//SearchTaskForIDQueueTaskStorage поиск информации по ID задачи
+func (qts *QueueTaskStorage) SearchTaskForIDQueueTaskStorage(taskID string) (int, *QueueTaskInformation, error) {
+	var sourceID int
+
+	sourceList := qts.GetAllSourcesQueueTaskStorage()
+	if len(sourceList) == 0 {
+		return sourceID, nil, errors.New("error, empty queue of pending tasks")
+	}
+
+	chanRes := make(chan chanResponse)
+	defer close(chanRes)
+
+DONE:
+	for sID, tasks := range sourceList {
+		for tID := range tasks {
+			if tID == taskID {
+				sourceID = sID
+
+				break DONE
+			}
+		}
+	}
+
+	if sourceID == 0 {
+		return sourceID, nil, fmt.Errorf("error, task ID %v not found", taskID)
+	}
+
+	qts.ChannelReq <- chanRequest{
+		Action:   "get information for task",
+		SourceID: sourceID,
+		TaskID:   taskID,
+		ChanRes:  chanRes,
+	}
+
+	msgRes := <-chanRes
+	qti := QueueTaskInformation{
+		TaskStatus:          msgRes.TaskStatus,
+		CheckingStatusItems: msgRes.CheckingStatusItems,
+		TaskParameters:      *msgRes.Settings,
+	}
+	qti.TaskType = msgRes.TaskType
+	qti.IDClientAPI = msgRes.IDClientAPI
+	qti.TaskIDClientAPI = msgRes.TaskIDClientAPI
+
+	return sourceID, &qti, nil
 }
 
 //GetQueueTaskStorage получить информацию по задаче
@@ -359,6 +419,24 @@ func (qts *QueueTaskStorage) ChangeAvailabilityFilesDownload(sourceID int, taskI
 		SourceID: sourceID,
 		TaskID:   taskID,
 		ChanRes:  chanRes,
+	}
+
+	return (<-chanRes).ErrorDescription
+}
+
+//AddConfirmedListFiles добавляет проверенный список файлов предназначенных для скачивания и удаляет список переданный клиентом API (если есть)
+func (qts *QueueTaskStorage) AddConfirmedListFiles(sourceID int, taskID string, clf []*DetailedFileInformation) error {
+	chanRes := make(chan chanResponse)
+	defer close(chanRes)
+
+	options := &DescriptionParametersReceivedFromUser{ConfirmedListFiles: clf}
+
+	qts.ChannelReq <- chanRequest{
+		Action:           "add confirmed list of files",
+		SourceID:         sourceID,
+		TaskID:           taskID,
+		AdditionalOption: options,
+		ChanRes:          chanRes,
 	}
 
 	return (<-chanRes).ErrorDescription

@@ -62,30 +62,24 @@ func connectToDB(ctx context.Context, conf configureDB) (*mongo.Client, error) {
 	return client, nil
 }
 
-func getInfoFiltrationTaskForClientTaskID(connectDB *mongo.Client, clientTaskID string) ([]configure.InformationAboutTaskFiltration, error) {
-	fmt.Println("START function 'getInfoFiltrationTaskForID'...")
-
+func getInfoFiltrationTaskForClientTaskID(connectDB *mongo.Client, taskID string) ([]configure.InformationAboutTask, error) {
 	qp := QueryParameters{
 		NameDB:         "isems-nih",
 		CollectionName: "task_list",
 		ConnectDB:      connectDB,
 	}
 
-	itf := []configure.InformationAboutTaskFiltration{}
+	itf := []configure.InformationAboutTask{}
 
-	cur, err := qp.Find(bson.D{bson.E{Key: "client_task_id", Value: clientTaskID}})
+	cur, err := qp.Find(bson.D{bson.E{Key: "task_id", Value: taskID}})
 	if err != nil {
-		fmt.Printf("---------1 ERROR: %v\n", err)
-
 		return itf, err
 	}
 
 	for cur.Next(context.TODO()) {
-		var model configure.InformationAboutTaskFiltration
+		var model configure.InformationAboutTask
 		err := cur.Decode(&model)
 		if err != nil {
-			fmt.Printf("---------2 ERROR: %v\n", err)
-
 			return itf, err
 		}
 
@@ -93,8 +87,6 @@ func getInfoFiltrationTaskForClientTaskID(connectDB *mongo.Client, clientTaskID 
 	}
 
 	if err := cur.Err(); err != nil {
-		fmt.Printf("---------3 ERROR: %v\n", err)
-
 		return itf, err
 	}
 
@@ -104,7 +96,7 @@ func getInfoFiltrationTaskForClientTaskID(connectDB *mongo.Client, clientTaskID 
 }
 
 var _ = Describe("InteractionDataBaseFromDownloadFiles", func() {
-	clientTaskID := "ef532470eda3bea92cff67da256bfbc30582afde"
+	taskID := "c440d417dc4386d63403eaed222dc4de"
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1000*time.Second)
 	defer cancel()
@@ -124,7 +116,7 @@ var _ = Describe("InteractionDataBaseFromDownloadFiles", func() {
 
 	Context("Тест 2: Запрос к БД для получения списка файлов для скачивания", func() {
 		It("Для выбранной в тесте задаче должно быть найдено 32 файла", func() {
-			ti, err := getInfoFiltrationTaskForClientTaskID(conn, clientTaskID)
+			ti, err := getInfoFiltrationTaskForClientTaskID(conn, taskID)
 
 			fmt.Println(err)
 			fmt.Printf("---------- All information about task -----\n%v\n", ti)

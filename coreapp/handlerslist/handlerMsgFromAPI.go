@@ -252,7 +252,7 @@ func HandlerMsgFromAPI(
 					DownloadList: dcts.MsgOption.FileList,
 				})
 
-				//устанавливаем статус источника для данной задачи как подключен
+				//устанавливаем проверочный статус источника для данной задачи как подключен
 				hsm.QTS.ChangeAvailabilityConnection(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp)
 
 				//запрос в БД о наличии задачи с указанным ID и файлов для скачивания

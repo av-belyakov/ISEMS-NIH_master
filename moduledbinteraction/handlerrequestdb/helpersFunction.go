@@ -9,31 +9,31 @@ import (
 	"ISEMS-NIH_master/configure"
 )
 
-func getInfoFiltrationTaskForID(qp QueryParameters, taskID string) ([]configure.InformationAboutTaskFiltration, error) {
-	fmt.Println("START function 'getInfoFiltrationTaskForID'...")
+func getInfoTaskForID(qp QueryParameters, taskID string) (*[]configure.InformationAboutTask, error) {
+	fmt.Println("START function 'getInfoTaskForID'...")
 
-	itf := []configure.InformationAboutTaskFiltration{}
+	itf := []configure.InformationAboutTask{}
 
 	cur, err := qp.Find(bson.D{bson.E{Key: "task_id", Value: taskID}})
 	if err != nil {
-		return itf, err
+		return &itf, err
 	}
 
 	for cur.Next(context.TODO()) {
-		var model configure.InformationAboutTaskFiltration
+		var model configure.InformationAboutTask
 		err := cur.Decode(&model)
 		if err != nil {
-			return itf, err
+			return &itf, err
 		}
 
 		itf = append(itf, model)
 	}
 
 	if err := cur.Err(); err != nil {
-		return itf, err
+		return &itf, err
 	}
 
 	cur.Close(context.TODO())
 
-	return itf, nil
+	return &itf, nil
 }

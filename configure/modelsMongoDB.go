@@ -25,13 +25,13 @@ type InfoServiceSettings struct {
 	IfAsServerThenPort        int      `json:"if_as_server_then_port" bson:"if_as_server_then_port"`
 }
 
-//InformationAboutTaskFiltration подробная информация связанная с задачей по фильтрации
+//InformationAboutTask подробная информация связанная с задачей по фильтрации
 // TaskID - уникальный идентификатор задачи полученный от приложения
 // ClientID - уникальный идентификатор клиента
 // ClientTaskID - уникальный идентификатор задачи полученный от клиента
 // SourceID - идентификатор источника на котором выполняется задача
 // FilteringOption - параметры фильтрации полученные от клиента
-type InformationAboutTaskFiltration struct {
+type InformationAboutTask struct {
 	TaskID                           string                         `json:"task_id" bson:"task_id"`
 	ClientID                         string                         `json:"client_id" bson:"client_id"`
 	ClientTaskID                     string                         `json:"client_task_id" bson:"client_task_id"`

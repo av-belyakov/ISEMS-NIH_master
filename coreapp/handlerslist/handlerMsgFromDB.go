@@ -25,13 +25,18 @@ func HandlerMsgFromDB(
 
 	switch res.MsgRecipient {
 	case "Core module":
-		if res.MsgSection == "error notification" {
+		switch res.MsgSection {
+		case "error notification":
 			//если сообщение об ошибке только для ядра приложения
 			if en, ok := res.AdvancedOptions.(configure.ErrorNotification); ok {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(en.ErrorBody))
 
 				return
 			}
+
+		case "all information about task":
+			//проверяем ряд параметров в задаче для изменения проверочного статуса задачи в QueueStoringMemoryTask
+			checkParametersDownloadTask(res, hsm, outCoreChans.OutCoreChanAPI)
 		}
 
 	case "API module":

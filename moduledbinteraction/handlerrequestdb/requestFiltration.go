@@ -60,7 +60,7 @@ func CreateNewFiltrationTask(
 		chanIn <- &msgRes
 	}
 
-	itf := configure.InformationAboutTaskFiltration{
+	itf := configure.InformationAboutTask{
 		TaskID:       req.TaskID,
 		ClientID:     req.IDClientAPI,
 		ClientTaskID: req.TaskIDClientAPI,
@@ -149,20 +149,20 @@ func UpdateParametersFiltrationTask(
 		fmt.Println("\tвосстанавливаем задачу по ее ID")
 
 		//восстанавливаем задачу по ее ID
-		taskInfoFromDB, err := getInfoFiltrationTaskForID(qp, req.TaskID)
+		taskInfoFromDB, err := getInfoTaskForID(qp, req.TaskID)
 		if err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 			return
 		}
 
-		if len(taskInfoFromDB) == 0 {
+		if len(*taskInfoFromDB) == 0 {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task ID '%v' not found in database (DB module)", req.TaskID))
 
 			return
 		}
 
-		itd := taskInfoFromDB[0]
+		itd := (*taskInfoFromDB)[0]
 		smt.RecoverStoringMemoryTask(configure.TaskDescription{
 			ClientID:                        itd.ClientID,
 			ClientTaskID:                    itd.ClientTaskID,

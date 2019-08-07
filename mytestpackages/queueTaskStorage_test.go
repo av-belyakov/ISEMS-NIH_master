@@ -4,10 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-<<<<<<< HEAD
-=======
 	"ISEMS-NIH_master/common"
->>>>>>> ISEMS-NIH_master 06.08.2019
 	"ISEMS-NIH_master/configure"
 	//. "ISEMS-NIH_master/mytestpackages"
 )
@@ -18,14 +15,10 @@ var _ = Describe("QueueTaskStorage", func() {
 	sourceID := 100
 	clientID := "mifw77g6f63g"
 
-<<<<<<< HEAD
-	taskID := qts.AddQueueTaskStorage(
-=======
 	taskID := common.GetUniqIDFormatMD5("idwi99d92")
 
 	qts.AddQueueTaskStorage(
 		taskID,
->>>>>>> ISEMS-NIH_master 06.08.2019
 		sourceID,
 		configure.CommonTaskInfo{
 			IDClientAPI:     clientID,
@@ -37,7 +30,7 @@ var _ = Describe("QueueTaskStorage", func() {
 		})
 
 	Context("Тест 1: Добавление в очередь новой задачи", func() {
-		It("Должна вернутся информация по заданному taskID", func() {
+		It("Должна вернуться информация по заданному taskID", func() {
 			i, err := qts.GetQueueTaskStorage(sourceID, taskID)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(len(i.TaskParameters.DownloadList)).Should(Equal(2))
@@ -46,7 +39,7 @@ var _ = Describe("QueueTaskStorage", func() {
 	})
 
 	Context("Тест 2: Изменение статуса задачи", func() {
-		It("Должен изменится статус задачи на 'execution'", func() {
+		It("Должен измениться статус задачи на 'execution'", func() {
 			var err error
 
 			err = qts.ChangeTaskStatusQueueTask(sourceID, taskID, "execution")
@@ -61,7 +54,7 @@ var _ = Describe("QueueTaskStorage", func() {
 	})
 
 	Context("Тест 3: Проверяем наличие соединения с источником", func() {
-		It("Должно вернутся значение 'TRUE'", func() {
+		It("Должно вернуться значение 'TRUE'", func() {
 			var err error
 
 			err = qts.ChangeAvailabilityConnection(sourceID, taskID)
@@ -74,7 +67,7 @@ var _ = Describe("QueueTaskStorage", func() {
 	})
 
 	Context("Тест 4: Проверяем наличие файлов для скачивания", func() {
-		It("Должно вернутся значение 'TRUE'", func() {
+		It("Должно вернуться значение 'TRUE'", func() {
 			var err error
 
 			err = qts.ChangeAvailabilityFilesDownload(sourceID, taskID)
@@ -86,7 +79,21 @@ var _ = Describe("QueueTaskStorage", func() {
 		})
 	})
 
-	Context("Тест 5: Удаление задачи из очередей", func() {
+	Context("Тест 5: Проверяем поиск информации о задаче только по ID задачи", func() {
+		It("Должна вернуться информация о задаче", func() {
+			sID, i, err := qts.SearchTaskForIDQueueTaskStorage(taskID)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(i.CheckingStatusItems.AvailabilityFilesDownload).Should(BeTrue())
+			Expect(sID).Should(Equal(100))
+		})
+
+		It("Должна вернутся ошибка так как задачи с указанным ID не найдено", func() {
+			_, _, err := qts.SearchTaskForIDQueueTaskStorage("fff9993j9f3")
+			Expect(err).Should(HaveOccurred())
+		})
+	})
+
+	Context("Тест 6: Удаление задачи из очередей", func() {
 		It("Информация о задаче не может быть удалена из очереди так как задача в процессе выполнения", func() {
 			e := qts.DelQueueTaskStorage(sourceID, taskID)
 			Expect(e).Should(HaveOccurred())
@@ -102,6 +109,13 @@ var _ = Describe("QueueTaskStorage", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			_, err = qts.GetQueueTaskStorage(sourceID, taskID)
+			Expect(err).Should(HaveOccurred())
+		})
+	})
+
+	Context("Тест 7: Проверка поиска задачи после удаления всех задач из очереди", func() {
+		It("Должна вернутся ошибка так как в очереди нет задач", func() {
+			_, _, err := qts.SearchTaskForIDQueueTaskStorage(taskID)
 			Expect(err).Should(HaveOccurred())
 		})
 	})

@@ -74,12 +74,11 @@ func createNewFiltrationTask(
 
 	fmt.Println("START function 'createNewFiltrationTask_test'...")
 
-	itf := configure.InformationAboutTaskFiltration{
+	itf := configure.InformationAboutTask{
 		TaskID:       taskID,
 		ClientID:     clientID,
 		ClientTaskID: clientTaskID,
 		FilteringOption: configure.FilteringOption{
-			ID: tf.ID,
 			DateTime: configure.TimeInterval{
 				Start: tf.DateTime.Start,
 				End:   tf.DateTime.End,
@@ -207,8 +206,8 @@ func updateFiltrationTaskParameters(
 	return nil
 }
 
-func getInfoFiltrationTaskForID(connectDB *mongo.Client, taskID string) ([]configure.InformationAboutTaskFiltration, error) {
-	fmt.Println("START function 'getInfoFiltrationTaskForID'...")
+func getInfoTaskForID(connectDB *mongo.Client, taskID string) ([]configure.InformationAboutTask, error) {
+	fmt.Println("START function 'getInfoTaskForID'...")
 
 	qp := QueryParameters{
 		NameDB:         "isems-nih",
@@ -216,7 +215,7 @@ func getInfoFiltrationTaskForID(connectDB *mongo.Client, taskID string) ([]confi
 		ConnectDB:      connectDB,
 	}
 
-	itf := []configure.InformationAboutTaskFiltration{}
+	itf := []configure.InformationAboutTask{}
 
 	cur, err := qp.Find(bson.D{bson.E{Key: "task_id", Value: "ff644a6faed4bbfec3a31cf8826a5587"}})
 	if err != nil {
@@ -226,7 +225,7 @@ func getInfoFiltrationTaskForID(connectDB *mongo.Client, taskID string) ([]confi
 	}
 
 	for cur.Next(context.TODO()) {
-		var model configure.InformationAboutTaskFiltration
+		var model configure.InformationAboutTask
 		err := cur.Decode(&model)
 		if err != nil {
 			fmt.Printf("---------2 ERROR: %v\n", err)
@@ -304,7 +303,6 @@ var _ = Describe("InteractionDataBase", func() {
 	Context("Тест 2: Создание в БД записи о новой задаче по фильтрации сет. трафика", func() {
 		It("Должна быть успешно создана новая запись по задаче фильтрации сет. трафика", func() {
 			tf := configure.FiltrationControlCommonParametersFiltration{
-				ID: 189,
 				DateTime: configure.DateTimeParameters{
 					Start: time.Now().Unix(),
 					End:   time.Now().Unix(),
@@ -395,7 +393,7 @@ var _ = Describe("InteractionDataBase", func() {
 
 	Context("Тест 5: Получаем всю информацию по выполняемой задачи", func() {
 		It("В результате должна быть получена вся информация о задачи фильтрации по ее ID", func() {
-			ti, err := getInfoFiltrationTaskForID(conn, taskID)
+			ti, err := getInfoTaskForID(conn, taskID)
 
 			fmt.Println(err)
 			fmt.Printf("---------- All information about task -----\n%v\n", ti)
