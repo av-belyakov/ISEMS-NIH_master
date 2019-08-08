@@ -110,7 +110,6 @@ func NewRepositoryQTS() *QueueTaskStorage {
 			case "get information for task":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID", msg.SourceID)
-
 					msg.ChanRes <- msgRes
 
 					break
@@ -129,11 +128,9 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				}
 				msgRes.Settings = &DescriptionParametersReceivedFromUser{}
 
-				if settings.TaskType == "filtration" {
-					msgRes.Settings.FilterationParameters = settings.TaskParameters.FilterationParameters
-				} else {
-					msgRes.Settings.DownloadList = settings.TaskParameters.DownloadList
-				}
+				msgRes.Settings.FilterationParameters = settings.TaskParameters.FilterationParameters
+				msgRes.Settings.DownloadList = settings.TaskParameters.DownloadList
+				msgRes.Settings.ConfirmedListFiles = settings.TaskParameters.ConfirmedListFiles
 
 				msg.ChanRes <- msgRes
 
@@ -149,7 +146,6 @@ func NewRepositoryQTS() *QueueTaskStorage {
 
 				if msg.TaskType == "filtration" {
 					qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.FilterationParameters = msg.AdditionalOption.FilterationParameters
-
 					msg.ChanRes <- msgRes
 
 					break
@@ -169,6 +165,20 @@ func NewRepositoryQTS() *QueueTaskStorage {
 
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles = msg.AdditionalOption.ConfirmedListFiles
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.DownloadList = []string{}
+
+				msg.ChanRes <- msgRes
+
+			case "add information on the filter":
+				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
+					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID", msg.SourceID)
+					msg.ChanRes <- msgRes
+
+					break
+				}
+
+				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.FilterationParameters = msg.AdditionalOption.FilterationParameters
+
+				msg.ChanRes <- msgRes
 
 			case "delete task":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
@@ -361,6 +371,28 @@ func (qts *QueueTaskStorage) AddQueueTaskStorage(
 	qts.ChannelReq <- cr
 
 	<-chanRes
+}
+
+//AddFiltrationParametersQueueTaskstorage добавляет параметры по фильтрации в существующую задачу
+func (qts *QueueTaskStorage) AddFiltrationParametersQueueTaskstorage(sourceID int, taskID string, fp *FilteringOption) error {
+	chanRes := make(chan chanResponse)
+	defer close(chanRes)
+
+	options := &DescriptionParametersReceivedFromUser{
+		FilterationParameters: *fp,
+	}
+
+	cr := chanRequest{
+		Action:           "add information on the filter",
+		SourceID:         sourceID,
+		TaskID:           taskID,
+		AdditionalOption: options,
+		ChanRes:          chanRes,
+	}
+
+	qts.ChannelReq <- cr
+
+	return (<-chanRes).ErrorDescription
 }
 
 //DelQueueTaskStorage удалить задачу из очереди
