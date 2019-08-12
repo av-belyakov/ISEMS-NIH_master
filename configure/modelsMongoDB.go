@@ -56,7 +56,7 @@ type TimeInterval struct {
 }
 
 //DetailedInformationFiltering детальная информация о ходе фильтрации
-// TaskStatus - состояние задачи
+// TaskStatus - состояние задачи 'not executed'/'wait'/'refused'/'execute'/'not fully completed'/'complete'
 // TimeIntervalTaskExecution - временной интервал начало, окончание выполнения задачи
 // WasIndexUsed - использовался ли данные по индексам для поиска файлов удовлетворяющих параметрам фильтрации
 // NumberFilesMeetFilterParameters - кол-во файлов удовлетворяющих параметрам фильтрации

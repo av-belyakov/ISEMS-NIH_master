@@ -280,7 +280,7 @@ type DownloadControlTypeInfo struct {
 //DownloadControlMsgTypeInfo информационные сообщения о ходе скачивания файлов
 // ID - уникальный цифровой идентификатор источника
 // TaskIDApp - уникальный цифровой идентификатор задачи присвоенный приложением при выполнении фильтрации
-// Status - статус выполняемой задачи
+// Status - статус выполняемой задачи 'wait'/'refused'/'execute'/'not fully completed'/'complete'
 // NumberFilesTotal — общее количество скачиваемых файлов
 // NumberFilesDownloaded — количество успешно скаченных файлов
 // NumberFilesDownloadedError — количество файлов скаченных с ошибкой

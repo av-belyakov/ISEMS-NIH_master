@@ -44,8 +44,8 @@
     },
     "settingsDBConnection_comments": "настройки для доступа к БД",
     "directoryLongTermStorageDownloadedFiles": {
-        "raw": "/home/ISEMS_NIH_master_RAW",
-        "object": "/home/ISEMS_NIH_master_OBJECT"
+        "raw": "/home/ISEMS_NIH_master/ISEMS_NIH_master_RAW",
+        "object": "/home/ISEMS_NIH_master/ISEMS_NIH_master_OBJECT"
     },
     "directoryLongTermStorageDownloadedFiles_comments": "директория для долговременного хранения скаченных файлов",
     "pathLogFiles": "/var/log/",
