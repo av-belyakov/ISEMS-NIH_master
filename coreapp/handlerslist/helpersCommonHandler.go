@@ -7,41 +7,54 @@ import (
 	"ISEMS-NIH_master/notifications"
 )
 
+//ErrorMessageType параметры для отработки сообщений об ошибках
+type ErrorMessageType struct {
+	SourceID        int
+	TaskID          string
+	TaskIDClientAPI string
+	IDClientAPI     string
+	Section         string
+	Instruction     string
+	MsgType         string
+	MsgHuman        string
+	ChanToAPI       chan<- *configure.MsgBetweenCoreAndAPI
+}
+
 //ErrorMessage формирует и отправляет клиенту API два сообщения, информационное сообщение и сообщение с откланенным статусом задачи
-func ErrorMessage(res *configure.MsgBetweenCoreAndDB, sourceID int, msgType, msg string, chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) error {
+func ErrorMessage(emt ErrorMessageType) error {
 	//отправляем информационное сообщение
 	notifications.SendNotificationToClientAPI(
-		chanToAPI,
+		emt.ChanToAPI,
 		notifications.NotificationSettingsToClientAPI{
-			MsgType:        msgType,
-			MsgDescription: msg,
+			MsgType:        emt.MsgType,
+			MsgDescription: emt.MsgHuman,
 		},
-		res.TaskIDClientAPI,
-		res.IDClientAPI)
+		emt.TaskIDClientAPI,
+		emt.IDClientAPI)
 
 	//отправляем сообщение о том что задача была отклонена
 	resMsg := configure.DownloadControlTypeInfo{
 		MsgOption: configure.DownloadControlMsgTypeInfo{
-			ID:        sourceID,
-			TaskIDApp: res.TaskID,
+			ID:        emt.SourceID,
+			TaskIDApp: emt.TaskID,
 			Status:    "refused",
 		},
 	}
 
 	resMsg.MsgType = "information"
-	resMsg.MsgSection = res.MsgSection
-	resMsg.MsgInsturction = res.Instruction
-	resMsg.ClientTaskID = res.TaskIDClientAPI
+	resMsg.MsgSection = emt.Section
+	resMsg.MsgInsturction = emt.Instruction
+	resMsg.ClientTaskID = emt.TaskIDClientAPI
 
 	msgJSON, err := json.Marshal(resMsg)
 	if err != nil {
 		return err
 	}
 
-	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+	emt.ChanToAPI <- &configure.MsgBetweenCoreAndAPI{
 		MsgGenerator: "Core module",
 		MsgRecipient: "API module",
-		IDClientAPI:  res.IDClientAPI,
+		IDClientAPI:  emt.IDClientAPI,
 		MsgJSON:      msgJSON,
 	}
 

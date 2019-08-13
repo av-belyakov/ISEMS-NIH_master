@@ -4,7 +4,7 @@ package coreapp
 * Ядро приложения
 * Маршрутизация сообщений получаемых через каналы
 *
-* Версия 0.4, дата релиза 01.08.2019
+* Версия 0.5, дата релиза 13.08.2019
 * */
 
 import (
@@ -12,6 +12,7 @@ import (
 
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/coreapp/handlerslist"
+	"ISEMS-NIH_master/directorypathshaper"
 	"ISEMS-NIH_master/notifications"
 	"ISEMS-NIH_master/savemessageapp"
 )
@@ -69,6 +70,45 @@ func Routing(
 			}
 
 			if qti.TaskType == "download" {
+				emt := handlerslist.ErrorMessageType{}
+
+				taskInfo, err := qts.GetQueueTaskStorage(msg.SourceID, msg.TaskID)
+				if err != nil {
+					//отправить сообщение пользователю
+					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("not found the tasks specified by the user ID %v", msg.TaskID))
+
+					emt.MsgHuman = "не найдено задачи по указанному пользователем ID"
+					if err := handlerslist.ErrorMessage(emt); err != nil {
+						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					}
+
+					continue
+				}
+
+				npfp := directorypathshaper.NecessaryParametersFiltrationProblem{
+					SourceID:         msg.SourceID,
+					SourceShortName:  "OBU ITC Lipetsk",
+					TaskID:           msg.TaskID,
+					PathRoot:         appConf.DirectoryLongTermStorageDownloadedFiles.Raw,
+					FiltrationOption: taskInfo.TaskParameters.FilterationParameters,
+				}
+
+				pathStorage, err := directorypathshaper.FileStorageDirectiry(&npfp)
+				if err != nil {
+					//отправляем сообщение пользователю
+					emt.MsgHuman = "Не найдено задачи по указанному пользователем ID, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+					if err := handlerslist.ErrorMessage(emt); err != nil {
+						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					}
+
+					//удаляем задачу из очереди
+					if err := qts.DelQueueTaskStorage(msg.SourceID, msg.TaskID); err != nil {
+						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					}
+
+					continue
+				}
+
 				/*
 							   После предыдущих манипуляций в QueueTaskSorage
 							   есть вся информация о задаче на выполнение

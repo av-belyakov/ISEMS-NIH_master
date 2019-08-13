@@ -1,16 +1,21 @@
-package directorypathshaper
+package mytestpackages
 
 import (
 	"encoding/xml"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
+	//. "ISEMS-NIH_master"
 )
 
 //NecessaryParametersFiltrationProblem содержит набор параметров для формирования директории
@@ -31,21 +36,6 @@ type NecessaryParametersFiltrationProblem struct {
 	FiltrationOption                configure.FilteringOption
 }
 
-//FileStorageDirectiry создает директорию для хранения файлов и формирует файл README.xml с кратким описание задачи
-func FileStorageDirectiry(npfp *NecessaryParametersFiltrationProblem) (string, error) {
-	pathStorage, err := CreatePathDirectory(npfp)
-	if err != nil {
-		return "", err
-	}
-
-	if err := CreateFileReadme(pathStorage, npfp); err != nil {
-		return pathStorage, err
-	}
-
-	return pathStorage, nil
-}
-
-//CreatePathDirectory создает каскад директорий и возвращает путь к ним
 func CreatePathDirectory(npfp *NecessaryParametersFiltrationProblem) (string, error) {
 	type timeParameters struct {
 		yearStr, mothStr, mothInt, dayStr, timeStr string
@@ -91,7 +81,6 @@ func CreatePathDirectory(npfp *NecessaryParametersFiltrationProblem) (string, er
 	return filePath, nil
 }
 
-//CreateFileReadme создает XML файл с кратким описанием задачи
 func CreateFileReadme(pathStorage string, npfp *NecessaryParametersFiltrationProblem) error {
 	type FiltrationControlIPorNetorPortParameters struct {
 		Any []string `xml:"any>value"`
@@ -180,3 +169,81 @@ func CreateFileReadme(pathStorage string, npfp *NecessaryParametersFiltrationPro
 	return nil
 
 }
+
+var _ = Describe("Mytestpackages/CreatePathDownloadFiles", func() {
+	validePath := "/home/ISEMS_NIH_master/ISEMS_NIH_master_OBJECT/313-OBU_ITC_Lipetsk/2019/August/11/11.08.2019T15:45-12.08.2019T07:23_hfeh8e83h38gh88485hg48"
+
+	npfp := NecessaryParametersFiltrationProblem{
+		SourceID:        313,
+		SourceShortName: "OBU ITC Lipetsk",
+		TaskID:          "hfeh8e83h38gh88485hg48",
+		PathRoot:        "/home/ISEMS_NIH_master/ISEMS_NIH_master_OBJECT/",
+		FiltrationOption: configure.FilteringOption{
+			DateTime: configure.TimeInterval{
+				Start: 1565538300, // 11.08.2019 15:45:00
+				End:   1565594616, // 12.08.2019 07:23:36
+			},
+			Protocol: "tcp",
+			Filters: configure.FilteringExpressions{
+				IP: configure.FilteringNetworkParameters{
+					Any: []string{"45.62.3.9", "78.3.6.4"},
+					Src: []string{"78.100.2.3"},
+				},
+				Port: configure.FilteringNetworkParameters{
+					Dst: []string{"22", "23", "25", "80", "443"},
+				},
+			},
+		},
+		NumberFilesMeetFilterParameters: 93,
+		NumberProcessedFiles:            93,
+		NumberFilesFoundResultFiltering: 4,
+		NumberDirectoryFiltartion:       3,
+		SizeFilesMeetFilterParameters:   49359594556,
+		SizeFilesFoundResultFiltering:   2133445,
+	}
+
+	checkDirExist := func(path, name string) bool {
+		files, err := ioutil.ReadDir(path)
+		if err != nil {
+			return false
+		}
+
+		for _, f := range files {
+			if f.Name() == name {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	Context("Тест 1: Создание директорий для формирования пути сохранения файлов при скачивании", func() {
+		It("Должен быть сформирован путь директорий", func() {
+			pathDir, err := CreatePathDirectory(&npfp)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(pathDir).Should(Equal(validePath))
+		})
+	})
+
+	Context("Тест 2: Наличие директории для хранения файлов", func() {
+		It("Должна быть создана директория для хранения файлов", func() {
+
+			dirIsExist := checkDirExist("/home/ISEMS_NIH_master/ISEMS_NIH_master_OBJECT/313-OBU_ITC_Lipetsk/2019/August/11/", "11.08.2019T15:45-12.08.2019T07:23_hfeh8e83h38gh88485hg48")
+
+			Expect(dirIsExist).Should(BeTrue())
+		})
+	})
+
+	Context("Тест 3: Создание файла типа README в формате XML", func() {
+		It("Должен быть создан файл с описанием в формате XML", func() {
+
+			err := CreateFileReadme(validePath, &npfp)
+
+			Expect(err).ShouldNot(HaveOccurred())
+
+			fileIsExist := checkDirExist(validePath, "README.xml")
+			Expect(fileIsExist).Should(BeTrue())
+		})
+	})
+})

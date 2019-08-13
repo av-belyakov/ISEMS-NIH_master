@@ -84,25 +84,37 @@ func checkParametersDownloadTask(
 
 	tidb := (*taskInfoFromDB)[0]
 
+	emt := ErrorMessageType{
+		TaskID:          res.TaskID,
+		TaskIDClientAPI: res.TaskIDClientAPI,
+		IDClientAPI:     res.IDClientAPI,
+		Section:         res.MsgSection,
+		Instruction:     res.Instruction,
+		MsgType:         "danger",
+		ChanToAPI:       chanToAPI,
+	}
+
 	//ищем задачу с taskID полученному из БД
 	sourceID, tisqt, err := hsm.QTS.SearchTaskForIDQueueTaskStorage(res.TaskID)
 	if err != nil {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("not found the tasks specified by the user ID %v%v", res.TaskID, funcName))
 
-		msgHuman := "не найдено задачи по указанному пользователем ID"
-		if err := errorMessage(res, 0, msgHuman, chanToAPI); err != nil {
+		emt.MsgHuman = "не найдено задачи по указанному пользователем ID"
+		if err := ErrorMessage(emt); err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 		}
 
 		return
 	}
 
+	emt.SourceID = sourceID
+
 	//наличие в БД задачи по заданному пользователем ID
 	if len(*taskInfoFromDB) == 0 {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("not found the tasks specified by the user ID %v%v", res.TaskID, funcName))
 
-		msgHuman := "Не найдено задачи по указанному пользователем ID, дальнейшее выполнение задачи по выгрузке файлов не возможна"
-		if err := errorMessage(res, sourceID, msgHuman, chanToAPI); err != nil {
+		emt.MsgHuman = "Не найдено задачи по указанному пользователем ID, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+		if err := ErrorMessage(emt); err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 		}
 
@@ -118,8 +130,8 @@ func checkParametersDownloadTask(
 	if tidb.SourceID != sourceID {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("the source ID %v specified by the user does not match the ID %v obtained from the database%v", sourceID, tidb.SourceID, funcName))
 
-		msgHuman := "Идентификатор источника указанный пользователем не совпадает с идентификатором полученным из базы данных, дальнейшее выполнение задачи по выгрузке файлов не возможна"
-		if err := errorMessage(res, sourceID, msgHuman, chanToAPI); err != nil {
+		emt.MsgHuman = "Идентификатор источника указанный пользователем не совпадает с идентификатором полученным из базы данных, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+		if err := ErrorMessage(emt); err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 		}
 
@@ -135,8 +147,8 @@ func checkParametersDownloadTask(
 	if tidb.DetailedInformationOnFiltering.TaskStatus != "complite" {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("the task with ID %v does not have the status 'completed'%v", res.TaskID, funcName))
 
-		msgHuman := fmt.Sprintf("Задача с ID %v не имеет статус 'завершена', дальнейшее выполнение задачи по выгрузке файлов не возможна", res.TaskID)
-		if err := errorMessage(res, sourceID, msgHuman, chanToAPI); err != nil {
+		emt.MsgHuman = fmt.Sprintf("Задача с ID %v не имеет статус 'завершена', дальнейшее выполнение задачи по выгрузке файлов не возможна", res.TaskID)
+		if err := ErrorMessage(emt); err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 		}
 
@@ -152,8 +164,8 @@ func checkParametersDownloadTask(
 	if tidb.DetailedInformationOnFiltering.NumberFilesFoundResultFiltering == 0 {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("as a result of the previous filtering, no files were found (task ID %v)%v", res.TaskID, funcName))
 
-		msgHuman := "В результате выполненной ранее фильтрации не было найдено ни одного файла, дальнейшее выполнение задачи по выгрузке файлов не возможна"
-		if err := errorMessage(res, sourceID, msgHuman, chanToAPI); err != nil {
+		emt.MsgHuman = "В результате выполненной ранее фильтрации не было найдено ни одного файла, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+		if err := ErrorMessage(emt); err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 		}
 
@@ -174,8 +186,8 @@ func checkParametersDownloadTask(
 		if err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-			msgHuman := "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
-			if err := errorMessage(res, sourceID, msgHuman, chanToAPI); err != nil {
+			emt.MsgHuman = "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+			if err := ErrorMessage(emt); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
 
@@ -190,8 +202,8 @@ func checkParametersDownloadTask(
 		if len(confirmedListFiles) == 0 {
 			_ = saveMessageApp.LogMessage("error", "no matches found in the database for files received from the user")
 
-			msgHuman := "Не найдено ни одного совпадения в базе данных для файлов полученных от пользователя"
-			if err := errorMessage(res, sourceID, msgHuman, chanToAPI); err != nil {
+			emt.MsgHuman = "Не найдено ни одного совпадения в базе данных для файлов полученных от пользователя"
+			if err := ErrorMessage(emt); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
 
@@ -221,8 +233,8 @@ func checkParametersDownloadTask(
 		if err := hsm.QTS.AddConfirmedListFiles(sourceID, res.TaskID, confirmedListFiles); err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-			msgHuman := "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
-			if err := errorMessage(res, sourceID, msgHuman, chanToAPI); err != nil {
+			emt.MsgHuman = "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+			if err := ErrorMessage(emt); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
 
@@ -253,8 +265,8 @@ func checkParametersDownloadTask(
 		if err := hsm.QTS.AddConfirmedListFiles(sourceID, res.TaskID, nlf); err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-			msgHuman := "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
-			if err := errorMessage(res, sourceID, msgHuman, chanToAPI); err != nil {
+			emt.MsgHuman = "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+			if err := ErrorMessage(emt); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
 
@@ -271,8 +283,8 @@ func checkParametersDownloadTask(
 	if err := hsm.QTS.AddFiltrationParametersQueueTaskstorage(sourceID, res.TaskID, &tidb.FilteringOption); err != nil {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-		msgHuman := "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
-		if err := errorMessage(res, sourceID, msgHuman, chanToAPI); err != nil {
+		emt.MsgHuman = "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+		if err := ErrorMessage(emt); err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 		}
 
@@ -285,8 +297,8 @@ func checkParametersDownloadTask(
 	if err := hsm.QTS.ChangeAvailabilityFilesDownload(sourceID, res.TaskID); err != nil {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-		msgHuman := "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
-		if err := errorMessage(res, sourceID, msgHuman, chanToAPI); err != nil {
+		emt.MsgHuman = "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+		if err := ErrorMessage(emt); err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 		}
 
@@ -335,45 +347,4 @@ func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) ([
 	}
 
 	return nlf, nil
-}
-
-//errorMessage формирует и отправляет клиенту API два сообщения, информационное сообщение и сообщение с откланенным статусом задачи
-func errorMessage(res *configure.MsgBetweenCoreAndDB, sourceID int, msg string, chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) error {
-	//отправляем информационное сообщение
-	notifications.SendNotificationToClientAPI(
-		chanToAPI,
-		notifications.NotificationSettingsToClientAPI{
-			MsgType:        "danger",
-			MsgDescription: msg,
-		},
-		res.TaskIDClientAPI,
-		res.IDClientAPI)
-
-	//отправляем сообщение о том что задача была отклонена
-	resMsg := configure.DownloadControlTypeInfo{
-		MsgOption: configure.DownloadControlMsgTypeInfo{
-			ID:        sourceID,
-			TaskIDApp: res.TaskID,
-			Status:    "refused",
-		},
-	}
-
-	resMsg.MsgType = "information"
-	resMsg.MsgSection = "download control"
-	resMsg.MsgInsturction = "task processing"
-	resMsg.ClientTaskID = res.TaskIDClientAPI
-
-	msgJSON, err := json.Marshal(resMsg)
-	if err != nil {
-		return err
-	}
-
-	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
-		MsgGenerator: "Core module",
-		MsgRecipient: "API module",
-		IDClientAPI:  res.IDClientAPI,
-		MsgJSON:      msgJSON,
-	}
-
-	return nil
 }
