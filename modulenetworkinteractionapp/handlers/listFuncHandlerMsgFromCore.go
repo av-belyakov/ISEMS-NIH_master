@@ -1,13 +1,14 @@
 package handlers
 
 import (
-	"ISEMS-NIH_master/common"
-	"ISEMS-NIH_master/configure"
 	"errors"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
+
+	"ISEMS-NIH_master/common"
+	"ISEMS-NIH_master/configure"
 )
 
 func createStringFromSourceList(l []int) string {
@@ -37,6 +38,7 @@ func createStringFromSourceList(l []int) string {
 func createSourceList(isl *configure.InformationSourcesList, l []configure.InformationAboutSource) {
 	for _, s := range l {
 		isl.AddSourceSettings(s.ID, configure.SourceSetting{
+			ShortName:  s.ShortName,
 			IP:         s.IP,
 			Token:      s.Token,
 			ClientName: s.NameClientAPI,
@@ -69,9 +71,10 @@ func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]configu
 		}
 
 		listTrastedSources = append(listTrastedSources, configure.SourceSetting{
-			IP:       s.Argument.IP,
-			Token:    s.Argument.Token,
-			AsServer: s.Argument.Settings.AsServer,
+			ShortName: s.Argument.ShortName,
+			IP:        s.Argument.IP,
+			Token:     s.Argument.Token,
+			AsServer:  s.Argument.Settings.AsServer,
 			Settings: configure.InfoServiceSettings{
 				IfAsServerThenPort:        serverPort,
 				EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
@@ -110,6 +113,7 @@ func updateSourceList(
 			}
 
 			isl.AddSourceSettings(s.ID, configure.SourceSetting{
+				ShortName:  s.Argument.ShortName,
 				IP:         s.Argument.IP,
 				Token:      s.Argument.Token,
 				ClientName: clientName,
@@ -140,6 +144,7 @@ func updateSourceList(
 		s, isExist := isl.GetSourceSetting(source.ID)
 		if !isExist {
 			isl.AddSourceSettings(source.ID, configure.SourceSetting{
+				ShortName:  source.Argument.ShortName,
 				IP:         source.Argument.IP,
 				Token:      source.Argument.Token,
 				ClientName: clientName,
@@ -183,6 +188,7 @@ func updateSourceList(
 			isl.DelSourceSettings(source.ID)
 
 			isl.AddSourceSettings(source.ID, configure.SourceSetting{
+				ShortName:  source.Argument.ShortName,
 				IP:         source.Argument.IP,
 				Token:      source.Argument.Token,
 				ClientName: clientName,
@@ -288,6 +294,7 @@ func performActionSelectedSources(
 		if sourceInfo, ok = isl.GetSourceSetting(s.ID); !ok {
 			if s.ActionType == "add" {
 				isl.AddSourceSettings(s.ID, configure.SourceSetting{
+					ShortName:  s.Argument.ShortName,
 					IP:         s.Argument.IP,
 					Token:      s.Argument.Token,
 					ClientName: clientName,
@@ -351,15 +358,6 @@ func performActionSelectedSources(
 
 				continue
 			}
-
-			/*if len(sourceInfo.CurrentTasks) > 0 {
-				aie.IsSuccess = false
-				aie.MessageFailure = "невозможно выполнить действия на сенсоре с ID " + strID + ", так как в настоящее время на данном сенсоре выполняется задача"
-
-				listActionIsExecuted = append(listActionIsExecuted, aie)
-
-				continue
-			}*/
 		}
 
 		if s.ActionType == "update" {
@@ -379,6 +377,7 @@ func performActionSelectedSources(
 			}
 
 			isl.AddSourceSettings(s.ID, configure.SourceSetting{
+				ShortName:  s.Argument.ShortName,
 				IP:         s.Argument.IP,
 				Token:      s.Argument.Token,
 				ClientName: clientName,
@@ -454,10 +453,10 @@ func performActionSelectedSources(
 	return &listActionIsExecuted, &listInvalidSource, nil
 }
 
-//getSourceListForWriteToBD получаем ID источников по которым нужно актуализировать информацию
+//getSourceListForWriteToDB получаем ID источников по которым нужно актуализировать информацию
 // в БД, к ним относятся источники для которых выполненно действие
 // add, delete, update
-func getSourceListsForWriteToBD(
+func getSourceListsForWriteToDB(
 	ml *[]configure.DetailedListSources,
 	l *[]configure.ActionTypeListSources,
 	clientName string,

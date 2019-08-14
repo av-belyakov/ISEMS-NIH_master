@@ -26,6 +26,7 @@ type sourcesListSetting map[int]SourceSetting
 //SourceSetting параметры источника
 // ConnectionStatus - статус соединения с источником
 // IP - ip адрес источника
+// ShortName - краткое название источника
 // DateLastConnected - время последнего соединения (в формате unix)
 // Token - токен для автризации
 // ClientName - имя клиента API (нужно для того чтобы контролировать управление определенным источником)
@@ -34,6 +35,7 @@ type sourcesListSetting map[int]SourceSetting
 type SourceSetting struct {
 	ConnectionStatus  bool
 	IP                string
+	ShortName         string
 	DateLastConnected int64
 	Token             string
 	ClientName        string

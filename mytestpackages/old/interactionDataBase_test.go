@@ -2,7 +2,6 @@ package mytestpackages_test
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"runtime"
@@ -240,8 +239,6 @@ func updateFiltrationTaskParameters(
 }
 
 func getInfoTaskForID(connectDB *mongo.Client, taskID string) ([]configure.InformationAboutTask, error) {
-	fmt.Println("START function 'getInfoTaskForID'...")
-
 	qp := QueryParameters{
 		NameDB:         "isems-nih",
 		CollectionName: "task_list",

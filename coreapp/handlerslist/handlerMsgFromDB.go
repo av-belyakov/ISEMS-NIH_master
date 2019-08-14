@@ -35,6 +35,8 @@ func HandlerMsgFromDB(
 			}
 
 		case "all information about task":
+			// ФАКТИЧЕСКИ ЭТО ЗАПУСК СКАЧИВАНИЯ ФАЙЛОВ
+
 			//проверяем ряд параметров в задаче для изменения проверочного статуса задачи в QueueStoringMemoryTask
 			checkParametersDownloadTask(res, hsm, outCoreChans.OutCoreChanAPI)
 		}

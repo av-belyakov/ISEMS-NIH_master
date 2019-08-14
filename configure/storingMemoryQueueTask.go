@@ -236,6 +236,18 @@ func NewRepositoryQTS() *QueueTaskStorage {
 
 				msg.ChanRes <- msgRes
 
+			case "clear all file list":
+				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
+					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID", msg.SourceID)
+					msg.ChanRes <- msgRes
+
+					break
+				}
+
+				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.DownloadList = []string{}
+				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles = []*DetailedFileInformation{}
+
+				msg.ChanRes <- msgRes
 			}
 		}
 	}()
@@ -469,6 +481,21 @@ func (qts *QueueTaskStorage) AddConfirmedListFiles(sourceID int, taskID string, 
 		TaskID:           taskID,
 		AdditionalOption: options,
 		ChanRes:          chanRes,
+	}
+
+	return (<-chanRes).ErrorDescription
+}
+
+//ClearAllListFiles очищает все списки файлов
+func (qts *QueueTaskStorage) ClearAllListFiles(sourceID int, taskID string) error {
+	chanRes := make(chan chanResponse)
+	defer close(chanRes)
+
+	qts.ChannelReq <- chanRequest{
+		Action:   "clear all file list",
+		SourceID: sourceID,
+		TaskID:   taskID,
+		ChanRes:  chanRes,
 	}
 
 	return (<-chanRes).ErrorDescription

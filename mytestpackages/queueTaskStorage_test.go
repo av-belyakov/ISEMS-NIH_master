@@ -187,8 +187,6 @@ var _ = Describe("QueueTaskStorage", func() {
 		finalyList, _ := checkFileNameMatches(listFilesDB, ti.TaskParameters.DownloadList)
 
 		It("При добавлении нового списка файлов не должно быть ошибок", func() {
-			fmt.Println("Add New List Files")
-
 			err := qts.AddConfirmedListFiles(sourceID, taskID, finalyList)
 			Expect(err).ShouldNot(HaveOccurred())
 			/*

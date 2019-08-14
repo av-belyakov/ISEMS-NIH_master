@@ -228,7 +228,7 @@ func HandlerMsgFromCore(
 			// получаем ID источников по которым нужно обновить информацию
 			// в БД, к ним относятся источники для которых выполненно действие
 			// la - add, lu - update, ld - delete
-			la, lu, ld := getSourceListsForWriteToBD(&ado.MsgOptions.SourceList, listActionType, msg.ClientName, mcpf)
+			la, lu, ld := getSourceListsForWriteToDB(&ado.MsgOptions.SourceList, listActionType, msg.ClientName, mcpf)
 
 			//актуализируем информацию в БД
 			if len(*la) > 0 {
@@ -383,7 +383,15 @@ func HandlerMsgFromCore(
 
 	case "download control":
 		if msg.Command == "start" {
+			/*
+				cwt chan<- configure.MsgWsTransmission,
+				isl *configure.InformationSourcesList,
+				msg *configure.MsgBetweenCoreAndNI,
+				smt *configure.StoringMemoryTask,
+				chanInCore chan<- *configure.MsgBetweenCoreAndNI
+			*/
 
+			go fileDownloadProcessing(cwt, isl, msg, smt, qts, chanInCore)
 		}
 
 		if msg.Command == "stop" {

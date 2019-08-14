@@ -37,11 +37,3 @@ func getInfoTaskForID(qp QueryParameters, taskID string) (*[]configure.Informati
 
 	return &itf, nil
 }
-
-func getInfoSource(qp QueryParameters, sourceID string) (*configure.InformationAboutSource, error) {
-	ias := configure.InformationAboutTask{}
-
-	/*  ПОЛУЧИТЬ ИНФОРМАЦИЮ ПО ИСТОЧНИКУ (ОСОБЕННО КРАТКОЕ НАЗВАНИЕ) */
-
-	return &ias, nil
-}

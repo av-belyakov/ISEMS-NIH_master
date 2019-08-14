@@ -9,6 +9,7 @@ package coreapp
 
 import (
 	"fmt"
+	"time"
 
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/coreapp/handlerslist"
@@ -53,6 +54,14 @@ func Routing(
 		saveMessageApp := savemessageapp.New()
 
 		for msg := range chanMsgInfoQueueTaskStorage {
+			emt := handlerslist.ErrorMessageType{
+				SourceID:    msg.SourceID,
+				TaskID:      msg.TaskID,
+				MsgType:     "danger",
+				Instruction: "task processing",
+				ChanToAPI:   cc.OutCoreChanAPI,
+			}
+
 			qti, err := qts.GetQueueTaskStorage(msg.SourceID, msg.TaskID)
 			if err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
@@ -60,7 +69,29 @@ func Routing(
 				continue
 			}
 
+			emt.TaskIDClientAPI = qti.TaskIDClientAPI
+			emt.IDClientAPI = qti.IDClientAPI
+
+			si, ok := isl.GetSourceSetting(msg.SourceID)
+			if !ok {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("no information found on source ID %v", msg.SourceID))
+
+				//отправляем сообщение пользователю
+				emt.MsgHuman = fmt.Sprintf("Не найдена информация по источнику с ID %v", msg.SourceID)
+				if err := handlerslist.ErrorMessage(emt); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				}
+
+				//удаляем задачу из очереди
+				if err := qts.DelQueueTaskStorage(msg.SourceID, msg.TaskID); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				}
+
+				continue
+			}
+
 			if qti.TaskType == "filteration" {
+				emt.Section = "filtration control"
 				/*
 
 				   ФИльтрацию переделаем позже, после выполнения части
@@ -70,33 +101,20 @@ func Routing(
 			}
 
 			if qti.TaskType == "download" {
-				emt := handlerslist.ErrorMessageType{}
-
-				taskInfo, err := qts.GetQueueTaskStorage(msg.SourceID, msg.TaskID)
-				if err != nil {
-					//отправить сообщение пользователю
-					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("not found the tasks specified by the user ID %v", msg.TaskID))
-
-					emt.MsgHuman = "не найдено задачи по указанному пользователем ID"
-					if err := handlerslist.ErrorMessage(emt); err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-					}
-
-					continue
-				}
+				emt.Section = "download control"
 
 				npfp := directorypathshaper.NecessaryParametersFiltrationProblem{
 					SourceID:         msg.SourceID,
-					SourceShortName:  "OBU ITC Lipetsk",
+					SourceShortName:  si.ShortName,
 					TaskID:           msg.TaskID,
 					PathRoot:         appConf.DirectoryLongTermStorageDownloadedFiles.Raw,
-					FiltrationOption: taskInfo.TaskParameters.FilterationParameters,
+					FiltrationOption: qti.TaskParameters.FilterationParameters,
 				}
 
 				pathStorage, err := directorypathshaper.FileStorageDirectiry(&npfp)
 				if err != nil {
 					//отправляем сообщение пользователю
-					emt.MsgHuman = "Не найдено задачи по указанному пользователем ID, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+					emt.MsgHuman = "Невозможно создать директорию для хранения файлов или запись скачиваемых файлов в созданную директорию невозможен"
 					if err := handlerslist.ErrorMessage(emt); err != nil {
 						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 					}
@@ -109,50 +127,56 @@ func Routing(
 					continue
 				}
 
-				/*
-							   После предыдущих манипуляций в QueueTaskSorage
-							   есть вся информация о задаче на выполнение
+				//подготавливаем список файлов для скачиания
+				downloadFileList := make(map[string]*configure.DownloadFilesInformation, len(qti.TaskParameters.ConfirmedListFiles))
 
-							   теперь выполнить следующие действия
+				for _, fi := range qti.TaskParameters.ConfirmedListFiles {
+					downloadFileList[fi.Name] = &configure.DownloadFilesInformation{}
 
-							    - создать директорию для хранения обработанных файлов (и обработать ошибки)
-								информацию по фильтрации взять из QUeueTaskStatrage
-					ПРИ СОЗДАНИИ ДИРЕКТОРИИ ЕСЛИ КОСЯК !!! НЕЗАБЫТЬ УДАЛИТЬ ЗАДАЧУ!!!
-								- добавить задачу в StoringMemoryTask
-							    - запустить обработчик для выполнений действий по скачиванию файлов
-
-				*/
-
-				//создание директорий куда будут сохранятся скачанные файлы
-				/*pathStorageDirectory, err := directorypathshaper.CreatePathDirectory()
-				if err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-					//отправить сообщение пользователю
-					nsErrJSON := notifications.NotificationSettingsToClientAPI{
-						MsgType:        "danger",
-						MsgDescription: "Внутренняя ошибка, невозможно создать директории для сохранения скаченных файлов",
-					}
-
-					notifications.SendNotificationToClientAPI(cc.OutCoreChanAPI, nsErrJSON, qti.TaskIDClientAPI, qti.IDClientAPI)
-
-					//удалить всю информацию о задаче из очереди
-					if e := qts.DelQueueTaskStorage(msg.SourceID, msg.TaskID); e != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(e))
-					}
-
-					continue
+					downloadFileList[fi.Name].Size = fi.FullSizeByte
+					downloadFileList[fi.Name].Hex = fi.Hex
 				}
 
-				/*
-				   Сделать и протестировать модуль создания вложеных директорий для
-				   хранения скаченных файлов
-				*/
+				//добавляем задачу в StorageMemoryTask
+				smt.AddStoringMemoryTask(msg.TaskID, configure.TaskDescription{
+					ClientID:                        qti.IDClientAPI,
+					ClientTaskID:                    qti.TaskIDClientAPI,
+					TaskType:                        "download control",
+					ModuleThatSetTask:               "API module",
+					ModuleResponsibleImplementation: "NI module",
+					TimeUpdate:                      time.Now().Unix(),
+					TimeInterval: configure.TimeIntervalTaskExecution{
+						Start: time.Now().Unix(),
+						End:   time.Now().Unix(),
+					},
+					TaskParameter: configure.DescriptionTaskParameters{
+						DownloadTask: configure.DownloadTaskParameters{
+							ID:                                  msg.SourceID,
+							Status:                              "wait",
+							PathDirectoryStorageDownloadedFiles: pathStorage,
+							DownloadingFilesInformation:         downloadFileList,
+						},
+					},
+				})
 
-				//добавление новой задачи в StoringMemoryTask
+				//изменяем статус задачи в StoringMemoryQueueTask
+				if err := qts.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "execution"); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				}
 
-				//изменение значений в таблице БД (статуса задачи и пути сохранения файлов)
+				//удаляе из StoringMemoryQueueTask списки файлов
+				if err := qts.ClearAllListFiles(msg.SourceID, msg.TaskID); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				}
 
+				//отправляем в NI module для вызова обработчика задания
+				cc.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{
+					TaskID:     msg.TaskID,
+					ClientName: si.ClientName,
+					Section:    "download control",
+					Command:    "start",
+					SourceID:   msg.SourceID,
+				}
 			}
 		}
 	}()

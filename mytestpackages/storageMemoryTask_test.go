@@ -1,6 +1,7 @@
 package mytestpackages_test
 
 import (
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -139,10 +140,11 @@ var _ = Describe("StorageMemoryTask", func() {
 
 			//проверяем заданные параметры фильтрации
 			task, ok := smt.GetStoringMemoryTask(taskID)
-			taskInfo := task.TaskParameter.FiltrationTask
+
+			//fmt.Println(task)
 
 			Expect(ok).Should(Equal(true))
-			Expect(len(taskInfo.FoundFilesInformation)).Should(Equal(3))
+			Expect(len(task.TaskParameter.FiltrationTask.FoundFilesInformation)).Should(Equal(3))
 		})
 	})
 
@@ -185,6 +187,110 @@ var _ = Describe("StorageMemoryTask", func() {
 
 			Expect(ok).Should(Equal(true))
 			Expect(len(taskInfo.FoundFilesInformation)).Should(Equal(6))
+		})
+	})
+
+	cliID := common.GetUniqIDFormatMD5("client_download id")
+	cliTaskID := common.GetUniqIDFormatMD5("client_download_task id")
+	tasID := common.GetUniqIDFormatMD5("fggg0k40kg04k04jh0j459tj49jt4g0j")
+	pathStorage := "/home/ISEMS_NIH_master/ISEMS_NIH_master_OBJECT/313-OBU_ITC_Lipetsk/2019/August/11/11.08.2019T15:45-12.08.2019T07:23_hfeh8e83h38gh88485hg48"
+
+	dfl := map[string]*configure.DownloadFilesInformation{}
+
+	for i := 1; i < 10; i++ {
+		fn := fmt.Sprintf("File_name_%v", i)
+		dfl[fn] = &configure.DownloadFilesInformation{}
+
+		dfl[fn].Size = int64(38 * i)
+		dfl[fn].Hex = "ffw020f29f29f293"
+	}
+
+	fileTestName := "File_name_2"
+
+	Context("Тест 5: Проверка добавления информации по задаче скачивания файлов", func() {
+		It("Должна быть добавлена новая задача по скачиванию файлов, список файлов должен присутствовать", func() {
+			smt.AddStoringMemoryTask(tasID, configure.TaskDescription{
+				ClientID:                        cliID,
+				ClientTaskID:                    cliTaskID,
+				TaskType:                        "download control",
+				ModuleThatSetTask:               "API module",
+				ModuleResponsibleImplementation: "NI module",
+				TimeUpdate:                      time.Now().Unix(),
+				TimeInterval: configure.TimeIntervalTaskExecution{
+					Start: time.Now().Unix(),
+					End:   time.Now().Unix(),
+				},
+				TaskParameter: configure.DescriptionTaskParameters{
+					DownloadTask: configure.DownloadTaskParameters{
+						ID:                                  3031,
+						Status:                              "wait",
+						NumberFilesTotal:                    len(dfl),
+						PathDirectoryStorageDownloadedFiles: pathStorage,
+						DownloadingFilesInformation:         dfl,
+					},
+				},
+			})
+
+			i, ok := smt.GetStoringMemoryTask(tasID)
+
+			Expect(ok).Should(BeTrue())
+			Expect(i.TaskParameter.DownloadTask.ID).Should(Equal(3031))
+			Expect(len(i.TaskParameter.DownloadTask.DownloadingFilesInformation)).Should(Equal(9))
+		})
+	})
+
+	Context("Тест 6: Проверка изменеия информации по задаче скачивания файлов", func() {
+		It("Должна быть изменена информация по скачиванию файлов", func() {
+			smt.UpdateTaskDownloadAllParameters(tasID, configure.DownloadTaskParameters{
+				Status:                              "execute",
+				NumberFilesTotal:                    len(dfl),
+				NumberFilesDownloaded:               1,
+				PathDirectoryStorageDownloadedFiles: pathStorage,
+				FileInformation: configure.DetailedFileInformation{
+					Name:                fileTestName,
+					Hex:                 "ffw020f29f29f293",
+					FullSizeByte:        int64(38 * 2),
+					AcceptedSizeByte:    38,
+					AcceptedSizePercent: 50,
+				},
+			})
+
+			//получаем информацию по задаче
+			i, ok := smt.GetStoringMemoryTask(tasID)
+
+			shortFileInfo, ok := i.TaskParameter.DownloadTask.DownloadingFilesInformation[fileTestName]
+
+			Expect(ok).Should(BeTrue())
+			Expect(shortFileInfo.IsLoaded).ShouldNot(BeTrue())
+			Expect(i.TaskParameter.DownloadTask.FileInformation.Name).Should(Equal(fileTestName))
+			Expect(i.TaskParameter.DownloadTask.FileInformation.AcceptedSizeByte).Should(Equal(int64(38)))
+		})
+	})
+
+	Context("Тест 7: Проверка изменеия информации по задаче скачивания файлов", func() {
+		It("Файл должен быть отмечен как скаченный", func() {
+			smt.UpdateTaskDownloadAllParameters(tasID, configure.DownloadTaskParameters{
+				Status:                              "execute",
+				NumberFilesTotal:                    len(dfl),
+				NumberFilesDownloaded:               1,
+				PathDirectoryStorageDownloadedFiles: pathStorage,
+				FileInformation: configure.DetailedFileInformation{
+					Name:                "File_name_2",
+					Hex:                 "ffw020f29f29f293",
+					FullSizeByte:        int64(38 * 2),
+					AcceptedSizeByte:    int64(38 * 2),
+					AcceptedSizePercent: 100,
+				},
+			})
+
+			i, ok := smt.GetStoringMemoryTask(tasID)
+
+			shortFileInfo, ok := i.TaskParameter.DownloadTask.DownloadingFilesInformation[fileTestName]
+
+			Expect(ok).Should(BeTrue())
+			Expect(shortFileInfo.IsLoaded).Should(BeTrue())
+			Expect(i.TaskParameter.DownloadTask.FileInformation.Name).Should(Equal(fileTestName))
+			Expect(i.TaskParameter.DownloadTask.FileInformation.AcceptedSizeByte).Should(Equal(int64(76)))
 		})
 	})
 })

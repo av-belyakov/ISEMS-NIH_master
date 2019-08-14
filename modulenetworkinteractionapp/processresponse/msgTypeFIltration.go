@@ -39,7 +39,6 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 	}
 
 	ftp := configure.FiltrationTaskParameters{
-		ID:                              pprmtf.SourceID,
 		Status:                          resMsg.Info.TaskStatus,
 		NumberFilesMeetFilterParameters: resMsg.Info.NumberFilesMeetFilterParameters,
 		NumberProcessedFiles:            resMsg.Info.NumberProcessedFiles,
