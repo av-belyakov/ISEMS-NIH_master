@@ -15,10 +15,9 @@ import (
 func HandlerMsgFromAPI(
 	outCoreChans HandlerOutChans,
 	msg *configure.MsgBetweenCoreAndAPI,
-	hsm HandlersStoringMemory) {
+	hsm HandlersStoringMemory,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'HeaderMsgFromAPI'"
 
 	msgc := configure.MsgCommon{}
@@ -173,7 +172,7 @@ func HandlerMsgFromAPI(
 					return
 				}
 
-				go handlerFiltrationControlTypeStart(outCoreChans.OutCoreChanDB, &fcts, hsm, msg.IDClientAPI, outCoreChans.OutCoreChanAPI)
+				go handlerFiltrationControlTypeStart(outCoreChans.OutCoreChanDB, &fcts, hsm, msg.IDClientAPI, saveMessageApp, outCoreChans.OutCoreChanAPI)
 
 				return
 			}

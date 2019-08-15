@@ -160,10 +160,9 @@ func handlerFiltrationControlTypeStart(
 	fcts *configure.FiltrationControlTypeStart,
 	hsm HandlersStoringMemory,
 	clientID string,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) {
 
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'handlerFiltrationControlTypeStart'"
 
 	if msg, ok := сheckParametersFiltration(&fcts.MsgOption); !ok {

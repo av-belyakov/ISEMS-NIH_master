@@ -10,24 +10,23 @@ import (
 
 //ParametersProcessingReceivedMsgTypeFiltering набор параметров для функции ProcessingReceivedMsgTypeFiltering
 type ParametersProcessingReceivedMsgTypeFiltering struct {
-	CwtRes     chan<- configure.MsgWsTransmission
-	ChanInCore chan<- *configure.MsgBetweenCoreAndNI
-	CwtReq     <-chan configure.MsgWsTransmission
-	Isl        *configure.InformationSourcesList
-	Smt        *configure.StoringMemoryTask
-	Message    *[]byte
-	SourceID   int
-	SourceIP   string
+	CwtRes         chan<- configure.MsgWsTransmission
+	ChanInCore     chan<- *configure.MsgBetweenCoreAndNI
+	CwtReq         <-chan configure.MsgWsTransmission
+	Isl            *configure.InformationSourcesList
+	Smt            *configure.StoringMemoryTask
+	Message        *[]byte
+	SourceID       int
+	SourceIP       string
+	SaveMessageApp *savemessageapp.PathDirLocationLogFiles
 }
 
 //ProcessingReceivedMsgTypeFiltering обработка сообщений связанных с фильтрацией файлов
 func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTypeFiltering) {
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
 	resMsg := configure.MsgTypeFiltration{}
 
 	if err := json.Unmarshal(*pprmtf.Message, &resMsg); err != nil {
-		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+		_ = pprmtf.SaveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
 
 	ffi := make(map[string]*configure.FoundFilesInformation, len(resMsg.Info.FoundFilesInformation))
@@ -61,10 +60,11 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 	}
 
 	msg := &configure.MsgBetweenCoreAndNI{
-		TaskID:   resMsg.Info.TaskID,
-		Section:  "filtration control",
-		Command:  resMsg.Info.TaskStatus,
-		SourceID: pprmtf.SourceID,
+		TaskID:          resMsg.Info.TaskID,
+		Section:         "filtration control",
+		Command:         resMsg.Info.TaskStatus,
+		SourceID:        pprmtf.SourceID,
+		AdvancedOptions: ffi,
 	}
 
 	fmt.Printf("\tпринята информация о задаче с ID '%v', статус задачи - %v\n", resMsg.Info.TaskID, resMsg.Info.TaskStatus)
@@ -106,7 +106,7 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 
 		msgJSON, err := json.Marshal(resConfirmComplite)
 		if err != nil {
-			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			_ = pprmtf.SaveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 			return
 		}

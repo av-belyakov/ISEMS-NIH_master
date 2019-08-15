@@ -21,10 +21,9 @@ func HandlerMsgFromCore(
 	msg *configure.MsgBetweenCoreAndNI,
 	smt *configure.StoringMemoryTask,
 	qts *configure.QueueTaskStorage,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI) {
 
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'HandlerMsgFromCore'"
 
 	//максимальное количество одновременно запущеных процессов фильтрации

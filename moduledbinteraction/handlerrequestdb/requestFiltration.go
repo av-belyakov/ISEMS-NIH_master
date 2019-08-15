@@ -9,7 +9,6 @@ import (
 	//"github.com/mongodb/mongo-go-driver/bson"
 
 	"ISEMS-NIH_master/configure"
-	"ISEMS-NIH_master/savemessageapp"
 
 	"github.com/mongodb/mongo-go-driver/bson"
 )
@@ -136,30 +135,23 @@ func UpdateParametersFiltrationTask(
 	chanIn chan<- *configure.MsgBetweenCoreAndDB,
 	req *configure.MsgBetweenCoreAndDB,
 	qp QueryParameters,
-	smt *configure.StoringMemoryTask) {
+	smt *configure.StoringMemoryTask) error {
 
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
+	var err error
 
 	//получаем всю информацию по выполняемой задаче
 	taskInfo, ok := smt.GetStoringMemoryTask(req.TaskID)
 	if !ok {
-		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with ID '%v' not found (DB module)", req.TaskID))
-
 		fmt.Println("\tвосстанавливаем задачу по ее ID")
 
 		//восстанавливаем задачу по ее ID
 		taskInfoFromDB, err := getInfoTaskForID(qp, req.TaskID)
 		if err != nil {
-			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-			return
+			return err
 		}
 
 		if len(*taskInfoFromDB) == 0 {
-			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task ID '%v' not found in database (DB module)", req.TaskID))
-
-			return
+			return err
 		}
 
 		itd := (*taskInfoFromDB)[0]
@@ -191,7 +183,7 @@ func UpdateParametersFiltrationTask(
 			},
 		}, req.TaskID)
 
-		return
+		return fmt.Errorf("task with ID '%v' not found (DB module)", req.TaskID)
 	}
 
 	ti := taskInfo.TaskParameter.FiltrationTask
@@ -199,7 +191,7 @@ func UpdateParametersFiltrationTask(
 	//выполнять обновление информации в БД для сообщения типа 'complite'
 	// всегда, для сообщения типа 'execute' только раз 31 секунду
 	if (ti.Status == "execute") && ((time.Now().Unix() - taskInfo.TimeInsertDB) < 30) {
-		return
+		return nil
 	}
 
 	//обновление основной информации
@@ -218,10 +210,7 @@ func UpdateParametersFiltrationTask(
 		}}}
 
 	//обновляем детальную информацию о ходе фильтрации
-	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, commonValueUpdate); err != nil {
-
-		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-	}
+	err = qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, commonValueUpdate)
 
 	arr := []interface{}{}
 
@@ -251,9 +240,7 @@ func UpdateParametersFiltrationTask(
 	}
 
 	//обновление информации об отфильтрованном файле
-	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, arrayValueUpdate); err != nil {
-		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-	}
+	err = qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, arrayValueUpdate)
 
 	//обновление таймера вставки информации в БД
 	smt.TimerUpdateTaskInsertDB(req.TaskID)
@@ -279,4 +266,6 @@ func UpdateParametersFiltrationTask(
 
 		chanIn <- &infoMsg
 	}
+
+	return err
 }

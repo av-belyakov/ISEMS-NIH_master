@@ -27,9 +27,14 @@ func connClose(
 	id int,
 	ip string) {
 
-/*
-Обработка разрыва соединения с источником
-*/
+	/*
+	   Обработка разрыва соединения с источником
+	   до отправки сообщения в модуль Ядра
+
+	   здесь можно сделать отправку сообщения об
+	   аварийном останове работы модуля отвечающего
+	   за прием файлов
+	*/
 
 	c.Close()
 
@@ -47,10 +52,8 @@ func MainNetworkInteraction(
 	appConf *configure.AppConfig,
 	smt *configure.StoringMemoryTask,
 	qts *configure.QueueTaskStorage,
-	isl *configure.InformationSourcesList) (chanOutCore, chanInCore chan *configure.MsgBetweenCoreAndNI) {
-
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
+	isl *configure.InformationSourcesList,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles) (chanOutCore, chanInCore chan *configure.MsgBetweenCoreAndNI) {
 
 	//инициализируем канал для передачи данных через websocket соединение
 	cwtRes := make(chan configure.MsgWsTransmission)
@@ -68,9 +71,9 @@ func MainNetworkInteraction(
 	}
 
 	//маршрутизатор запросов получаемых от CoreApp
-	go RouteCoreRequest(cwtRes, chanInCore, isl, smt, qts, chansStatSource, chanOutCore)
+	go RouteCoreRequest(cwtRes, chanInCore, isl, smt, qts, saveMessageApp, chansStatSource, chanOutCore)
 	//маршрутизатор запросов получаемых Wss
-	go RouteWssConnectionResponse(cwtRes, isl, smt, chanInCore, cwtReq)
+	go RouteWssConnectionResponse(cwtRes, isl, smt, saveMessageApp, chanInCore, cwtReq)
 
 	//запуск модуля wssServerNI
 	go WssServerNetworkInteraction(chansStatSource["outWssModuleServer"], appConf, isl, cwtReq)

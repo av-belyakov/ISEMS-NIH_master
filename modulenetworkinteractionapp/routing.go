@@ -24,11 +24,9 @@ func RouteCoreRequest(
 	isl *configure.InformationSourcesList,
 	smt *configure.StoringMemoryTask,
 	qts *configure.QueueTaskStorage,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	chanColl map[string]chan [2]string,
 	chanOutCore <-chan *configure.MsgBetweenCoreAndNI) {
-
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
 
 	//обработка данных получаемых через каналы
 	for {
@@ -118,7 +116,7 @@ func RouteCoreRequest(
 
 			//обработка сообщения от ядра
 		case msg := <-chanOutCore:
-			go handlers.HandlerMsgFromCore(cwt, isl, msg, smt, qts, chanInCore)
+			go handlers.HandlerMsgFromCore(cwt, isl, msg, smt, qts, saveMessageApp, chanInCore)
 		}
 	}
 }
@@ -128,11 +126,9 @@ func RouteWssConnectionResponse(
 	cwtRes chan<- configure.MsgWsTransmission,
 	isl *configure.InformationSourcesList,
 	smt *configure.StoringMemoryTask,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
 	cwtReq <-chan configure.MsgWsTransmission) {
-
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
 
 	//MessageType содержит тип JSON сообщения
 	type MessageType struct {
@@ -165,14 +161,15 @@ func RouteWssConnectionResponse(
 
 		case "filtration":
 			pprmtf := processresponse.ParametersProcessingReceivedMsgTypeFiltering{
-				CwtRes:     cwtRes,
-				ChanInCore: chanInCore,
-				CwtReq:     cwtReq,
-				Isl:        isl,
-				Smt:        smt,
-				Message:    message,
-				SourceID:   sourceID,
-				SourceIP:   sourceIP,
+				CwtRes:         cwtRes,
+				ChanInCore:     chanInCore,
+				CwtReq:         cwtReq,
+				Isl:            isl,
+				Smt:            smt,
+				Message:        message,
+				SourceID:       sourceID,
+				SourceIP:       sourceIP,
+				SaveMessageApp: saveMessageApp,
 			}
 
 			go processresponse.ProcessingReceivedMsgTypeFiltering(pprmtf)

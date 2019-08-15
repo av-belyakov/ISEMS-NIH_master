@@ -11,6 +11,7 @@ import (
 
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/moduledbinteraction/handlerrequestdb"
+	"ISEMS-NIH_master/savemessageapp"
 
 	"github.com/mongodb/mongo-go-driver/mongo"
 )
@@ -23,7 +24,7 @@ type WrappersRouteRequest struct {
 }
 
 //WrapperFuncSourceControl обработка запросов об источниках
-func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetweenCoreAndDB) {
+func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetweenCoreAndDB, saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 	qp := handlerrequestdb.QueryParameters{
 		NameDB:         wr.NameDB,
 		CollectionName: "sources_list",
@@ -47,7 +48,12 @@ func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetwe
 }
 
 //WrapperFuncFiltration обработка запросов по фильтрации
-func (wr *WrappersRouteRequest) WrapperFuncFiltration(msg *configure.MsgBetweenCoreAndDB, smt *configure.StoringMemoryTask, qts *configure.QueueTaskStorage) {
+func (wr *WrappersRouteRequest) WrapperFuncFiltration(
+	msg *configure.MsgBetweenCoreAndDB,
+	smt *configure.StoringMemoryTask,
+	qts *configure.QueueTaskStorage,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
+
 	qp := handlerrequestdb.QueryParameters{
 		NameDB:         wr.NameDB,
 		CollectionName: "task_list",
@@ -65,13 +71,19 @@ func (wr *WrappersRouteRequest) WrapperFuncFiltration(msg *configure.MsgBetweenC
 		fmt.Println("func 'WrapperFuncFiltration' RESIVED COMMAND 'FIND_ALL'")
 
 	case "update":
-		handlerrequestdb.UpdateParametersFiltrationTask(wr.ChanIn, msg, qp, smt)
+		if err := handlerrequestdb.UpdateParametersFiltrationTask(wr.ChanIn, msg, qp, smt); err != nil {
+			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+		}
 	}
 
 }
 
 //WrapperFuncDownload обработка запросов по скачиванию файлов
-func (wr *WrappersRouteRequest) WrapperFuncDownload(msg *configure.MsgBetweenCoreAndDB, smt *configure.StoringMemoryTask, qts *configure.QueueTaskStorage) {
+func (wr *WrappersRouteRequest) WrapperFuncDownload(
+	msg *configure.MsgBetweenCoreAndDB,
+	smt *configure.StoringMemoryTask,
+	qts *configure.QueueTaskStorage) {
+
 	qp := handlerrequestdb.QueryParameters{
 		NameDB:         wr.NameDB,
 		CollectionName: "task_list",

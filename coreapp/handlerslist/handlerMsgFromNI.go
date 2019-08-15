@@ -19,10 +19,9 @@ import (
 func HandlerMsgFromNI(
 	outCoreChans HandlerOutChans,
 	msg *configure.MsgBetweenCoreAndNI,
-	hsm HandlersStoringMemory) {
+	hsm HandlersStoringMemory,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'HandlerMsgFromNI'"
 
 	taskInfo, ok := hsm.SMT.GetStoringMemoryTask(msg.TaskID)
@@ -74,20 +73,24 @@ func HandlerMsgFromNI(
 
 		case "confirm the action":
 			//клиенту API
-			getConfirmActionSourceListForAPI(outCoreChans.OutCoreChanAPI, msg, hsm.SMT)
+			if err := getConfirmActionSourceListForAPI(outCoreChans.OutCoreChanAPI, msg, hsm.SMT); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
 
 		case "change connection status source":
 			/*
 				   Обработка изменения состояния соединения
 				   в том числе РАЗРЫВ соединения
 
-				здесть можно сделать удаление задачи из StoringMemoryTask
+				здесь можно сделать удаление задачи из StoringMemoryTask
 				и изменение статуса задачи в StoringMemoryQueueTask
 				с 'execute' на 'wait'
 			*/
 
 			//клиенту API
-			sendChanStatusSourceForAPI(outCoreChans.OutCoreChanAPI, msg)
+			if err := sendChanStatusSourceForAPI(outCoreChans.OutCoreChanAPI, msg); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
 
 		case "telemetry":
 			//клиенту API
@@ -150,7 +153,9 @@ func HandlerMsgFromNI(
 
 		//если задача найдена
 		if ok {
-			sendInformationFiltrationTask(outCoreChans.OutCoreChanAPI, taskInfo, msg)
+			if err := sendInformationFiltrationTask(outCoreChans.OutCoreChanAPI, taskInfo, msg); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
 		}
 
 	case "download control":

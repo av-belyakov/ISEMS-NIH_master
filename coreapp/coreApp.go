@@ -11,10 +11,11 @@ import (
 	"ISEMS-NIH_master/moduleapiapp"
 	"ISEMS-NIH_master/moduledbinteraction"
 	"ISEMS-NIH_master/modulenetworkinteractionapp"
+	"ISEMS-NIH_master/savemessageapp"
 )
 
 //CoreApp запускает все обработчики уровня ядра
-func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConnect) {
+func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConnect, saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 	//инициализация репозитория для учета выполняемых задач
 	smt := configure.NewRepositorySMT()
 
@@ -31,13 +32,13 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	chanMsgInfoQueueTaskStorage := qts.CheckTimeQueueTaskStorage(isl, 3)
 
 	//инициализация модуля для взаимодействия с БД
-	chanOutCoreDB, chanInCoreDB := moduledbinteraction.MainDBInteraction(appConf.ConnectionDB.NameDB, linkConnection, smt, qts)
+	chanOutCoreDB, chanInCoreDB := moduledbinteraction.MainDBInteraction(appConf.ConnectionDB.NameDB, linkConnection, smt, qts, saveMessageApp)
 
 	//инициализация модуля для взаимодействия с API (обработчик внешних запросов)
-	chanOutCoreAPI, chanInCoreAPI := moduleapiapp.MainAPIApp(appConf)
+	chanOutCoreAPI, chanInCoreAPI := moduleapiapp.MainAPIApp(appConf, saveMessageApp)
 
 	//инициализация модуля сетевого взаимодействия (взаимодействие с сенсорами)
-	chanOutCoreNI, chanInCoreNI := modulenetworkinteractionapp.MainNetworkInteraction(appConf, smt, qts, isl)
+	chanOutCoreNI, chanInCoreNI := modulenetworkinteractionapp.MainNetworkInteraction(appConf, smt, qts, isl, saveMessageApp)
 
 	chanColl := configure.ChannelCollectionCoreApp{
 		OutCoreChanDB:  chanOutCoreDB,  //->БД
@@ -49,5 +50,5 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	}
 
 	//запуск подпрограммы для маршрутизации запросов внутри приложения
-	Routing(appConf, &chanColl, smt, qts, isl, chanCheckTask, chanMsgInfoQueueTaskStorage)
+	Routing(appConf, &chanColl, smt, qts, isl, saveMessageApp, chanCheckTask, chanMsgInfoQueueTaskStorage)
 }

@@ -25,6 +25,7 @@ func Routing(
 	smt *configure.StoringMemoryTask,
 	qts *configure.QueueTaskStorage,
 	isl *configure.InformationSourcesList,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	chanCheckTask <-chan configure.MsgChanStoringMemoryTask,
 	chanMsgInfoQueueTaskStorage <-chan configure.MessageInformationQueueTaskStorage) {
 
@@ -50,9 +51,6 @@ func Routing(
 
 	//обработчик модуля очереди ожидающих задач QueueTaskStorage
 	go func() {
-		//инициализируем функцию конструктор для записи лог-файлов
-		saveMessageApp := savemessageapp.New()
-
 		for msg := range chanMsgInfoQueueTaskStorage {
 			emt := handlerslist.ErrorMessageType{
 				SourceID:    msg.SourceID,
@@ -198,15 +196,15 @@ func Routing(
 		select {
 		//CHANNEL FROM DATABASE
 		case data := <-cc.InCoreChanDB:
-			go handlerslist.HandlerMsgFromDB(OutCoreChans, data, hsm, cc.ChanDropNI)
+			go handlerslist.HandlerMsgFromDB(OutCoreChans, data, hsm, saveMessageApp, cc.ChanDropNI)
 
 		//CHANNEL FROM API
 		case data := <-cc.InCoreChanAPI:
-			go handlerslist.HandlerMsgFromAPI(OutCoreChans, data, hsm)
+			go handlerslist.HandlerMsgFromAPI(OutCoreChans, data, hsm, saveMessageApp)
 
 		//CHANNEL FROM NETWORK INTERACTION
 		case data := <-cc.InCoreChanNI:
-			go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm)
+			go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, saveMessageApp)
 
 		//сообщение клиенту API о том что задача с указанным ID долго выполняется
 		case infoHungTask := <-chanCheckTask:

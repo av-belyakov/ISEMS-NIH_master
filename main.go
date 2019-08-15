@@ -151,6 +151,8 @@ func init() {
 func main() {
 	log.Printf("START application ISEMS-NIH_master version %q\n", appConfig.VersionApp)
 
+	saveMessageApp := savemessageapp.New()
+
 	//запуск ядра приложения
-	coreapp.CoreApp(&appConfig, &mongoDBConnect)
+	coreapp.CoreApp(&appConfig, &mongoDBConnect, saveMessageApp)
 }

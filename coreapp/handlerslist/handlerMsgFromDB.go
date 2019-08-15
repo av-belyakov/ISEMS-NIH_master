@@ -15,10 +15,9 @@ func HandlerMsgFromDB(
 	outCoreChans HandlerOutChans,
 	res *configure.MsgBetweenCoreAndDB,
 	hsm HandlersStoringMemory,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	chanDropNI <-chan string) {
 
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
 	funcName := ", function 'HandlerMsgFromDB'"
 
 	taskInfo, taskIDIsExist := hsm.SMT.GetStoringMemoryTask(res.TaskID)
@@ -38,7 +37,9 @@ func HandlerMsgFromDB(
 			// ФАКТИЧЕСКИ ЭТО ЗАПУСК СКАЧИВАНИЯ ФАЙЛОВ
 
 			//проверяем ряд параметров в задаче для изменения проверочного статуса задачи в QueueStoringMemoryTask
-			checkParametersDownloadTask(res, hsm, outCoreChans.OutCoreChanAPI)
+			if err := checkParametersDownloadTask(res, hsm, outCoreChans.OutCoreChanAPI); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
 		}
 
 	case "API module":
@@ -50,7 +51,9 @@ func HandlerMsgFromDB(
 
 		switch res.MsgSection {
 		case "source list":
-			getCurrentSourceListForAPI(outCoreChans.OutCoreChanAPI, res, hsm.SMT)
+			if err := getCurrentSourceListForAPI(outCoreChans.OutCoreChanAPI, res, hsm.SMT); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
 
 		case "source control":
 			//пока заглушка

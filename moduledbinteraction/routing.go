@@ -8,6 +8,7 @@ package moduledbinteraction
 
 import (
 	"ISEMS-NIH_master/configure"
+	"ISEMS-NIH_master/savemessageapp"
 )
 
 //RouteRequest маршрутизатор запросов
@@ -17,6 +18,7 @@ func RouteRequest(
 	linkConnection *configure.MongoDBConnect,
 	smt *configure.StoringMemoryTask,
 	qts *configure.QueueTaskStorage,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	chanOut <-chan *configure.MsgBetweenCoreAndDB) {
 
 	wrapperFunc := WrappersRouteRequest{
@@ -28,12 +30,12 @@ func RouteRequest(
 	for msg := range chanOut {
 		switch msg.MsgSection {
 		case "source control":
-			go wrapperFunc.WrapperFuncSourceControl(msg)
+			go wrapperFunc.WrapperFuncSourceControl(msg, saveMessageApp)
 
 		case "source telemetry":
 
 		case "filtration control":
-			go wrapperFunc.WrapperFuncFiltration(msg, smt, qts)
+			go wrapperFunc.WrapperFuncFiltration(msg, smt, qts, saveMessageApp)
 
 		case "download control":
 			go wrapperFunc.WrapperFuncDownload(msg, smt, qts)
