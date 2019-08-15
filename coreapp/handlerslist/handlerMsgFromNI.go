@@ -77,6 +77,15 @@ func HandlerMsgFromNI(
 			getConfirmActionSourceListForAPI(outCoreChans.OutCoreChanAPI, msg, hsm.SMT)
 
 		case "change connection status source":
+			/*
+				   Обработка изменения состояния соединения
+				   в том числе РАЗРЫВ соединения
+
+				здесть можно сделать удаление задачи из StoringMemoryTask
+				и изменение статуса задачи в StoringMemoryQueueTask
+				с 'execute' на 'wait'
+			*/
+
 			//клиенту API
 			sendChanStatusSourceForAPI(outCoreChans.OutCoreChanAPI, msg)
 

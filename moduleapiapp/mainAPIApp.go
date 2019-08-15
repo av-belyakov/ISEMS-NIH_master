@@ -68,7 +68,7 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 
 	defer func() {
 		if err := recover(); err != nil {
-			_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
+			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
 		}
 	}()
 
@@ -101,7 +101,7 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 		w.WriteHeader(400)
 		w.Write(bodyHTTPResponseError)
 
-		_ = saveMessageApp.LogMessage("error", "Server API - missing or incorrect identification token (сlient ipaddress "+req.RemoteAddr+")")
+		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("Server API - missing or incorrect identification token (сlient ipaddress %v)", req.RemoteAddr))
 	}
 
 	for _, sc := range settingsServerAPI.Tokens {
@@ -121,7 +121,7 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 	w.WriteHeader(400)
 	w.Write(bodyHTTPResponseError)
 
-	_ = saveMessageApp.LogMessage("error", "Server API - missing or incorrect identification token (сlient ipaddress "+req.RemoteAddr+")")
+	_ = saveMessageApp.LogMessage("error", fmt.Sprintf("Server API - missing or incorrect identification token (сlient ipaddress %v)", req.RemoteAddr))
 }
 
 func serverWss(w http.ResponseWriter, req *http.Request) {
@@ -130,7 +130,7 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 
 	defer func() {
 		if err := recover(); err != nil {
-			_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
+			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
 		}
 	}()
 
@@ -140,7 +140,7 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 	clientID, _, ok := storingMemoryAPI.SearchClientForIP(remoteIP)
 	if !ok {
 		w.WriteHeader(401)
-		_ = saveMessageApp.LogMessage("error", "Server API - access for the user with ipaddress "+req.RemoteAddr+" is prohibited")
+		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("Server API - access for the user with ipaddress %v is prohibited", req.RemoteAddr))
 		return
 	}
 
@@ -161,7 +161,7 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 		//удаляем информацию о клиенте
 		storingMemoryAPI.DelClientAPI(clientID)
 
-		_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
+		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
 
 		log.Println("Client API whis ip", remoteIP, "is disconnect")
 	}
@@ -169,7 +169,7 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 	//получаем настройки клиента
 	clientSettings, ok := storingMemoryAPI.GetClientSettings(clientID)
 	if !ok {
-		_ = saveMessageApp.LogMessage("error", "Server API - client setup with ID "+clientID+" not found")
+		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("Server API - client setup with ID %v not found", clientID))
 
 		return
 	}
@@ -196,7 +196,7 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 					cl := storingMemoryAPI.GetClientList()
 					for _, cs := range cl {
 						if err := cs.SendWsMessage(1, msgjson); err != nil {
-							_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
+							_ = saveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
 						}
 					}
 
@@ -204,7 +204,7 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 				}
 
 				if err := clientSettings.SendWsMessage(1, msgjson); err != nil {
-					_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
 				}
 			}
 		}
@@ -219,7 +219,7 @@ func serverWss(w http.ResponseWriter, req *http.Request) {
 
 				//удаляем информацию о клиенте
 				storingMemoryAPI.DelClientAPI(clientID)
-				_ = saveMessageApp.LogMessage("error", "Server API - "+fmt.Sprint(err))
+				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
 
 				log.Println("Client API whis ip", remoteIP, "is disconnect")
 

@@ -137,12 +137,9 @@ func RouteWssConnectionResponse(
 	//MessageType содержит тип JSON сообщения
 	type MessageType struct {
 		Type string `json:"messageType"`
-		//		Info []byte `json:"info"`
 	}
 
 	var messageType MessageType
-
-	//sourcesListConnection := isl.GetSourcesListConnection()
 
 	for msg := range cwtReq {
 		sourceIP := msg.DestinationHost
@@ -205,8 +202,6 @@ func RouteWssConnectionResponse(
 					Sources:                      []int{sourceID},
 				},
 			}
-
-			fmt.Printf("----- Message type 'NOTIFICATION' ------\n%v\n", clientNotify)
 
 			chanInCore <- &clientNotify
 

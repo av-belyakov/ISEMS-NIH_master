@@ -74,7 +74,7 @@ func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWrit
 		w.WriteHeader(400)
 		w.Write(bodyHTTPResponseError)
 
-		_ = saveMessageApp.LogMessage("error", "missing or incorrect identification token (сlient ipaddress "+req.RemoteAddr+")")
+		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("missing or incorrect identification token (сlient ipaddress %v)", req.RemoteAddr))
 
 		return
 	}
@@ -96,7 +96,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	clientID, idIsExist := sws.SourceList.GetSourceIDOnIP(remoteIP)
 	if !idIsExist {
 		w.WriteHeader(401)
-		_ = saveMessageApp.LogMessage("error", "access for the user with ipaddress "+remoteIP+" is prohibited")
+		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("access for the user with ipaddress %v is prohibited", remoteIP))
 
 		return
 	}
@@ -104,7 +104,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	//проверяем разрешено ли данному ip соединение с сервером wss
 	if !sws.SourceList.GetAccessIsAllowed(remoteIP) {
 		w.WriteHeader(401)
-		_ = saveMessageApp.LogMessage("error", "access for the user with ipaddress "+remoteIP+" is prohibited")
+		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("access for the user with ipaddress %v is prohibited", remoteIP))
 
 		return
 	}

@@ -48,7 +48,7 @@ func New() *PathDirLocationLogFiles {
 	return &pathDirLocationLogFiles
 }
 
-//ReadMainConfig читает основной конфигурационный файл и сохраняет данные в MothConfig
+//ReadMainConfig читает основной конфигурационный файл и сохраняет данные
 func readMainConfig(fileName string, mpc *mothPathConfig) error {
 	var err error
 	row, err := ioutil.ReadFile(fileName)
