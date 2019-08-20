@@ -125,16 +125,6 @@ func Routing(
 					continue
 				}
 
-				//подготавливаем список файлов для скачиания
-				downloadFileList := make(map[string]*configure.DownloadFilesInformation, len(qti.TaskParameters.ConfirmedListFiles))
-
-				for _, fi := range qti.TaskParameters.ConfirmedListFiles {
-					downloadFileList[fi.Name] = &configure.DownloadFilesInformation{}
-
-					downloadFileList[fi.Name].Size = fi.FullSizeByte
-					downloadFileList[fi.Name].Hex = fi.Hex
-				}
-
 				//добавляем задачу в StorageMemoryTask
 				smt.AddStoringMemoryTask(msg.TaskID, configure.TaskDescription{
 					ClientID:                        qti.IDClientAPI,
@@ -152,7 +142,7 @@ func Routing(
 							ID:                                  msg.SourceID,
 							Status:                              "wait",
 							PathDirectoryStorageDownloadedFiles: pathStorage,
-							DownloadingFilesInformation:         downloadFileList,
+							DownloadingFilesInformation:         qti.TaskParameters.ConfirmedListFiles,
 						},
 					},
 				})
@@ -161,11 +151,14 @@ func Routing(
 				if err := qts.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "execution"); err != nil {
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 				}
+				/*
+				   Удалять нельзя, понадобится при обработке разрыва соединения
 
-				//удаляе из StoringMemoryQueueTask списки файлов
-				if err := qts.ClearAllListFiles(msg.SourceID, msg.TaskID); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-				}
+				   				//удаляем из StoringMemoryQueueTask списки файлов
+				   if err := qts.ClearAllListFiles(msg.SourceID, msg.TaskID); err != nil {
+				   					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				   				}
+				*/
 
 				//отправляем в NI module для вызова обработчика задания
 				cc.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{

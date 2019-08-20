@@ -223,17 +223,15 @@ func checkParametersDownloadTask(
 		}
 
 	} else {
-		nlf := make([]*configure.DetailedFileInformation, 0, len(tidb.ListFilesResultTaskExecution))
+		nlf := make(map[string]*configure.DownloadFilesInformation, len(tidb.ListFilesResultTaskExecution))
 
 		//формируем новый список не выгружавшихся файлов
 		for _, f := range tidb.ListFilesResultTaskExecution {
 			//только если файл не загружался
 			if !f.FileLoaded {
-				nlf = append(nlf, &configure.DetailedFileInformation{
-					Name:         f.FileName,
-					Hex:          f.FileHex,
-					FullSizeByte: f.FileSize,
-				})
+				nlf[f.FileName] = &configure.DownloadFilesInformation{}
+				nlf[f.FileName].Size = f.FileSize
+				nlf[f.FileName].Hex = f.FileHex
 			}
 		}
 
@@ -253,9 +251,24 @@ func checkParametersDownloadTask(
 		}
 	}
 
+	emt.MsgHuman = "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+
 	//добавляем информацию по фильтрации в QueueTaskStorage
 	if err := hsm.QTS.AddFiltrationParametersQueueTaskstorage(sourceID, res.TaskID, &tidb.FilteringOption); err != nil {
-		emt.MsgHuman = "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+		if err := ErrorMessage(emt); err != nil {
+			return err
+		}
+
+		//удаляем задачу из очереди
+		if err := hsm.QTS.DelQueueTaskStorage(sourceID, res.TaskID); err != nil {
+			return err
+		}
+
+		return err
+	}
+
+	//добавляем информацию о директории на источнике в которой хранятся отфильтрованные файлы
+	if err := hsm.QTS.AddPathDirectoryFilteredFiles(sourceID, res.TaskID, tidb.DetailedInformationOnFiltering.PathDirectoryForFilteredFiles); err != nil {
 		if err := ErrorMessage(emt); err != nil {
 			return err
 		}
@@ -269,7 +282,6 @@ func checkParametersDownloadTask(
 	}
 
 	if err := hsm.QTS.ChangeAvailabilityFilesDownload(sourceID, res.TaskID); err != nil {
-		emt.MsgHuman = "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
 		if err := ErrorMessage(emt); err != nil {
 			return err
 		}
@@ -286,14 +298,14 @@ func checkParametersDownloadTask(
 }
 
 //checkFileNameMatches проверяет на совпадение файлов переданных пользователем с файлами полученными из БД
-func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) ([]*configure.DetailedFileInformation, error) {
+func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) (map[string]*configure.DownloadFilesInformation, error) {
 	type fileInfo struct {
 		hex      string
 		size     int64
 		isLoaded bool
 	}
 
-	nlf := make([]*configure.DetailedFileInformation, 0, len(lfqst))
+	nlf := make(map[string]*configure.DownloadFilesInformation, len(lfqst))
 
 	if len(lfdb) == 0 {
 		return nlf, errors.New("an empty list with files was obtained from the database")
@@ -313,11 +325,9 @@ func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) ([
 		if info, ok := tmpList[f]; ok {
 			//только если файл не загружался
 			if !info.isLoaded {
-				nlf = append(nlf, &configure.DetailedFileInformation{
-					Name:         f,
-					Hex:          info.hex,
-					FullSizeByte: info.size,
-				})
+				nlf[f] = &configure.DownloadFilesInformation{}
+				nlf[f].Size = info.size
+				nlf[f].Hex = info.hex
 			}
 		}
 	}

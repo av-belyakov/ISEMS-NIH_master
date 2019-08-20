@@ -3,7 +3,7 @@ package configure
 /*
 * Описание типов JSON сообщений принимаемых от источников
 *
-* Версия 0.23, дата релиза 27.05.2019
+* Версия 0.30, дата релиза 20.08.2019
 * */
 
 //SourceTelemetry полная системная информация подготовленная к отправке
@@ -117,6 +117,20 @@ type DetailInfoMsgFiltration struct {
 type InputFilesInformation struct {
 	Size int64  `json:"s"`
 	Hex  string `json:"h"`
+}
+
+//MsgTypeDownload сообщение типа ping
+type MsgTypeDownload struct {
+	MsgType string                `json:"messageType"`
+	Info    DetailInfoMsgDownload `json:"info"`
+}
+
+//DetailInfoMsgDownload подробная информация
+// TaskID - ID задачи
+// TaskStatus - статус выполняемой задачи
+type DetailInfoMsgDownload struct {
+	TaskID     string
+	TaskStatus string
 }
 
 /*

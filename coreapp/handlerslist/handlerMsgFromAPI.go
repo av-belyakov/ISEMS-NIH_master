@@ -252,7 +252,13 @@ func HandlerMsgFromAPI(
 				})
 
 				//устанавливаем проверочный статус источника для данной задачи как подключен
-				hsm.QTS.ChangeAvailabilityConnection(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp)
+				if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp); err != nil {
+					nsErrJSON.MsgDescription = fmt.Sprintf("Ошибка, запись для источника с ID %v отсутствует в памяти приложения", dcts.MsgOption.ID)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+					return
+				}
 
 				//запрос в БД о наличии задачи с указанным ID и файлов для скачивания
 				outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{

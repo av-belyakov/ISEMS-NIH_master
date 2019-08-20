@@ -39,10 +39,34 @@ type TaskDescription struct {
 	ChanStopTransferListFiles       chan struct{}
 }
 
+//TimeIntervalTaskExecution временной интервал выполнения задачи
+type TimeIntervalTaskExecution struct {
+	Start, End int64
+}
+
 //DescriptionTaskParameters описание параметров задачи
 type DescriptionTaskParameters struct {
 	FiltrationTask FiltrationTaskParameters
 	DownloadTask   DownloadTaskParameters
+}
+
+//DownloadTaskParameters параметры задачи по скачиванию файлов
+// ID - уникальный цифровой идентификатор источника
+// Status - статус задачи 'wait'/'refused'/'execute'/'completed'/'stop' ('ожидает' / 'отклонена' / 'выполняется' / 'завершена' / 'остановлена')
+// NumberFilesTotal - всего файлов предназначенных для скачивания
+// NumberFilesDownloaded - кол-во загруженных файлов
+// NumberFilesDownloadedError - кол-во загруженных с ошибкой файлов
+// FileInformation - подробная информация о передаваемом файле
+// DownloadingFilesInformation - информация о скачиваемых файлах, ключ - имя файла
+type DownloadTaskParameters struct {
+	ID                                  int
+	Status                              string
+	NumberFilesTotal                    int
+	NumberFilesDownloaded               int
+	NumberFilesDownloadedError          int
+	PathDirectoryStorageDownloadedFiles string
+	FileInformation                     DetailedFileInformation
+	DownloadingFilesInformation         map[string]*DownloadFilesInformation
 }
 
 //DownloadFilesInformation подробная информация о скачиваемых файлах
@@ -51,27 +75,10 @@ type DownloadFilesInformation struct {
 	IsLoaded bool
 }
 
-//TimeIntervalTaskExecution временной интервал выполнения задачи
-type TimeIntervalTaskExecution struct {
-	Start, End int64
-}
-
 //FoundFilesInformation подробная информация о файлах
 type FoundFilesInformation struct {
 	Size int64
 	Hex  string
-}
-
-//DetailedFileInformation подробная информация о передаваемом файле
-// Name - имя файла
-// Hex - хеш сумма
-// FullSizeByte - полный размер файла в байтах
-// AcceptedSizeByte - принятый размер файла в байтах
-// AcceptedSizePercent - принятый размер файла в процентах
-type DetailedFileInformation struct {
-	Name, Hex                      string
-	FullSizeByte, AcceptedSizeByte int64
-	AcceptedSizePercent            int
 }
 
 //FiltrationTaskParameters параметры задачи по фильтрации файлов
@@ -102,23 +109,16 @@ type FiltrationTaskParameters struct {
 	FoundFilesInformation           map[string]*FoundFilesInformation
 }
 
-//DownloadTaskParameters параметры задачи по скачиванию файлов
-// ID - уникальный цифровой идентификатор источника
-// Status - статус задачи 'wait'/'refused'/'execute'/'completed'/'stop' ('ожидает' / 'отклонена' / 'выполняется' / 'завершена' / 'остановлена')
-// NumberFilesTotal - всего файлов предназначенных для скачивания
-// NumberFilesDownloaded - кол-во загруженных файлов
-// NumberFilesDownloadedError - кол-во загруженных с ошибкой файлов
-// FileInformation - подробная информация о передаваемом файле
-// DownloadingFilesInformation - информация о скачиваемых файлах, ключ - имя файла
-type DownloadTaskParameters struct {
-	ID                                  int
-	Status                              string
-	NumberFilesTotal                    int
-	NumberFilesDownloaded               int
-	NumberFilesDownloadedError          int
-	PathDirectoryStorageDownloadedFiles string
-	FileInformation                     DetailedFileInformation
-	DownloadingFilesInformation         map[string]*DownloadFilesInformation
+//DetailedFileInformation подробная информация о передаваемом файле
+// Name - имя файла
+// Hex - хеш сумма
+// FullSizeByte - полный размер файла в байтах
+// AcceptedSizeByte - принятый размер файла в байтах
+// AcceptedSizePercent - принятый размер файла в процентах
+type DetailedFileInformation struct {
+	Name, Hex                      string
+	FullSizeByte, AcceptedSizeByte int64
+	AcceptedSizePercent            int
 }
 
 //ChanStoringMemoryTask описание информации передаваемой через канал

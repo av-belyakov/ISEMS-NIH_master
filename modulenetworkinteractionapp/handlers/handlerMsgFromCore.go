@@ -22,7 +22,8 @@ func HandlerMsgFromCore(
 	smt *configure.StoringMemoryTask,
 	qts *configure.QueueTaskStorage,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
-	chanInCore chan<- *configure.MsgBetweenCoreAndNI) {
+	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
+	chanInCRRF chan<- *MsgChannelReceivingFiles) {
 
 	funcName := ", function 'HandlerMsgFromCore'"
 
@@ -382,19 +383,19 @@ func HandlerMsgFromCore(
 
 	case "download control":
 		if msg.Command == "start" {
-			/*
-				cwt chan<- configure.MsgWsTransmission,
-				isl *configure.InformationSourcesList,
-				msg *configure.MsgBetweenCoreAndNI,
-				smt *configure.StoringMemoryTask,
-				chanInCore chan<- *configure.MsgBetweenCoreAndNI
-			*/
-
-			go fileDownloadProcessing(cwt, isl, msg, smt, qts, chanInCore)
+			chanInCRRF <- &MsgChannelReceivingFiles{
+				SourceID: msg.SourceID,
+				TaskID:   msg.TaskID,
+				Command:  "give my the file",
+			}
 		}
 
 		if msg.Command == "stop" {
-
+			chanInCRRF <- &MsgChannelReceivingFiles{
+				SourceID: msg.SourceID,
+				TaskID:   msg.TaskID,
+				Command:  "stop receiving files",
+			}
 		}
 
 	}

@@ -14,6 +14,7 @@ import (
 	"fmt"
 
 	"ISEMS-NIH_master/configure"
+	"ISEMS-NIH_master/modulenetworkinteractionapp/handlers"
 	"ISEMS-NIH_master/savemessageapp"
 
 	"github.com/gorilla/websocket"
@@ -28,12 +29,16 @@ func connClose(
 	ip string) {
 
 	/*
-	   Обработка разрыва соединения с источником
-	   до отправки сообщения в модуль Ядра
+			   Обработка разрыва соединения с источником
+			   до отправки сообщения в модуль Ядра
 
-	   здесь можно сделать отправку сообщения об
-	   аварийном останове работы модуля отвечающего
-	   за прием файлов
+		Изменение статуса соединений для источника,
+		Изменить AvailabilityConnection в StoringMemoryQueueTask для всех
+		задач выполняемых на данном источнике с true на false
+
+			   здесь можно сделать отправку сообщения об
+			   аварийном останове работы модуля отвечающего
+			   за прием файлов
 	*/
 
 	c.Close()
@@ -70,10 +75,13 @@ func MainNetworkInteraction(
 		"outWssModuleClient": make(chan [2]string, 10),
 	}
 
+	//обработчик процессов по скачиванию запрошенных файлов
+	chanInCRRF := handlers.ControllerReceivingRequestedFiles(smt, qts, isl, saveMessageApp, chanInCore)
+
 	//маршрутизатор запросов получаемых от CoreApp
-	go RouteCoreRequest(cwtRes, chanInCore, isl, smt, qts, saveMessageApp, chansStatSource, chanOutCore)
+	go RouteCoreRequest(cwtRes, chanInCore, chanInCRRF, isl, smt, qts, saveMessageApp, chansStatSource, chanOutCore)
 	//маршрутизатор запросов получаемых Wss
-	go RouteWssConnectionResponse(cwtRes, isl, smt, saveMessageApp, chanInCore, cwtReq)
+	go RouteWssConnectionResponse(cwtRes, isl, smt, saveMessageApp, chanInCore, chanInCRRF, cwtReq)
 
 	//запуск модуля wssServerNI
 	go WssServerNetworkInteraction(chansStatSource["outWssModuleServer"], appConf, isl, cwtReq)

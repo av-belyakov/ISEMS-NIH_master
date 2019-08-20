@@ -32,13 +32,16 @@ type QueueTaskInformation struct {
 
 //DescriptionParametersReceivedFromUser описание параметров задачи
 // FilterationParameters - параметры фильтрации
+// PathDirectoryForFilteredFiles - путь до директории с отфильтрованными файлами на источнике
 // DownloadList - список файлов полученный от пользователя
 // ConfirmedListFiles - подтвержденный список файлов полученный из БД и прошедший сравнение
 // с пользовательским (если нужно)
 type DescriptionParametersReceivedFromUser struct {
-	FilterationParameters FilteringOption
-	DownloadList          []string
-	ConfirmedListFiles    []*DetailedFileInformation
+	FilterationParameters         FilteringOption
+	PathDirectoryForFilteredFiles string
+	DownloadList                  []string
+	//ConfirmedListFiles    []*DetailedFileInformation
+	ConfirmedListFiles map[string]*DownloadFilesInformation
 }
 
 //StatusItems пункты состояния задачи или источника
@@ -180,6 +183,18 @@ func NewRepositoryQTS() *QueueTaskStorage {
 
 				msg.ChanRes <- msgRes
 
+			case "add path directory for filtered files":
+				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
+					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID", msg.SourceID)
+					msg.ChanRes <- msgRes
+
+					break
+				}
+
+				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.PathDirectoryForFilteredFiles = msg.AdditionalOption.PathDirectoryForFilteredFiles
+
+				msg.ChanRes <- msgRes
+
 			case "delete task":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID", msg.SourceID)
@@ -212,7 +227,7 @@ func NewRepositoryQTS() *QueueTaskStorage {
 
 				msg.ChanRes <- msgRes
 
-			case "change availability connection":
+			case "change availability connection on connection":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID", msg.SourceID)
 					msg.ChanRes <- msgRes
@@ -221,6 +236,18 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				}
 
 				qts.StorageList[msg.SourceID][msg.TaskID].CheckingStatusItems.AvailabilityConnection = true
+
+				msg.ChanRes <- msgRes
+
+			case "change availability connection on disconnection":
+				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
+					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID", msg.SourceID)
+					msg.ChanRes <- msgRes
+
+					break
+				}
+
+				qts.StorageList[msg.SourceID][msg.TaskID].CheckingStatusItems.AvailabilityConnection = false
 
 				msg.ChanRes <- msgRes
 
@@ -245,7 +272,8 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				}
 
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.DownloadList = []string{}
-				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles = []*DetailedFileInformation{}
+				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles = map[string]*DownloadFilesInformation{}
+				//[]*DetailedFileInformation{}
 
 				msg.ChanRes <- msgRes
 			}
@@ -407,6 +435,28 @@ func (qts *QueueTaskStorage) AddFiltrationParametersQueueTaskstorage(sourceID in
 	return (<-chanRes).ErrorDescription
 }
 
+//AddPathDirectoryFilteredFiles добавляет путь к директории на источнике в которой хранятся отфильтрованные файлы
+func (qts *QueueTaskStorage) AddPathDirectoryFilteredFiles(sourceID int, taskID, pathDir string) error {
+	chanRes := make(chan chanResponse)
+	defer close(chanRes)
+
+	options := &DescriptionParametersReceivedFromUser{
+		PathDirectoryForFilteredFiles: pathDir,
+	}
+
+	cr := chanRequest{
+		Action:           "add path directory for filtered files",
+		SourceID:         sourceID,
+		TaskID:           taskID,
+		AdditionalOption: options,
+		ChanRes:          chanRes,
+	}
+
+	qts.ChannelReq <- cr
+
+	return (<-chanRes).ErrorDescription
+}
+
 //DelQueueTaskStorage удалить задачу из очереди
 func (qts *QueueTaskStorage) DelQueueTaskStorage(sourceID int, taskID string) error {
 	chanRes := make(chan chanResponse)
@@ -438,13 +488,13 @@ func (qts *QueueTaskStorage) ChangeTaskStatusQueueTask(sourceID int, taskID, new
 	return (<-chanRes).ErrorDescription
 }
 
-//ChangeAvailabilityConnection проверить наличие соединение с источником
-func (qts *QueueTaskStorage) ChangeAvailabilityConnection(sourceID int, taskID string) error {
+//ChangeAvailabilityConnectionOnConnection изменить статус соединения с источником
+func (qts *QueueTaskStorage) ChangeAvailabilityConnectionOnConnection(sourceID int, taskID string) error {
 	chanRes := make(chan chanResponse)
 	defer close(chanRes)
 
 	qts.ChannelReq <- chanRequest{
-		Action:   "change availability connection",
+		Action:   "change availability connection on connection",
 		SourceID: sourceID,
 		TaskID:   taskID,
 		ChanRes:  chanRes,
@@ -453,7 +503,22 @@ func (qts *QueueTaskStorage) ChangeAvailabilityConnection(sourceID int, taskID s
 	return (<-chanRes).ErrorDescription
 }
 
-//ChangeAvailabilityFilesDownload проверить наличие файлов для скачивания
+//ChangeAvailabilityConnectionOnDisconnection изменить статус соединения с источником
+func (qts *QueueTaskStorage) ChangeAvailabilityConnectionOnDisconnection(sourceID int, taskID string) error {
+	chanRes := make(chan chanResponse)
+	defer close(chanRes)
+
+	qts.ChannelReq <- chanRequest{
+		Action:   "change availability connection on disconnection",
+		SourceID: sourceID,
+		TaskID:   taskID,
+		ChanRes:  chanRes,
+	}
+
+	return (<-chanRes).ErrorDescription
+}
+
+//ChangeAvailabilityFilesDownload изменить статус наличия файлов для скачивания
 func (qts *QueueTaskStorage) ChangeAvailabilityFilesDownload(sourceID int, taskID string) error {
 	chanRes := make(chan chanResponse)
 	defer close(chanRes)
@@ -469,7 +534,7 @@ func (qts *QueueTaskStorage) ChangeAvailabilityFilesDownload(sourceID int, taskI
 }
 
 //AddConfirmedListFiles добавляет проверенный список файлов предназначенных для скачивания и удаляет список переданный клиентом API (если есть)
-func (qts *QueueTaskStorage) AddConfirmedListFiles(sourceID int, taskID string, clf []*DetailedFileInformation) error {
+func (qts *QueueTaskStorage) AddConfirmedListFiles(sourceID int, taskID string, clf map[string]*DownloadFilesInformation) error {
 	chanRes := make(chan chanResponse)
 	defer close(chanRes)
 
@@ -550,6 +615,10 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 						_ = qts.DelQueueTaskStorage(sourceID, taskID)
 					}
 
+					/*
+					   Для скачивания файлов
+					*/
+
 					if taskInfo.TaskType == "download" {
 						//выполняется ли задача
 						if len(et.downloadTask) > 0 {
@@ -569,6 +638,10 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 							}
 						}
 					}
+
+					/*
+					   Для фильтрации файлов
+					*/
 
 					if taskInfo.TaskType == "filtration" {
 						if len(et.filtrationTask) == maxProcessFiltration {

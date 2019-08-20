@@ -13,7 +13,44 @@ import (
 	//. "ISEMS-NIH_master/mytestpackages"
 )
 
-func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) ([]*configure.DetailedFileInformation, error) {
+func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) (map[string]*configure.DownloadFilesInformation, error) {
+	type fileInfo struct {
+		hex      string
+		size     int64
+		isLoaded bool
+	}
+
+	nlf := make(map[string]*configure.DownloadFilesInformation, len(lfqst))
+
+	if len(lfdb) == 0 {
+		return nlf, errors.New("an empty list with files was obtained from the database")
+	}
+
+	if len(lfqst) == 0 {
+		return nlf, errors.New("an empty list with files was received from the API client")
+	}
+
+	tmpList := make(map[string]fileInfo, len(lfdb))
+
+	for _, i := range lfdb {
+		tmpList[i.FileName] = fileInfo{i.FileHex, i.FileSize, i.FileLoaded}
+	}
+
+	for _, f := range lfqst {
+		if info, ok := tmpList[f]; ok {
+			//только если файл не загружался
+			if !info.isLoaded {
+				nlf[f] = &configure.DownloadFilesInformation{}
+				nlf[f].Size = info.size
+				nlf[f].Hex = info.hex
+			}
+		}
+	}
+
+	return nlf, nil
+}
+
+/*func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) ([]*configure.DetailedFileInformation, error) {
 	type fileInfo struct {
 		hex      string
 		size     int64
@@ -50,7 +87,7 @@ func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) ([
 	}
 
 	return nlf, nil
-}
+}*/
 
 var _ = Describe("QueueTaskStorage", func() {
 	qts := configure.NewRepositoryQTS()
@@ -124,7 +161,7 @@ var _ = Describe("QueueTaskStorage", func() {
 		It("Должно вернуться значение 'TRUE'", func() {
 			var err error
 
-			err = qts.ChangeAvailabilityConnection(sourceID, taskID)
+			err = qts.ChangeAvailabilityConnectionOnConnection(sourceID, taskID)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			i, err := qts.GetQueueTaskStorage(sourceID, taskID)

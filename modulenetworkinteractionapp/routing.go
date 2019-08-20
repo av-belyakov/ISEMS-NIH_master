@@ -21,6 +21,7 @@ import (
 func RouteCoreRequest(
 	cwt chan<- configure.MsgWsTransmission,
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
+	chanInCRRF chan<- *handlers.MsgChannelReceivingFiles,
 	isl *configure.InformationSourcesList,
 	smt *configure.StoringMemoryTask,
 	qts *configure.QueueTaskStorage,
@@ -116,7 +117,7 @@ func RouteCoreRequest(
 
 			//обработка сообщения от ядра
 		case msg := <-chanOutCore:
-			go handlers.HandlerMsgFromCore(cwt, isl, msg, smt, qts, saveMessageApp, chanInCore)
+			go handlers.HandlerMsgFromCore(cwt, isl, msg, smt, qts, saveMessageApp, chanInCore, chanInCRRF)
 		}
 	}
 }
@@ -128,6 +129,7 @@ func RouteWssConnectionResponse(
 	smt *configure.StoringMemoryTask,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
+	chanInCRRF chan<- *handlers.MsgChannelReceivingFiles,
 	cwtReq <-chan configure.MsgWsTransmission) {
 
 	//MessageType содержит тип JSON сообщения
@@ -175,6 +177,12 @@ func RouteWssConnectionResponse(
 			go processresponse.ProcessingReceivedMsgTypeFiltering(pprmtf)
 
 		case "download files":
+			chanInCRRF <- &handlers.MsgChannelReceivingFiles{
+				SourceID: sourceID,
+				SourceIP: sourceIP,
+				Command:  "taken from the source",
+				Message:  message,
+			}
 
 		case "notification":
 			var notify configure.MsgTypeNotification
