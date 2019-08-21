@@ -18,6 +18,15 @@ import (
 )
 
 //RouteCoreRequest маршрутизирует запросы от CoreApp и обрабатывает сообщения от wss модулей
+// cwt - канал для передачи данных источникам
+// chanInCore - канал для взаимодействия с Ядром приложения (ИСХОДЯЩИЙ)
+// chanInCRRF - канал для взаимодействия с контроллером запрошенных принимаемых файлов
+// isl - информация по источникам
+// smt - информация по выполняемым задачам
+// qts - информация об ожидающих и выполняющихся задачах
+// saveMessageApp - объект для записи логов
+// chanColl - коллекция каналов для взаимодействия с WssServer и WssClient
+// chanOutCore - канал для взаимодействия с Ядром приложения (ВХОДЯЩИЙ)
 func RouteCoreRequest(
 	cwt chan<- configure.MsgWsTransmission,
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
@@ -143,95 +152,115 @@ func RouteWssConnectionResponse(
 		sourceIP := msg.DestinationHost
 		message := msg.Data
 
-		sourceID, _ := isl.GetSourceIDOnIP(sourceIP)
-
-		if err := json.Unmarshal(*message, &messageType); err != nil {
-			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+		sourceID, ok := isl.GetSourceIDOnIP(sourceIP)
+		if !ok {
+			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("not found the ID of the source ip address %v"))
 		}
 
-		switch messageType.Type {
-		case "pong":
-			_ = saveMessageApp.LogMessage("info", fmt.Sprintf("resived message type 'PONG' from IP %v", sourceIP))
+		if msg.MsgType == 1 {
+			//обработка текстовых данных
 
-		case "telemetry":
-			chanInCore <- &configure.MsgBetweenCoreAndNI{
-				Section:         "source control",
-				Command:         "telemetry",
-				SourceID:        sourceID,
-				AdvancedOptions: message,
-			}
-
-		case "filtration":
-			pprmtf := processresponse.ParametersProcessingReceivedMsgTypeFiltering{
-				CwtRes:         cwtRes,
-				ChanInCore:     chanInCore,
-				CwtReq:         cwtReq,
-				Isl:            isl,
-				Smt:            smt,
-				Message:        message,
-				SourceID:       sourceID,
-				SourceIP:       sourceIP,
-				SaveMessageApp: saveMessageApp,
-			}
-
-			go processresponse.ProcessingReceivedMsgTypeFiltering(pprmtf)
-
-		case "download files":
-			chanInCRRF <- &handlers.MsgChannelReceivingFiles{
-				SourceID: sourceID,
-				SourceIP: sourceIP,
-				Command:  "taken from the source",
-				Message:  message,
-			}
-
-		case "notification":
-			var notify configure.MsgTypeNotification
-			err := json.Unmarshal(*message, &notify)
-			if err != nil {
+			if err := json.Unmarshal(*message, &messageType); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-				return
 			}
 
-			clientNotify := configure.MsgBetweenCoreAndNI{
-				TaskID:   notify.Info.TaskID,
-				Section:  "message notification",
-				Command:  "send client API",
-				SourceID: sourceID,
-				AdvancedOptions: configure.MessageNotification{
-					SourceReport:                 "NI module",
-					Section:                      notify.Info.Section,
-					TypeActionPerformed:          notify.Info.TypeActionPerformed,
-					CriticalityMessage:           notify.Info.CriticalityMessage,
-					HumanDescriptionNotification: notify.Info.Description,
-					Sources:                      []int{sourceID},
-				},
+			switch messageType.Type {
+			case "pong":
+				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("resived message type 'PONG' from IP %v", sourceIP))
+
+			case "telemetry":
+				chanInCore <- &configure.MsgBetweenCoreAndNI{
+					Section:         "source control",
+					Command:         "telemetry",
+					SourceID:        sourceID,
+					AdvancedOptions: message,
+				}
+
+			case "filtration":
+				pprmtf := processresponse.ParametersProcessingReceivedMsgTypeFiltering{
+					CwtRes:         cwtRes,
+					ChanInCore:     chanInCore,
+					CwtReq:         cwtReq,
+					Isl:            isl,
+					Smt:            smt,
+					Message:        message,
+					SourceID:       sourceID,
+					SourceIP:       sourceIP,
+					SaveMessageApp: saveMessageApp,
+				}
+
+				go processresponse.ProcessingReceivedMsgTypeFiltering(pprmtf)
+
+			case "download files":
+				chanInCRRF <- &handlers.MsgChannelReceivingFiles{
+					SourceID: sourceID,
+					SourceIP: sourceIP,
+					Command:  "taken from the source",
+					Message:  message,
+				}
+
+			case "notification":
+				var notify configure.MsgTypeNotification
+				err := json.Unmarshal(*message, &notify)
+				if err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+					return
+				}
+
+				clientNotify := configure.MsgBetweenCoreAndNI{
+					TaskID:   notify.Info.TaskID,
+					Section:  "message notification",
+					Command:  "send client API",
+					SourceID: sourceID,
+					AdvancedOptions: configure.MessageNotification{
+						SourceReport:                 "NI module",
+						Section:                      notify.Info.Section,
+						TypeActionPerformed:          notify.Info.TypeActionPerformed,
+						CriticalityMessage:           notify.Info.CriticalityMessage,
+						HumanDescriptionNotification: notify.Info.Description,
+						Sources:                      []int{sourceID},
+					},
+				}
+
+				chanInCore <- &clientNotify
+
+			case "error":
+				var errMsg configure.MsgTypeError
+				err := json.Unmarshal(*message, &errMsg)
+				if err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+					return
+				}
+
+				errNotify := configure.MsgBetweenCoreAndNI{
+					TaskID:   errMsg.Info.TaskID,
+					Section:  "error notification",
+					SourceID: sourceID,
+					AdvancedOptions: configure.ErrorNotification{
+						SourceReport:          "NI module",
+						ErrorName:             errMsg.Info.ErrorName,
+						HumanDescriptionError: errMsg.Info.ErrorDescription,
+						Sources:               []int{sourceID},
+					},
+				}
+
+				chanInCore <- &errNotify
 			}
+		} else if msg.MsgType == 2 {
+			//обработка бинарных данных
 
-			chanInCore <- &clientNotify
+			/*
+			   Читаем первые N байт из бинарного пакета и определяем по
+			   номеру принадлежность бинарных данных (например, 1 - передача файлов сет. трафика,
+			   2 - передача сжатых JSON данных и т.д.). На основании этого осуществляется
+			   долнейшая передача или в ControllerReceivingRequestedFiles или
+			   обработчику сжатых файлов
+			*/
 
-		case "error":
-			var errMsg configure.MsgTypeError
-			err := json.Unmarshal(*message, &errMsg)
-			if err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-				return
-			}
-
-			errNotify := configure.MsgBetweenCoreAndNI{
-				TaskID:   errMsg.Info.TaskID,
-				Section:  "error notification",
-				SourceID: sourceID,
-				AdvancedOptions: configure.ErrorNotification{
-					SourceReport:          "NI module",
-					ErrorName:             errMsg.Info.ErrorName,
-					HumanDescriptionError: errMsg.Info.ErrorDescription,
-					Sources:               []int{sourceID},
-				},
-			}
-
-			chanInCore <- &errNotify
+		} else {
+			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("unknown data type received from source with ID %v (ip %v)", sourceID, sourceIP))
 		}
 	}
 }

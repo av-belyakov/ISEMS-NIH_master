@@ -71,7 +71,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 
 			//обработчик запросов приходящих через websocket
 			for {
-				_, message, err := c.ReadMessage()
+				msgType, message, err := c.ReadMessage()
 				if err != nil {
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
@@ -80,6 +80,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 
 				cs.CwtReq <- configure.MsgWsTransmission{
 					DestinationHost: cs.IP,
+					MsgType:         msgType,
 					Data:            &message,
 				}
 			}

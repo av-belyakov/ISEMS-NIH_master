@@ -77,7 +77,7 @@ type DetailInfoMsgError struct {
 	ErrorDescription string `json:"ed"`
 }
 
-//MsgTypeFiltration сообщение типа ping
+//MsgTypeFiltration сообщение типа 'filtration'
 type MsgTypeFiltration struct {
 	MsgType string                  `json:"messageType"`
 	Info    DetailInfoMsgFiltration `json:"info"`
@@ -119,7 +119,7 @@ type InputFilesInformation struct {
 	Hex  string `json:"h"`
 }
 
-//MsgTypeDownload сообщение типа ping
+//MsgTypeDownload сообщение типа 'download'
 type MsgTypeDownload struct {
 	MsgType string                `json:"messageType"`
 	Info    DetailInfoMsgDownload `json:"info"`

@@ -76,7 +76,7 @@ func MainNetworkInteraction(
 	}
 
 	//обработчик процессов по скачиванию запрошенных файлов
-	chanInCRRF := handlers.ControllerReceivingRequestedFiles(smt, qts, isl, saveMessageApp, chanInCore)
+	chanInCRRF := handlers.ControllerReceivingRequestedFiles(smt, qts, isl, saveMessageApp, chanInCore, cwtRes)
 
 	//маршрутизатор запросов получаемых от CoreApp
 	go RouteCoreRequest(cwtRes, chanInCore, chanInCRRF, isl, smt, qts, saveMessageApp, chansStatSource, chanOutCore)

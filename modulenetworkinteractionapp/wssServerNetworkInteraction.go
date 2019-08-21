@@ -148,7 +148,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 			break
 		}
 
-		_, message, err := c.ReadMessage()
+		msgType, message, err := c.ReadMessage()
 		if err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
@@ -157,6 +157,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 
 		sws.CwtReq <- configure.MsgWsTransmission{
 			DestinationHost: remoteIP,
+			MsgType:         msgType,
 			Data:            &message,
 		}
 	}

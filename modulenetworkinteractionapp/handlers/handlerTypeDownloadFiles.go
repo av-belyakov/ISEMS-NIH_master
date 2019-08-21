@@ -8,21 +8,14 @@ import (
 	"ISEMS-NIH_master/savemessageapp"
 )
 
-//MsgChannelReceivingFiles взаимодействие при приеме запрошенных файлов
-// SourceID - ID источника
-// SourceIP - IP источника
-// TaskID - ID задачи
-// Command - команда взаимодействия
-//  - 'give my the file'
-//  - 'ready to receive file'
-//  - 'stop receiving files'
-// Message - сообщения принимаемые от источников
-type MsgChannelReceivingFiles struct {
-	SourceID int
-	SourceIP string
-	TaskID   string
-	Command  string
-	Message  *[]byte
+//msgChannelProcessorReceivingFiles параметры канала взаимодействия между 'ControllerReceivingRequestedFiles' и 'processorReceivingFiles'
+// TaskStatus - состояние задачи
+// MessageType - тип передаваемых данных (1 - text, 2 - binary)
+// Message - информационное сообщение в двоичном формате
+type msgChannelProcessorReceivingFiles struct {
+	TaskStatus  string
+	MessageType int
+	Message     *[]byte
 }
 
 //listHandlerReceivingFile список задач по скачиванию файлов
@@ -35,7 +28,7 @@ type listTaskReceivingFile map[string]handlerRecivingParameters
 
 //handlerRecivingParameters описание параметров
 type handlerRecivingParameters struct {
-	chanToHandler chan string
+	chanToHandler chan msgChannelProcessorReceivingFiles
 }
 
 //ControllerReceivingRequestedFiles обработчик приема запрашиваемых файлов
@@ -44,7 +37,8 @@ func ControllerReceivingRequestedFiles(
 	qts *configure.QueueTaskStorage,
 	isl *configure.InformationSourcesList,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
-	chanInCore chan<- *configure.MsgBetweenCoreAndNI) chan *MsgChannelReceivingFiles {
+	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
+	cwtRes chan<- configure.MsgWsTransmission) chan *configure.MsgChannelReceivingFiles {
 
 	clientNotify := configure.MsgBetweenCoreAndNI{
 		Section: "message notification",
@@ -65,7 +59,7 @@ func ControllerReceivingRequestedFiles(
 		}
 	}
 
-	chanIn := make(chan *MsgChannelReceivingFiles)
+	chanIn := make(chan *configure.MsgChannelReceivingFiles)
 	lhrf := listHandlerReceivingFile{}
 
 	go func() {
@@ -81,6 +75,8 @@ func ControllerReceivingRequestedFiles(
 			//получаем IP адрес и параметры источника
 			si, ok := isl.GetSourceSetting(msg.SourceID)
 			if !ok || !si.ConnectionStatus {
+				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("It is not possible to send a request to download files, the source with ID %v is not connected", msg.SourceID))
+
 				humanNotify := fmt.Sprintf("Не возможно отправить запрос на скачивание файлов, источник с ID %v не подключен", msg.SourceID)
 				if !ok {
 					humanNotify = fmt.Sprintf("Источник с ID %v не найден", msg.SourceID)
@@ -102,38 +98,52 @@ func ControllerReceivingRequestedFiles(
 			ao.HumanDescriptionNotification = fmt.Sprintf("Источник с ID %v не найден", msg.SourceID)
 			clientNotify.AdvancedOptions = ao
 
+			errMsg := fmt.Sprintf("Source with ID %v not found", msg.SourceID)
+
 			switch msg.Command {
+			//начало выполнения задачи
 			case "give my the file":
 				if len(lhrf[si.IP]) == 0 {
 					lhrf[si.IP] = listTaskReceivingFile{}
 				}
 
-				chanel, err := processorReceivingFiles(msg.SourceID, si.IP, msg.TaskID, smt)
+				//запуск обработчика задачи по скачиванию файлов
+				channel, err := processorReceivingFiles(chanInCore, msg.SourceID, si.IP, msg.TaskID, smt, saveMessageApp, cwtRes)
 				if err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
 					handlerTaskWarning(msg.TaskID, clientNotify)
 
 					continue
 				}
 
 				lhrf[si.IP][msg.TaskID] = handlerRecivingParameters{
-					chanToHandler: chanel,
+					chanToHandler: channel,
 				}
 
+			//останов выполнения задачи
 			case "stop receiving files":
 				if _, ok := lhrf[si.IP]; !ok {
+					_ = saveMessageApp.LogMessage("error", errMsg)
+
 					handlerTaskWarning(msg.TaskID, clientNotify)
 
 					continue
 				}
 				hrp, ok := lhrf[si.IP][msg.TaskID]
 				if !ok {
+					_ = saveMessageApp.LogMessage("error", errMsg)
+
 					handlerTaskWarning(msg.TaskID, clientNotify)
 
 					continue
 				}
 
-				hrp.chanToHandler <- msg.Command
+				hrp.chanToHandler <- msgChannelProcessorReceivingFiles{
+					TaskStatus: msg.Command,
+				}
 
+			//ответы приходящие от источника в рамках выполнения конкретной задачи
 			case "taken from the source":
 				resMsg := configure.MsgTypeDownload{}
 
@@ -144,19 +154,27 @@ func ControllerReceivingRequestedFiles(
 				}
 
 				if _, ok := lhrf[si.IP]; !ok {
+					_ = saveMessageApp.LogMessage("error", errMsg)
+
 					handlerTaskWarning(msg.TaskID, clientNotify)
 
 					continue
 				}
 				hrp, ok := lhrf[si.IP][msg.TaskID]
 				if !ok {
+					_ = saveMessageApp.LogMessage("error", errMsg)
+
 					handlerTaskWarning(msg.TaskID, clientNotify)
 
 					continue
 				}
 
 				//ответы приходящие от источника (команды для processorReceivingFiles)
-				hrp.chanToHandler <- resMsg.Info.TaskStatus
+				hrp.chanToHandler <- msgChannelProcessorReceivingFiles{
+					TaskStatus:  resMsg.Info.TaskStatus,
+					MessageType: msg.MsgType,
+					Message:     msg.Message,
+				}
 
 			case "":
 				/*
@@ -231,30 +249,71 @@ func ControllerReceivingRequestedFiles(
 }
 
 //processorReceivingFiles управляет приемом файлов в рамках одной задачи
-func processorReceivingFiles(sourceID int, sourceIP, taskID string, smt *configure.StoringMemoryTask) (chan string, error) {
-	chanOut := make(chan string)
+func processorReceivingFiles(
+	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
+	sourceID int,
+	sourceIP, taskID string,
+	smt *configure.StoringMemoryTask,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
+	cwtRes chan<- configure.MsgWsTransmission) (chan msgChannelProcessorReceivingFiles, error) {
 
 	ti, ok := smt.GetStoringMemoryTask(taskID)
 	if !ok {
-		return chanOut, fmt.Errorf("task with ID %v not found", taskID)
+		return nil, fmt.Errorf("task with ID %v not found", taskID)
 	}
+
+	chanOut := make(chan msgChannelProcessorReceivingFiles)
+
+	pathDirStorage := ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles
 
 	go func() {
 		//читаем список файлов
 		for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
-			//отправляем источнику запрос на получение файла
-			msgJSON := configure.MsgTypeDownload{
-				MsgType: "download files",
-				Info:    configure.DetailInfoMsgDownload{},
+			msg := <-chanOut
+
+			//текстовые данные
+			if msg.MessageType == 1 {
+				switch msg.TaskStatus {
+				case "stop receiving files":
+					/*
+						- Сообщение о том что задача успешно ОСТАНОВЛЕНА
+						- Записать инофрмацию о задаче в БД
+
+						После записи информации в БД УЖЕ В Core modules
+						после ответа из БД удалить задачу из StoringeMemoryTask и
+						StoringMemoryQueueTask
+					*/
+
+				case "ready for the transfer":
+					/*
+						- Создать линк файла для записи бинарных данных
+
+						- Отправить источнику сообщение о готовности к
+						приему данных
+					*/
+
+					//отправляем источнику запрос на получение файла
+					msgJSON := configure.MsgTypeDownload{
+						MsgType: "download files",
+						Info:    configure.DetailInfoMsgDownload{},
+					}
+
+				case "file transfer completed":
+					/*
+						- Сообщение о том что задача успешно ЗАВЕРШЕНА
+
+						- Записать инофрмацию о задаче в БД
+
+						После записи информации в БД УЖЕ В Core modules
+						после ответа из БД удалить задачу из StoringeMemoryTask и
+						StoringMemoryQueueTask
+					*/
+
+				}
 			}
 
-			command := <-chanOut
-			switch command {
-			case "stop receiving files":
-
-			case "ready for the transfer":
-
-			case "file transfer completed":
+			//бинарные данные
+			if msg.MessageType == 2 {
 
 			}
 		}

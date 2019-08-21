@@ -9,12 +9,16 @@ type ChannelCollectionCoreApp struct {
 }
 
 //MsgWsTransmission содержит информацию для передачи подключенному источнику
+// DestinationHost - ip адрес источника сообщений
+// MsgType - тип сообщения (1 - text, 2 - binary)
+// Data - набор принимаемых байт
 type MsgWsTransmission struct {
 	DestinationHost string
+	MsgType         int
 	Data            *[]byte
 }
 
-// MsgBetweenCoreAndNI используется для взаимодействия между ядром приложения и модулем сет. взаимодействия
+//MsgBetweenCoreAndNI используется для взаимодействия между ядром приложения и модулем сет. взаимодействия
 // TaskID - ID задачи
 // ClientName - имя клиента, используется для управления источниками
 // Section:
@@ -141,4 +145,23 @@ type MessageNotification struct {
 	CriticalityMessage           string
 	HumanDescriptionNotification string
 	Sources                      []int
+}
+
+//MsgChannelReceivingFiles взаимодействие при приеме запрошенных файлов
+// SourceID - ID источника
+// SourceIP - IP источника
+// TaskID - ID задачи
+// Command - команда взаимодействия
+//  - 'give my the file'
+//  - 'ready to receive file'
+//  - 'stop receiving files'
+// MsgType - тип сообщения (1 - text, 2 - binary)
+// Message - сообщения принимаемые от источников
+type MsgChannelReceivingFiles struct {
+	SourceID int
+	SourceIP string
+	TaskID   string
+	Command  string
+	MsgType  int
+	Message  *[]byte
 }
