@@ -266,38 +266,69 @@ func processorReceivingFiles(
 
 	pathDirStorage := ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles
 
+	/*
+	   Алгоритм передачи и приема файлов
+	   1. Запрос файла 'give me the file' (master -> slave)
+	   2.1. Сообщение 'ready for the transfer' - готовность к передачи файла (slave -> master)
+	   2.2. Сообщение 'file transfer not possible' - невозможно передать файл (slave -> master)
+	   3. Готовность к приему файла 'ready to receive file' (master -> slave)
+	   4. ПЕРЕДАЧА БИНАРНОГО ФАЙЛА
+	   5. Сообщение о завершении передачи файла 'file transfer complited' (slave -> master)
+	   6. Запрос нового файла 'give me the file' (master -> slave) цикл повторяется
+	*/
+
 	go func() {
+		//начальный запрос на передачу файла
+		mtd := configure.MsgTypeDownload{
+			MsgType: "download files",
+			Info: configure.DetailInfoMsgDownload{
+				TaskID:         taskID,
+				PathDirStorage: pathDirStorage,
+			},
+		}
+
 		//читаем список файлов
 		for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
+			//делаем первый запрос на скачивание файла
+			mtd.Info.TaskStatus = "give me the file"
+			mtd.Info.FileOptions = configure.DownloadFileOptions{
+				Name: fn,
+				Size: fi.Size,
+				Hex:  fi.Hex,
+			}
+
+			msgJSON, err := json.Marshal(mtd)
+			if err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+				continue
+			}
+			cwtRes <- configure.MsgWsTransmission{
+				DestinationHost: sourceIP,
+				Data:            &msgJSON,
+			}
+
 			msg := <-chanOut
 
 			//текстовые данные
 			if msg.MessageType == 1 {
 				switch msg.TaskStatus {
-				case "stop receiving files":
-					/*
-						- Сообщение о том что задача успешно ОСТАНОВЛЕНА
-						- Записать инофрмацию о задаче в БД
-
-						После записи информации в БД УЖЕ В Core modules
-						после ответа из БД удалить задачу из StoringeMemoryTask и
-						StoringMemoryQueueTask
-					*/
-
+				//готовность к приему файла
 				case "ready for the transfer":
 					/*
 						- Создать линк файла для записи бинарных данных
+						из расчета что одновременно могут передоваться
+						несколько файлов
+						map[<file_hex>]*os.Writer
 
 						- Отправить источнику сообщение о готовности к
 						приему данных
 					*/
 
 					//отправляем источнику запрос на получение файла
-					msgJSON := configure.MsgTypeDownload{
-						MsgType: "download files",
-						Info:    configure.DetailInfoMsgDownload{},
-					}
+					//msgJSON
 
+				//передача файла успешно завершена
 				case "file transfer completed":
 					/*
 						- Сообщение о том что задача успешно ЗАВЕРШЕНА
@@ -307,7 +338,27 @@ func processorReceivingFiles(
 						После записи информации в БД УЖЕ В Core modules
 						после ответа из БД удалить задачу из StoringeMemoryTask и
 						StoringMemoryQueueTask
+
+						- Отправить новый запрос на скачивание файла
+						такой же как и самый первый 'give me the file'
 					*/
+
+				//остановить скачивание файлов
+				case "stop receiving files":
+					/*
+						- Сообщение о том что задача успешно ОСТАНОВЛЕНА
+						- Записать инофрмацию о задаче в БД
+
+						После записи информации в БД УЖЕ В Core modules
+						после ответа из БД удалить задачу из StoringeMemoryTask и
+						StoringMemoryQueueTask
+
+						- завершить подпрограмму, тем самым остановив цикл
+						по запросам файлов у источника
+					*/
+
+				//сообщение о невозможности передачи файла
+				case "file transfer not possible":
 
 				}
 			}

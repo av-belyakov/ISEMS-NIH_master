@@ -128,9 +128,25 @@ type MsgTypeDownload struct {
 //DetailInfoMsgDownload подробная информация
 // TaskID - ID задачи
 // TaskStatus - статус выполняемой задачи
+//  - 'give me the file' (master -> slave), запрос файла
+//  - 'ready to receive file' (master -> salve), подтверждение готовности приема файла
+//  - 'ready for the transfer' (slave -> master), подтверждение готовности передачи
+//  - 'file transfer not possible' (slave -> master), сообщение о невозможности передачи
+//  - 'file transfer complited' (slave -> master), сообщение о завершении передачи
+// PathDirStorage - директория в которой хранятся файлы на источнике
+// FileOptions - параметры файла
 type DetailInfoMsgDownload struct {
-	TaskID     string
-	TaskStatus string
+	TaskID         string              `json:"tid"`
+	TaskStatus     string              `json:"ts"`
+	PathDirStorage string              `json:"pds"`
+	FileOptions    DownloadFileOptions `json:"fo"`
+}
+
+//DownloadFileOptions параметры загружаемого файла
+type DownloadFileOptions struct {
+	Name string `json:"n"`
+	Size int64  `json:"sz"`
+	Hex  string `json:"hex"`
 }
 
 /*
