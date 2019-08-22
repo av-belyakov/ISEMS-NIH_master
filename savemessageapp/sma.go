@@ -158,6 +158,7 @@ func (pdllf *PathDirLocationLogFiles) LogMessage(typeMessage, message string) (e
 
 		return err
 	}
+	defer fileOut.Close()
 
 	timeNowString := time.Now().String()
 	tns := strings.Split(timeNowString, " ")

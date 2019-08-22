@@ -275,6 +275,7 @@ func processorReceivingFiles(
 	   4. ПЕРЕДАЧА БИНАРНОГО ФАЙЛА
 	   5. Сообщение о завершении передачи файла 'file transfer complited' (slave -> master)
 	   6. Запрос нового файла 'give me the file' (master -> slave) цикл повторяется
+
 	*/
 
 	go func() {
