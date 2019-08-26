@@ -386,7 +386,7 @@ func HandlerMsgFromCore(
 			chanInCRRF <- &configure.MsgChannelReceivingFiles{
 				SourceID: msg.SourceID,
 				TaskID:   msg.TaskID,
-				Command:  "give my the file",
+				Command:  "give my the files",
 			}
 		}
 

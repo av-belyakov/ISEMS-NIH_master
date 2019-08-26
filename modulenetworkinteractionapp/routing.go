@@ -30,7 +30,7 @@ import (
 func RouteCoreRequest(
 	cwt chan<- configure.MsgWsTransmission,
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
-	chanInCRRF chan<- *handlers.MsgChannelReceivingFiles,
+	chanInCRRF chan<- *configure.MsgChannelReceivingFiles,
 	isl *configure.InformationSourcesList,
 	smt *configure.StoringMemoryTask,
 	qts *configure.QueueTaskStorage,
@@ -38,7 +38,6 @@ func RouteCoreRequest(
 	chanColl map[string]chan [2]string,
 	chanOutCore <-chan *configure.MsgBetweenCoreAndNI) {
 
-	//обработка данных получаемых через каналы
 	for {
 		select {
 		/*
@@ -124,7 +123,7 @@ func RouteCoreRequest(
 				}
 			}
 
-			//обработка сообщения от ядра
+		//обработка сообщения от ядра
 		case msg := <-chanOutCore:
 			go handlers.HandlerMsgFromCore(cwt, isl, msg, smt, qts, saveMessageApp, chanInCore, chanInCRRF)
 		}
@@ -138,7 +137,7 @@ func RouteWssConnectionResponse(
 	smt *configure.StoringMemoryTask,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
-	chanInCRRF chan<- *handlers.MsgChannelReceivingFiles,
+	chanInCRRF chan<- *configure.MsgChannelReceivingFiles,
 	cwtReq <-chan configure.MsgWsTransmission) {
 
 	//MessageType содержит тип JSON сообщения
@@ -154,7 +153,7 @@ func RouteWssConnectionResponse(
 
 		sourceID, ok := isl.GetSourceIDOnIP(sourceIP)
 		if !ok {
-			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("not found the ID of the source ip address %v"))
+			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("not found the ID of the source ip address %v", sourceIP))
 		}
 
 		if msg.MsgType == 1 {
@@ -192,10 +191,20 @@ func RouteWssConnectionResponse(
 				go processresponse.ProcessingReceivedMsgTypeFiltering(pprmtf)
 
 			case "download files":
-				chanInCRRF <- &handlers.MsgChannelReceivingFiles{
+				var mtd configure.MsgTypeDownload
+				err := json.Unmarshal(*message, &mtd)
+				if err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+					return
+				}
+
+				chanInCRRF <- &configure.MsgChannelReceivingFiles{
 					SourceID: sourceID,
 					SourceIP: sourceIP,
+					TaskID:   mtd.Info.TaskID,
 					Command:  "taken from the source",
+					MsgType:  msg.MsgType,
 					Message:  message,
 				}
 
@@ -251,13 +260,28 @@ func RouteWssConnectionResponse(
 		} else if msg.MsgType == 2 {
 			//обработка бинарных данных
 
-			/*
-			   Читаем первые N байт из бинарного пакета и определяем по
-			   номеру принадлежность бинарных данных (например, 1 - передача файлов сет. трафика,
-			   2 - передача сжатых JSON данных и т.д.). На основании этого осуществляется
-			   долнейшая передача или в ControllerReceivingRequestedFiles или
-			   обработчику сжатых файлов
-			*/
+			//определяем принадлежность пакета
+			checkBytes := (*message)[:1]
+
+			if string(checkBytes) == "1" {
+				taskID := fmt.Sprint((*message)[2:34])
+
+				//raw файл (сет. трафик)
+				chanInCRRF <- &configure.MsgChannelReceivingFiles{
+					SourceID: sourceID,
+					SourceIP: sourceIP,
+					TaskID:   taskID,
+					Command:  "taken from the source",
+					MsgType:  msg.MsgType,
+					Message:  message,
+				}
+
+			} else if string(checkBytes) == "2" {
+				//tar.gz архив (JSON файл с индексами)
+
+			} else {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("unknown format of data received from source with ID %v (ip %v)", sourceID, sourceIP))
+			}
 
 		} else {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("unknown data type received from source with ID %v (ip %v)", sourceID, sourceIP))

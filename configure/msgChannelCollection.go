@@ -152,7 +152,7 @@ type MessageNotification struct {
 // SourceIP - IP источника
 // TaskID - ID задачи
 // Command - команда взаимодействия
-//  - 'give my the file'
+//  - 'give my the files'
 //  - 'ready to receive file'
 //  - 'stop receiving files'
 // MsgType - тип сообщения (1 - text, 2 - binary)

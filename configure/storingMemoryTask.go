@@ -56,6 +56,7 @@ type DescriptionTaskParameters struct {
 // NumberFilesTotal - всего файлов предназначенных для скачивания
 // NumberFilesDownloaded - кол-во загруженных файлов
 // NumberFilesDownloadedError - кол-во загруженных с ошибкой файлов
+// PathDirectoryStorageDownloadedFiles - директория в которую осуществляется скачивание файлов
 // FileInformation - подробная информация о передаваемом файле
 // DownloadingFilesInformation - информация о скачиваемых файлах, ключ - имя файла
 type DownloadTaskParameters struct {

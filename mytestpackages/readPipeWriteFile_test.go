@@ -2,7 +2,6 @@ package mytestpackages
 
 import (
 	"bufio"
-	"bytes"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
@@ -215,21 +214,26 @@ func writeReseivedFile(
 	num := 0
 DONE:
 	for data := range chanInOut {
-		r := bytes.NewReader(data)
+		/*r := bytes.NewReader(data)
 
 		checkBytes := make([]byte, msgSysInfo.lengthCheckString)
-		r.ReadAt(checkBytes, int64(msgSysInfo.lengthCheckString))
+		r.ReadAt(checkBytes, int64(msgSysInfo.lengthCheckString))*/
+
+		checkBytes := data[:msgSysInfo.lengthCheckString]
 
 		data = data[msgSysInfo.lengthCheckString:]
 		if _, err := w.Write(data); err != nil {
 			return err
 		}
 
-		/*if num == 0 {
-			fmt.Printf("NUM checkByte = %v, NUM DATA = %v,\n", len(checkBytes), len(data))
+		if num == 0 {
+			strCheck := string(checkBytes)
+			taskID := fmt.Sprint(strCheck[2:34])
+
+			fmt.Printf("NUM checkByte = %v, NUM DATA = %v, checkString = %v, taskID = %v, fileHash = %v\n", len(checkBytes), len(data), strCheck, taskID, strCheck[35:67])
 		}
 
-		if num == 1 {
+		/*if num == 1 {
 			fmt.Printf("NUM checkByte = %v, NUM DATA = %v,\n", len(checkBytes), len(data))
 		}
 

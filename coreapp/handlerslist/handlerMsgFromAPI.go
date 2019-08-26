@@ -216,6 +216,7 @@ func HandlerMsgFromAPI(
 				fmt.Println("START task 'DOWNLOADING'")
 
 				var dcts configure.DownloadControlTypeStart
+
 				if err := json.Unmarshal(msgJSON, &dcts); err != nil {
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
