@@ -373,6 +373,25 @@ var _ = Describe("Mytestpackages/ReadPipeWriteFile", func() {
 		})
 	})
 
+	Context("Тест 3: деление чисел", func() {
+		It("должно получится число", func() {
+			var fullNum, uploadNum int64
+
+			fullNum = 1232345
+			onePercent := fullNum / 100
+			for i := 0; int64(i) < (fullNum / 4096); i++ {
+				beforePercent := uploadNum / onePercent
+				uploadNum += 4096
+				afterPercent := uploadNum / onePercent
+				if afterPercent > beforePercent {
+					fmt.Printf("PERCENT after %v > before %v\n", afterPercent, beforePercent)
+				}
+			}
+
+			Expect(true).Should(BeTrue())
+		})
+	})
+
 	/*
 	   Context("", func(){
 	   	It("", func(){

@@ -263,6 +263,27 @@ func NewRepositoryQTS() *QueueTaskStorage {
 
 				msg.ChanRes <- msgRes
 
+			case "change the status of uploaded files":
+				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
+					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID", msg.SourceID)
+					msg.ChanRes <- msgRes
+
+					break
+				}
+
+				//qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles = msg.AdditionalOption.ConfirmedListFiles
+				for fn := range msg.AdditionalOption.ConfirmedListFiles {
+					_, ok := qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles[fn]
+					if ok {
+						fi := qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles[fn]
+						fi.IsLoaded = true
+
+						qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles[fn] = fi
+					}
+				}
+
+				msg.ChanRes <- msgRes
+
 			case "clear all file list":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID", msg.SourceID)
@@ -542,6 +563,24 @@ func (qts *QueueTaskStorage) AddConfirmedListFiles(sourceID int, taskID string, 
 
 	qts.ChannelReq <- chanRequest{
 		Action:           "add confirmed list of files",
+		SourceID:         sourceID,
+		TaskID:           taskID,
+		AdditionalOption: options,
+		ChanRes:          chanRes,
+	}
+
+	return (<-chanRes).ErrorDescription
+}
+
+//ChangeIsLoadedFiles изменяет статус файлов
+func (qts *QueueTaskStorage) ChangeIsLoadedFiles(sourceID int, taskID string, clf map[string]*DownloadFilesInformation) error {
+	chanRes := make(chan chanResponse)
+	defer close(chanRes)
+
+	options := &DescriptionParametersReceivedFromUser{ConfirmedListFiles: clf}
+
+	qts.ChannelReq <- chanRequest{
+		Action:           "change the status of uploaded files",
 		SourceID:         sourceID,
 		TaskID:           taskID,
 		AdditionalOption: options,

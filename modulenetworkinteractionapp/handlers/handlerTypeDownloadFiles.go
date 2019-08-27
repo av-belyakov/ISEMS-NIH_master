@@ -216,7 +216,7 @@ func processorReceivingFiles(
 	   2.2. Сообщение 'file transfer not possible' - невозможно передать файл (slave -> master)
 	   3. Готовность к приему файла 'ready to receive file' (master -> slave)
 	   4. ПЕРЕДАЧА БИНАРНОГО ФАЙЛА
-	   5. Сообщение о завершении передачи файла 'file transfer complited' (slave -> master)
+	   5. завершением приема файла считается прием последнего кусочка
 	   6. Запрос нового файла 'give me the file' (master -> slave) цикл повторяется
 
 	*/
@@ -231,6 +231,7 @@ func processorReceivingFiles(
 			},
 		}
 
+	DONE:
 		//читаем список файлов
 		for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
 			//делаем первый запрос на скачивание файла
@@ -252,73 +253,31 @@ func processorReceivingFiles(
 				Data:            &msgJSON,
 			}
 
-			msg := <-chanOut
-
 			listFileDescriptors := map[string]*os.File{}
 
-			//текстовые данные
-			if msg.MessageType == 1 {
-				if msg.MsgGenerator == "Core module" {
-					command := fmt.Sprint(*msg.Message)
+			//msg := <-chanOut
 
-					//остановить скачивание файлов
-					if command == "stop receiving files" {
-						/*
-							- Сообщение о том что задача успешно ОСТАНОВЛЕНА
-							- Записать инофрмацию о задаче в БД
+			for msg := range chanOut {
+				//обновляем значение таймера (что бы задача не была удалена по таймауту)
+				smt.TimerUpdateStoringMemoryTask(taskID)
 
-							После записи информации в БД УЖЕ В Core modules
-							после ответа из БД удалить задачу из StoringeMemoryTask и
-							StoringMemoryQueueTask
-
-							- завершить подпрограмму, тем самым остановив цикл
-							по запросам файлов у источника
-						*/
+				//текстовые данные
+				if msg.MessageType == 1 {
+					msgReq := configure.MsgTypeDownload{
+						MsgType: "download files",
+						Info: configure.DetailInfoMsgDownload{
+							TaskID: taskID,
+						},
 					}
 
-				} else if msg.MsgGenerator == "NI module" {
-					var msgRes configure.MsgTypeDownload
-					err := json.Unmarshal(*msg.Message, &msgRes)
-					if err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					if msg.MsgGenerator == "Core module" {
+						command := fmt.Sprint(*msg.Message)
 
-						continue
-					}
+						//остановить скачивание файлов
+						if command == "stop receiving files" {
+							msgReq.Info.TaskStatus = "stop receiving files"
 
-					switch msgRes.Info.TaskStatus {
-					//готовность к приему файла
-					case "ready for the transfer":
-						/*
-							- Создать линк файла для записи бинарных данных
-							из расчета что одновременно могут передаваться
-							несколько файлов
-							map[<file_hex>]*os.Writer
-
-							- Отправить источнику сообщение о готовности к
-							приему данных
-						*/
-
-						//отправляем источнику запрос на получение файла
-						//msgJSON
-
-						if _, ok := listFileDescriptors[msgRes.Info.FileOptions.Hex]; !ok {
-							//создаем дескриптор файла для последующей записи в него
-							f, err := os.Create(path.Join(pathDirStorage, msgRes.Info.FileOptions.Name))
-							if err != nil {
-								_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-								continue
-							}
-
-							listFileDescriptors[msgRes.Info.FileOptions.Hex] = f
-
-							msgJSON, err := json.Marshal(configure.MsgTypeDownload{
-								MsgType: "download files",
-								Info: configure.DetailInfoMsgDownload{
-									TaskID:     taskID,
-									TaskStatus: "ready to receive file",
-								},
-							})
+							msgJSON, err := json.Marshal(msgReq)
 							if err != nil {
 								_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
@@ -330,31 +289,133 @@ func processorReceivingFiles(
 							}
 						}
 
-					//передача файла успешно завершена
-					case "file transfer completed":
-						/*
+					} else if msg.MsgGenerator == "NI module" {
+						var msgRes configure.MsgTypeDownload
+						err := json.Unmarshal(*msg.Message, &msgRes)
+						if err != nil {
+							_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-							- Отправить новый запрос на скачивание файла
-							такой же как и самый первый 'give me the file'
+							continue
+						}
+
+						switch msgRes.Info.TaskStatus {
+						//готовность к приему файла
+						case "ready for the transfer":
+							if _, ok := listFileDescriptors[msgRes.Info.FileOptions.Hex]; !ok {
+								//создаем дескриптор файла для последующей записи в него
+								f, err := os.Create(path.Join(pathDirStorage, msgRes.Info.FileOptions.Name))
+								if err != nil {
+									_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+									continue
+								}
+
+								listFileDescriptors[msgRes.Info.FileOptions.Hex] = f
+
+								//получаем информацию о задаче
+								ti, ok := smt.GetStoringMemoryTask(taskID)
+								if !ok {
+									_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with ID %v not found", taskID))
+
+									/*
+										нужно както отметить что файл передан с ошибкой
+										   не удалось записать один кусочек значит весь файл
+										   на выброс
+									*/
+
+									break DONE
+								}
+								fi := ti.TaskParameter.DownloadTask.FileInformation
+
+								//обновляем информацию о задаче
+								smt.UpdateTaskDownloadAllParameters(taskID, configure.DownloadTaskParameters{
+									Status:                              "wait",
+									NumberFilesTotal:                    ti.TaskParameter.DownloadTask.NumberFilesTotal,
+									NumberFilesDownloaded:               ti.TaskParameter.DownloadTask.NumberFilesDownloaded,
+									PathDirectoryStorageDownloadedFiles: ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles,
+									FileInformation: configure.DetailedFileInformation{
+										Name:         fn, //fi.Name,
+										Hex:          fi.Hex,
+										FullSizeByte: fi.FullSizeByte,
+										NumChunk:     msgRes.Info.FileOptions.NumChunk,
+										ChunkSize:    msgRes.Info.FileOptions.ChunkSize,
+									},
+								})
+
+								msgReq.Info.TaskStatus = "ready to receive file"
+								msgJSON, err := json.Marshal(msgReq)
+								if err != nil {
+									_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+									continue
+								}
+								cwtRes <- configure.MsgWsTransmission{
+									DestinationHost: sourceIP,
+									Data:            &msgJSON,
+								}
+							}
+
+						//передача файла успешно завершена
+						case "file transfer completed":
+							/*
+								!!! Может вообще нестоит отправлять это сообщение !!!
+								А завершение передачи отслеживать по количеству частей
+								в разделе обработки бинарного файла
+
+								- проверить хеш принятого файла
+
+								- Отправить новый запрос на скачивание файла
+								такой же как и самый первый 'give me the file'
+							*/
+
+							//закрыть дескриптор файла listFileDescription[msg.Message.FileOptions.Hex].Close()
+
+						//сообщение о невозможности передачи файла
+						case "file transfer not possible":
+							//закрыть дескриптор файла listFileDescription[msg.Message.FileOptions.Hex].Close()
+
+						//передача файла успешно остановлена
+						case "file transfer stopped":
+
+							/*
+								- Сообщение о том что задача успешно ОСТАНОВЛЕНА
+								- Записать инофрмацию о задаче в БД
+
+								После записи информации в БД УЖЕ В Core modules
+								после ответа из БД удалить задачу из StoringeMemoryTask и
+								StoringMemoryQueueTask
+
+								- завершить подпрограмму, тем самым остановив цикл
+								по запросам файлов у источника
+							*/
+
+						}
+					} else {
+						_ = saveMessageApp.LogMessage("error", "unknown generator events")
+
+						continue
+					}
+				}
+
+				//бинарные данные
+				if msg.MessageType == 2 {
+					if err := writingBinaryFile(parametersWritingBinaryFile{
+						SourceID:            sourceID,
+						TaskID:              taskID,
+						Data:                msg.Message,
+						ListFileDescriptors: listFileDescriptors,
+						SMT:                 smt,
+						ChanInCore:          chanInCore,
+					}); err != nil {
+						/*
+						   	нужно как то отметить что файл передан с ошибкой
+						   не удалось записать один кусочек значит весь файл
+						   на выброс
 						*/
 
-						//закрыть дескриптор файла listFileDescription[msg.Message.FileOptions.Hex].Close()
-
-					//сообщение о невозможности передачи файла
-					case "file transfer not possible":
-						//закрыть дескриптор файла listFileDescription[msg.Message.FileOptions.Hex].Close()
-
+						break DONE
 					}
-				} else {
-					_ = saveMessageApp.LogMessage("error", "unknown generator events")
-
-					continue
 				}
-			}
-
-			//бинарные данные
-			if msg.MessageType == 2 {
-				//listFileDescription[msg.Message.FileOptions.Hex]
 			}
 		}
 

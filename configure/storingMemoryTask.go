@@ -116,10 +116,18 @@ type FiltrationTaskParameters struct {
 // FullSizeByte - полный размер файла в байтах
 // AcceptedSizeByte - принятый размер файла в байтах
 // AcceptedSizePercent - принятый размер файла в процентах
+// NumChunk - общее кол-во кусочков для передачи
+// ChunkSize - размер передоваемого кусочка
+// NumAcceptedChunk - кол-во принятых кусочков
 type DetailedFileInformation struct {
-	Name, Hex                      string
-	FullSizeByte, AcceptedSizeByte int64
-	AcceptedSizePercent            int
+	Name                string
+	Hex                 string
+	FullSizeByte        int64
+	AcceptedSizeByte    int64
+	AcceptedSizePercent int
+	NumChunk            int
+	ChunkSize           int
+	NumAcceptedChunk    int
 }
 
 //ChanStoringMemoryTask описание информации передаваемой через канал
@@ -284,7 +292,7 @@ func (smt *StoringMemoryTask) CompleteStoringMemoryTask(taskID string) {
 	<-chanRes
 }
 
-//TimerUpdateStoringMemoryTask обновить значение таймера в задачи
+//TimerUpdateStoringMemoryTask обновить значение таймера для задачи
 func (smt *StoringMemoryTask) TimerUpdateStoringMemoryTask(taskID string) {
 	chanRes := make(chan channelResSettings)
 	defer close(chanRes)
@@ -298,7 +306,7 @@ func (smt *StoringMemoryTask) TimerUpdateStoringMemoryTask(taskID string) {
 	<-chanRes
 }
 
-//TimerUpdateTaskInsertDB обновить значение таймера в задачи
+//TimerUpdateTaskInsertDB обновить значение таймера для задачи выполняемой в БД
 func (smt *StoringMemoryTask) TimerUpdateTaskInsertDB(taskID string) {
 	chanRes := make(chan channelResSettings)
 	defer close(chanRes)
@@ -381,7 +389,7 @@ func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, f
 	<-chanRes
 }
 
-//UpdateTaskDownloadAllParameters обнавление параметров скачивания файлов
+//UpdateTaskDownloadAllParameters обновление параметров скачивания файлов
 func (smt *StoringMemoryTask) UpdateTaskDownloadAllParameters(taskID string, dtp DownloadTaskParameters) {
 	chanRes := make(chan channelResSettings)
 	defer close(chanRes)

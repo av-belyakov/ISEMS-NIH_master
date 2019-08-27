@@ -148,14 +148,12 @@ type DetailInfoMsgDownload struct {
 // Hex - контрольная сумма файла
 // NumChunk - кол-во передаваемых кусочков
 // ChunkSize - размер передаваемого кусочка
-// LengthEndString - длинна проверочный строки сообщающей об окончании файла
 type DownloadFileOptions struct {
-	Name            string `json:"n"`
-	Size            int64  `json:"sz"`
-	Hex             string `json:"hex"`
-	NumChunk        int    `json:"nc"`
-	ChunkSize       int    `json:"cs"`
-	LengthEndString int    `json:"les"`
+	Name      string `json:"n"`
+	Size      int64  `json:"sz"`
+	Hex       string `json:"hex"`
+	NumChunk  int    `json:"nc"`
+	ChunkSize int    `json:"cs"`
 }
 
 /*

@@ -151,14 +151,6 @@ func Routing(
 				if err := qts.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "execution"); err != nil {
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 				}
-				/*
-				   Удалять нельзя, понадобится при обработке разрыва соединения
-
-				   				//удаляем из StoringMemoryQueueTask списки файлов
-				   if err := qts.ClearAllListFiles(msg.SourceID, msg.TaskID); err != nil {
-				   					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-				   				}
-				*/
 
 				//отправляем в NI module для вызова обработчика задания
 				cc.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{

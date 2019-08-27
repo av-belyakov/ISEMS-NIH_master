@@ -10,6 +10,7 @@ import (
 	"errors"
 	"io"
 	"math"
+	"os"
 	"regexp"
 	"strconv"
 	"time"
@@ -46,6 +47,27 @@ func GetUniqIDFormatMD5(str string) string {
 	hsum := hex.EncodeToString(h.Sum(nil))
 
 	return hsum
+}
+
+//GetFileParameters получает параметры файла, его размер и хеш-сумму
+func GetFileParameters(filePath string) (int64, string, error) {
+	fd, err := os.Open(filePath)
+	if err != nil {
+		return 0, "", err
+	}
+	defer fd.Close()
+
+	fileInfo, err := fd.Stat()
+	if err != nil {
+		return 0, "", err
+	}
+
+	h := md5.New()
+	if _, err := io.Copy(h, fd); err != nil {
+		return 0, "", err
+	}
+
+	return fileInfo.Size(), hex.EncodeToString(h.Sum(nil)), nil
 }
 
 //GetCountPartsMessage получить количество частей сообщений

@@ -276,6 +276,22 @@ func HandlerMsgFromAPI(
 			if msgc.MsgInsturction == "to cancel downloading" {
 				fmt.Println("STOP task 'DOWNLOADING'")
 
+				var dcts configure.DownloadControlTypeStart
+
+				if err := json.Unmarshal(msgJSON, &dcts); err != nil {
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
+					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
+
+					return
+				}
+
+				outCoreChans.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{
+					TaskID:     dcts.MsgOption.TaskIDApp,
+					ClientName: msg.ClientName,
+					Section:    "download control",
+					Command:    "stop receiving files",
+					SourceID:   dcts.MsgOption.ID,
+				}
 			}
 
 			return

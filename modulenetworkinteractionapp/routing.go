@@ -17,6 +17,27 @@ import (
 	"ISEMS-NIH_master/savemessageapp"
 )
 
+func sendPing(
+	sourceIP string,
+	sourceID int,
+	isl *configure.InformationSourcesList,
+	cwt chan<- configure.MsgWsTransmission) error {
+
+	ss, _ := isl.GetSourceSetting(sourceID)
+	formatJSON, err := processrequest.SendMsgPing(ss)
+	if err != nil {
+		return err
+	}
+
+	//отправляем источнику запрос типа Ping
+	cwt <- configure.MsgWsTransmission{
+		DestinationHost: sourceIP,
+		Data:            &formatJSON,
+	}
+
+	return nil
+}
+
 //RouteCoreRequest маршрутизирует запросы от CoreApp и обрабатывает сообщения от wss модулей
 // cwt - канал для передачи данных источникам
 // chanInCore - канал для взаимодействия с Ядром приложения (ИСХОДЯЩИЙ)
@@ -51,6 +72,8 @@ func RouteCoreRequest(
 
 			sourceID, ok := isl.GetSourceIDOnIP(sourceIP)
 			if !ok {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("it is impossible to find the ID of the source ip address of %v", sourceIP))
+
 				break
 			}
 
@@ -66,21 +89,24 @@ func RouteCoreRequest(
 			chanInCore <- &sendMsg
 
 			if action == "connect" {
-				if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
-					ss, _ := isl.GetSourceSetting(id)
-					formatJSON, err := processrequest.SendMsgPing(ss)
-					if err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-					}
+				err := sendPing(sourceIP, sourceID, isl, cwt)
+				if err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-					_ = saveMessageApp.LogMessage("info", fmt.Sprintf("SERVER: send msg type PING source %v", id))
-
-					//отправляем источнику запрос типа Ping
-					cwt <- configure.MsgWsTransmission{
-						DestinationHost: sourceIP,
-						Data:            &formatJSON,
-					}
+					continue
 				}
+
+				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("SERVER: send msg type PING source %v", sourceID))
+
+				/*
+					ОБРАБОТАТЬ СКАЧИВАНИЕ ФАЙЛОВ ПРИ УСТАНОВЛЕНИИ СОЕДИНЕНИЯ
+				*/
+			}
+
+			if action == "disconnect" {
+				/*
+					ОБРАБОТАТЬ СКАЧИВАНИЕ ФАЙЛОВ ПРИ РАЗРЫВЕ СОЕДИНЕНИЯ
+				*/
 			}
 
 		//модуль wssClient
@@ -91,6 +117,8 @@ func RouteCoreRequest(
 
 			sourceID, ok := isl.GetSourceIDOnIP(sourceIP)
 			if !ok {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("it is impossible to find the ID of the source ip address of %v", sourceIP))
+
 				break
 			}
 
@@ -106,21 +134,24 @@ func RouteCoreRequest(
 			chanInCore <- &sendMsg
 
 			if action == "connect" {
-				if id, ok := isl.GetSourceIDOnIP(sourceIP); ok {
-					ss, _ := isl.GetSourceSetting(id)
-					formatJSON, err := processrequest.SendMsgPing(ss)
-					if err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-					}
+				err := sendPing(sourceIP, sourceID, isl, cwt)
+				if err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-					_ = saveMessageApp.LogMessage("info", fmt.Sprintf("CLIENT: send msg type PING source %v", id))
-
-					//отправляем источнику запрос типа Ping
-					cwt <- configure.MsgWsTransmission{
-						DestinationHost: sourceIP,
-						Data:            &formatJSON,
-					}
+					continue
 				}
+
+				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("CLIENT: send msg type PING source %v", sourceID))
+
+				/*
+					ОБРАБОТАТЬ СКАЧИВАНИЕ ФАЙЛОВ ПРИ УСТАНОВЛЕНИИ СОЕДИНЕНИЯ
+				*/
+			}
+
+			if action == "disconnect" {
+				/*
+					ОБРАБОТАТЬ СКАЧИВАНИЕ ФАЙЛОВ ПРИ РАЗРЫВЕ СОЕДИНЕНИЯ
+				*/
 			}
 
 		//обработка сообщения от ядра
@@ -264,20 +295,23 @@ func RouteWssConnectionResponse(
 			checkBytes := (*message)[:1]
 
 			if string(checkBytes) == "1" {
-				taskID := fmt.Sprint((*message)[2:34])
+				/*
+					raw файл (сет. трафик)
+				*/
 
-				//raw файл (сет. трафик)
 				chanInCRRF <- &configure.MsgChannelReceivingFiles{
 					SourceID: sourceID,
 					SourceIP: sourceIP,
-					TaskID:   taskID,
+					TaskID:   fmt.Sprint((*message)[2:34]),
 					Command:  "taken from the source",
 					MsgType:  msg.MsgType,
 					Message:  message,
 				}
 
 			} else if string(checkBytes) == "2" {
-				//tar.gz архив (JSON файл с индексами)
+				/*
+					tar.gz архив (JSON файл с индексами)
+				*/
 
 			} else {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("unknown format of data received from source with ID %v (ip %v)", sourceID, sourceIP))

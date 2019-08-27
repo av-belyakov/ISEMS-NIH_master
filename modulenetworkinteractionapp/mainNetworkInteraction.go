@@ -25,7 +25,7 @@ func connClose(
 	COut chan<- [2]string,
 	c *websocket.Conn,
 	isl *configure.InformationSourcesList,
-	id int,
+	clientID int,
 	ip string) {
 
 	/*
@@ -44,7 +44,7 @@ func connClose(
 	c.Close()
 
 	//изменяем статус подключения клиента
-	_ = isl.ChangeSourceConnectionStatus(id, false)
+	_ = isl.ChangeSourceConnectionStatus(clientID, false)
 	//удаляем дескриптор соединения
 	isl.DelLinkWebsocketConnection(ip)
 

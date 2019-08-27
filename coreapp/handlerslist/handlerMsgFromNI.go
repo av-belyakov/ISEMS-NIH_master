@@ -161,6 +161,43 @@ func HandlerMsgFromNI(
 	case "download control":
 		fmt.Println("func 'HandlerMsgFromNI', section DOWNLOAD CONTROL")
 
+		switch msg.Command {
+		//при завершении скачивания файла
+		case "file download complete":
+			dfi, ok := msg.AdvancedOptions.(configure.DetailedFileInformation)
+			if !ok {
+				_ = saveMessageApp.LogMessage("error", "type conversion error"+funcName)
+
+				return
+			}
+
+			fi := map[string]*configure.DownloadFilesInformation{
+				dfi.Name: &configure.DownloadFilesInformation{},
+			}
+
+			//обновляем список загруженых файлов StoreMemoryQueueTask
+			/*
+				функцию ChangeIsLoadedFiles() надо ПОТЕСТИТЬ
+			*/
+			if err := hsm.QTS.ChangeIsLoadedFiles(msg.SourceID, msg.TaskID, fi); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
+
+			//отправляем информацию клиенту API
+
+			//отправляем информацию в БД, НО ТОЛЬКО РАЗ за определенное
+			//количество, как с фильтрацией
+
+		//при завершении скачивания ВСЕХ файлов
+		case "download complete":
+			//отправляем информацию клиенту API
+
+			//отправляем информацию в БД
+
+			//удаляем задачу из StoringMemoryQueueTask
+
+		}
+
 	case "error notification":
 		if taskInfo == nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", msg.TaskID))
