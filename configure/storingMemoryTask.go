@@ -233,6 +233,12 @@ func NewRepositorySMT() *StoringMemoryTask {
 					TaskID: msg.TaskID,
 				}
 
+			case "update task download file is loaded":
+				smt.updateTaskDownloadFileIsLoaded(msg.TaskID, msg.Description)
+
+				msg.ChannelRes <- channelResSettings{
+					TaskID: msg.TaskID,
+				}
 			}
 		}
 	}()
@@ -408,6 +414,25 @@ func (smt *StoringMemoryTask) UpdateTaskDownloadAllParameters(taskID string, dtp
 	<-chanRes
 }
 
+//UpdateTaskDownloadFileIsLoaded обновление параметра - файл загружен
+func (smt *StoringMemoryTask) UpdateTaskDownloadFileIsLoaded(taskID string, dtp DownloadTaskParameters) {
+	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
+
+	smt.channelReq <- ChanStoringMemoryTask{
+		ActionType: "update task download file is loaded",
+		TaskID:     taskID,
+		Description: &TaskDescription{
+			TaskParameter: DescriptionTaskParameters{
+				DownloadTask: dtp,
+			},
+		},
+		ChannelRes: chanRes,
+	}
+
+	<-chanRes
+}
+
 func (smt *StoringMemoryTask) updateTaskFiltrationAllParameters(taskID string, td *TaskDescription) {
 	if _, ok := smt.tasks[taskID]; !ok {
 		return
@@ -454,13 +479,19 @@ func (smt *StoringMemoryTask) updateTaskDownloadAllParameters(taskID string, td 
 	dt.PathDirectoryStorageDownloadedFiles = ndt.PathDirectoryStorageDownloadedFiles
 	dt.FileInformation = ndt.FileInformation
 
-	if ndt.FileInformation.FullSizeByte == ndt.FileInformation.AcceptedSizeByte {
-		if _, ok := dt.DownloadingFilesInformation[ndt.FileInformation.Name]; ok {
-			dt.DownloadingFilesInformation[ndt.FileInformation.Name].IsLoaded = true
-		}
+	smt.tasks[taskID].TaskParameter.DownloadTask = dt
+}
+
+func (smt *StoringMemoryTask) updateTaskDownloadFileIsLoaded(taskID string, td *TaskDescription) {
+	if _, ok := smt.tasks[taskID]; !ok {
+		return
 	}
 
-	smt.tasks[taskID].TaskParameter.DownloadTask = dt
+	for fn := range td.TaskParameter.DownloadTask.DownloadingFilesInformation {
+		if _, ok := smt.tasks[taskID].TaskParameter.DownloadTask.DownloadingFilesInformation[fn]; ok {
+			smt.tasks[taskID].TaskParameter.DownloadTask.DownloadingFilesInformation[fn].IsLoaded = true
+		}
+	}
 }
 
 //MsgChanStoringMemoryTask информация о подвисшей задачи

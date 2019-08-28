@@ -49,6 +49,53 @@ func getConfirmActionSourceListForAPI(
 	return nil
 }
 
+//handlingConnectionStatusDownloadTask обработчик изменения статуса подключения
+//при выполнении задачи скачивания файлов
+func handlingConnectionStatusDownloadTask(
+	qts *configure.QueueTaskStorage,
+	res *configure.MsgBetweenCoreAndNI,
+	chanInNI chan<- *configure.MsgBetweenCoreAndNI) error {
+
+	funcName := ", function 'handlingConnectionStatusDownloadTask'"
+
+	s, ok := res.AdvancedOptions.(configure.SettingsChangeConnectionStatusSource)
+	if !ok {
+		return fmt.Errorf("type conversion error section type 'error notification'%v", funcName)
+	}
+
+	sourceID := s.ID
+
+	if s.Status == "disconnect" {
+
+	} else if s.Status == "connect" {
+
+	} else {
+		return fmt.Errorf("uncertain status of the connection to the source ID %v", sourceID)
+	}
+
+	/*
+
+		   Сделать обработчик изменеия статуса соединения
+		    - для соединения типа 'disconnect' (отправить в ControllerReceivingRequestedFiles
+		   команду на останов задачи по скачиванию файла, установить в QueueTaskStorage
+		   статус задачи как 'прерванная')
+
+		    - для соединения типа 'connect' (проверить какие задачи в QueueTaskStorage
+		   имеют статус 'прерванная')
+
+		   Отправить модулю NI о разрыве соединения
+		   или о запуска скачивания файлов (при востоновлении соединения)
+
+
+		   		Изменение статуса соединений для источника,
+			Изменить AvailabilityConnection в StoringMemoryQueueTask для всех
+			задач выполняемых на данном источнике с true на false
+
+	*/
+
+	return nil
+}
+
 //sendChanStatusSourceForAPI формирование информационного сообщения
 //об изменении статуса соединения источника
 func sendChanStatusSourceForAPI(chanToAPI chan<- *configure.MsgBetweenCoreAndAPI, res *configure.MsgBetweenCoreAndNI) error {

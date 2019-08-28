@@ -35,6 +35,11 @@ type handlerRecivingParameters struct {
 
 type messageFromCore string
 
+type statusDownloadFile struct {
+	Status string
+	ErrMsg error
+}
+
 //ControllerReceivingRequestedFiles обработчик приема запрашиваемых файлов
 func ControllerReceivingRequestedFiles(
 	smt *configure.StoringMemoryTask,
@@ -151,6 +156,32 @@ func ControllerReceivingRequestedFiles(
 					Message:      &c,
 				}
 
+				//останов выполнения задачи из-за разрыва соединения (запрос из Ядра)
+			case "to stop the task because of a disconnection":
+				if _, ok := lhrf[si.IP]; !ok {
+					_ = saveMessageApp.LogMessage("error", errMsg)
+
+					handlerTaskWarning(msg.TaskID, clientNotify)
+
+					continue
+				}
+				hrp, ok := lhrf[si.IP][msg.TaskID]
+				if !ok {
+					_ = saveMessageApp.LogMessage("error", errMsg)
+
+					handlerTaskWarning(msg.TaskID, clientNotify)
+
+					continue
+				}
+
+				c := []byte("to stop the task because of a disconnection")
+
+				hrp.chanToHandler <- msgChannelProcessorReceivingFiles{
+					MessageType:  1,
+					MsgGenerator: "Core module",
+					Message:      &c,
+				}
+
 			//ответы приходящие от источника в рамках выполнения конкретной задачи
 			case "taken from the source":
 				if _, ok := lhrf[si.IP]; !ok {
@@ -175,14 +206,6 @@ func ControllerReceivingRequestedFiles(
 					MsgGenerator: "NI module",
 					Message:      msg.Message,
 				}
-
-			//сообщения о разрыве соединения
-			case "":
-				/*
-
-					!!! ОБРАБОТАТЬ РАЗРЫВ СОЕДИНЕНИЯ С ИСТОЧНИКОМ !!!
-
-				*/
 
 			}
 		}
@@ -222,6 +245,9 @@ func processorReceivingFiles(
 	*/
 
 	go func() {
+		sdf := statusDownloadFile{Status: "success"}
+		listFileDescriptors := map[string]*os.File{}
+
 		//начальный запрос на передачу файла
 		mtd := configure.MsgTypeDownload{
 			MsgType: "download files",
@@ -253,10 +279,7 @@ func processorReceivingFiles(
 				Data:            &msgJSON,
 			}
 
-			listFileDescriptors := map[string]*os.File{}
-
-			//msg := <-chanOut
-
+		NEWFILE:
 			for msg := range chanOut {
 				//обновляем значение таймера (что бы задача не была удалена по таймауту)
 				smt.TimerUpdateStoringMemoryTask(taskID)
@@ -289,6 +312,21 @@ func processorReceivingFiles(
 							}
 						}
 
+						//разрыв соединения (остановить загрузку файлов)
+						if command == "to stop the task because of a disconnection" {
+							//закрываем дескриптор файла
+							if w, ok := listFileDescriptors[fi.Hex]; ok {
+								w.Close()
+							}
+
+							//удаляем файл
+							_ = os.Remove(path.Join(pathDirStorage, fn))
+
+							sdf.Status = "task stoped disconnect"
+
+							break DONE
+						}
+
 					} else if msg.MsgGenerator == "NI module" {
 						var msgRes configure.MsgTypeDownload
 						err := json.Unmarshal(*msg.Message, &msgRes)
@@ -298,81 +336,87 @@ func processorReceivingFiles(
 							continue
 						}
 
+						/* получаем информацию о задаче */
+						ti, ok := smt.GetStoringMemoryTask(taskID)
+						if !ok {
+							_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with ID %v not found", taskID))
+
+							sdf.Status = "error"
+							sdf.ErrMsg = err
+
+							break DONE
+						}
+
+						fi := ti.TaskParameter.DownloadTask.FileInformation
+
 						switch msgRes.Info.TaskStatus {
 						//готовность к приему файла
 						case "ready for the transfer":
-							if _, ok := listFileDescriptors[msgRes.Info.FileOptions.Hex]; !ok {
-								//создаем дескриптор файла для последующей записи в него
-								f, err := os.Create(path.Join(pathDirStorage, msgRes.Info.FileOptions.Name))
-								if err != nil {
-									_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-									continue
-								}
-
-								listFileDescriptors[msgRes.Info.FileOptions.Hex] = f
-
-								//получаем информацию о задаче
-								ti, ok := smt.GetStoringMemoryTask(taskID)
-								if !ok {
-									_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with ID %v not found", taskID))
-
-									/*
-										нужно както отметить что файл передан с ошибкой
-										   не удалось записать один кусочек значит весь файл
-										   на выброс
-									*/
-
-									break DONE
-								}
-								fi := ti.TaskParameter.DownloadTask.FileInformation
-
-								//обновляем информацию о задаче
-								smt.UpdateTaskDownloadAllParameters(taskID, configure.DownloadTaskParameters{
-									Status:                              "wait",
-									NumberFilesTotal:                    ti.TaskParameter.DownloadTask.NumberFilesTotal,
-									NumberFilesDownloaded:               ti.TaskParameter.DownloadTask.NumberFilesDownloaded,
-									PathDirectoryStorageDownloadedFiles: ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles,
-									FileInformation: configure.DetailedFileInformation{
-										Name:         fn, //fi.Name,
-										Hex:          fi.Hex,
-										FullSizeByte: fi.FullSizeByte,
-										NumChunk:     msgRes.Info.FileOptions.NumChunk,
-										ChunkSize:    msgRes.Info.FileOptions.ChunkSize,
-									},
-								})
-
-								msgReq.Info.TaskStatus = "ready to receive file"
-								msgJSON, err := json.Marshal(msgReq)
-								if err != nil {
-									_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-									continue
-								}
-								cwtRes <- configure.MsgWsTransmission{
-									DestinationHost: sourceIP,
-									Data:            &msgJSON,
-								}
+							if _, ok := listFileDescriptors[msgRes.Info.FileOptions.Hex]; ok {
+								continue
 							}
 
-						//передача файла успешно завершена
-						case "file transfer completed":
-							/*
-								!!! Может вообще нестоит отправлять это сообщение !!!
-								А завершение передачи отслеживать по количеству частей
-								в разделе обработки бинарного файла
+							//создаем дескриптор файла для последующей записи в него
+							f, err := os.Create(path.Join(pathDirStorage, msgRes.Info.FileOptions.Name))
+							if err != nil {
+								_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-								- проверить хеш принятого файла
+								sdf.Status = "error"
+								sdf.ErrMsg = err
 
-								- Отправить новый запрос на скачивание файла
-								такой же как и самый первый 'give me the file'
-							*/
+								break DONE
+							}
 
-							//закрыть дескриптор файла listFileDescription[msg.Message.FileOptions.Hex].Close()
+							listFileDescriptors[msgRes.Info.FileOptions.Hex] = f
+
+							//обновляем информацию о задаче
+							smt.UpdateTaskDownloadAllParameters(taskID, configure.DownloadTaskParameters{
+								Status:                              "wait",
+								NumberFilesTotal:                    ti.TaskParameter.DownloadTask.NumberFilesTotal,
+								NumberFilesDownloaded:               ti.TaskParameter.DownloadTask.NumberFilesDownloaded,
+								PathDirectoryStorageDownloadedFiles: ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles,
+								FileInformation: configure.DetailedFileInformation{
+									Name:         fn, //fi.Name,
+									Hex:          fi.Hex,
+									FullSizeByte: fi.FullSizeByte,
+									NumChunk:     msgRes.Info.FileOptions.NumChunk,
+									ChunkSize:    msgRes.Info.FileOptions.ChunkSize,
+								},
+							})
+
+							msgReq.Info.TaskStatus = "ready to receive file"
+							msgJSON, err := json.Marshal(msgReq)
+							if err != nil {
+								_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+								sdf.Status = "error"
+								sdf.ErrMsg = err
+
+								break DONE
+							}
+
+							cwtRes <- configure.MsgWsTransmission{
+								DestinationHost: sourceIP,
+								Data:            &msgJSON,
+							}
 
 						//сообщение о невозможности передачи файла
 						case "file transfer not possible":
-							//закрыть дескриптор файла listFileDescription[msg.Message.FileOptions.Hex].Close()
+							dtp := ti.TaskParameter.DownloadTask
+							dtp.NumberFilesDownloadedError = dtp.NumberFilesDownloadedError + 1
+
+							//добавляем информацию о не принятом файле
+							smt.UpdateTaskDownloadAllParameters(taskID, dtp)
+
+							//отправляем информацию в Ядро
+							chanInCore <- &configure.MsgBetweenCoreAndNI{
+								TaskID:   taskID,
+								Section:  "download control",
+								Command:  "file download process",
+								SourceID: sourceID,
+							}
+
+							break NEWFILE
 
 						//передача файла успешно остановлена
 						case "file transfer stopped":
@@ -389,48 +433,81 @@ func processorReceivingFiles(
 								по запросам файлов у источника
 							*/
 
+							//закрываем дескриптор файла
+							if w, ok := listFileDescriptors[fi.Hex]; ok {
+								w.Close()
+							}
+
+							//удаляем файл
+							_ = os.Remove(path.Join(pathDirStorage, fn))
+
+							sdf.Status = "task stoped client"
+
+							break DONE
 						}
 					} else {
 						_ = saveMessageApp.LogMessage("error", "unknown generator events")
 
-						continue
+						break NEWFILE
 					}
 				}
 
 				//бинарные данные
 				if msg.MessageType == 2 {
-					if err := writingBinaryFile(parametersWritingBinaryFile{
+					fileIsLoaded, err := writingBinaryFile(parametersWritingBinaryFile{
 						SourceID:            sourceID,
 						TaskID:              taskID,
 						Data:                msg.Message,
 						ListFileDescriptors: listFileDescriptors,
 						SMT:                 smt,
 						ChanInCore:          chanInCore,
-					}); err != nil {
-						/*
-						   	нужно как то отметить что файл передан с ошибкой
-						   не удалось записать один кусочек значит весь файл
-						   на выброс
-						*/
+					})
+					if err != nil {
+						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+						sdf.Status = "error"
+						sdf.ErrMsg = err
 
 						break DONE
+					}
+
+					//если файл полностью загружен запрашиваем следующий файл
+					if fileIsLoaded {
+						break NEWFILE
 					}
 				}
 			}
 		}
 
-		/*
-			Так как список файлов для скачивания закончился
+		dtp := ti.TaskParameter.DownloadTask
+		dtp.Status = "completed"
 
-			- Сообщение о том что задача успешно ЗАВЕРШЕНА
+		smt.UpdateTaskDownloadAllParameters(taskID, dtp)
 
-							- Записать инофрмацию о задаче в БД
+		//задача завершена успешно
+		msgToCore := configure.MsgBetweenCoreAndNI{
+			TaskID:   taskID,
+			Section:  "download control",
+			Command:  "task completed",
+			SourceID: sourceID,
+		}
 
-							После записи информации в БД УЖЕ В Core modules
-							после ответа из БД удалить задачу из StoringeMemoryTask и
-							StoringMemoryQueueTask
+		switch sdf.Status {
+		//задача остановлена пользователем
+		case "task stoped client":
+			msgToCore.Command = "file transfer stopped"
 
-		*/
+		//задача остановлена в связи с разрывом соединения с источником
+		case "task stoped disconnect":
+			msgToCore.Command = "task stoped disconnect"
+
+		//задача остановлена из-за внутренней ошибки приложения
+		case "error":
+			msgToCore.Command = "task stoped error"
+
+		}
+
+		chanInCore <- &msgToCore
 	}()
 
 	return chanOut, nil

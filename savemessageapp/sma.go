@@ -85,7 +85,9 @@ func createLogsDirectory(pathLogFiles, directoryName string) error {
 }
 
 func compressLogFile(filePath string, fileName string, fileSize int64) error {
-	fd, err := os.Open(path.Join(filePath, fileName))
+	filePathName := path.Join(filePath, fileName)
+
+	fd, err := os.Open(filePathName)
 	if err != nil {
 		return err
 	}
@@ -103,7 +105,7 @@ func compressLogFile(filePath string, fileName string, fileSize int64) error {
 	timeNowUnix := time.Now().Unix()
 	newFileName := strconv.FormatInt(timeNowUnix, 10) + "_" + strings.Replace(fileName, ".log", ".gz", -1)
 
-	fileIn, err := os.Create(filePath + newFileName)
+	fileIn, err := os.Create(filePathName)
 	if err != nil {
 		return err
 	}
@@ -112,7 +114,7 @@ func compressLogFile(filePath string, fileName string, fileSize int64) error {
 	zw := gzip.NewWriter(fileIn)
 	zw.Name = newFileName
 
-	fileOut, err := ioutil.ReadFile(filePath + fileName)
+	fileOut, err := ioutil.ReadFile(filePathName)
 	if err != nil {
 		return err
 	}
@@ -125,7 +127,7 @@ func compressLogFile(filePath string, fileName string, fileSize int64) error {
 		return err
 	}
 
-	_ = os.Remove((filePath + fileName))
+	_ = os.Remove(filePathName)
 
 	return nil
 }

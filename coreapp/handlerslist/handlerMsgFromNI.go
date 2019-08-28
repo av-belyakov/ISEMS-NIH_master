@@ -87,6 +87,10 @@ func HandlerMsgFromNI(
 				с 'execute' на 'wait'
 			*/
 
+			if err := handlingConnectionStatusDownloadTask(hsm.QTS, msg, outCoreChans.OutCoreChanNI); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
+
 			//клиенту API
 			if err := sendChanStatusSourceForAPI(outCoreChans.OutCoreChanAPI, msg); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
@@ -162,8 +166,19 @@ func HandlerMsgFromNI(
 		fmt.Println("func 'HandlerMsgFromNI', section DOWNLOAD CONTROL")
 
 		switch msg.Command {
+		//завершение записи части файла кратной 1%
+		case "file download process":
+
 		//при завершении скачивания файла
 		case "file download complete":
+			/*
+				Увеличить на 1 NumberFilesDownloaded
+				В StoringMemoryTask файл уже помечен как успешно принятый
+				Отметь файл в StoringMemoryQueryTask
+				Отправить информацию в БД (с интервалом как при фильтрации)
+
+			*/
+
 			dfi, ok := msg.AdvancedOptions.(configure.DetailedFileInformation)
 			if !ok {
 				_ = saveMessageApp.LogMessage("error", "type conversion error"+funcName)
@@ -188,13 +203,27 @@ func HandlerMsgFromNI(
 			//отправляем информацию в БД, НО ТОЛЬКО РАЗ за определенное
 			//количество, как с фильтрацией
 
-		//при завершении скачивания ВСЕХ файлов
-		case "download complete":
+		//при завершении задачи по скачиванию файлов
+		case "task completed":
 			//отправляем информацию клиенту API
 
 			//отправляем информацию в БД
 
 			//удаляем задачу из StoringMemoryQueueTask
+
+			//задача остановлена пользователем
+		case "file transfer stopped":
+
+		//задача остановлена в связи с разрывом соединения с источником
+		case "task stoped disconnect":
+			//изменяем статус задачи на 'прерванная'
+			//для того чтобы Ядро ее удалило из StoringMemoryTask,
+			//но в StoringMemoryQueueTask отметило как прерванное
+			//для последующего автоматического возоднавления при установлении
+			//соединения
+
+		//задача остановлена из-за внутренней ошибки приложения
+		case "task stoped error":
 
 		}
 

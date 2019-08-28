@@ -285,12 +285,37 @@ var _ = Describe("StorageMemoryTask", func() {
 
 			i, ok := smt.GetStoringMemoryTask(tasID)
 
-			shortFileInfo, ok := i.TaskParameter.DownloadTask.DownloadingFilesInformation[fileTestName]
+			//shortFileInfo, ok := i.TaskParameter.DownloadTask.DownloadingFilesInformation[fileTestName]
 
 			Expect(ok).Should(BeTrue())
-			Expect(shortFileInfo.IsLoaded).Should(BeTrue())
+			//Expect(shortFileInfo.IsLoaded).Should(BeTrue())
 			Expect(i.TaskParameter.DownloadTask.FileInformation.Name).Should(Equal(fileTestName))
 			Expect(i.TaskParameter.DownloadTask.FileInformation.AcceptedSizeByte).Should(Equal(int64(76)))
+		})
+	})
+
+	Context("Тест 8: Проверка изменения статуса IsLoaded для выбранного файла", func() {
+		It("Статус файла с заданными именами должны быть изменены на true", func() {
+			//"1438535410_2015_08_02____20_10_13_23267.tdp" "1438535410_2015_08_02____20_10_14_724263.tdp"
+
+			smt.UpdateTaskDownloadFileIsLoaded(tasID, configure.DownloadTaskParameters{
+				DownloadingFilesInformation: map[string]*configure.DownloadFilesInformation{
+					"File_name_3": &configure.DownloadFilesInformation{},
+					"File_name_5": &configure.DownloadFilesInformation{},
+				},
+			})
+
+			i, ok := smt.GetStoringMemoryTask(tasID)
+
+			for fn, param := range i.TaskParameter.DownloadTask.DownloadingFilesInformation {
+				fmt.Printf("file name: %v, param 'IsLoaded': %v\n", fn, param.IsLoaded)
+
+				if fn == "File_name_3" || fn == "File_name_5" {
+					Expect(param.IsLoaded).Should(BeTrue())
+				}
+			}
+
+			Expect(ok).Should(BeTrue())
 		})
 	})
 })

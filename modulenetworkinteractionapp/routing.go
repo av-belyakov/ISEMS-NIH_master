@@ -97,16 +97,6 @@ func RouteCoreRequest(
 				}
 
 				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("SERVER: send msg type PING source %v", sourceID))
-
-				/*
-					ОБРАБОТАТЬ СКАЧИВАНИЕ ФАЙЛОВ ПРИ УСТАНОВЛЕНИИ СОЕДИНЕНИЯ
-				*/
-			}
-
-			if action == "disconnect" {
-				/*
-					ОБРАБОТАТЬ СКАЧИВАНИЕ ФАЙЛОВ ПРИ РАЗРЫВЕ СОЕДИНЕНИЯ
-				*/
 			}
 
 		//модуль wssClient
@@ -142,16 +132,6 @@ func RouteCoreRequest(
 				}
 
 				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("CLIENT: send msg type PING source %v", sourceID))
-
-				/*
-					ОБРАБОТАТЬ СКАЧИВАНИЕ ФАЙЛОВ ПРИ УСТАНОВЛЕНИИ СОЕДИНЕНИЯ
-				*/
-			}
-
-			if action == "disconnect" {
-				/*
-					ОБРАБОТАТЬ СКАЧИВАНИЕ ФАЙЛОВ ПРИ РАЗРЫВЕ СОЕДИНЕНИЯ
-				*/
 			}
 
 		//обработка сообщения от ядра
