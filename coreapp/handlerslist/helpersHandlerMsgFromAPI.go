@@ -187,7 +187,7 @@ func handlerFiltrationControlTypeStart(
 		}
 		resMsg.MsgType = "information"
 		resMsg.MsgSection = "filtration control"
-		resMsg.MsgInsturction = "task processing"
+		resMsg.MsgInstruction = "task processing"
 		resMsg.ClientTaskID = fcts.ClientTaskID
 
 		msgJSON, err := json.Marshal(resMsg)

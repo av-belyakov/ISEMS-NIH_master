@@ -38,6 +38,45 @@ func sendPing(
 	return nil
 }
 
+//sendNIStopTask сообщение NI module с целью остановить выполнение задачи
+// из-за разрыва соединения
+func sendNIStopTask(
+	chanInCRRF chan<- *configure.MsgChannelReceivingFiles,
+	sourceID int,
+	qts *configure.QueueTaskStorage) {
+
+	tasks, ok := qts.GetAllTaskQueueTaskStorage(sourceID)
+	if !ok {
+		return
+	}
+
+	msgStop := configure.MsgChannelReceivingFiles{
+		SourceID: sourceID,
+		Command:  "to stop the task because of a disconnection",
+	}
+
+	for tid, taskInfo := range tasks {
+		msgStop.TaskID = tid
+		qts.ChangeAvailabilityConnectionOnDisconnection(sourceID, tid)
+
+		if taskInfo.TaskStatus == "execution" {
+			chanInCRRF <- &msgStop
+		}
+	}
+}
+
+//checkIfThereTaskForSource проверяет есть ли в очереди задачи для данного источника
+func checkIfThereTaskForSource(sourceID int, qts *configure.QueueTaskStorage) {
+	tasks, ok := qts.GetAllTaskQueueTaskStorage(sourceID)
+	if !ok {
+		return
+	}
+
+	for tid := range tasks {
+		qts.ChangeAvailabilityConnectionOnConnection(sourceID, tid)
+	}
+}
+
 //RouteCoreRequest маршрутизирует запросы от CoreApp и обрабатывает сообщения от wss модулей
 // cwt - канал для передачи данных источникам
 // chanInCore - канал для взаимодействия с Ядром приложения (ИСХОДЯЩИЙ)
@@ -88,6 +127,11 @@ func RouteCoreRequest(
 
 			chanInCore <- &sendMsg
 
+			//остановить скачивание файлов если соединение с источником было разорвано
+			if action == "disconnect" {
+				sendNIStopTask(chanInCRRF, sourceID, qts)
+			}
+
 			if action == "connect" {
 				err := sendPing(sourceIP, sourceID, isl, cwt)
 				if err != nil {
@@ -95,6 +139,9 @@ func RouteCoreRequest(
 
 					continue
 				}
+
+				//проверяем есть ли в очереди задачи для данного источника
+				checkIfThereTaskForSource(sourceID, qts)
 
 				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("SERVER: send msg type PING source %v", sourceID))
 			}
@@ -123,6 +170,11 @@ func RouteCoreRequest(
 
 			chanInCore <- &sendMsg
 
+			//остановить скачивание файлов если соединение с источником было разорвано
+			if action == "disconnect" {
+				sendNIStopTask(chanInCRRF, sourceID, qts)
+			}
+
 			if action == "connect" {
 				err := sendPing(sourceIP, sourceID, isl, cwt)
 				if err != nil {
@@ -130,6 +182,9 @@ func RouteCoreRequest(
 
 					continue
 				}
+
+				//проверяем есть ли в очереди задачи для данного источника
+				checkIfThereTaskForSource(sourceID, qts)
 
 				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("CLIENT: send msg type PING source %v", sourceID))
 			}

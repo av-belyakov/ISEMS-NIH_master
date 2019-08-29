@@ -78,6 +78,9 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 		//закрываем дескриптор файла
 		w.Close()
 
+		//удаляем дескриптор файла
+		delete(pwbf.ListFileDescriptors, fi.Hex)
+
 		//проверяем хеш-сумму файла
 		ok := checkDownloadedFile(ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles, fi.Hex, fi.FullSizeByte)
 		if !ok {

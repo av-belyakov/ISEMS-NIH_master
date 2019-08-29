@@ -49,7 +49,7 @@ func sendMsgGetSourceList(clientID string) error {
 	msgjson, err := json.Marshal(configure.MsgCommon{
 		MsgType:        "command",
 		MsgSection:     "source control",
-		MsgInsturction: "get new source list",
+		MsgInstruction: "get new source list",
 	})
 	if err != nil {
 		return err

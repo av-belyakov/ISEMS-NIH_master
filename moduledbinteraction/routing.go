@@ -38,7 +38,7 @@ func RouteRequest(
 			go wrapperFunc.WrapperFuncFiltration(msg, smt, qts, saveMessageApp)
 
 		case "download control":
-			go wrapperFunc.WrapperFuncDownload(msg, smt, qts)
+			go wrapperFunc.WrapperFuncDownload(msg, smt, qts, saveMessageApp)
 
 		case "error notification":
 

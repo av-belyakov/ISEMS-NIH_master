@@ -2,6 +2,7 @@ package handlerrequestdb
 
 import (
 	"ISEMS-NIH_master/configure"
+	"fmt"
 )
 
 //FindingInformationAboutTask поиск в БД информации по ID задачи
@@ -36,4 +37,23 @@ func FindingInformationAboutTask(
 	msgRes.AdvancedOptions = taskInfo
 
 	chanIn <- &msgRes
+}
+
+//UpdateFinishedInformationAboutTask запись информации по задаче (задача завершена)
+func UpdateFinishedInformationAboutTask(
+	req *configure.MsgBetweenCoreAndDB,
+	qp QueryParameters,
+	smt *configure.StoringMemoryTask) error {
+
+	ti, ok := smt.GetStoringMemoryTask(req.TaskID)
+	if !ok {
+		return fmt.Errorf("task with ID '%v' not found (DB module)", req.TaskID)
+	}
+
+	//записать инфорацию в БД
+
+	//пометить задачу в StoringMemoryTask как выполненную
+	smt.CompleteStoringMemoryTask(req.TaskID)
+
+	return nil
 }

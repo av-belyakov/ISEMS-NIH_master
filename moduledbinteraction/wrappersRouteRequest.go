@@ -82,7 +82,8 @@ func (wr *WrappersRouteRequest) WrapperFuncFiltration(
 func (wr *WrappersRouteRequest) WrapperFuncDownload(
 	msg *configure.MsgBetweenCoreAndDB,
 	smt *configure.StoringMemoryTask,
-	qts *configure.QueueTaskStorage) {
+	qts *configure.QueueTaskStorage,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 
 	qp := handlerrequestdb.QueryParameters{
 		NameDB:         wr.NameDB,
@@ -96,5 +97,9 @@ func (wr *WrappersRouteRequest) WrapperFuncDownload(
 
 	case "update":
 
+	case "update finished":
+		if err := handlerrequestdb.UpdateFinishedInformationAboutTask(msg, qp, smt); err != nil {
+			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+		}
 	}
 }

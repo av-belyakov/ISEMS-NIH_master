@@ -20,12 +20,15 @@ type QueueTaskStorage struct {
 // IDClientAPI - уникальный идентификатор клиента
 // TaskIDClientAPI - идентификатор задачи полученный от клиента
 // TaskStatus - статус задачи 'wait', 'execution', 'complite'
+// TimeUpdate - время последнего обнавления задачи (предназначено для того,
+//  что бы уничтажать задачи которые долшое время находятся в режиме ожидания)
 // TaskType - тип задачи 'filtration', 'download'
 // CheckingStatusItems - проверка пунктов
 // TaskParameters - параметры задачи
 type QueueTaskInformation struct {
 	CommonTaskInfo
 	TaskStatus          string
+	TimeUpdate          int64
 	CheckingStatusItems StatusItems
 	TaskParameters      DescriptionParametersReceivedFromUser
 }
@@ -40,8 +43,7 @@ type DescriptionParametersReceivedFromUser struct {
 	FilterationParameters         FilteringOption
 	PathDirectoryForFilteredFiles string
 	DownloadList                  []string
-	//ConfirmedListFiles    []*DetailedFileInformation
-	ConfirmedListFiles map[string]*DownloadFilesInformation
+	ConfirmedListFiles            map[string]*DownloadFilesInformation
 }
 
 //StatusItems пункты состояния задачи или источника
@@ -142,7 +144,10 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				msgRes.TaskStatus = ts
 
 				qts.StorageList[msg.SourceID] = map[string]*QueueTaskInformation{}
-				qts.StorageList[msg.SourceID][msg.TaskID] = &QueueTaskInformation{TaskStatus: ts}
+				qts.StorageList[msg.SourceID][msg.TaskID] = &QueueTaskInformation{
+					TaskStatus: ts,
+					TimeUpdate: time.Now().Unix(),
+				}
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskType = msg.TaskType
 				qts.StorageList[msg.SourceID][msg.TaskID].IDClientAPI = msg.IDClientAPI
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskIDClientAPI = msg.TaskIDClientAPI
@@ -224,6 +229,7 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				}
 
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskStatus = msg.NewStatus
+				qts.StorageList[msg.SourceID][msg.TaskID].TimeUpdate = time.Now().Unix()
 
 				msg.ChanRes <- msgRes
 
@@ -271,7 +277,8 @@ func NewRepositoryQTS() *QueueTaskStorage {
 					break
 				}
 
-				//qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles = msg.AdditionalOption.ConfirmedListFiles
+				qts.StorageList[msg.SourceID][msg.TaskID].TimeUpdate = time.Now().Unix()
+
 				for fn := range msg.AdditionalOption.ConfirmedListFiles {
 					_, ok := qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles[fn]
 					if ok {
@@ -675,6 +682,11 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 									TaskID:   taskID,
 								}
 							}
+						}
+
+						//удаляем задачу находящуюся в очереди более суток
+						if (taskInfo.TaskStatus == "wait") && (time.Now().Unix() > (taskInfo.TimeUpdate + 86400)) {
+							_ = qts.DelQueueTaskStorage(sourceID, taskID)
 						}
 					}
 

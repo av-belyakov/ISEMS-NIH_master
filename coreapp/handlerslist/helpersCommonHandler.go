@@ -43,7 +43,7 @@ func ErrorMessage(emt ErrorMessageType) error {
 
 	resMsg.MsgType = "information"
 	resMsg.MsgSection = emt.Section
-	resMsg.MsgInsturction = emt.Instruction
+	resMsg.MsgInstruction = emt.Instruction
 	resMsg.ClientTaskID = emt.TaskIDClientAPI
 
 	msgJSON, err := json.Marshal(resMsg)

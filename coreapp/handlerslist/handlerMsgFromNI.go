@@ -78,19 +78,6 @@ func HandlerMsgFromNI(
 			}
 
 		case "change connection status source":
-			/*
-				   Обработка изменения состояния соединения
-				   в том числе РАЗРЫВ соединения
-
-				здесь можно сделать удаление задачи из StoringMemoryTask
-				и изменение статуса задачи в StoringMemoryQueueTask
-				с 'execute' на 'wait'
-			*/
-
-			if err := handlingConnectionStatusDownloadTask(hsm.QTS, msg, outCoreChans.OutCoreChanNI); err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-			}
-
 			//клиенту API
 			if err := sendChanStatusSourceForAPI(outCoreChans.OutCoreChanAPI, msg); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
@@ -122,7 +109,7 @@ func HandlerMsgFromNI(
 
 			msg.MsgType = "information"
 			msg.MsgSection = "source control"
-			msg.MsgInsturction = "send telemetry"
+			msg.MsgInstruction = "send telemetry"
 
 			jsonOut, err := json.Marshal(msg)
 			if err != nil {
@@ -164,6 +151,19 @@ func HandlerMsgFromNI(
 
 	case "download control":
 		fmt.Println("func 'HandlerMsgFromNI', section DOWNLOAD CONTROL")
+
+		ti, ok := hsm.SMT.GetStoringMemoryTask(msg.TaskID)
+		if !ok {
+			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("there is no task with the specified ID %v", msg.TaskID))
+
+			return
+		}
+
+		msgToAPI := configure.MsgBetweenCoreAndAPI{
+			MsgGenerator: "Core module",
+			MsgRecipient: "API module",
+			IDClientAPI:  ti.ClientID,
+		}
 
 		switch msg.Command {
 		//завершение записи части файла кратной 1%
@@ -211,16 +211,63 @@ func HandlerMsgFromNI(
 
 			//удаляем задачу из StoringMemoryQueueTask
 
-			//задача остановлена пользователем
+		//останов задачи пользователем
 		case "file transfer stopped":
 
-		//задача остановлена в связи с разрывом соединения с источником
+		//останов задачи в связи с разрывом соединения с источником
 		case "task stoped disconnect":
-			//изменяем статус задачи на 'прерванная'
-			//для того чтобы Ядро ее удалило из StoringMemoryTask,
-			//но в StoringMemoryQueueTask отметило как прерванное
-			//для последующего автоматического возоднавления при установлении
-			//соединения
+			/*
+			   msgToCore := configure.MsgBetweenCoreAndNI{
+			   			TaskID:   taskID,
+			   			Section:  "download control",
+			   			Command:  "task completed",
+			   			SourceID: sourceID,
+			   		}
+			*/
+
+			//изменяем статус задачи на 'wait' (storingMemoryQueueTask)
+			if err := hsm.QTS.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "wait"); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
+
+			//отправляем ответ клиенту API
+			msgRes := configure.DownloadControlTypeInfo{
+				MsgOption: configure.DownloadControlMsgTypeInfo{
+					ID:        msg.SourceID,
+					TaskIDApp: msg.TaskID,
+					Status:    "stoped",
+				},
+			}
+			msgRes.MsgType = "information"
+			msgRes.MsgSection = "download control"
+			msgRes.MsgInstruction = "task processing"
+			msgRes.ClientTaskID = ti.ClientTaskID
+
+			msgJSON, err := json.Marshal(msgRes)
+			if err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
+
+			msgToAPI.MsgJSON = msgJSON
+			outCoreChans.OutCoreChanAPI <- &msgToAPI
+
+			//отправляем информационное сообщение клиенту API
+			ns := notifications.NotificationSettingsToClientAPI{
+				MsgType:        "warning",
+				MsgDescription: fmt.Sprintf("Задача по скачиванию файлов с источника ID %v была аварийно завершена из-за потери сетевого соединения", msg.SourceID),
+				Sources:        []int{msg.SourceID},
+			}
+
+			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, ti.ClientTaskID, ti.ClientID)
+
+			//отправляем сообщение в БД для записи информации о задаче
+			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
+				MsgGenerator: "NI module",
+				MsgRecipient: "DB module",
+				MsgSection:   "download control",
+				Instruction:  "update finished",
+				TaskID:       msg.TaskID,
+			}
 
 		//задача остановлена из-за внутренней ошибки приложения
 		case "task stoped error":

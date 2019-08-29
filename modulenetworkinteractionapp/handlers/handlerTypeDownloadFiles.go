@@ -156,7 +156,7 @@ func ControllerReceivingRequestedFiles(
 					Message:      &c,
 				}
 
-				//останов выполнения задачи из-за разрыва соединения (запрос из Ядра)
+			//останов выполнения задачи из-за разрыва соединения (запрос из Ядра)
 			case "to stop the task because of a disconnection":
 				if _, ok := lhrf[si.IP]; !ok {
 					_ = saveMessageApp.LogMessage("error", errMsg)
@@ -223,15 +223,6 @@ func processorReceivingFiles(
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	cwtRes chan<- configure.MsgWsTransmission) (chan msgChannelProcessorReceivingFiles, error) {
 
-	ti, ok := smt.GetStoringMemoryTask(taskID)
-	if !ok {
-		return nil, fmt.Errorf("task with ID %v not found", taskID)
-	}
-
-	chanOut := make(chan msgChannelProcessorReceivingFiles)
-
-	pathDirStorage := ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles
-
 	/*
 	   Алгоритм передачи и приема файлов
 	   1. Запрос файла 'give me the file' (master -> slave)
@@ -239,10 +230,17 @@ func processorReceivingFiles(
 	   2.2. Сообщение 'file transfer not possible' - невозможно передать файл (slave -> master)
 	   3. Готовность к приему файла 'ready to receive file' (master -> slave)
 	   4. ПЕРЕДАЧА БИНАРНОГО ФАЙЛА
-	   5. завершением приема файла считается прием последнего кусочка
+	   5. завершением приема файла считается прием последнего части файла
 	   6. Запрос нового файла 'give me the file' (master -> slave) цикл повторяется
-
 	*/
+
+	ti, ok := smt.GetStoringMemoryTask(taskID)
+	if !ok {
+		return nil, fmt.Errorf("task with ID %v not found", taskID)
+	}
+
+	chanOut := make(chan msgChannelProcessorReceivingFiles)
+	pathDirStorage := ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles
 
 	go func() {
 		sdf := statusDownloadFile{Status: "success"}
@@ -317,6 +315,9 @@ func processorReceivingFiles(
 							//закрываем дескриптор файла
 							if w, ok := listFileDescriptors[fi.Hex]; ok {
 								w.Close()
+
+								//удаляем дескриптор файла
+								delete(listFileDescriptors, fi.Hex)
 							}
 
 							//удаляем файл
@@ -420,22 +421,12 @@ func processorReceivingFiles(
 
 						//передача файла успешно остановлена
 						case "file transfer stopped":
-
-							/*
-								- Сообщение о том что задача успешно ОСТАНОВЛЕНА
-								- Записать инофрмацию о задаче в БД
-
-								После записи информации в БД УЖЕ В Core modules
-								после ответа из БД удалить задачу из StoringeMemoryTask и
-								StoringMemoryQueueTask
-
-								- завершить подпрограмму, тем самым остановив цикл
-								по запросам файлов у источника
-							*/
-
 							//закрываем дескриптор файла
 							if w, ok := listFileDescriptors[fi.Hex]; ok {
 								w.Close()
+
+								//удаляем дескриптор файла
+								delete(listFileDescriptors, fi.Hex)
 							}
 
 							//удаляем файл

@@ -16,7 +16,7 @@ package configure
 //  - 'download control'
 //  - 'information search control'
 //  - 'user notification'
-// MsgInsturction:
+// MsgInstruction:
 //  - 'get new source list' API->
 //  - 'change status source' API->
 //  - 'confirm the action' API->
@@ -26,7 +26,7 @@ package configure
 type MsgCommon struct {
 	MsgType        string `json:"t"`
 	MsgSection     string `json:"s"`
-	MsgInsturction string `json:"i"`
+	MsgInstruction string `json:"i"`
 	ClientTaskID   string `json:"tid"`
 }
 
@@ -280,7 +280,7 @@ type DownloadControlTypeInfo struct {
 //DownloadControlMsgTypeInfo информационные сообщения о ходе скачивания файлов
 // ID - уникальный цифровой идентификатор источника
 // TaskIDApp - уникальный цифровой идентификатор задачи присвоенный приложением при выполнении фильтрации
-// Status - статус выполняемой задачи 'wait'/'refused'/'execute'/'not fully completed'/'complete'
+// Status - статус выполняемой задачи 'wait'/'refused'/'execute'/'complete'/'stoped'
 // NumberFilesTotal — общее количество скачиваемых файлов
 // NumberFilesDownloaded — количество успешно скаченных файлов
 // NumberFilesDownloadedError — количество файлов скаченных с ошибкой

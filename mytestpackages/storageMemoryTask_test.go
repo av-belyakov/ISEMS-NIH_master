@@ -318,4 +318,15 @@ var _ = Describe("StorageMemoryTask", func() {
 			Expect(ok).Should(BeTrue())
 		})
 	})
+
+	Context("Тест 9: Проверка изменения статуса задачи", func() {
+		It("Должен изменится статус задачи на 'завершенная'", func() {
+			smt.CompleteStoringMemoryTask(tasID)
+
+			i, ok := smt.GetStoringMemoryTask(tasID)
+
+			Expect(ok).Should(BeTrue())
+			Expect(i.TaskStatus).Should(BeTrue())
+		})
+	})
 })

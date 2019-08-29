@@ -33,7 +33,7 @@ func SendNotificationToClientAPI(
 
 	notify.MsgType = "information"
 	notify.MsgSection = "user notification"
-	notify.MsgInsturction = "send notification"
+	notify.MsgInstruction = "send notification"
 	notify.ClientTaskID = clientTaskID
 
 	msgjson, _ := json.Marshal(&notify)

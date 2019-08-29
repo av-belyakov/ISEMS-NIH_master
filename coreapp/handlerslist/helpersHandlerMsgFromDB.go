@@ -49,7 +49,7 @@ func getCurrentSourceListForAPI(
 	}
 	msg.MsgType = "information"
 	msg.MsgSection = "source control"
-	msg.MsgInsturction = "send current source list"
+	msg.MsgInstruction = "send current source list"
 	msg.ClientTaskID = st.ClientTaskID
 
 	msgjson, _ := json.Marshal(&msg)
