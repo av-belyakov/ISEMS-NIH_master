@@ -110,6 +110,20 @@ func updateOne(
 	return nil
 }
 
+func updateOneArrayFilters(
+	connectDB *mongo.Client,
+	nameDB, nameCollection string,
+	filter, update interface{},
+	uo *options.UpdateOptions) error {
+
+	collection := connectDB.Database(nameDB).Collection(nameCollection)
+	if _, err := collection.UpdateOne(context.TODO(), filter, update, uo); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 //UpdateMany обновляет множественные параметры в элементе
 func (qp *QueryParameters) UpdateMany(searchElem, update []interface{}) error {
 
@@ -135,6 +149,13 @@ func UpdateFinishedInformationAboutTask(
 		return fmt.Errorf("task with ID '%v' not found (DB module)", req.TaskID)
 	}
 
+	const timeUpdate = 30
+	//выполнять обновление информации в БД для сообщения типа 'complite' всегда,
+	// для сообщения типа 'execute' только раз 31 секунду
+	/*	if (ti.TaskParameter.DownloadTask.Status == "execute") && ((time.Now().Unix() - ti.TimeInsertDB) < timeUpdate) {
+		return nil
+	}*/
+
 	//обновление основной информации
 	commonValueUpdate := bson.D{
 		bson.E{Key: "$set", Value: bson.D{
@@ -151,57 +172,50 @@ func UpdateFinishedInformationAboutTask(
 		return err
 	}
 
-	/*
-		!!!!
+	var arrayFiles []interface{}
+	for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
+		t := time.Now().Unix() - (timeUpdate * 2)
 
-		ПРОДУМАТЬ изменение статуса загрузки файла
-		   в массиве со списком файлов
+		fmt.Printf("Time download:%v, time now:%v, equal: %v\n", fi.TimeDownload, t, fi.TimeDownload >= t)
 
-		!!!!
-	*/
-
-	arr := []interface{}{}
-
-	for fileName, v := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
-		arr = append(arr, bson.D{
-			bson.E{Key: "file_name", Value: fileName},
-			bson.E{Key: "file_size", Value: v.Size},
-			bson.E{Key: "file_hex", Value: v.Hex},
-			bson.E{Key: "file_loaded", Value: v.IsLoaded},
-		})
+		if fi.IsLoaded && ( /*fi.TimeDownload*/ int64(0) >= time.Now().Unix()-(timeUpdate*2)) {
+			arrayFiles = append(arrayFiles, bson.D{bson.E{Key: "elem.file_name", Value: fn}})
+		}
 	}
 
-	arrayValueUpdate := bson.D{
-		bson.E{
-			Key: "$addToSet", Value: bson.D{
-				bson.E{
-					Key: "list_files_result_task_execution",
-					Value: bson.D{
-						bson.E{
-							Key:   "$each",
-							Value: arr,
-						},
+	fmt.Printf("Count files update = %v\n", len(arrayFiles))
+
+	if len(arrayFiles) == 0 {
+		return nil
+	}
+
+	//обновляем информацию по загруженным файлам
+	if err := updateOneArrayFilters(
+		qp.ConnectDB,
+		"isems-nih",
+		"task_list",
+		bson.D{
+			bson.E{Key: "task_id", Value: req.TaskID}},
+		bson.D{
+			bson.E{Key: "$set", Value: bson.D{
+				bson.E{Key: "list_files_result_task_execution.$[elem].file_loaded", Value: true},
+			}}},
+		&options.UpdateOptions{
+			ArrayFilters: &options.ArrayFilters{
+				Filters: []interface{}{bson.D{
+					bson.E{
+						Key: "$or", Value: arrayFiles,
 					},
-				},
+				}},
 			},
-		},
-	}
-
-	//обновление информации об отфильтрованном файле
-	if err := updateOne(qp.ConnectDB, "isems-nih", "task_list", bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, arrayValueUpdate); err != nil {
+		}); err != nil {
 		return err
 	}
-
-	//изменить статус задачи в storingMemoryTask на 'completed'
-	//пометить задачу в StoringMemoryTask как выполненную
-	smt.CompleteStoringMemoryTask(req.TaskID)
 
 	return nil
 }
 
 var _ = Describe("InteractionDataBaseFromDownloadFiles", func() {
-	taskID := "9b6c633defaee1b78ec65affc3ddc768"
-
 	ctx, cancel := context.WithTimeout(context.Background(), 1000*time.Second)
 	defer cancel()
 	conn, err := connectToDB(ctx, configureDB{
@@ -220,6 +234,8 @@ var _ = Describe("InteractionDataBaseFromDownloadFiles", func() {
 
 	Context("Тест 2: Запрос к БД для получения списка файлов для скачивания", func() {
 		It("Для выбранной в тесте задаче должно быть найдено 32 файла", func() {
+			taskID := "cd42ebd8e8f260a1f713e97379fa135e"
+
 			ti, err := getInfoFiltrationTaskForClientTaskID(conn, taskID)
 
 			//fmt.Println(err)
@@ -238,15 +254,21 @@ var _ = Describe("InteractionDataBaseFromDownloadFiles", func() {
 	Context("Тест 3: Запись информации о скачивании файлов в БД", func() {
 		smt := configure.NewRepositorySMT()
 
-		taskID := "9b6c633defaee1b78ec65affc3ddc768"
+		taskID := "239379934af7a56f5e86e90894811018"
 		clientID := "b73aaca054c920d13500a6ad9beb0c3b"
-		clientTaskID := "a75f5abec2ed6450794fb8622ba83f276a60f94e"
+		clientTaskID := "58c5eb8c72e64fedfe34380d9be2b07668fc6807"
 
 		qp := QueryParameters{
 			NameDB:         "isems-nih",
 			CollectionName: "task_list",
 			ConnectDB:      conn,
 		}
+
+		tf1 := "1560801329_2019_06_17____22_55_29_29140.tdp"
+		tf2 := "1560803273_2019_06_17____23_27_53_59020.tdp"
+		tf3 := "1560801977_2019_06_17____23_06_17_36143.tdp"
+		tf4 := "1560800357_2019_06_17____22_39_17_7593.tdp"
+		tf5 := "1560802301_2019_06_17____23_11_41_969.tdp"
 
 		taskDescription := configure.TaskDescription{
 			ClientID:                        clientID,
@@ -277,25 +299,44 @@ var _ = Describe("InteractionDataBaseFromDownloadFiles", func() {
 						NumAcceptedChunk:    3123,
 					},
 					DownloadingFilesInformation: map[string]*configure.DownloadFilesInformation{
-						"1560801329_2019_06_17____22_55_29_29140.tdp": &configure.DownloadFilesInformation{IsLoaded: true},
-						"1560800033_2019_06_17____22_33_53_38583.tdp": &configure.DownloadFilesInformation{IsLoaded: true},
-						"1560773471_2019_06_17____15_11_11_100.tdp":   &configure.DownloadFilesInformation{},
+						tf1: &configure.DownloadFilesInformation{IsLoaded: true},
+						tf2: &configure.DownloadFilesInformation{IsLoaded: true},
+						tf3: &configure.DownloadFilesInformation{},
+						tf4: &configure.DownloadFilesInformation{IsLoaded: true},
+						tf5: &configure.DownloadFilesInformation{IsLoaded: true},
 					},
 				},
 			},
 		}
 
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation["1560801329_2019_06_17____22_55_29_29140.tdp"].Size = 3081429
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation["1560801329_2019_06_17____22_55_29_29140.tdp"].Hex = "a86b143391a1eeae4078786f624b5257"
+		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf1].Size = 3081429
+		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf1].Hex = "a86b143391a1eeae4078786f624b5257"
 
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation["1560800033_2019_06_17____22_33_53_38583.tdp"].Size = 3137245
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation["1560800033_2019_06_17____22_33_53_38583.tdp"].Hex = "3ab19032a4a3d990a5a0b92042a93ef4"
+		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf2].Size = 3137245
+		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf2].Hex = "3ab19032a4a3d990a5a0b92042a93ef4"
 
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation["1560773471_2019_06_17____15_11_11_100.tdp"].Size = 70951216
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation["1560773471_2019_06_17____15_11_11_100.tdp"].Hex = "8b95f4e9454e5fe755bc7d6cfbe1f4a1"
+		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf3].Size = 70951216
+		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf3].Hex = "8b95f4e9454e5fe755bc7d6cfbe1f4a1"
+
+		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf4].Size = 2948350
+		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf4].Hex = "ead26b5d302e53961b75a7e92c080187"
+
+		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf5].Size = 3421341
+		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf5].Hex = "6654b432096dab1f4f0818a42143e341"
 
 		//добавляем новую задачу
 		smt.AddStoringMemoryTask(taskID, taskDescription)
+
+		//обновляем информацию о файлах
+		smt.UpdateTaskDownloadFileIsLoaded(taskID, configure.DownloadTaskParameters{
+			DownloadingFilesInformation: map[string]*configure.DownloadFilesInformation{
+				tf1: &configure.DownloadFilesInformation{IsLoaded: true},
+				tf2: &configure.DownloadFilesInformation{IsLoaded: true},
+				tf3: &configure.DownloadFilesInformation{},
+				tf4: &configure.DownloadFilesInformation{IsLoaded: true},
+				tf5: &configure.DownloadFilesInformation{IsLoaded: true},
+			},
+		})
 
 		ti, ok := smt.GetStoringMemoryTask(taskID)
 

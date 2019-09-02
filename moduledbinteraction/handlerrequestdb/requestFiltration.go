@@ -188,8 +188,8 @@ func UpdateParametersFiltrationTask(
 
 	ti := taskInfo.TaskParameter.FiltrationTask
 
-	//выполнять обновление информации в БД для сообщения типа 'complite'
-	// всегда, для сообщения типа 'execute' только раз 31 секунду
+	//выполнять обновление информации в БД для сообщения типа 'complite' всегда,
+	// для сообщения типа 'execute' только раз 31 секунду
 	if (ti.Status == "execute") && ((time.Now().Unix() - taskInfo.TimeInsertDB) < 30) {
 		return nil
 	}

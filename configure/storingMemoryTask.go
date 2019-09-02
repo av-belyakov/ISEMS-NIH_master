@@ -73,7 +73,8 @@ type DownloadTaskParameters struct {
 //DownloadFilesInformation подробная информация о скачиваемых файлах
 type DownloadFilesInformation struct {
 	FoundFilesInformation
-	IsLoaded bool
+	IsLoaded     bool
+	TimeDownload int64
 }
 
 //FoundFilesInformation подробная информация о файлах
@@ -239,6 +240,17 @@ func NewRepositorySMT() *StoringMemoryTask {
 				msg.ChannelRes <- channelResSettings{
 					TaskID: msg.TaskID,
 				}
+
+			case "increment number files downloaded":
+				if ti, ok := smt.tasks[msg.TaskID]; ok {
+					smt.tasks[msg.TaskID].TaskParameter.DownloadTask.NumberFilesDownloaded = ti.TaskParameter.DownloadTask.NumberFilesDownloaded + 1
+				}
+
+			case "increment number files downloaded error":
+				if ti, ok := smt.tasks[msg.TaskID]; ok {
+					smt.tasks[msg.TaskID].TaskParameter.DownloadTask.NumberFilesDownloadedError = ti.TaskParameter.DownloadTask.NumberFilesDownloadedError + 1
+				}
+
 			}
 		}
 	}()
@@ -284,7 +296,7 @@ func (smt StoringMemoryTask) delStoringMemoryTask(taskID string) {
 	}
 }
 
-//CompleteStoringMemoryTask установить статус выполненно для задачи
+//CompleteStoringMemoryTask установить статус 'выполненно' для задачи
 func (smt *StoringMemoryTask) CompleteStoringMemoryTask(taskID string) {
 	chanRes := make(chan channelResSettings)
 	defer close(chanRes)
@@ -374,6 +386,22 @@ func (smt StoringMemoryTask) GetStoringMemoryTaskForClientID(clientID, ClientTas
 	}
 
 	return "", nil, false
+}
+
+//IncrementNumberFilesDownloaded увеличить кол-во успешно скаченных файлов на 1
+func (smt StoringMemoryTask) IncrementNumberFilesDownloaded(taskID string) {
+	smt.channelReq <- ChanStoringMemoryTask{
+		ActionType: "increment number files downloaded",
+		TaskID:     taskID,
+	}
+}
+
+//IncrementNumberFilesDownloadedError увеличить кол-во успешно скаченных файлов на 1
+func (smt StoringMemoryTask) IncrementNumberFilesDownloadedError(taskID string) {
+	smt.channelReq <- ChanStoringMemoryTask{
+		ActionType: "increment number files downloaded error",
+		TaskID:     taskID,
+	}
 }
 
 //UpdateTaskFiltrationAllParameters управление задачами по фильтрации
@@ -490,6 +518,7 @@ func (smt *StoringMemoryTask) updateTaskDownloadFileIsLoaded(taskID string, td *
 	for fn := range td.TaskParameter.DownloadTask.DownloadingFilesInformation {
 		if _, ok := smt.tasks[taskID].TaskParameter.DownloadTask.DownloadingFilesInformation[fn]; ok {
 			smt.tasks[taskID].TaskParameter.DownloadTask.DownloadingFilesInformation[fn].IsLoaded = true
+			smt.tasks[taskID].TaskParameter.DownloadTask.DownloadingFilesInformation[fn].TimeDownload = time.Now().Unix()
 		}
 	}
 }

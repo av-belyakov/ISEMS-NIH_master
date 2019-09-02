@@ -84,6 +84,8 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 		//проверяем хеш-сумму файла
 		ok := checkDownloadedFile(ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles, fi.Hex, fi.FullSizeByte)
 		if !ok {
+			pwbf.SMT.IncrementNumberFilesDownloadedError(pwbf.TaskID)
+
 			return false, fmt.Errorf("invalid checksum for file %v (task ID %v)", fi.Name, pwbf.TaskID)
 		}
 
@@ -95,6 +97,9 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 				fi.Name: &configure.DownloadFilesInformation{},
 			},
 		})
+
+		//увеличиваем количество принятых файлов на 1
+		pwbf.SMT.IncrementNumberFilesDownloaded(pwbf.TaskID)
 
 		pwbf.ChanInCore <- &msgToCore
 

@@ -91,6 +91,16 @@ func (qp *QueryParameters) UpdateMany(searchElem, update []interface{}) error {
 	return nil
 }
 
+//UpdateOneArrayFilters обновляет множественные параметры в массиве
+func (qp *QueryParameters) UpdateOneArrayFilters(filter, update interface{}, uo *options.UpdateOptions) error {
+	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
+	if _, err := collection.UpdateOne(context.TODO(), filter, update, uo); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 //Find найти всю информацию по заданному элементу
 func (qp QueryParameters) Find(elem interface{}) (*mongo.Cursor, error) {
 

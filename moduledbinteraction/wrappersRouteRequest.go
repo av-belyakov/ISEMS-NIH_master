@@ -96,9 +96,7 @@ func (wr *WrappersRouteRequest) WrapperFuncDownload(
 		handlerrequestdb.FindingInformationAboutTask(wr.ChanIn, msg, qp)
 
 	case "update":
-
-	case "update finished":
-		if err := handlerrequestdb.UpdateFinishedInformationAboutTask(msg, qp, smt); err != nil {
+		if err := handlerrequestdb.UpdateInformationAboutTask(msg, qp, smt); err != nil {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 		}
 	}

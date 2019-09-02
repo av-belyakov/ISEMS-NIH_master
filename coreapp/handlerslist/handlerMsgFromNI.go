@@ -169,50 +169,55 @@ func HandlerMsgFromNI(
 		//завершение записи части файла кратной 1%
 		case "file download process":
 
+			//отправляем информацию клиенту API
+
 		//при завершении скачивания файла
 		case "file download complete":
-			/*
-				Увеличить на 1 NumberFilesDownloaded
-				В StoringMemoryTask файл уже помечен как успешно принятый
-				Отметь файл в StoringMemoryQueryTask
-				Отправить информацию в БД (с интервалом как при фильтрации)
-
-			*/
-
-			dfi, ok := msg.AdvancedOptions.(configure.DetailedFileInformation)
-			if !ok {
-				_ = saveMessageApp.LogMessage("error", "type conversion error"+funcName)
-
-				return
-			}
-
-			fi := map[string]*configure.DownloadFilesInformation{
-				dfi.Name: &configure.DownloadFilesInformation{},
-			}
-
-			//обновляем список загруженых файлов StoreMemoryQueueTask
-			/*
-				функцию ChangeIsLoadedFiles() надо ПОТЕСТИТЬ
-			*/
-			if err := hsm.QTS.ChangeIsLoadedFiles(msg.SourceID, msg.TaskID, fi); err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-			}
 
 			//отправляем информацию клиенту API
 
-			//отправляем информацию в БД, НО ТОЛЬКО РАЗ за определенное
-			//количество, как с фильтрацией
+			/*
+			   Модуль БД сам определяет когда стоит добавить запись в БД
+			   а когда (основываясь на таймере) добавление записи в БД не происходит
+			*/
+
+			//записываем информацию в БД
+			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
+				MsgGenerator: "NI module",
+				MsgRecipient: "DB module",
+				MsgSection:   "download control",
+				Instruction:  "update",
+				TaskID:       msg.TaskID,
+			}
 
 		//при завершении задачи по скачиванию файлов
 		case "task completed":
 			//отправляем информацию клиенту API
 
-			//отправляем информацию в БД
+			//записываем информацию в БД
+			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
+				MsgGenerator: "NI module",
+				MsgRecipient: "DB module",
+				MsgSection:   "download control",
+				Instruction:  "update",
+				TaskID:       msg.TaskID,
+			}
 
 			//удаляем задачу из StoringMemoryQueueTask
 
 		//останов задачи пользователем
 		case "file transfer stopped":
+
+			//отправляем информацию клиенту API
+
+			//записываем информацию в БД
+			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
+				MsgGenerator: "NI module",
+				MsgRecipient: "DB module",
+				MsgSection:   "download control",
+				Instruction:  "update",
+				TaskID:       msg.TaskID,
+			}
 
 		//останов задачи в связи с разрывом соединения с источником
 		case "task stoped disconnect":
@@ -260,12 +265,12 @@ func HandlerMsgFromNI(
 
 			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, ti.ClientTaskID, ti.ClientID)
 
-			//отправляем сообщение в БД для записи информации о задаче
+			//записываем информацию в БД
 			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 				MsgGenerator: "NI module",
 				MsgRecipient: "DB module",
 				MsgSection:   "download control",
-				Instruction:  "update finished",
+				Instruction:  "update",
 				TaskID:       msg.TaskID,
 			}
 
