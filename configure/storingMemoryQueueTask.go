@@ -19,7 +19,7 @@ type QueueTaskStorage struct {
 //QueueTaskInformation подробная информация о задаче в очереди
 // IDClientAPI - уникальный идентификатор клиента
 // TaskIDClientAPI - идентификатор задачи полученный от клиента
-// TaskStatus - статус задачи 'wait', 'execution', 'complite'
+// TaskStatus - статус задачи 'wait', 'execution', 'complete'
 // TimeUpdate - время последнего обнавления задачи (предназначено для того,
 //  что бы уничтажать задачи которые долшое время находятся в режиме ожидания)
 // TaskType - тип задачи 'filtration', 'download'
@@ -58,7 +58,7 @@ type StatusItems struct {
 // SourceID - ID источника
 // TaskID - ID задачи
 // TaskType - тип задачи ('filtration', 'download')
-// NewStatus - новый статус задачи ('execution', 'complite')
+// NewStatus - новый статус задачи ('execution', 'complete')
 // AdditionalOption - дополнительные опции для каждого типа задачи
 type chanRequest struct {
 	CommonTaskInfo
@@ -208,7 +208,7 @@ func NewRepositoryQTS() *QueueTaskStorage {
 					break
 				}
 
-				//удаляеть можно только в том случае если задача в состоянии 'wait' или 'complite'
+				//удаляеть можно только в том случае если задача в состоянии 'wait' или 'complete'
 				if qts.StorageList[msg.SourceID][msg.TaskID].TaskStatus == "execution" {
 					msgRes.ErrorDescription = fmt.Errorf("deleting is not possible, the task with ID %v is in progress", msg.SourceID)
 					msg.ChanRes <- msgRes
@@ -657,7 +657,7 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 
 				for taskID, taskInfo := range tasks {
 					//если задача помечена как выполненная удаляем ее
-					if taskInfo.TaskStatus == "complite" {
+					if taskInfo.TaskStatus == "complete" {
 						_ = qts.DelQueueTaskStorage(sourceID, taskID)
 					}
 

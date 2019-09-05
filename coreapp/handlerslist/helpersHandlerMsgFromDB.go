@@ -129,8 +129,8 @@ func checkParametersDownloadTask(
 		return fmt.Errorf("the source ID %v specified by the user does not match the ID %v obtained from the database%v", sourceID, tidb.SourceID, funcName)
 	}
 
-	//выполнена ли задача по фильтрации (статус задачи "complite")
-	if tidb.DetailedInformationOnFiltering.TaskStatus != "complite" {
+	//выполнена ли задача по фильтрации (статус задачи "complete")
+	if tidb.DetailedInformationOnFiltering.TaskStatus != "complete" {
 		emt.MsgHuman = fmt.Sprintf("Задача с ID %v не имеет статус 'завершена', дальнейшее выполнение задачи по выгрузке файлов не возможна", res.TaskID)
 		if err := ErrorMessage(emt); err != nil {
 			return err

@@ -140,7 +140,7 @@ func HandlerMsgFromNI(
 
 		/* упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
 		при чем если статус 'execute', то отправляем еще и содержимое поля 'FoundFilesInformation',
-		а если статус фильтрации 'stop' или 'complite' то данное поле не заполняем */
+		а если статус фильтрации 'stop' или 'complete' то данное поле не заполняем */
 
 		//если задача найдена
 		if ok {
@@ -159,29 +159,72 @@ func HandlerMsgFromNI(
 			return
 		}
 
+		sourceID := ti.TaskParameter.DownloadTask.ID
+
 		msgToAPI := configure.MsgBetweenCoreAndAPI{
 			MsgGenerator: "Core module",
 			MsgRecipient: "API module",
 			IDClientAPI:  ti.ClientID,
 		}
 
+		ns := notifications.NotificationSettingsToClientAPI{
+			Sources: []int{sourceID},
+		}
+
+		//отправляем сообщение о том что задача была отклонена
+		resMsgInfo := configure.DownloadControlTypeInfo{
+			MsgOption: configure.DownloadControlMsgTypeInfo{
+				ID:                                  sourceID,
+				Status:                              "execute",
+				TaskIDApp:                           msg.TaskID,
+				NumberFilesTotal:                    ti.TaskParameter.DownloadTask.NumberFilesTotal,
+				NumberFilesDownloaded:               ti.TaskParameter.DownloadTask.NumberFilesDownloaded,
+				NumberFilesDownloadedError:          ti.TaskParameter.DownloadTask.NumberFilesDownloadedError,
+				PathDirectoryStorageDownloadedFiles: ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles,
+				DetailedFileInformation: configure.MoreFileInformation{
+					Name:                ti.TaskParameter.DownloadTask.FileInformation.Name,
+					Hex:                 ti.TaskParameter.DownloadTask.FileInformation.Hex,
+					FullSizeByte:        ti.TaskParameter.DownloadTask.FileInformation.FullSizeByte,
+					AcceptedSizeByte:    ti.TaskParameter.DownloadTask.FileInformation.AcceptedSizeByte,
+					AcceptedSizePercent: ti.TaskParameter.DownloadTask.FileInformation.AcceptedSizePercent,
+				},
+			},
+		}
+		resMsgInfo.MsgType = "information"
+		resMsgInfo.MsgSection = "download control"
+		resMsgInfo.MsgInstruction = "task processing"
+
+		hdtsct := handlerDownloadTaskStatusCompleteType{
+			SourceID:       sourceID,
+			TaskID:         msg.TaskID,
+			TI:             ti,
+			QTS:            hsm.QTS,
+			NS:             ns,
+			ResMsgInfo:     resMsgInfo,
+			OutCoreChanAPI: outCoreChans.OutCoreChanAPI,
+			OutCoreChanDB:  outCoreChans.OutCoreChanDB,
+		}
+
 		switch msg.Command {
 		//завершение записи части файла кратной 1%
 		case "file download process":
-
 			//отправляем информацию клиенту API
+			msgJSONInfo, err := json.Marshal(resMsgInfo)
+			if err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+				return
+			}
+			msgToAPI.MsgJSON = msgJSONInfo
+			outCoreChans.OutCoreChanAPI <- &msgToAPI
 
 		//при завершении скачивания файла
 		case "file download complete":
-
-			//отправляем информацию клиенту API
-
 			/*
-			   Модуль БД сам определяет когда стоит добавить запись в БД
-			   а когда (основываясь на таймере) добавление записи в БД не происходит
+				записываем информацию в БД
+				Модуль БД сам определяет когда стоит добавить запись в БД
+				а когда (основываясь на таймере) добавление записи в БД не происходит
 			*/
-
-			//записываем информацию в БД
 			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 				MsgGenerator: "NI module",
 				MsgRecipient: "DB module",
@@ -189,93 +232,86 @@ func HandlerMsgFromNI(
 				Instruction:  "update",
 				TaskID:       msg.TaskID,
 			}
+
+			//отправляем информацию клиенту API
+			msgJSONInfo, err := json.Marshal(resMsgInfo)
+			if err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+				return
+			}
+			msgToAPI.MsgJSON = msgJSONInfo
+			outCoreChans.OutCoreChanAPI <- &msgToAPI
 
 		//при завершении задачи по скачиванию файлов
 		case "task completed":
-			//отправляем информацию клиенту API
+			hdtsct.NS.MsgType = "success"
+			hdtsct.NS.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника '%v' выполнена успешно", sourceID)
 
-			//записываем информацию в БД
-			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
-				MsgGenerator: "NI module",
-				MsgRecipient: "DB module",
-				MsgSection:   "download control",
-				Instruction:  "update",
-				TaskID:       msg.TaskID,
+			hdtsct.ResMsgInfo.MsgOption.Status = "complete"
+			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
+
+			if err := handlerDownloadTaskStatusComplete(hdtsct); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
-
-			//удаляем задачу из StoringMemoryQueueTask
 
 		//останов задачи пользователем
 		case "file transfer stopped":
+			hdtsct.NS.MsgType = "success"
+			hdtsct.NS.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника '%v' была успешно остановлена", sourceID)
 
-			//отправляем информацию клиенту API
+			hdtsct.ResMsgInfo.MsgOption.Status = "complete"
+			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
 
-			//записываем информацию в БД
-			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
-				MsgGenerator: "NI module",
-				MsgRecipient: "DB module",
-				MsgSection:   "download control",
-				Instruction:  "update",
-				TaskID:       msg.TaskID,
+			if err := handlerDownloadTaskStatusComplete(hdtsct); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
 
 		//останов задачи в связи с разрывом соединения с источником
 		case "task stoped disconnect":
-			/*
-			   msgToCore := configure.MsgBetweenCoreAndNI{
-			   			TaskID:   taskID,
-			   			Section:  "download control",
-			   			Command:  "task completed",
-			   			SourceID: sourceID,
-			   		}
-			*/
+			//записываем информацию в БД
+			hdtsct.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
+				MsgGenerator: "NI module",
+				MsgRecipient: "DB module",
+				MsgSection:   "download control",
+				Instruction:  "update",
+				TaskID:       hdtsct.TaskID,
+			}
+
+			//отправляем информационное сообщение клиенту API
+			ns.MsgType = "warning"
+			ns.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника ID %v была аварийно завершена из-за потери сетевого соединения", msg.SourceID)
+			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, ti.ClientTaskID, ti.ClientID)
+
+			hdtsct.ResMsgInfo.MsgOption.Status = "stop"
+			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
 
 			//изменяем статус задачи на 'wait' (storingMemoryQueueTask)
 			if err := hsm.QTS.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "wait"); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
 
-			//отправляем ответ клиенту API
-			msgRes := configure.DownloadControlTypeInfo{
-				MsgOption: configure.DownloadControlMsgTypeInfo{
-					ID:        msg.SourceID,
-					TaskIDApp: msg.TaskID,
-					Status:    "stoped",
-				},
-			}
-			msgRes.MsgType = "information"
-			msgRes.MsgSection = "download control"
-			msgRes.MsgInstruction = "task processing"
-			msgRes.ClientTaskID = ti.ClientTaskID
-
-			msgJSON, err := json.Marshal(msgRes)
+			//отправляем информацию по задаче клиенту API
+			msgJSONInfo, err := json.Marshal(hdtsct.ResMsgInfo)
 			if err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-			}
 
-			msgToAPI.MsgJSON = msgJSON
+				return
+			}
+			msgToAPI.MsgJSON = msgJSONInfo
 			outCoreChans.OutCoreChanAPI <- &msgToAPI
-
-			//отправляем информационное сообщение клиенту API
-			ns := notifications.NotificationSettingsToClientAPI{
-				MsgType:        "warning",
-				MsgDescription: fmt.Sprintf("Задача по скачиванию файлов с источника ID %v была аварийно завершена из-за потери сетевого соединения", msg.SourceID),
-				Sources:        []int{msg.SourceID},
-			}
-
-			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, ti.ClientTaskID, ti.ClientID)
-
-			//записываем информацию в БД
-			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
-				MsgGenerator: "NI module",
-				MsgRecipient: "DB module",
-				MsgSection:   "download control",
-				Instruction:  "update",
-				TaskID:       msg.TaskID,
-			}
 
 		//задача остановлена из-за внутренней ошибки приложения
 		case "task stoped error":
+			hdtsct.NS.MsgType = "danger"
+			hdtsct.NS.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника '%v' была остановлена из-за внутренней ошибки приложения", sourceID)
+
+			hdtsct.ResMsgInfo.MsgOption.Status = "stop"
+			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
+
+			if err := handlerDownloadTaskStatusComplete(hdtsct); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
 
 		}
 

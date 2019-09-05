@@ -86,7 +86,7 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 		return
 	}
 
-	//если тип сообщения "stop" или "complite"
+	//если тип сообщения "stop" или "complete"
 
 	//отправка информации только после получения всех частей
 	if resMsg.Info.NumberMessagesParts[0] == resMsg.Info.NumberMessagesParts[1] {
@@ -100,7 +100,7 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 			MsgType: "filtration",
 			Info: configure.SettingsFiltrationControl{
 				TaskID:  resMsg.Info.TaskID,
-				Command: "confirm complite",
+				Command: "confirm complete",
 			},
 		}
 
@@ -111,7 +111,7 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 			return
 		}
 
-		//отправляем источнику сообщение типа 'confirm complite' для того что бы подтвердить останов задачи
+		//отправляем источнику сообщение типа 'confirm complete' для того что бы подтвердить останов задачи
 		pprmtf.CwtRes <- configure.MsgWsTransmission{
 			DestinationHost: pprmtf.SourceIP,
 			Data:            &msgJSON,

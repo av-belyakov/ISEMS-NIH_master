@@ -62,7 +62,7 @@ func HandlerMsgFromDB(
 			//пока заглушка
 
 		case "filtration control":
-			//устанавливаем статус задачи в "complite" для ее последующего удаления
+			//устанавливаем статус задачи в "complete" для ее последующего удаления
 			hsm.SMT.CompleteStoringMemoryTask(res.TaskID)
 
 		case "download control":

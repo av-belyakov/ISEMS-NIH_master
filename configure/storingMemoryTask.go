@@ -52,7 +52,7 @@ type DescriptionTaskParameters struct {
 
 //DownloadTaskParameters параметры задачи по скачиванию файлов
 // ID - уникальный цифровой идентификатор источника
-// Status - статус задачи 'wait'/'refused'/'execute'/'completed'/'stop' ('ожидает' / 'отклонена' / 'выполняется' / 'завершена' / 'остановлена')
+// Status - статус задачи 'wait'/'refused'/'execute'/'complete'/'stop' ('ожидает' / 'отклонена' / 'выполняется' / 'завершена' / 'остановлена')
 // NumberFilesTotal - всего файлов предназначенных для скачивания
 // NumberFilesDownloaded - кол-во загруженных файлов
 // NumberFilesDownloadedError - кол-во загруженных с ошибкой файлов
@@ -85,7 +85,7 @@ type FoundFilesInformation struct {
 
 //FiltrationTaskParameters параметры задачи по фильтрации файлов
 // ID - уникальный цифровой идентификатор источника
-// Status - статус задачи 'wait'/'refused'/'execute'/'completed'/'stop' ('ожидает' / 'отклонена' / 'выполняется' / 'завершена' / 'остановлена')
+// Status - статус задачи 'wait'/'refused'/'execute'/'complete'/'stop' ('ожидает' / 'отклонена' / 'выполняется' / 'завершена' / 'остановлена')
 // UseIndex - используется ли индекс для поиска файлов
 // NumberFilesMeetFilterParameters - кол-во файлов удовлетворяющих параметрам фильтрации
 // NumberProcessedFiles - кол-во обработанных файлов

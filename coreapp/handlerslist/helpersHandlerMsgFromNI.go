@@ -5,7 +5,19 @@ import (
 	"fmt"
 
 	"ISEMS-NIH_master/configure"
+	"ISEMS-NIH_master/notifications"
 )
+
+type handlerDownloadTaskStatusCompleteType struct {
+	SourceID       int
+	TaskID         string
+	TI             *configure.TaskDescription
+	QTS            *configure.QueueTaskStorage
+	NS             notifications.NotificationSettingsToClientAPI
+	ResMsgInfo     configure.DownloadControlTypeInfo
+	OutCoreChanAPI chan<- *configure.MsgBetweenCoreAndAPI
+	OutCoreChanDB  chan<- *configure.MsgBetweenCoreAndDB
+}
 
 //getConfirmActionSourceListForAPI формирует список источников с выполненными
 //над ними действиями и статусом успешности
@@ -143,6 +155,45 @@ func sendInformationFiltrationTask(
 		MsgRecipient: "API module",
 		IDClientAPI:  taskInfo.ClientID,
 		MsgJSON:      msgJSON,
+	}
+
+	return nil
+}
+
+func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteType) error {
+	//записываем информацию в БД
+	hdtsct.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
+		MsgGenerator: "NI module",
+		MsgRecipient: "DB module",
+		MsgSection:   "download control",
+		Instruction:  "update",
+		TaskID:       hdtsct.TaskID,
+	}
+
+	//отправляем информационное сообщение клиенту API
+	notifications.SendNotificationToClientAPI(hdtsct.OutCoreChanAPI, hdtsct.NS, hdtsct.TaskID, hdtsct.TI.ClientID)
+
+	//отправляем информацию по задаче клиенту API
+	msgJSONInfo, err := json.Marshal(hdtsct.ResMsgInfo)
+	if err != nil {
+		return err
+	}
+	hdtsct.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
+		MsgGenerator: "Core module",
+		MsgRecipient: "API module",
+		IDClientAPI:  hdtsct.TI.ClientID,
+		MsgJSON:      msgJSONInfo,
+	}
+
+	//изменяем статус задачи в storingMemoryQueueTask
+	// на 'complete' (без этого состояния нельзя удалить задачу)
+	if err := hdtsct.QTS.ChangeTaskStatusQueueTask(hdtsct.SourceID, hdtsct.TaskID, "complete"); err != nil {
+		return err
+	}
+
+	//удаляем задачу из StoringMemoryQueueTask
+	if err := hdtsct.QTS.DelQueueTaskStorage(hdtsct.SourceID, hdtsct.TaskID); err != nil {
+		return err
 	}
 
 	return nil

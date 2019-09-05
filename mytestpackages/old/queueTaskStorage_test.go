@@ -265,7 +265,7 @@ var _ = Describe("QueueTaskStorage", func() {
 		It("Вся информация о задаче должна быть удалена из очереди", func() {
 			var err error
 
-			err = qts.ChangeTaskStatusQueueTask(sourceID, taskID, "complite")
+			err = qts.ChangeTaskStatusQueueTask(sourceID, taskID, "complete")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			err = qts.DelQueueTaskStorage(sourceID, taskID)

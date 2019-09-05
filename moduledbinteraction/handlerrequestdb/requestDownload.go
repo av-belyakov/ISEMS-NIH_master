@@ -58,7 +58,7 @@ func UpdateInformationAboutTask(
 
 	taskStatus := ti.TaskParameter.DownloadTask.Status
 
-	//выполнять обновление информации в БД для сообщения типа 'complite' всегда,
+	//выполнять обновление информации в БД для сообщения типа 'complete' всегда,
 	// для сообщения типа 'execute' только раз 31 секунду
 	if (taskStatus == "execute") && ((time.Now().Unix() - ti.TimeInsertDB) < timeUpdate) {
 		return nil
@@ -81,7 +81,7 @@ func UpdateInformationAboutTask(
 	}
 
 	var arrayFiles []interface{}
-	if ti.TaskParameter.DownloadTask.Status == "completed" {
+	if ti.TaskParameter.DownloadTask.Status == "complete" {
 		for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
 			if fi.IsLoaded {
 				arrayFiles = append(arrayFiles, bson.D{bson.E{Key: "elem.file_name", Value: fn}})
@@ -95,7 +95,6 @@ func UpdateInformationAboutTask(
 		}
 	}
 
-	//не обновляем информацию по загруженным файлам
 	if len(arrayFiles) == 0 {
 		return nil
 	}

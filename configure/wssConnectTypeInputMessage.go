@@ -127,17 +127,17 @@ type MsgTypeDownload struct {
 
 //DetailInfoMsgDownload подробная информация
 // TaskID - ID задачи
-// TaskStatus - статус выполняемой задачи
+// Command - статус выполняемой задачи
 //  - 'give me the file' (master -> slave), запрос файла
 //  - 'ready to receive file' (master -> salve), подтверждение готовности приема файла
 //  - 'ready for the transfer' (slave -> master), подтверждение готовности передачи
 //  - 'file transfer not possible' (slave -> master), сообщение о невозможности передачи
-//  - 'file transfer complited' (slave -> master), сообщение о завершении передачи
+//  - 'file transfer complete' (slave -> master), сообщение о завершении передачи
 // PathDirStorage - директория в которой хранятся файлы на источнике
 // FileOptions - параметры файла
 type DetailInfoMsgDownload struct {
 	TaskID         string              `json:"tid"`
-	TaskStatus     string              `json:"ts"`
+	Command        string              `json:"c"`
 	PathDirStorage string              `json:"pds"`
 	FileOptions    DownloadFileOptions `json:"fo"`
 }
@@ -155,143 +155,3 @@ type DownloadFileOptions struct {
 	NumChunk  int    `json:"nc"`
 	ChunkSize int    `json:"cs"`
 }
-
-/*
-//ChunkListParameters хранит набор параметров для разделения среза имен файлов на отдельные части
-type ChunkListParameters struct {
-	NumPart, CountParts, SizeChunk int
-	ListFoundFiles                 []FoundFilesInfo
-}
-
-//FilterInfoPattern является шаблоном типа Info
-type FilterInfoPattern struct {
-	Processing string `json:"processing"`
-	TaskIndex  string `json:"taskIndex"`
-	IPAddress  string `json:"ipAddress"`
-}
-
-//FilterCountPattern шаблон для частей учета некоторого количества
-type FilterCountPattern struct {
-	CountCycleComplete    int   `json:"countCycleComplete"`
-	CountFilesFound       int   `json:"countFilesFound"`
-	CountFoundFilesSize   int64 `json:"countFoundFilesSize"`
-	CountFilesProcessed   int   `json:"countFilesProcessed"`
-	CountFilesUnprocessed int   `json:"countFilesUnprocessed"`
-}
-
-//InfoProcessingFile информация об обработанном файле
-type InfoProcessingFile struct {
-	FileName          string `json:"fileName"`
-	DirectoryLocation string `json:"directoryLocation"`
-	StatusProcessed   bool   `json:"statusProcessed"`
-}
-
-//MessageTypefiltrationStopInfo сообщение при ОСТАНОВ выполнения фильтрации
-type MessageTypefiltrationStopInfo struct {
-	FilterInfoPattern
-}
-
-//MessageTypefiltrationCompleteInfoFirstPart детальная информация при ЗАВЕРШЕНИИ выполнения фильтрации (первая часть)
-type MessageTypefiltrationCompleteInfoFirstPart struct {
-	FilterInfoPattern
-	FilterCountPattern
-	NumberMessageParts [2]int `json:"numberMessageParts"`
-}
-
-//MessageTypefiltrationCompleteInfoSecondPart информация при ЗАВЕРШЕНИИ выполнения фильтрации (вторая часть)
-type MessageTypefiltrationCompleteInfoSecondPart struct {
-	FilterInfoPattern
-	NumberMessageParts             [2]int           `json:"numberMessageParts"`
-	ListFilesFoundDuringfiltration []FoundFilesInfo `json:"listFilesFoundDuringfiltration"`
-}
-
-//MessageTypefiltrationStartInfoFirstPart детальная информаци, первый фрагмент (без имен файлов)
-type MessageTypefiltrationStartInfoFirstPart struct {
-	FilterInfoPattern
-	Directoryfiltration      string         `json:"directoryfiltration"`
-	CountDirectoryfiltration int            `json:"countDirectoryfiltration"`
-	CountFullCycle           int            `json:"countFullCycle"`
-	CountFilesfiltration     int            `json:"countFilesfiltration"`
-	CountMaxFilesSize        int64          `json:"countMaxFilesSize"`
-	UseIndexes               bool           `json:"useIndexes"`
-	NumberMessageParts       [2]int         `json:"numberMessageParts"`
-	ListCountFilesFilter     map[string]int `json:"listCountFilesFilter"`
-}
-
-//MessageTypefiltrationStartInfoSecondPart детальная информация с именами файлов
-type MessageTypefiltrationStartInfoSecondPart struct {
-	FilterInfoPattern
-	UseIndexes         bool                `json:"useIndexes"`
-	NumberMessageParts [2]int              `json:"numberMessageParts"`
-	ListFilesFilter    map[string][]string `json:"listFilesFilter"`
-}
-
-//MessageTypefiltrationExecuteOrUnexecuteInfo детальная информация при выполнении или не выполнении фильтрации
-type MessageTypefiltrationExecuteOrUnexecuteInfo struct {
-	FilterInfoPattern
-	FilterCountPattern
-	InfoProcessingFile `json:"infoProcessingFile"`
-}
-
-//MessageTypefiltrationStartFirstPart при начале фильтрации (первая часть)
-type MessageTypefiltrationStartFirstPart struct {
-	MessageType string                                  `json:"messageType"`
-	Info        MessageTypefiltrationStartInfoFirstPart `json:"info"`
-}
-
-//MessageTypefiltrationStartSecondPart при начале фильтрации (первая часть)
-type MessageTypefiltrationStartSecondPart struct {
-	MessageType string                                   `json:"messageType"`
-	Info        MessageTypefiltrationStartInfoSecondPart `json:"info"`
-}
-
-//MessageTypefiltrationStop отправляется для подтверждения остановки фильтрации
-type MessageTypefiltrationStop struct {
-	MessageType string                        `json:"messageType"`
-	Info        MessageTypefiltrationStopInfo `json:"info"`
-}
-
-//MessageTypefiltrationCompleteFirstPart отправляется при завершении фильтрации
-type MessageTypefiltrationCompleteFirstPart struct {
-	MessageType string                                     `json:"messageType"`
-	Info        MessageTypefiltrationCompleteInfoFirstPart `json:"info"`
-}
-
-//MessageTypefiltrationCompleteSecondPart отправляется при завершении фильтрации
-type MessageTypefiltrationCompleteSecondPart struct {
-	MessageType string                                      `json:"messageType"`
-	Info        MessageTypefiltrationCompleteInfoSecondPart `json:"info"`
-}
-
-//MessageTypefiltrationExecutedOrUnexecuted при выполнении или не выполнении фильтрации
-type MessageTypefiltrationExecutedOrUnexecuted struct {
-	MessageType string                                      `json:"messageType"`
-	Info        MessageTypefiltrationExecuteOrUnexecuteInfo `json:"info"`
-}
-
-//MessageTypeDownloadFilesInfoReadyOrCompleted содержит информацию передоваемую при сообщениях о готовности или завершении передачи
-type MessageTypeDownloadFilesInfoReadyOrCompleted struct {
-	Processing string `json:"processing"`
-	TaskIndex  string `json:"taskIndex"`
-}
-
-//MessageTypeDownloadFilesInfoExecute содержит информацию передоваемую при сообщениях о передаче информации о файле
-type MessageTypeDownloadFilesInfoExecute struct {
-	MessageTypeDownloadFilesInfoReadyOrCompleted
-	FileName string `json:"fileName"`
-	FileSize int64  `json:"fileSize"`
-	FileHash string `json:"fileHash"`
-}
-
-//MessageTypeDownloadFilesReadyOrCompleted применяется для отправки сообщений о готовности или завершении передачи
-type MessageTypeDownloadFilesReadyOrCompleted struct {
-	MessageType string                                       `json:"messageType"`
-	Info        MessageTypeDownloadFilesInfoReadyOrCompleted `json:"info"`
-}
-
-//MessageTypeDownloadFilesExecute применяется для отправки сообщений о передаче файлов
-type MessageTypeDownloadFilesExecute struct {
-	MessageType string                              `json:"messageType"`
-	Info        MessageTypeDownloadFilesInfoExecute `json:"info"`
-}
-*/

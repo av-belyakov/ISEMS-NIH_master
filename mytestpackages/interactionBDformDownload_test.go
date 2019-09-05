@@ -143,14 +143,14 @@ func UpdateFinishedInformationAboutTask(
 	smt *configure.StoringMemoryTask,
 	req configure.MsgBetweenCoreAndDB) error {
 
-	//при добавлении информации в БД не забыть изменить статус на 'completed'
+	//при добавлении информации в БД не забыть изменить статус на 'complete'
 	ti, ok := smt.GetStoringMemoryTask(req.TaskID)
 	if !ok {
 		return fmt.Errorf("task with ID '%v' not found (DB module)", req.TaskID)
 	}
 
 	const timeUpdate = 30
-	//выполнять обновление информации в БД для сообщения типа 'complite' всегда,
+	//выполнять обновление информации в БД для сообщения типа 'complete' всегда,
 	// для сообщения типа 'execute' только раз 31 секунду
 	/*	if (ti.TaskParameter.DownloadTask.Status == "execute") && ((time.Now().Unix() - ti.TimeInsertDB) < timeUpdate) {
 		return nil
@@ -159,7 +159,7 @@ func UpdateFinishedInformationAboutTask(
 	//обновление основной информации
 	commonValueUpdate := bson.D{
 		bson.E{Key: "$set", Value: bson.D{
-			bson.E{Key: "detailed_information_on_downloading.task_status", Value: "completed"},
+			bson.E{Key: "detailed_information_on_downloading.task_status", Value: "complete"},
 			bson.E{Key: "detailed_information_on_downloading.time_interval_task_execution.end", Value: time.Now().Unix()},
 			bson.E{Key: "detailed_information_on_downloading.number_files_total", Value: ti.TaskParameter.DownloadTask.NumberFilesTotal},
 			bson.E{Key: "detailed_information_on_downloading.number_files_downloaded", Value: ti.TaskParameter.DownloadTask.NumberFilesDownloaded},

@@ -373,7 +373,7 @@ func HandlerMsgFromCore(
 					return
 				}
 
-				//отправляем источнику сообщение типа 'confirm complite' для того что бы подтвердить останов задачи
+				//отправляем источнику сообщение типа 'confirm complete' для того что бы подтвердить останов задачи
 				cwt <- configure.MsgWsTransmission{
 					DestinationHost: si.IP,
 					Data:            &msgJSON,

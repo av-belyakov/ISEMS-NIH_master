@@ -188,7 +188,7 @@ func UpdateParametersFiltrationTask(
 
 	ti := taskInfo.TaskParameter.FiltrationTask
 
-	//выполнять обновление информации в БД для сообщения типа 'complite' всегда,
+	//выполнять обновление информации в БД для сообщения типа 'complete' всегда,
 	// для сообщения типа 'execute' только раз 31 секунду
 	if (ti.Status == "execute") && ((time.Now().Unix() - taskInfo.TimeInsertDB) < 30) {
 		return nil
@@ -249,14 +249,14 @@ func UpdateParametersFiltrationTask(
 		MsgGenerator:    "DB module",
 		MsgRecipient:    "API module",
 		MsgSection:      "filtration control",
-		Instruction:     "filtration complite",
+		Instruction:     "filtration complete",
 		IDClientAPI:     req.IDClientAPI,
 		TaskID:          req.TaskID,
 		TaskIDClientAPI: taskInfo.ClientTaskID,
 	}
 
-	//если статус задачи "stop" или "complite" через ядро останавливаем задачу и оповещаем пользователя
-	if ti.Status == "stop" || ti.Status == "complite" {
+	//если статус задачи "stop" или "complete" через ядро останавливаем задачу и оповещаем пользователя
+	if ti.Status == "stop" || ti.Status == "complete" {
 		chanIn <- &infoMsg
 	}
 

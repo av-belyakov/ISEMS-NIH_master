@@ -102,7 +102,7 @@ type MsgBetweenCoreAndAPI struct {
 //  - find_all (Core->DB)
 //  - update (Core->DB)
 //  - delete (Core->DB)
-//  - 'filtration complite' (DB->Core)
+//  - 'filtration complete' (DB->Core)
 // IDClientAPI - уникальный идентификатор клиента API
 // TaskID - уникальный идентификатор задачи присвоенный ядром приложения
 type MsgBetweenCoreAndDB struct {

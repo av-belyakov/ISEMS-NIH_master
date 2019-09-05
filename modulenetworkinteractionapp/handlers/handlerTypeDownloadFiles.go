@@ -259,7 +259,7 @@ func processorReceivingFiles(
 		//читаем список файлов
 		for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
 			//делаем первый запрос на скачивание файла
-			mtd.Info.TaskStatus = "give me the file"
+			mtd.Info.Command = "give me the file"
 			mtd.Info.FileOptions = configure.DownloadFileOptions{
 				Name: fn,
 				Size: fi.Size,
@@ -296,7 +296,7 @@ func processorReceivingFiles(
 
 						//остановить скачивание файлов
 						if command == "stop receiving files" {
-							msgReq.Info.TaskStatus = "stop receiving files"
+							msgReq.Info.Command = "stop receiving files"
 
 							msgJSON, err := json.Marshal(msgReq)
 							if err != nil {
@@ -350,8 +350,8 @@ func processorReceivingFiles(
 
 						fi := ti.TaskParameter.DownloadTask.FileInformation
 
-						switch msgRes.Info.TaskStatus {
-						//готовность к приему файла
+						switch msgRes.Info.Command {
+						//готовность к приему файла (slave -> master)
 						case "ready for the transfer":
 							if _, ok := listFileDescriptors[msgRes.Info.FileOptions.Hex]; ok {
 								continue
@@ -385,7 +385,7 @@ func processorReceivingFiles(
 								},
 							})
 
-							msgReq.Info.TaskStatus = "ready to receive file"
+							msgReq.Info.Command = "ready to receive file"
 							msgJSON, err := json.Marshal(msgReq)
 							if err != nil {
 								_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
@@ -401,7 +401,7 @@ func processorReceivingFiles(
 								Data:            &msgJSON,
 							}
 
-						//сообщение о невозможности передачи файла
+						//сообщение о невозможности передачи файла (slave -> master)
 						case "file transfer not possible":
 							dtp := ti.TaskParameter.DownloadTask
 							dtp.NumberFilesDownloadedError = dtp.NumberFilesDownloadedError + 1
@@ -419,7 +419,7 @@ func processorReceivingFiles(
 
 							break NEWFILE
 
-						//передача файла успешно остановлена
+						//передача файла успешно остановлена (slave -> master)
 						case "file transfer stopped":
 							//закрываем дескриптор файла
 							if w, ok := listFileDescriptors[fi.Hex]; ok {
@@ -471,8 +471,12 @@ func processorReceivingFiles(
 		}
 
 		dtp := ti.TaskParameter.DownloadTask
-		dtp.Status = "completed"
+		dtp.Status = "complete"
 
+		/*
+			изменяем состояние задачи по которому данная задача будет
+			удалена через определенный промежуток времени
+		*/
 		smt.UpdateTaskDownloadAllParameters(taskID, dtp)
 
 		//задача завершена успешно
