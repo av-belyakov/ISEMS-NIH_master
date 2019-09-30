@@ -272,6 +272,7 @@ func processorReceivingFiles(
 
 				continue
 			}
+
 			cwtRes <- configure.MsgWsTransmission{
 				DestinationHost: sourceIP,
 				Data:            &msgJSON,
@@ -377,7 +378,7 @@ func processorReceivingFiles(
 								NumberFilesDownloaded:               ti.TaskParameter.DownloadTask.NumberFilesDownloaded,
 								PathDirectoryStorageDownloadedFiles: ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles,
 								FileInformation: configure.DetailedFileInformation{
-									Name:         fn, //fi.Name,
+									Name:         fn,
 									Hex:          fi.Hex,
 									FullSizeByte: fi.FullSizeByte,
 									NumChunk:     msgRes.Info.FileOptions.NumChunk,

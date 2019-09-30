@@ -109,6 +109,7 @@ func Routing(
 					FiltrationOption: qti.TaskParameters.FilterationParameters,
 				}
 
+				//создаем директорию для хранения файлов и формируем файл README.xml с кратким описание задачи
 				pathStorage, err := directorypathshaper.FileStorageDirectiry(&npfp)
 				if err != nil {
 					//отправляем сообщение пользователю

@@ -301,7 +301,6 @@ func NewRepositoryQTS() *QueueTaskStorage {
 
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.DownloadList = []string{}
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles = map[string]*DownloadFilesInformation{}
-				//[]*DetailedFileInformation{}
 
 				msg.ChanRes <- msgRes
 			}
@@ -659,6 +658,17 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 					//если задача помечена как выполненная удаляем ее
 					if taskInfo.TaskStatus == "complete" {
 						_ = qts.DelQueueTaskStorage(sourceID, taskID)
+
+						//удаляем задачу из списка отслеживания кол-ва выполняемых задач
+						if taskInfo.TaskType == "download" {
+							et.downloadTask = []string{}
+						} else {
+							for key, tID := range et.filtrationTask {
+								if tID == taskID {
+									et.filtrationTask = append(et.filtrationTask[:key], et.filtrationTask[key:]...)
+								}
+							}
+						}
 					}
 
 					/*
@@ -674,6 +684,7 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 						//если задача не выполнялась и источник подключен и есть файлы для скачивания
 						if (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection && taskInfo.CheckingStatusItems.AvailabilityFilesDownload {
 							if err := qts.ChangeTaskStatusQueueTask(sourceID, taskID, "execution"); err == nil {
+								//добавляем в массив выполняющихся задач
 								et.downloadTask = append(et.downloadTask, taskID)
 
 								//запускаем выполнение задачи
@@ -702,6 +713,7 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 						//если задача не выполнялась и источник подключен и есть файлы для скачивания
 						if (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection {
 							if err := qts.ChangeTaskStatusQueueTask(sourceID, taskID, "execution"); err == nil {
+								//добавляем в массив выполняющихся задач
 								et.filtrationTask = append(et.filtrationTask, taskID)
 
 								//запускаем выполнение задачи

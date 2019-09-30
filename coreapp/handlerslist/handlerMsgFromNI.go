@@ -240,6 +240,7 @@ func HandlerMsgFromNI(
 
 				return
 			}
+
 			msgToAPI.MsgJSON = msgJSONInfo
 			outCoreChans.OutCoreChanAPI <- &msgToAPI
 

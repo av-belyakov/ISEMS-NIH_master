@@ -89,7 +89,7 @@ func checkParametersDownloadTask(
 	//ищем задачу с taskID полученному из БД
 	sourceID, tisqt, err := hsm.QTS.SearchTaskForIDQueueTaskStorage(res.TaskID)
 	if err != nil {
-		emt.MsgHuman = "не найдено задачи по указанному пользователем ID"
+		emt.MsgHuman = "Не найдено задачи по указанному пользователем ID"
 		if err := ErrorMessage(emt); err != nil {
 			return err
 		}
@@ -114,7 +114,7 @@ func checkParametersDownloadTask(
 		return fmt.Errorf("not found the tasks specified by the user ID %v%v", res.TaskID, funcName)
 	}
 
-	//совпадает ли ID источника из задачи с ID источника полученного от пользователя
+	//совпадает ли ID источника задачи из БД с ID источника полученного от пользователя
 	if tidb.SourceID != sourceID {
 		emt.MsgHuman = "Идентификатор источника указанный пользователем не совпадает с идентификатором полученным из базы данных, дальнейшее выполнение задачи по выгрузке файлов не возможна"
 		if err := ErrorMessage(emt); err != nil {
@@ -159,12 +159,26 @@ func checkParametersDownloadTask(
 		return fmt.Errorf("as a result of the previous filtering, no files were found (task ID %v)%v", res.TaskID, funcName)
 	}
 
+	var confirmedListFiles map[string]*configure.DownloadFilesInformation
+
 	numUserDownloadList := len(tisqt.TaskParameters.DownloadList)
 
 	//совпадают ли файлы переданные пользователем (если передовались) с файлами полученными из БД
-	if numUserDownloadList > 0 {
-		confirmedListFiles, err := checkFileNameMatches(tidb.ListFilesResultTaskExecution, tisqt.TaskParameters.DownloadList)
+	if numUserDownloadList == 0 {
+		confirmedListFiles = make(map[string]*configure.DownloadFilesInformation, len(tidb.ListFilesResultTaskExecution))
 
+		//формируем новый список не выгружавшихся файлов
+		for _, f := range tidb.ListFilesResultTaskExecution {
+			//только если файл не загружался
+			if !f.FileLoaded {
+				confirmedListFiles[f.FileName] = &configure.DownloadFilesInformation{}
+				confirmedListFiles[f.FileName].Size = f.FileSize
+				confirmedListFiles[f.FileName].Hex = f.FileHex
+			}
+		}
+
+	} else {
+		confirmedListFiles, err := checkFileNameMatches(tidb.ListFilesResultTaskExecution, tisqt.TaskParameters.DownloadList)
 		if err != nil {
 			emt.MsgHuman = "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
 			if err := ErrorMessage(emt); err != nil {
@@ -201,57 +215,28 @@ func checkParametersDownloadTask(
 				chanToAPI,
 				notifications.NotificationSettingsToClientAPI{
 					MsgType:        "warning",
-					MsgDescription: fmt.Sprintf("Не все файлы выбранные для скачивания прошли верификацию. %v и %v файлов передаваться не будут так как отсутствуют на сервере или были переданы ранее.", numFilesInvalid, numUserDownloadList),
+					MsgDescription: fmt.Sprintf("Не все файлы выбранные для скачивания прошли верификацию. %v из %v файлов передаваться не будут так как отсутствуют на сервере или были переданы ранее.", numFilesInvalid, numUserDownloadList),
 				},
 				res.TaskIDClientAPI,
 				res.IDClientAPI)
 		}
-
-		//добавляем информацию о файлах в StoringMemoryQueueTask
-		if err := hsm.QTS.AddConfirmedListFiles(sourceID, res.TaskID, confirmedListFiles); err != nil {
-			emt.MsgHuman = "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
-			if err := ErrorMessage(emt); err != nil {
-				return err
-			}
-
-			//удаляем задачу из очереди
-			if err := hsm.QTS.DelQueueTaskStorage(sourceID, res.TaskID); err != nil {
-				return err
-			}
-
-			return err
-		}
-
-	} else {
-		nlf := make(map[string]*configure.DownloadFilesInformation, len(tidb.ListFilesResultTaskExecution))
-
-		//формируем новый список не выгружавшихся файлов
-		for _, f := range tidb.ListFilesResultTaskExecution {
-			//только если файл не загружался
-			if !f.FileLoaded {
-				nlf[f.FileName] = &configure.DownloadFilesInformation{}
-				nlf[f.FileName].Size = f.FileSize
-				nlf[f.FileName].Hex = f.FileHex
-			}
-		}
-
-		//добавляем список подтвержденных и ранее не загружавшихся файлов
-		if err := hsm.QTS.AddConfirmedListFiles(sourceID, res.TaskID, nlf); err != nil {
-			emt.MsgHuman = "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
-			if err := ErrorMessage(emt); err != nil {
-				return err
-			}
-
-			//удаляем задачу из очереди
-			if err := hsm.QTS.DelQueueTaskStorage(sourceID, res.TaskID); err != nil {
-				return err
-			}
-
-			return err
-		}
 	}
 
 	emt.MsgHuman = "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+
+	//добавляем список подтвержденных и ранее не загружавшихся файлов
+	if err := hsm.QTS.AddConfirmedListFiles(sourceID, res.TaskID, confirmedListFiles); err != nil {
+		if err := ErrorMessage(emt); err != nil {
+			return err
+		}
+
+		//удаляем задачу из очереди
+		if err := hsm.QTS.DelQueueTaskStorage(sourceID, res.TaskID); err != nil {
+			return err
+		}
+
+		return err
+	}
 
 	//добавляем информацию по фильтрации в QueueTaskStorage
 	if err := hsm.QTS.AddFiltrationParametersQueueTaskstorage(sourceID, res.TaskID, &tidb.FilteringOption); err != nil {
@@ -267,7 +252,7 @@ func checkParametersDownloadTask(
 		return err
 	}
 
-	//добавляем информацию о директории на источнике в которой хранятся отфильтрованные файлы
+	//добавляем информацию о директории на источнике, в которой хранятся отфильтрованные файлы
 	if err := hsm.QTS.AddPathDirectoryFilteredFiles(sourceID, res.TaskID, tidb.DetailedInformationOnFiltering.PathDirectoryForFilteredFiles); err != nil {
 		if err := ErrorMessage(emt); err != nil {
 			return err
@@ -281,6 +266,7 @@ func checkParametersDownloadTask(
 		return err
 	}
 
+	//изменяем статус наличия файлов для скачивания
 	if err := hsm.QTS.ChangeAvailabilityFilesDownload(sourceID, res.TaskID); err != nil {
 		if err := ErrorMessage(emt); err != nil {
 			return err
