@@ -436,6 +436,11 @@ func processorReceivingFiles(
 							sdf.Status = "task stoped client"
 
 							break DONE
+
+						//невозможно остановить передачу файла
+						case "impossible to stop file transfer":
+							_ = saveMessageApp.LogMessage("error", fmt.Sprintf("it is impossible to stop file transfer (source ID: %v, task ID: %v)", sourceID, taskID))
+
 						}
 					} else {
 						_ = saveMessageApp.LogMessage("error", "unknown generator events")
