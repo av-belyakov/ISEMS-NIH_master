@@ -90,8 +90,10 @@ func ControllerReceivingRequestedFiles(
 				if !ok {
 					humanNotify = fmt.Sprintf("Источник с ID %v не найден", msg.SourceID)
 
-					//удаляем из списка задач ожидающих выполнение
-					if err := qts.DelQueueTaskStorage(msg.SourceID, msg.TaskID); err != nil {
+					//изменяем статус задачи в storingMemoryQueueTask
+					// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
+					// функцией 'CheckTimeQueueTaskStorage')
+					if err := qts.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "complete"); err != nil {
 						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 					}
 				}

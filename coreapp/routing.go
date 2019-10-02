@@ -80,8 +80,10 @@ func Routing(
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 				}
 
-				//удаляем задачу из очереди
-				if err := qts.DelQueueTaskStorage(msg.SourceID, msg.TaskID); err != nil {
+				//изменяем статус задачи в storingMemoryQueueTask
+				// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
+				// функцией 'CheckTimeQueueTaskStorage')
+				if err := qts.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "complete"); err != nil {
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 				}
 
@@ -118,13 +120,22 @@ func Routing(
 						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 					}
 
-					//удаляем задачу из очереди
-					if err := qts.DelQueueTaskStorage(msg.SourceID, msg.TaskID); err != nil {
+					//изменяем статус задачи в storingMemoryQueueTask
+					// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
+					// функцией 'CheckTimeQueueTaskStorage')
+					if err := qts.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "complete"); err != nil {
 						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 					}
 
 					continue
 				}
+
+				//изменяем статус задачи в StoringMemoryQueueTask
+				/*
+					if err := qts.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "execution"); err != nil {
+						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					}
+				*/
 
 				//добавляем задачу в StorageMemoryTask
 				smt.AddStoringMemoryTask(msg.TaskID, configure.TaskDescription{
@@ -147,11 +158,6 @@ func Routing(
 						},
 					},
 				})
-
-				//изменяем статус задачи в StoringMemoryQueueTask
-				if err := qts.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "execution"); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-				}
 
 				//отправляем в NI module для вызова обработчика задания
 				cc.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{

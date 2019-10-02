@@ -186,13 +186,9 @@ func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteT
 	}
 
 	//изменяем статус задачи в storingMemoryQueueTask
-	// на 'complete' (без этого состояния нельзя удалить задачу)
+	// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
+	// функцией 'CheckTimeQueueTaskStorage')
 	if err := hdtsct.QTS.ChangeTaskStatusQueueTask(hdtsct.SourceID, hdtsct.TaskID, "complete"); err != nil {
-		return err
-	}
-
-	//удаляем задачу из StoringMemoryQueueTask
-	if err := hdtsct.QTS.DelQueueTaskStorage(hdtsct.SourceID, hdtsct.TaskID); err != nil {
 		return err
 	}
 

@@ -106,8 +106,10 @@ func checkParametersDownloadTask(
 			return err
 		}
 
-		//удаляем задачу из очереди
-		if err := hsm.QTS.DelQueueTaskStorage(sourceID, res.TaskID); err != nil {
+		//изменяем статус задачи в storingMemoryQueueTask
+		// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
+		// функцией 'CheckTimeQueueTaskStorage')
+		if err := hsm.QTS.ChangeTaskStatusQueueTask(sourceID, res.TaskID, "complete"); err != nil {
 			return err
 		}
 
@@ -121,8 +123,10 @@ func checkParametersDownloadTask(
 			return err
 		}
 
-		//удаляем задачу из очереди
-		if err := hsm.QTS.DelQueueTaskStorage(sourceID, res.TaskID); err != nil {
+		//изменяем статус задачи в storingMemoryQueueTask
+		// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
+		// функцией 'CheckTimeQueueTaskStorage')
+		if err := hsm.QTS.ChangeTaskStatusQueueTask(sourceID, res.TaskID, "complete"); err != nil {
 			return err
 		}
 
@@ -136,8 +140,10 @@ func checkParametersDownloadTask(
 			return err
 		}
 
-		//удаляем задачу из очереди
-		if err := hsm.QTS.DelQueueTaskStorage(sourceID, res.TaskID); err != nil {
+		//изменяем статус задачи в storingMemoryQueueTask
+		// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
+		// функцией 'CheckTimeQueueTaskStorage')
+		if err := hsm.QTS.ChangeTaskStatusQueueTask(sourceID, res.TaskID, "complete"); err != nil {
 			return err
 		}
 
@@ -151,8 +157,10 @@ func checkParametersDownloadTask(
 			return err
 		}
 
-		//удаляем задачу из очереди
-		if err := hsm.QTS.DelQueueTaskStorage(sourceID, res.TaskID); err != nil {
+		//изменяем статус задачи в storingMemoryQueueTask
+		// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
+		// функцией 'CheckTimeQueueTaskStorage')
+		if err := hsm.QTS.ChangeTaskStatusQueueTask(sourceID, res.TaskID, "complete"); err != nil {
 			return err
 		}
 
@@ -185,8 +193,10 @@ func checkParametersDownloadTask(
 				return err
 			}
 
-			//удаляем задачу из очереди
-			if err := hsm.QTS.DelQueueTaskStorage(sourceID, res.TaskID); err != nil {
+			//изменяем статус задачи в storingMemoryQueueTask
+			// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
+			// функцией 'CheckTimeQueueTaskStorage')
+			if err := hsm.QTS.ChangeTaskStatusQueueTask(sourceID, res.TaskID, "complete"); err != nil {
 				return err
 			}
 
@@ -199,8 +209,10 @@ func checkParametersDownloadTask(
 				return err
 			}
 
-			//удаляем задачу из очереди
-			if err := hsm.QTS.DelQueueTaskStorage(sourceID, res.TaskID); err != nil {
+			//изменяем статус задачи в storingMemoryQueueTask
+			// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
+			// функцией 'CheckTimeQueueTaskStorage')
+			if err := hsm.QTS.ChangeTaskStatusQueueTask(sourceID, res.TaskID, "complete"); err != nil {
 				return err
 			}
 
@@ -215,7 +227,7 @@ func checkParametersDownloadTask(
 				chanToAPI,
 				notifications.NotificationSettingsToClientAPI{
 					MsgType:        "warning",
-					MsgDescription: fmt.Sprintf("Не все файлы выбранные для скачивания прошли верификацию. %v из %v файлов передаваться не будут так как отсутствуют на сервере или были переданы ранее.", numFilesInvalid, numUserDownloadList),
+					MsgDescription: fmt.Sprintf("Не все файлы выбранные для скачивания прошли верификацию. %v из %v файлов передаваться не будут так как отсутствуют на сервере или были переданы ранее", numFilesInvalid, numUserDownloadList),
 				},
 				res.TaskIDClientAPI,
 				res.IDClientAPI)
@@ -230,8 +242,10 @@ func checkParametersDownloadTask(
 			return err
 		}
 
-		//удаляем задачу из очереди
-		if err := hsm.QTS.DelQueueTaskStorage(sourceID, res.TaskID); err != nil {
+		//изменяем статус задачи в storingMemoryQueueTask
+		// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
+		// функцией 'CheckTimeQueueTaskStorage')
+		if err := hsm.QTS.ChangeTaskStatusQueueTask(sourceID, res.TaskID, "complete"); err != nil {
 			return err
 		}
 
@@ -239,13 +253,15 @@ func checkParametersDownloadTask(
 	}
 
 	//добавляем информацию по фильтрации в QueueTaskStorage
-	if err := hsm.QTS.AddFiltrationParametersQueueTaskstorage(sourceID, res.TaskID, &tidb.FilteringOption); err != nil {
+	if err := hsm.QTS.AddFiltrationParametersQueueTaskStorage(sourceID, res.TaskID, &tidb.FilteringOption); err != nil {
 		if err := ErrorMessage(emt); err != nil {
 			return err
 		}
 
-		//удаляем задачу из очереди
-		if err := hsm.QTS.DelQueueTaskStorage(sourceID, res.TaskID); err != nil {
+		//изменяем статус задачи в storingMemoryQueueTask
+		// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
+		// функцией 'CheckTimeQueueTaskStorage')
+		if err := hsm.QTS.ChangeTaskStatusQueueTask(sourceID, res.TaskID, "complete"); err != nil {
 			return err
 		}
 
@@ -258,8 +274,10 @@ func checkParametersDownloadTask(
 			return err
 		}
 
-		//удаляем задачу из очереди
-		if err := hsm.QTS.DelQueueTaskStorage(sourceID, res.TaskID); err != nil {
+		//изменяем статус задачи в storingMemoryQueueTask
+		// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
+		// функцией 'CheckTimeQueueTaskStorage')
+		if err := hsm.QTS.ChangeTaskStatusQueueTask(sourceID, res.TaskID, "complete"); err != nil {
 			return err
 		}
 
@@ -272,8 +290,10 @@ func checkParametersDownloadTask(
 			return err
 		}
 
-		//удаляем задачу из очереди
-		if err := hsm.QTS.DelQueueTaskStorage(sourceID, res.TaskID); err != nil {
+		//изменяем статус задачи в storingMemoryQueueTask
+		// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
+		// функцией 'CheckTimeQueueTaskStorage')
+		if err := hsm.QTS.ChangeTaskStatusQueueTask(sourceID, res.TaskID, "complete"); err != nil {
 			return err
 		}
 

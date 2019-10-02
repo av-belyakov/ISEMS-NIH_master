@@ -440,8 +440,8 @@ func (qts *QueueTaskStorage) AddQueueTaskStorage(
 	<-chanRes
 }
 
-//AddFiltrationParametersQueueTaskstorage добавляет параметры по фильтрации в существующую задачу
-func (qts *QueueTaskStorage) AddFiltrationParametersQueueTaskstorage(sourceID int, taskID string, fp *FilteringOption) error {
+//AddFiltrationParametersQueueTaskStorage добавляет параметры по фильтрации в существующую задачу
+func (qts *QueueTaskStorage) AddFiltrationParametersQueueTaskStorage(sourceID int, taskID string, fp *FilteringOption) error {
 	chanRes := make(chan chanResponse)
 	defer close(chanRes)
 
@@ -681,7 +681,7 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 							continue
 						}
 
-						//если задача не выполнялась и источник подключен и есть файлы для скачивания
+						//если задача не выполнялась, источник подключен и есть файлы для скачивания
 						if (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection && taskInfo.CheckingStatusItems.AvailabilityFilesDownload {
 							if err := qts.ChangeTaskStatusQueueTask(sourceID, taskID, "execution"); err == nil {
 								//добавляем в массив выполняющихся задач
