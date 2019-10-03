@@ -20,8 +20,8 @@ type QueueTaskStorage struct {
 // IDClientAPI - уникальный идентификатор клиента
 // TaskIDClientAPI - идентификатор задачи полученный от клиента
 // TaskStatus - статус задачи 'wait', 'execution', 'complete'
-// TimeUpdate - время последнего обнавления задачи (предназначено для того,
-//  что бы уничтажать задачи которые долшое время находятся в режиме ожидания)
+// TimeUpdate - время последнего обновления задачи (используется для
+//  удаления 'подвисших' задач)
 // TaskType - тип задачи 'filtration', 'download'
 // CheckingStatusItems - проверка пунктов
 // TaskParameters - параметры задачи
@@ -710,7 +710,7 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 							continue
 						}
 
-						//если задача не выполнялась и источник подключен и есть файлы для скачивания
+						//если задача не выполнялась и источник подключен
 						if (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection {
 							if err := qts.ChangeTaskStatusQueueTask(sourceID, taskID, "execution"); err == nil {
 								//добавляем в массив выполняющихся задач

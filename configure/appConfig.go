@@ -3,7 +3,7 @@ package configure
 /*
 * Описание типа конфигурационных настроек приложения
 *
-* Версия 0.2, дата релиза 20.03.2019
+* Версия 0.3, дата релиза 03.10.2019
 * */
 
 //settingsServerHTTP настройки HTTP сервера
@@ -37,15 +37,27 @@ type SettingsAuthenticationTokenClientsAPI struct {
 }
 
 //AppConfig хранит настройки из конфигурационного файла приложения
+// VersionApp - версия приложения
+// RootDir - корневая директория приложения
+// ServerHTTPS - параметры для запуска сервера к которому подключаются сенсора
+// AuthenticationTokenClientsAPI - идентификационные токены для подключения клиентов
+// ServerAPI - параметры запуска сервера для взаимодействия с клиентом API
+// PathRootCA - путь до ключа с корневым сертификатом
+// TimeReconnectClient - актуально только в режиме isServer = false, тогда с заданным интервалом времени будут попытки соединения с адресами slave
+// ConnectionDB - настройки для доступа к БД
+// DirectoryLongTermStorageDownloadedFiles - директория для долговременного хранения скаченных файлов
+// MaximumTotalSizeFilesDownloadedAutomatically - максимальный, общий размер файлов скачиваемых в автоматическом режиме (в Мб)
+// PathLogFiles - место расположение лог-файла приложения
 type AppConfig struct {
-	VersionApp                              string
-	RootDir                                 string
-	ServerHTTPS                             settingsServerHTTP
-	AuthenticationTokenClientsAPI           []SettingsAuthenticationTokenClientsAPI
-	ServerAPI                               settingsServerHTTP
-	PathRootCA                              string
-	TimeReconnectClient                     int
-	ConnectionDB                            settingsConnectionDB
-	DirectoryLongTermStorageDownloadedFiles settingsDirectoryStoreFiles
-	PathLogFiles                            string
+	VersionApp                                   string
+	RootDir                                      string
+	ServerHTTPS                                  settingsServerHTTP
+	AuthenticationTokenClientsAPI                []SettingsAuthenticationTokenClientsAPI
+	ServerAPI                                    settingsServerHTTP
+	PathRootCA                                   string
+	TimeReconnectClient                          int
+	ConnectionDB                                 settingsConnectionDB
+	DirectoryLongTermStorageDownloadedFiles      settingsDirectoryStoreFiles
+	MaximumTotalSizeFilesDownloadedAutomatically int64
+	PathLogFiles                                 string
 }

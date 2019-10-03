@@ -90,14 +90,40 @@ func Routing(
 				continue
 			}
 
-			if qti.TaskType == "filteration" {
+			if qti.TaskType == "filtration" {
 				emt.Section = "filtration control"
-				/*
 
-				   ФИльтрацию переделаем позже, после выполнения части
-				   раздела по выгрузки файлов
+				//добавляем задачу в 'StoringMemoryTask'
+				smt.AddStoringMemoryTask(msg.TaskID, configure.TaskDescription{
+					ClientID:                        qti.IDClientAPI,
+					ClientTaskID:                    qti.TaskIDClientAPI,
+					TaskType:                        "filtration control",
+					ModuleThatSetTask:               "API module",
+					ModuleResponsibleImplementation: "NI module",
+					TimeUpdate:                      time.Now().Unix(),
+					TimeInterval: configure.TimeIntervalTaskExecution{
+						Start: time.Now().Unix(),
+						End:   time.Now().Unix(),
+					},
+					TaskParameter: configure.DescriptionTaskParameters{
+						FiltrationTask: configure.FiltrationTaskParameters{
+							ID:     msg.SourceID,
+							Status: "wait",
+						},
+					},
+				})
 
-				*/
+				//сохраняем параметры задачи в БД
+				cc.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
+					MsgGenerator:    "Core module",
+					MsgRecipient:    "DB module",
+					MsgSection:      "filtration control",
+					Instruction:     "insert",
+					IDClientAPI:     qti.IDClientAPI,
+					TaskID:          msg.TaskID,
+					TaskIDClientAPI: qti.TaskIDClientAPI,
+					AdvancedOptions: msg.SourceID,
+				}
 			}
 
 			if qti.TaskType == "download" {
@@ -137,7 +163,7 @@ func Routing(
 					}
 				*/
 
-				//добавляем задачу в StorageMemoryTask
+				//добавляем задачу в 'StoringMemoryTask'
 				smt.AddStoringMemoryTask(msg.TaskID, configure.TaskDescription{
 					ClientID:                        qti.IDClientAPI,
 					ClientTaskID:                    qti.TaskIDClientAPI,
@@ -196,7 +222,7 @@ func Routing(
 
 		//CHANNEL FROM NETWORK INTERACTION
 		case data := <-cc.InCoreChanNI:
-			go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, saveMessageApp)
+			go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, appConf.MaximumTotalSizeFilesDownloadedAutomatically, saveMessageApp)
 
 		//сообщение клиенту API о том что задача с указанным ID долго выполняется
 		case infoHungTask := <-chanCheckTask:

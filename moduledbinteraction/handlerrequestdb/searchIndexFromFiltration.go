@@ -6,10 +6,11 @@ import (
 	"github.com/mongodb/mongo-go-driver/bson"
 )
 
-//searchIndexFormFiltration поиск индексов для выполнения фильтрации
-func searchIndexFormFiltration(
+//searchIndexFromFiltration поиск индексов для выполнения фильтрации
+func searchIndexFromFiltration(
 	cn string,
-	tf *configure.FiltrationControlCommonParametersFiltration,
+	sourceID int,
+	tf *configure.QueueTaskInformation,
 	qp QueryParameters) (bool, *map[string][]string, error) {
 
 	qp.CollectionName = cn

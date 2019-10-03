@@ -62,7 +62,7 @@ func (wr *WrappersRouteRequest) WrapperFuncFiltration(
 
 	switch msg.Instruction {
 	case "insert":
-		handlerrequestdb.CreateNewFiltrationTask(wr.ChanIn, msg, qp)
+		handlerrequestdb.CreateNewFiltrationTask(wr.ChanIn, msg, qp, qts)
 
 	case "find":
 		fmt.Println("func 'WrapperFuncFiltration' RESIVED COMMAND 'FIND'")

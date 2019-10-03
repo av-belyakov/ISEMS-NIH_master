@@ -18,7 +18,8 @@ import (
 func CreateNewFiltrationTask(
 	chanIn chan<- *configure.MsgBetweenCoreAndDB,
 	req *configure.MsgBetweenCoreAndDB,
-	qp QueryParameters) {
+	qp QueryParameters,
+	qts *configure.QueueTaskStorage) {
 
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
@@ -28,10 +29,25 @@ func CreateNewFiltrationTask(
 		TaskID:       req.TaskID,
 	}
 
-	tf, ok := req.AdvancedOptions.(configure.FiltrationControlCommonParametersFiltration)
-	if !ok {
-		errMsg := "taken incorrect settings for task filtering"
+	errMsg := "taken incorrect settings for task filtering"
 
+	sourceID, ok := req.AdvancedOptions.(int)
+	if !ok {
+		msgRes.MsgRecipient = "Core module"
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: errMsg,
+			ErrorBody:             errors.New(errMsg),
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	tf, err := qts.GetQueueTaskStorage(sourceID, req.TaskID)
+	if err != nil {
 		msgRes.MsgRecipient = "Core module"
 		msgRes.MsgSection = "error notification"
 		msgRes.AdvancedOptions = configure.ErrorNotification{
@@ -46,7 +62,7 @@ func CreateNewFiltrationTask(
 	}
 
 	//поиск индексов
-	isFound, index, err := searchIndexFormFiltration("index_filtration", &tf, qp)
+	isFound, index, err := searchIndexFromFiltration("index_filtration", sourceID, tf, qp)
 	if err != nil {
 		msgRes.MsgRecipient = "Core module"
 		msgRes.MsgSection = "error notification"
@@ -60,34 +76,11 @@ func CreateNewFiltrationTask(
 	}
 
 	itf := configure.InformationAboutTask{
-		TaskID:       req.TaskID,
-		ClientID:     req.IDClientAPI,
-		ClientTaskID: req.TaskIDClientAPI,
-		SourceID:     tf.ID,
-		FilteringOption: configure.FilteringOption{
-			DateTime: configure.TimeInterval{
-				Start: tf.DateTime.Start,
-				End:   tf.DateTime.End,
-			},
-			Protocol: tf.Protocol,
-			Filters: configure.FilteringExpressions{
-				IP: configure.FilteringNetworkParameters{
-					Any: tf.Filters.IP.Any,
-					Src: tf.Filters.IP.Src,
-					Dst: tf.Filters.IP.Dst,
-				},
-				Port: configure.FilteringNetworkParameters{
-					Any: tf.Filters.Port.Any,
-					Src: tf.Filters.Port.Src,
-					Dst: tf.Filters.Port.Dst,
-				},
-				Network: configure.FilteringNetworkParameters{
-					Any: tf.Filters.Network.Any,
-					Src: tf.Filters.Network.Src,
-					Dst: tf.Filters.Network.Dst,
-				},
-			},
-		},
+		TaskID:          req.TaskID,
+		ClientID:        req.IDClientAPI,
+		ClientTaskID:    req.TaskIDClientAPI,
+		SourceID:        sourceID,
+		FilteringOption: tf.TaskParameters.FilterationParameters,
 		DetailedInformationOnFiltering: configure.DetailedInformationFiltering{
 			TaskStatus:   "wait",
 			WasIndexUsed: isFound,
@@ -121,9 +114,33 @@ func CreateNewFiltrationTask(
 
 	msgRes.MsgRecipient = "NI module"
 	msgRes.AdvancedOptions = configure.TypeFiltrationMsgFoundIndex{
-		FilteringOption: tf,
-		IndexIsFound:    isFound,
-		IndexData:       *index,
+		FilteringOption: configure.FiltrationControlCommonParametersFiltration{
+			ID: sourceID,
+			DateTime: configure.DateTimeParameters{
+				Start: tf.TaskParameters.FilterationParameters.DateTime.Start,
+				End:   tf.TaskParameters.FilterationParameters.DateTime.End,
+			},
+			Protocol: tf.TaskParameters.FilterationParameters.Protocol,
+			Filters: configure.FiltrationControlParametersNetworkFilters{
+				IP: configure.FiltrationControlIPorNetorPortParameters{
+					Any: tf.TaskParameters.FilterationParameters.Filters.IP.Any,
+					Src: tf.TaskParameters.FilterationParameters.Filters.IP.Src,
+					Dst: tf.TaskParameters.FilterationParameters.Filters.IP.Dst,
+				},
+				Port: configure.FiltrationControlIPorNetorPortParameters{
+					Any: tf.TaskParameters.FilterationParameters.Filters.Port.Any,
+					Src: tf.TaskParameters.FilterationParameters.Filters.Port.Src,
+					Dst: tf.TaskParameters.FilterationParameters.Filters.Port.Dst,
+				},
+				Network: configure.FiltrationControlIPorNetorPortParameters{
+					Any: tf.TaskParameters.FilterationParameters.Filters.Network.Any,
+					Src: tf.TaskParameters.FilterationParameters.Filters.Network.Src,
+					Dst: tf.TaskParameters.FilterationParameters.Filters.Network.Dst,
+				},
+			},
+		},
+		IndexIsFound: isFound,
+		IndexData:    *index,
 	}
 
 	//отправляем в ядро сообщение о возможности продолжения обработки запроса на фильтрацию

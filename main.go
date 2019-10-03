@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -115,7 +116,7 @@ func init() {
 	}
 
 	//читаем конфигурационный файл приложения
-	err = readConfigApp(dir+"/config.json", &appConfig)
+	err = readConfigApp(path.Join(dir, "/config.json"), &appConfig)
 	if err != nil {
 		fmt.Println("Error reading configuration file", err)
 		os.Exit(1)
@@ -145,6 +146,16 @@ func init() {
 	//получаем номер версии приложения
 	if err = getVersionApp(&appConfig); err != nil {
 		_ = saveMessageApp.LogMessage("error", "it is impossible to obtain the version number of the application")
+	}
+
+	//проверяем задан ли максимальный, общий размер файлов, которые скачиваются в автоматическом режиме
+	mtsfda := appConfig.MaximumTotalSizeFilesDownloadedAutomatically
+	if (mtsfda == 0) || (mtsfda > 1000) {
+		//переводим мегабайты в байты
+		appConfig.MaximumTotalSizeFilesDownloadedAutomatically = 250 * 1000000
+	} else {
+		//переводим мегабайты в байты
+		appConfig.MaximumTotalSizeFilesDownloadedAutomatically = mtsfda * 1000000
 	}
 }
 

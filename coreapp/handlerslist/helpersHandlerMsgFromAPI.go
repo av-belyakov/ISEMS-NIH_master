@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
@@ -156,7 +155,6 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 
 //handlerFiltrationControlTypeStart обработчик запроса на фильтрацию
 func handlerFiltrationControlTypeStart(
-	chanToDB chan<- *configure.MsgBetweenCoreAndDB,
 	fcts *configure.FiltrationControlTypeStart,
 	hsm HandlersStoringMemory,
 	clientID string,
@@ -165,6 +163,26 @@ func handlerFiltrationControlTypeStart(
 
 	funcName := ", function 'handlerFiltrationControlTypeStart'"
 
+	//сообщение о том что задача была отклонена
+	resMsg := configure.FiltrationControlTypeInfo{
+		MsgOption: configure.FiltrationControlMsgTypeInfo{
+			ID:     fcts.MsgOption.ID,
+			Status: "refused",
+		},
+	}
+	resMsg.MsgType = "information"
+	resMsg.MsgSection = "filtration control"
+	resMsg.MsgInstruction = "task processing"
+	resMsg.ClientTaskID = fcts.ClientTaskID
+
+	msgJSON, err := json.Marshal(resMsg)
+	if err != nil {
+		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+		return
+	}
+
+	//проверяем параметры фильтрации
 	if msg, ok := сheckParametersFiltration(&fcts.MsgOption); !ok {
 		_ = saveMessageApp.LogMessage("error", "incorrect parameters for filtering are set"+funcName)
 
@@ -178,25 +196,7 @@ func handlerFiltrationControlTypeStart(
 			fcts.ClientTaskID,
 			clientID)
 
-		//отправляем сообщение о том что задача была отклонена
-		resMsg := configure.FiltrationControlTypeInfo{
-			MsgOption: configure.FiltrationControlMsgTypeInfo{
-				ID:     fcts.MsgOption.ID,
-				Status: "refused",
-			},
-		}
-		resMsg.MsgType = "information"
-		resMsg.MsgSection = "filtration control"
-		resMsg.MsgInstruction = "task processing"
-		resMsg.ClientTaskID = fcts.ClientTaskID
-
-		msgJSON, err := json.Marshal(resMsg)
-		if err != nil {
-			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-			return
-		}
-
+		//отправляем сообщение что задача была отклонена
 		chanToAPI <- &configure.MsgBetweenCoreAndAPI{
 			MsgGenerator: "Core module",
 			MsgRecipient: "API module",
@@ -207,34 +207,69 @@ func handlerFiltrationControlTypeStart(
 		return
 	}
 
-	/*
-			   После разработки и апробации StoringMemoryQueueTask
-			   в место
-		<<<<<<< HEAD
-			   taskID := smt.AddStoringMemoryTask(configure.TaskDescription...
-		=======
-			   smt.AddStoringMemoryTask(configure.TaskDescription...
-		>>>>>>> ISEMS-NIH_master 06.08.2019
-			   	chanToDB <- &configure.MsgBetweenCoreAndDB...
+	//проверяем состояние подключения источника
+	connectionStatus, err := hsm.ISL.GetSourceConnectionStatus(fcts.MsgOption.ID)
+	if err != nil || !connectionStatus {
+		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-			   	нужно добавить
+		//отправляем информационное сообщение
+		notifications.SendNotificationToClientAPI(
+			chanToAPI,
+			notifications.NotificationSettingsToClientAPI{
+				MsgType:        "danger",
+				MsgDescription: fmt.Sprintf("Не возможно отправить запрос на фильтрацию, источник с ID %v не подключен", fcts.MsgOption.ID),
+			},
+			fcts.ClientTaskID,
+			clientID)
 
-			   	qts.AddQueueTaskStorage(
-			   		fcts.MsgOption.ID, //это sourceID
-			   		configure.CommonTaskInfo{
-			   			IDClientAPI:     clientID,
-			   			TaskIDClientAPI: fcts.ClientTaskID,
-			   			TaskType:        "filtration",
-			   		},
-			   		&configure.DescriptionParametersReceivedFromUser{
-			   			FiltrationParameters: FiltrationOptions,
-			   		})
-	*/
+		//отправляем сообщение что задача была отклонена
+		chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+			MsgGenerator: "Core module",
+			MsgRecipient: "API module",
+			IDClientAPI:  clientID,
+			MsgJSON:      msgJSON,
+		}
+
+		return
+	}
 
 	taskID := common.GetUniqIDFormatMD5(clientID)
 
+	//добавляем новую задачу в очередь задач
+	hsm.QTS.AddQueueTaskStorage(taskID, fcts.MsgOption.ID, configure.CommonTaskInfo{
+		IDClientAPI:     clientID,
+		TaskIDClientAPI: fcts.ClientTaskID,
+		TaskType:        "filtration",
+	}, &configure.DescriptionParametersReceivedFromUser{
+		FilterationParameters: configure.FilteringOption{
+			DateTime: configure.TimeInterval{
+				Start: fcts.MsgOption.DateTime.Start,
+				End:   fcts.MsgOption.DateTime.End,
+			},
+			Protocol: fcts.MsgOption.Protocol,
+			Filters: configure.FilteringExpressions{
+				IP: configure.FilteringNetworkParameters{
+					Any: fcts.MsgOption.Filters.IP.Any,
+					Src: fcts.MsgOption.Filters.IP.Src,
+					Dst: fcts.MsgOption.Filters.IP.Dst,
+				},
+				Port: configure.FilteringNetworkParameters{
+					Any: fcts.MsgOption.Filters.Port.Any,
+					Src: fcts.MsgOption.Filters.Port.Src,
+					Dst: fcts.MsgOption.Filters.Port.Dst,
+				},
+				Network: configure.FilteringNetworkParameters{
+					Any: fcts.MsgOption.Filters.Network.Any,
+					Src: fcts.MsgOption.Filters.Network.Src,
+					Dst: fcts.MsgOption.Filters.Network.Dst,
+				},
+			},
+		},
+		DownloadList: []string{},
+	})
+
 	//добавляем новую задачу
-	hsm.SMT.AddStoringMemoryTask(taskID, configure.TaskDescription{
+	/*hsm.SMT.AddStoringMemoryTask(taskID, configure.TaskDescription{
 		ClientID:                        clientID,
 		ClientTaskID:                    fcts.ClientTaskID,
 		TaskType:                        fcts.MsgSection,
@@ -263,5 +298,5 @@ func handlerFiltrationControlTypeStart(
 		TaskID:          taskID,
 		TaskIDClientAPI: fcts.ClientTaskID,
 		AdvancedOptions: fcts.MsgOption,
-	}
+	}*/
 }

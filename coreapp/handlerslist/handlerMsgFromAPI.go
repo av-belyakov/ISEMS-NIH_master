@@ -172,7 +172,7 @@ func HandlerMsgFromAPI(
 					return
 				}
 
-				go handlerFiltrationControlTypeStart(outCoreChans.OutCoreChanDB, &fcts, hsm, msg.IDClientAPI, saveMessageApp, outCoreChans.OutCoreChanAPI)
+				go handlerFiltrationControlTypeStart(&fcts, hsm, msg.IDClientAPI, saveMessageApp, outCoreChans.OutCoreChanAPI)
 
 				return
 			}

@@ -20,6 +20,7 @@ func HandlerMsgFromNI(
 	outCoreChans HandlerOutChans,
 	msg *configure.MsgBetweenCoreAndNI,
 	hsm HandlersStoringMemory,
+	mtsfda int64,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 
 	funcName := ", function 'HandlerMsgFromNI'"
@@ -138,15 +139,44 @@ func HandlerMsgFromNI(
 		//отправляем иформацию о ходе фильтрации в БД
 		outCoreChans.OutCoreChanDB <- &msgChan
 
-		/* упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
-		при чем если статус 'execute', то отправляем еще и содержимое поля 'FoundFilesInformation',
-		а если статус фильтрации 'stop' или 'complete' то данное поле не заполняем */
-
 		//если задача найдена
 		if ok {
+			/* упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
+			при чем если статус 'execute', то отправляем еще и содержимое поля 'FoundFilesInformation',
+			а если статус фильтрации 'stop' или 'complete' то данное поле не заполняем */
 			if err := sendInformationFiltrationTask(outCoreChans.OutCoreChanAPI, taskInfo, msg); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
+
+			/* проверяем общий размер найденных файлов и если общий размер меньше заданного
+			то автоматически доваляем новую задачу по выгрузке файлов в очередь StoringMemoryQueueTask */
+			/*isComplete := taskInfo.TaskParameter.FiltrationTask.Status == "complete"
+			lessThanMax := taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering < mtsfda
+			if isComplete && lessThanMax {
+				//проверяем наличие в очереди задачи с указанным ID
+				if _, _, err := hsm.QTS.SearchTaskForIDQueueTaskStorage(msg.TaskID); err == nil {
+					return
+				}
+
+				//добавляем задачу в очередь
+				hsm.QTS.AddQueueTaskStorage(dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID, configure.CommonTaskInfo{
+					IDClientAPI:     msg.IDClientAPI,
+					TaskIDClientAPI: dcts.ClientTaskID,
+					TaskType:        "download",
+				}, &configure.DescriptionParametersReceivedFromUser{
+					DownloadList: dcts.MsgOption.FileList,
+				})
+
+				//устанавливаем проверочный статус источника для данной задачи как подключен
+				if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				}
+
+				//изменяем статус наличия файлов для скачивания
+				if err := hsm.QTS.ChangeAvailabilityFilesDownload(sourceID, res.TaskID); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				}
+			}*/
 		}
 
 	case "download control":

@@ -8,6 +8,7 @@ package configure
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -68,12 +69,12 @@ func NewRepositoryISL() *InformationSourcesList {
 	return &isl
 }
 
-//AddSourceSettings добавить настройки источника
+//AddSourceSettings добавляет настройки источника
 func (isl *InformationSourcesList) AddSourceSettings(id int, settings SourceSetting) {
 	isl.sourcesListSetting[id] = settings
 }
 
-//DelSourceSettings удаление информации об источнике
+//DelSourceSettings удаляет информацию об источнике
 func (isl *InformationSourcesList) DelSourceSettings(id int) {
 	delete(isl.sourcesListSetting, id)
 }
@@ -92,7 +93,7 @@ func (isl *InformationSourcesList) SearchSourceIPAndToken(ip, token string) (int
 	return 0, false
 }
 
-//GetSourceIDOnIP получить ID источника по его IP
+//GetSourceIDOnIP возвращает ID источника по его IP
 func (isl *InformationSourcesList) GetSourceIDOnIP(ip string) (int, bool) {
 	for id, s := range isl.sourcesListSetting {
 		if s.IP == ip {
@@ -103,13 +104,23 @@ func (isl *InformationSourcesList) GetSourceIDOnIP(ip string) (int, bool) {
 	return 0, false
 }
 
-//GetSourceSetting получить все настройки источника по его ID
+//GetSourceSetting возвращает все настройки источника по его ID
 func (isl *InformationSourcesList) GetSourceSetting(id int) (*SourceSetting, bool) {
 	if s, ok := isl.sourcesListSetting[id]; ok {
 		return &s, true
 	}
 
 	return nil, false
+}
+
+//GetSourceConnectionStatus возвращает состояние соединения с источником
+func (isl *InformationSourcesList) GetSourceConnectionStatus(id int) (bool, error) {
+	s, ok := isl.sourcesListSetting[id]
+	if !ok {
+		return false, fmt.Errorf("source with ID %v not found", id)
+	}
+
+	return s.ConnectionStatus, nil
 }
 
 //GetSourceList возвращает список источников
@@ -123,7 +134,7 @@ func (isl *InformationSourcesList) GetSourceList() *map[int]SourceSetting {
 	return &sl
 }
 
-//ChangeSourceConnectionStatus изменить состояние источника
+//ChangeSourceConnectionStatus изменяет состояние источника
 func (isl *InformationSourcesList) ChangeSourceConnectionStatus(id int, status bool) bool {
 	if s, ok := isl.sourcesListSetting[id]; ok {
 		s.ConnectionStatus = status
@@ -189,19 +200,19 @@ func (wssc *WssConnection) SendWsMessage(t int, v []byte) error {
 	return wssc.Link.WriteMessage(t, v)
 }
 
-//GetSourcesListConnection получить список всех соединений
+//GetSourcesListConnection возвращает список всех соединений
 func (isl *InformationSourcesList) GetSourcesListConnection() map[string]WssConnection {
 	return isl.sourcesListConnection
 }
 
-//AddLinkWebsocketConnect добавить линк соединения по websocket
+//AddLinkWebsocketConnect добавляет линк соединения по websocket
 func (isl *InformationSourcesList) AddLinkWebsocketConnect(host string, lwsc *websocket.Conn) {
 	isl.sourcesListConnection[host] = WssConnection{
 		Link: lwsc,
 	}
 }
 
-//DelLinkWebsocketConnection удаление дескриптора соединения при отключении источника
+//DelLinkWebsocketConnection удаляет дескриптор соединения при отключении источника
 func (isl *InformationSourcesList) DelLinkWebsocketConnection(host string) {
 	delete(isl.sourcesListConnection, host)
 	/*if _, ok := ism.SourcesListConnection[host]; ok {
@@ -211,7 +222,7 @@ func (isl *InformationSourcesList) DelLinkWebsocketConnection(host string) {
 	}*/
 }
 
-//GetLinkWebsocketConnect получить линк соединения по websocket
+//GetLinkWebsocketConnect возвращает линк соединения по websocket
 func (isl *InformationSourcesList) GetLinkWebsocketConnect(host string) (*WssConnection, bool) {
 	if conn, ok := isl.sourcesListConnection[host]; ok {
 		return &conn, true

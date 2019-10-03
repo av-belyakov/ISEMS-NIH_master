@@ -62,8 +62,35 @@ func HandlerMsgFromDB(
 			//пока заглушка
 
 		case "filtration control":
+			//получаем всю информацию по выполняемой задаче
+			taskInfo, ok := hsm.SMT.GetStoringMemoryTask(res.TaskID)
+			if !ok {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with ID %v not found", res.TaskID))
+
+				return
+			}
+
+			//отмечаем задачу как завершенную в списке очередей
+			if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID, "complete"); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
+
 			//устанавливаем статус задачи в "complete" для ее последующего удаления
 			hsm.SMT.CompleteStoringMemoryTask(res.TaskID)
+
+			/*
+			   Не доделал очереди для фильтрации.
+			    - Добавление задачи в очередь и удаление ее из очереди при завершении
+			   фильтрации вроде бы сделал, на до бы еще проверить логику.
+			    - Нужно сделать удаление при отмене фильтрации.
+
+			    - Продумать действия при подвисании задачи!!!
+			    - На основании полученной логики с очередями по фильтрации продумать
+			    автоматическую загрузку файлов при завершении фильтрации. Здесь
+			    основная сложность это совпадение ID задачи, так как задача по фильтрации
+			    еще не удалилась а уже нужно добавлять задачу по скачиванию с таким же ID.
+			    По этому не проходит проверка на наличие дубликатов задач.
+			*/
 
 		case "download control":
 			//пока заглушка

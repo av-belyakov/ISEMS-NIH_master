@@ -21,6 +21,7 @@
         "pathPrivateKeyFile": "keys/isems_nih_master_api_private_key.pem",
         "pathPrivateKeyFile_comments": "ОТНОСИТЕЛЬНЫЙ путь до файла с приватным ключем"
     },
+    "serverAPI_comments": "параметры запуска сервера для взаимодействия с клиентом API",
     "serverHTTPS": {
         "host": "127.0.0.1",
         "port": 13313,
@@ -48,6 +49,8 @@
         "object": "/home/ISEMS_NIH_master/ISEMS_NIH_master_OBJECT"
     },
     "directoryLongTermStorageDownloadedFiles_comments": "директория для долговременного хранения скаченных файлов",
+    "maximumTotalSizeFilesDownloadedAutomatically": 300,
+    "maximumTotalSizeFilesDownloadedAutomatically_comments": "максимальный, общий размер файлов скачиваемых в автоматическом режиме (в Мб)",
     "pathLogFiles": "/var/log/",
     "pathLogFiles_comments": "место расположение лог-файла приложения"
 }
