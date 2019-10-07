@@ -14,7 +14,7 @@ type ParametersProcessingReceivedMsgTypeFiltering struct {
 	ChanInCore     chan<- *configure.MsgBetweenCoreAndNI
 	CwtReq         <-chan configure.MsgWsTransmission
 	Isl            *configure.InformationSourcesList
-	Smt            *configure.StoringMemoryTask
+	SMT            *configure.StoringMemoryTask
 	Message        *[]byte
 	SourceID       int
 	SourceIP       string
@@ -51,7 +51,7 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 	}
 
 	//обновляем информацию о выполняемой задаче в памяти приложения
-	pprmtf.Smt.UpdateTaskFiltrationAllParameters(resMsg.Info.TaskID, ftp)
+	pprmtf.SMT.UpdateTaskFiltrationAllParameters(resMsg.Info.TaskID, ftp)
 
 	msgCompliteTask := configure.MsgBetweenCoreAndNI{
 		TaskID:  resMsg.Info.TaskID,

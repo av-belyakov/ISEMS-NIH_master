@@ -214,7 +214,7 @@ func Routing(
 		select {
 		//CHANNEL FROM DATABASE
 		case data := <-cc.InCoreChanDB:
-			go handlerslist.HandlerMsgFromDB(OutCoreChans, data, hsm, saveMessageApp, cc.ChanDropNI)
+			go handlerslist.HandlerMsgFromDB(OutCoreChans, data, hsm, appConf.MaximumTotalSizeFilesDownloadedAutomatically, saveMessageApp, cc.ChanDropNI)
 
 		//CHANNEL FROM API
 		case data := <-cc.InCoreChanAPI:
@@ -222,7 +222,7 @@ func Routing(
 
 		//CHANNEL FROM NETWORK INTERACTION
 		case data := <-cc.InCoreChanNI:
-			go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, appConf.MaximumTotalSizeFilesDownloadedAutomatically, saveMessageApp)
+			go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, saveMessageApp)
 
 		//сообщение клиенту API о том что задача с указанным ID долго выполняется
 		case infoHungTask := <-chanCheckTask:

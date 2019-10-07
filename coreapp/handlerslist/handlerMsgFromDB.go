@@ -15,6 +15,7 @@ func HandlerMsgFromDB(
 	outCoreChans HandlerOutChans,
 	res *configure.MsgBetweenCoreAndDB,
 	hsm HandlersStoringMemory,
+	mtsfda int64,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	chanDropNI <-chan string) {
 
@@ -70,8 +71,34 @@ func HandlerMsgFromDB(
 				return
 			}
 
-			//отмечаем задачу как завершенную в списке очередей
-			if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID, "complete"); err != nil {
+			isNotComplete := taskInfo.TaskParameter.FiltrationTask.Status != "complete"
+			moreThanMax := taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering > mtsfda
+			taskTypeNotFiltr := taskInfo.TaskType != "filtration"
+			if taskTypeNotFiltr || isNotComplete || moreThanMax {
+				//отмечаем задачу как завершенную в списке очередей
+				if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID, "complete"); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				}
+
+				return
+			}
+
+			//добавляем задачу в очередь
+			hsm.QTS.AddQueueTaskStorage(res.TaskID, taskInfo.TaskParameter.FiltrationTask.ID, configure.CommonTaskInfo{
+				IDClientAPI:     res.IDClientAPI,
+				TaskIDClientAPI: res.TaskIDClientAPI,
+				TaskType:        "download",
+			}, &configure.DescriptionParametersReceivedFromUser{
+				DownloadList: []string{},
+			})
+
+			//устанавливаем проверочный статус источника для данной задачи как подключен
+			if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
+
+			//изменяем статус наличия файлов для скачивания
+			if err := hsm.QTS.ChangeAvailabilityFilesDownload(taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
 
@@ -79,17 +106,23 @@ func HandlerMsgFromDB(
 			hsm.SMT.CompleteStoringMemoryTask(res.TaskID)
 
 			/*
-			   Не доделал очереди для фильтрации.
-			    - Добавление задачи в очередь и удаление ее из очереди при завершении
-			   фильтрации вроде бы сделал, на до бы еще проверить логику.
-			    - Нужно сделать удаление при отмене фильтрации.
+				!!!!
+				   Не доделал очереди для фильтрации.
+				   // - Добавление задачи в очередь и удаление ее из очереди при завершении
+				   // фильтрации вроде бы сделал, на до бы еще проверить логику.
 
-			    - Продумать действия при подвисании задачи!!!
-			    - На основании полученной логики с очередями по фильтрации продумать
-			    автоматическую загрузку файлов при завершении фильтрации. Здесь
-			    основная сложность это совпадение ID задачи, так как задача по фильтрации
-			    еще не удалилась а уже нужно добавлять задачу по скачиванию с таким же ID.
-			    По этому не проходит проверка на наличие дубликатов задач.
+				   // !!! ДУМАЮ СТОИТ ПРОДУМАТЬ удаления задачи из очереди
+				   // через событие 'monitoring task performance'
+
+				   // - Нужно сделать удаление при отмене фильтрации.
+
+				   // - Продумать действия при подвисании задачи!!!
+				    - На основании полученной логики с очередями по фильтрации продумать
+				    автоматическую загрузку файлов при завершении фильтрации. Здесь
+				    основная сложность это совпадение ID задачи, так как задача по фильтрации
+				    еще не удалилась а уже нужно добавлять задачу по скачиванию с таким же ID.
+				    По этому не проходит проверка на наличие дубликатов задач.
+				!!!!
 			*/
 
 		case "download control":

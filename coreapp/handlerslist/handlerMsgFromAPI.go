@@ -179,15 +179,23 @@ func HandlerMsgFromAPI(
 
 			//команда на останов фильтрации
 			if msgc.MsgInstruction == "to cancel filtering" {
-				//ищем выполняемую задачу по ClientTaskID (уникальный ID задачи на стороне клиента)
-				taskID, ti, isExist := hsm.SMT.GetStoringMemoryTaskForClientID(msg.IDClientAPI, msgc.ClientTaskID)
-				if !isExist {
+				//ищем ожидающую в очереди задачу по ее ID
+				sourceID, taskID, err := hsm.QTS.SearchTaskForClientIDQueueTaskStorage(msgc.ClientTaskID)
+				if err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
 					nsErr := notifications.NotificationSettingsToClientAPI{
 						MsgType:        "danger",
-						MsgDescription: fmt.Sprintf("Ошибка, по переданному идентификатору '%v' выполняемых задач не обнаружено", msgc.ClientTaskID),
+						MsgDescription: fmt.Sprintf("Ошибка, по переданному идентификатору '%v' ожидающих или выполняемых задач не обнаружено", msgc.ClientTaskID),
 					}
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErr, msgc.ClientTaskID, msg.IDClientAPI)
-					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
+
+					return
+				}
+
+				//проверяем наличие задачи в StoringMemoryTask
+				_, isExist := hsm.SMT.GetStoringMemoryTask(taskID)
+				if !isExist {
 
 					return
 				}
@@ -197,7 +205,7 @@ func HandlerMsgFromAPI(
 					ClientName: msg.ClientName,
 					Section:    "filtration control",
 					Command:    "stop",
-					SourceID:   ti.TaskParameter.FiltrationTask.ID,
+					SourceID:   sourceID,
 				}
 
 				return

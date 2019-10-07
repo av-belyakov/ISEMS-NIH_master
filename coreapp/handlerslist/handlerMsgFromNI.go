@@ -20,7 +20,6 @@ func HandlerMsgFromNI(
 	outCoreChans HandlerOutChans,
 	msg *configure.MsgBetweenCoreAndNI,
 	hsm HandlersStoringMemory,
-	mtsfda int64,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 
 	funcName := ", function 'HandlerMsgFromNI'"
@@ -147,36 +146,6 @@ func HandlerMsgFromNI(
 			if err := sendInformationFiltrationTask(outCoreChans.OutCoreChanAPI, taskInfo, msg); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
-
-			/* проверяем общий размер найденных файлов и если общий размер меньше заданного
-			то автоматически доваляем новую задачу по выгрузке файлов в очередь StoringMemoryQueueTask */
-			/*isComplete := taskInfo.TaskParameter.FiltrationTask.Status == "complete"
-			lessThanMax := taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering < mtsfda
-			if isComplete && lessThanMax {
-				//проверяем наличие в очереди задачи с указанным ID
-				if _, _, err := hsm.QTS.SearchTaskForIDQueueTaskStorage(msg.TaskID); err == nil {
-					return
-				}
-
-				//добавляем задачу в очередь
-				hsm.QTS.AddQueueTaskStorage(dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID, configure.CommonTaskInfo{
-					IDClientAPI:     msg.IDClientAPI,
-					TaskIDClientAPI: dcts.ClientTaskID,
-					TaskType:        "download",
-				}, &configure.DescriptionParametersReceivedFromUser{
-					DownloadList: dcts.MsgOption.FileList,
-				})
-
-				//устанавливаем проверочный статус источника для данной задачи как подключен
-				if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-				}
-
-				//изменяем статус наличия файлов для скачивания
-				if err := hsm.QTS.ChangeAvailabilityFilesDownload(sourceID, res.TaskID); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-				}
-			}*/
 		}
 
 	case "download control":
@@ -385,7 +354,7 @@ func HandlerMsgFromNI(
 			}
 
 			if taskInfo == nil {
-				_ = saveMessageApp.LogMessage("error", "task with "+msg.TaskID+" not found")
+				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", msg.TaskID))
 
 				return
 			}
@@ -402,6 +371,10 @@ func HandlerMsgFromNI(
 	case "monitoring task performance":
 		if msg.Command == "complete task" {
 			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
+
+			if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, msg.TaskID, "complete"); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
 		}
 	}
 }

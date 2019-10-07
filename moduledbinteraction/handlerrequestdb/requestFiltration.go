@@ -278,11 +278,11 @@ func UpdateParametersFiltrationTask(
 	}
 
 	//если статус задачи "refused" то есть, задача была отклонена
-	if ti.Status == "refused" {
+	/*if ti.Status == "refused" {
 		infoMsg.Instruction = "filtration refused"
 
 		chanIn <- &infoMsg
-	}
+	}*/
 
 	return err
 }

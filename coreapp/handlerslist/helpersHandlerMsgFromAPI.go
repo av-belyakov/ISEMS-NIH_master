@@ -233,6 +233,7 @@ func handlerFiltrationControlTypeStart(
 		return
 	}
 
+	//получаем новый идентификатор задачи
 	taskID := common.GetUniqIDFormatMD5(clientID)
 
 	//добавляем новую задачу в очередь задач
@@ -267,36 +268,4 @@ func handlerFiltrationControlTypeStart(
 		},
 		DownloadList: []string{},
 	})
-
-	//добавляем новую задачу
-	/*hsm.SMT.AddStoringMemoryTask(taskID, configure.TaskDescription{
-		ClientID:                        clientID,
-		ClientTaskID:                    fcts.ClientTaskID,
-		TaskType:                        fcts.MsgSection,
-		ModuleThatSetTask:               "API module",
-		ModuleResponsibleImplementation: "NI module",
-		TimeUpdate:                      time.Now().Unix(),
-		TimeInterval: configure.TimeIntervalTaskExecution{
-			Start: time.Now().Unix(),
-			End:   time.Now().Unix(),
-		},
-		TaskParameter: configure.DescriptionTaskParameters{
-			FiltrationTask: configure.FiltrationTaskParameters{
-				ID:     fcts.MsgOption.ID,
-				Status: "wait",
-			},
-		},
-	})
-
-	//сохранение параметров задачи в БД
-	chanToDB <- &configure.MsgBetweenCoreAndDB{
-		MsgGenerator:    "Core module",
-		MsgRecipient:    "DB module",
-		MsgSection:      "filtration control",
-		Instruction:     "insert",
-		IDClientAPI:     clientID,
-		TaskID:          taskID,
-		TaskIDClientAPI: fcts.ClientTaskID,
-		AdvancedOptions: fcts.MsgOption,
-	}*/
 }

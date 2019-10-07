@@ -247,7 +247,7 @@ func RouteWssConnectionResponse(
 					ChanInCore:     chanInCore,
 					CwtReq:         cwtReq,
 					Isl:            isl,
-					Smt:            smt,
+					SMT:            smt,
 					Message:        message,
 					SourceID:       sourceID,
 					SourceIP:       sourceIP,

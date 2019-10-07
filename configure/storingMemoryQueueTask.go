@@ -338,7 +338,7 @@ func (qts QueueTaskStorage) IsExistTaskDownloadQueueTaskStorage(sourceID int) bo
 	return false
 }
 
-//SearchTaskForIDQueueTaskStorage поиск информации по ID задачи
+//SearchTaskForIDQueueTaskStorage поиск информации по ID задачи (внутренний task ID приложения)
 func (qts *QueueTaskStorage) SearchTaskForIDQueueTaskStorage(taskID string) (int, *QueueTaskInformation, error) {
 	var sourceID int
 
@@ -383,6 +383,44 @@ DONE:
 	qti.TaskIDClientAPI = msgRes.TaskIDClientAPI
 
 	return sourceID, &qti, nil
+}
+
+//SearchTaskForClientIDQueueTaskStorage поиск информации по ID задачи клиента API
+func (qts *QueueTaskStorage) SearchTaskForClientIDQueueTaskStorage(clientTaskID string) (int, string, error) {
+	var sourceID int
+	var taskID string
+	errMsg := fmt.Errorf("error, client task ID %v not found", clientTaskID)
+
+	sourceList := qts.GetAllSourcesQueueTaskStorage()
+	if len(sourceList) == 0 {
+		return sourceID, taskID, errMsg
+	}
+
+	chanRes := make(chan chanResponse)
+	defer close(chanRes)
+
+DONE:
+	for sID, tasks := range sourceList {
+		for tID := range tasks {
+			qts.ChannelReq <- chanRequest{
+				Action:   "get information for task",
+				SourceID: sID,
+				TaskID:   tID,
+				ChanRes:  chanRes,
+			}
+
+			msgRes := <-chanRes
+			if msgRes.TaskIDClientAPI == clientTaskID {
+				sourceID = sID
+				taskID = tID
+				errMsg = nil
+
+				break DONE
+			}
+		}
+	}
+
+	return sourceID, taskID, errMsg
 }
 
 //GetQueueTaskStorage получить информацию по задаче
@@ -671,10 +709,14 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 						}
 					}
 
+					//удаляем задачу находящуюся в очереди более суток
+					if (taskInfo.TaskStatus == "wait") && (time.Now().Unix() > (taskInfo.TimeUpdate + 86400)) {
+						_ = qts.DelQueueTaskStorage(sourceID, taskID)
+					}
+
 					/*
 					   Для скачивания файлов
 					*/
-
 					if taskInfo.TaskType == "download" {
 						//выполняется ли задача
 						if len(et.downloadTask) > 0 {
@@ -694,17 +736,11 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 								}
 							}
 						}
-
-						//удаляем задачу находящуюся в очереди более суток
-						if (taskInfo.TaskStatus == "wait") && (time.Now().Unix() > (taskInfo.TimeUpdate + 86400)) {
-							_ = qts.DelQueueTaskStorage(sourceID, taskID)
-						}
 					}
 
 					/*
 					   Для фильтрации файлов
 					*/
-
 					if taskInfo.TaskType == "filtration" {
 						if len(et.filtrationTask) == maxProcessFiltration {
 							continue
