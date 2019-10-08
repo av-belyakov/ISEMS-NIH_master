@@ -132,9 +132,9 @@ func sendInformationFiltrationTask(
 	resMsg.ClientTaskID = taskInfo.ClientTaskID
 
 	if ti.Status == "execute" {
-		if ffi, ok := msg.AdvancedOptions.(map[string]*configure.FoundFilesInformation); ok {
-			nffi := make(map[string]*configure.InputFilesInformation, len(ffi))
-			for n, v := range ffi {
+		if tfmffiats, ok := msg.AdvancedOptions.(configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus); ok {
+			nffi := make(map[string]*configure.InputFilesInformation, len(tfmffiats.ListFoundFile))
+			for n, v := range tfmffiats.ListFoundFile {
 				nffi[n] = &configure.InputFilesInformation{
 					Size: v.Size,
 					Hex:  v.Hex,

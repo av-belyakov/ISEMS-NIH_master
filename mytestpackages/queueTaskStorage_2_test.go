@@ -36,7 +36,7 @@ var _ = Describe("QueueTaskStorage", func() {
 				configure.CommonTaskInfo{
 					IDClientAPI:     clientID,
 					TaskIDClientAPI: ctID,
-					TaskType:        "filtration",
+					TaskType:        "filtration control",
 				},
 				&configure.DescriptionParametersReceivedFromUser{
 					FilterationParameters: configure.FilteringOption{

@@ -279,6 +279,9 @@ func HandlerMsgFromCore(
 
 	case "filtration control":
 		if msg.Command == "start" {
+
+			fmt.Println("function 'HandlerMsgFromCore', section - 'filtration control', command - 'START'")
+
 			//проверяем наличие подключения для заданного источника
 			si, ok := isl.GetSourceSetting(msg.SourceID)
 			if !ok || !si.ConnectionStatus {
@@ -331,6 +334,8 @@ func HandlerMsgFromCore(
 				return
 			}
 
+			fmt.Println("function 'HandlerMsgFromCore', section - 'filtration control', send task 'START' to source")
+
 			//передаем задачу источнику
 			cwt <- configure.MsgWsTransmission{
 				DestinationHost: si.IP,
@@ -341,6 +346,9 @@ func HandlerMsgFromCore(
 		}
 
 		if msg.Command == "stop" {
+
+			fmt.Println("function 'HandlerMsgFromCore', section - 'filtration control', command - 'STOP'")
+
 			if si, ok := isl.GetSourceSetting(msg.SourceID); ok {
 				//проверяем наличие подключения для заданного источника
 				if !si.ConnectionStatus {
@@ -373,6 +381,8 @@ func HandlerMsgFromCore(
 					return
 				}
 
+				fmt.Println("function 'HandlerMsgFromCore', section - 'filtration control', send task 'STOP' to source")
+
 				//отправляем источнику сообщение типа 'confirm complete' для того что бы подтвердить останов задачи
 				cwt <- configure.MsgWsTransmission{
 					DestinationHost: si.IP,
@@ -383,6 +393,9 @@ func HandlerMsgFromCore(
 
 	case "download control":
 		if msg.Command == "start" {
+
+			fmt.Println("function 'HandlerMsgFromCore', section - 'download control', send task 'START' to source")
+
 			chanInCRRF <- &configure.MsgChannelReceivingFiles{
 				SourceID: msg.SourceID,
 				TaskID:   msg.TaskID,
@@ -391,6 +404,9 @@ func HandlerMsgFromCore(
 		}
 
 		if msg.Command == "stop" {
+
+			fmt.Println("function 'HandlerMsgFromCore', section - 'download control', send task 'STOP' to source")
+
 			chanInCRRF <- &configure.MsgChannelReceivingFiles{
 				SourceID: msg.SourceID,
 				TaskID:   msg.TaskID,

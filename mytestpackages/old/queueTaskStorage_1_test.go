@@ -109,7 +109,7 @@ var _ = Describe("QueueTaskStorage", func() {
 		configure.CommonTaskInfo{
 			IDClientAPI:     clientID,
 			TaskIDClientAPI: "00e0ie0ir0i0r4",
-			TaskType:        "download",
+			TaskType:        "download control",
 		},
 		&configure.DescriptionParametersReceivedFromUser{
 			DownloadList: listFilesUser,

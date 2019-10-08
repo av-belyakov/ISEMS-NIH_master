@@ -63,6 +63,9 @@ func HandlerMsgFromDB(
 			//пока заглушка
 
 		case "filtration control":
+
+			fmt.Println("function 'handlerMsgFromDB' SECTION - 'filtration source'")
+
 			//получаем всю информацию по выполняемой задаче
 			taskInfo, ok := hsm.SMT.GetStoringMemoryTask(res.TaskID)
 			if !ok {
@@ -73,21 +76,41 @@ func HandlerMsgFromDB(
 
 			isNotComplete := taskInfo.TaskParameter.FiltrationTask.Status != "complete"
 			moreThanMax := taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering > mtsfda
-			taskTypeNotFiltr := taskInfo.TaskType != "filtration"
+			taskTypeNotFiltr := taskInfo.TaskType != "filtration control"
+
+			fmt.Printf("function 'handlerMsgFromDB' INSTRACTION - %v\n", res.Instruction)
+			fmt.Printf("function 'handlerMsgFromDB' STATUS = %v\n", taskInfo.TaskParameter.FiltrationTask.Status)
+
+			//отправляем сообщение пользователю об завершении фильтрации
+			if (taskInfo.TaskParameter.FiltrationTask.Status == "complete") && (res.Instruction == "filtration complete") {
+				if err := sendMsgCompleteTaskFiltration(res.TaskID, taskInfo, outCoreChans.OutCoreChanAPI); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				}
+			}
+
+			fmt.Printf("function 'handlerMsgFromDB' STATUS:%v, SIZE:%v, TASK TYPE:%v\n", taskInfo.TaskParameter.FiltrationTask.Status, taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering, taskInfo.TaskType)
+			fmt.Printf("function 'handlerMsgFromDB' resipient - API module, section - 'filtration control', isNotComplete - %v, SizeFilesFoundResultFiltering (%v) > mtsfda (%v), taskTypeNotFiltr - %v\n", isNotComplete, taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering, mtsfda, taskTypeNotFiltr)
+
 			if taskTypeNotFiltr || isNotComplete || moreThanMax {
+				fmt.Println("function 'handlerMsgFromDB', отмечаем задачу как завершенную в списке очередей")
+
 				//отмечаем задачу как завершенную в списке очередей
 				if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID, "complete"); err != nil {
+					fmt.Printf("function 'handlerMsgFromDB', ERROR = %v\n", err)
+
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 				}
 
 				return
 			}
 
+			fmt.Println("function 'handlerMsgFromDB', add task download after filtration to QueueTaskStorage")
+
 			//добавляем задачу в очередь
 			hsm.QTS.AddQueueTaskStorage(res.TaskID, taskInfo.TaskParameter.FiltrationTask.ID, configure.CommonTaskInfo{
 				IDClientAPI:     res.IDClientAPI,
 				TaskIDClientAPI: res.TaskIDClientAPI,
-				TaskType:        "download",
+				TaskType:        "download control",
 			}, &configure.DescriptionParametersReceivedFromUser{
 				DownloadList: []string{},
 			})
@@ -102,8 +125,15 @@ func HandlerMsgFromDB(
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
 
+			/*
+			   До сего момента вроде все правельно,
+			   а вот дальше не понятно и ничего не работает
+			*/
+
 			//устанавливаем статус задачи в "complete" для ее последующего удаления
 			hsm.SMT.CompleteStoringMemoryTask(res.TaskID)
+
+			fmt.Println("function 'handlerMsgFromDB', complete storing memory task --- ")
 
 			/*
 				!!!!
@@ -200,6 +230,8 @@ func HandlerMsgFromDB(
 				},
 			}
 
+			fmt.Println("function 'HandlerMsgFromDB', section 'filtartion control', recipient - 'NI module' (INDEX NOT FOUNT)")
+
 			if !tfmfi.IndexIsFound {
 				msgJSON, err := json.Marshal(mtfc)
 				if err != nil {
@@ -215,6 +247,8 @@ func HandlerMsgFromDB(
 
 				return
 			}
+
+			fmt.Println("function 'HandlerMsgFromDB', section 'filtartion control', recipient - 'NI module' (INDEX FOUND)")
 
 			//размер части сообщения
 			const maxChunk = 100

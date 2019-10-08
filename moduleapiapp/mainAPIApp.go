@@ -175,37 +175,6 @@ func (settingsServerAPI *settingsServerAPI) serverWss(w http.ResponseWriter, req
 	//при подключении клиента отправляем запрос на получение списка источников
 	sendMsgGetSourceList(clientID)
 
-	//обработка ответов получаемых от ядра приложения
-	go func() {
-		for msg := range chn.ChanOut {
-			if msg.MsgGenerator == "Core module" && msg.MsgRecipient == "API module" {
-				msgjson, ok := msg.MsgJSON.([]byte)
-				if !ok {
-					_ = settingsServerAPI.SaveMessageApp.LogMessage("error", "Server API - failed to send json message, error while casting type")
-
-					continue
-				}
-
-				clientSettings, ok := storingMemoryAPI.GetClientSettings(msg.IDClientAPI)
-				//если клиент с таким ID не найден, отправляем широковещательное сообщение
-				if !ok {
-					cl := storingMemoryAPI.GetClientList()
-					for _, cs := range cl {
-						if err := cs.SendWsMessage(1, msgjson); err != nil {
-							_ = settingsServerAPI.SaveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
-						}
-					}
-
-					continue
-				}
-
-				if err := clientSettings.SendWsMessage(1, msgjson); err != nil {
-					_ = settingsServerAPI.SaveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
-				}
-			}
-		}
-	}()
-
 	//маршрутизация сообщений приходящих от клиентов API
 	go func() {
 		for {
@@ -252,8 +221,8 @@ func MainAPIApp(appConfig *configure.AppConfig, saveMessageApp *savemessageapp.P
 		SaveMessageApp: saveMessageApp,
 	}
 
+	//сервер WSS для подключения клиентов
 	go func() {
-		//создаем сервер wss для подключения клиентов
 		http.HandleFunc("/api", settingsServerAPI.HandlerRequest)
 		http.HandleFunc("/api_wss", settingsServerAPI.serverWss)
 
@@ -261,6 +230,37 @@ func MainAPIApp(appConfig *configure.AppConfig, saveMessageApp *savemessageapp.P
 		if err != nil {
 			log.Println(err)
 			os.Exit(1)
+		}
+	}()
+
+	//маршрутизатор ответов от Core module
+	go func() {
+		for msg := range chn.ChanOut {
+			if msg.MsgGenerator == "Core module" && msg.MsgRecipient == "API module" {
+				msgjson, ok := msg.MsgJSON.([]byte)
+				if !ok {
+					_ = settingsServerAPI.SaveMessageApp.LogMessage("error", "Server API - failed to send json message, error while casting type")
+
+					continue
+				}
+
+				clientSettings, ok := storingMemoryAPI.GetClientSettings(msg.IDClientAPI)
+				//если клиент с таким ID не найден, отправляем широковещательное сообщение
+				if !ok {
+					cl := storingMemoryAPI.GetClientList()
+					for _, cs := range cl {
+						if err := cs.SendWsMessage(1, msgjson); err != nil {
+							_ = settingsServerAPI.SaveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
+						}
+					}
+
+					continue
+				}
+
+				if err := clientSettings.SendWsMessage(1, msgjson); err != nil {
+					_ = settingsServerAPI.SaveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
+				}
+			}
 		}
 	}()
 

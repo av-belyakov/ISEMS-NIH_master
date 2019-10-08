@@ -61,6 +61,58 @@ func getCurrentSourceListForAPI(
 	return nil
 }
 
+//sendMsgCompleteTaskFiltration отправляет информационное сообщение об
+// окончании фильтрации но только если восстанавливалась информация о задаче
+// в StoringMemoryTask после разрыва соединения и задача находится в
+// статусе 'complete'
+func sendMsgCompleteTaskFiltration(
+	taskID string,
+	taskInfo *configure.TaskDescription,
+	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) error {
+
+	fmt.Println("START function 'sendMsgCompleteTaskFiltration'")
+
+	ti := taskInfo.TaskParameter.FiltrationTask
+	resMsg := configure.FiltrationControlTypeInfo{
+		MsgOption: configure.FiltrationControlMsgTypeInfo{
+			ID:                              taskInfo.TaskParameter.FiltrationTask.ID,
+			TaskIDApp:                       taskID,
+			Status:                          ti.Status,
+			NumberFilesMeetFilterParameters: ti.NumberFilesMeetFilterParameters,
+			NumberProcessedFiles:            ti.NumberProcessedFiles,
+			NumberFilesFoundResultFiltering: ti.NumberFilesFoundResultFiltering,
+			NumberErrorProcessedFiles:       ti.NumberErrorProcessedFiles,
+			NumberDirectoryFiltartion:       ti.NumberDirectoryFiltartion,
+			SizeFilesMeetFilterParameters:   ti.SizeFilesMeetFilterParameters,
+			SizeFilesFoundResultFiltering:   ti.SizeFilesFoundResultFiltering,
+			PathStorageSource:               ti.PathStorageSource,
+		},
+	}
+
+	resMsg.MsgType = "information"
+	resMsg.MsgSection = "filtration control"
+	resMsg.MsgInstruction = "task processing"
+	resMsg.ClientTaskID = taskInfo.ClientTaskID
+
+	msgJSON, err := json.Marshal(resMsg)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("function 'sendMsgCompleteTaskFiltration'")
+
+	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+		MsgGenerator: "Core module",
+		MsgRecipient: "API module",
+		IDClientAPI:  taskInfo.ClientID,
+		MsgJSON:      msgJSON,
+	}
+
+	fmt.Println("STOP function 'sendMsgCompleteTaskFiltration'")
+
+	return nil
+}
+
 //checkParametersDownloadTask проверяет ряд параметров в информации о задаче полученной из БД
 func checkParametersDownloadTask(
 	res *configure.MsgBetweenCoreAndDB,

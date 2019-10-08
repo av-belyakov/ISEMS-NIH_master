@@ -313,7 +313,7 @@ func HandlerMsgFromAPI(
 				hsm.QTS.AddQueueTaskStorage(dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID, configure.CommonTaskInfo{
 					IDClientAPI:     msg.IDClientAPI,
 					TaskIDClientAPI: dcts.ClientTaskID,
-					TaskType:        "download",
+					TaskType:        "download control",
 				}, &configure.DescriptionParametersReceivedFromUser{
 					DownloadList: dcts.MsgOption.FileList,
 				})

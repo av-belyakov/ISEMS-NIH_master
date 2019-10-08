@@ -53,21 +53,24 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 	//обновляем информацию о выполняемой задаче в памяти приложения
 	pprmtf.SMT.UpdateTaskFiltrationAllParameters(resMsg.Info.TaskID, ftp)
 
-	msgCompliteTask := configure.MsgBetweenCoreAndNI{
+	msgCompleteTask := configure.MsgBetweenCoreAndNI{
 		TaskID:  resMsg.Info.TaskID,
 		Section: "monitoring task performance",
 		Command: "complete task",
 	}
 
 	msg := &configure.MsgBetweenCoreAndNI{
-		TaskID:          resMsg.Info.TaskID,
-		Section:         "filtration control",
-		Command:         resMsg.Info.TaskStatus,
-		SourceID:        pprmtf.SourceID,
-		AdvancedOptions: ffi,
+		TaskID:   resMsg.Info.TaskID,
+		Section:  "filtration control",
+		Command:  resMsg.Info.TaskStatus,
+		SourceID: pprmtf.SourceID,
+		AdvancedOptions: configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus{
+			TaskStatus:    resMsg.Info.TaskStatus,
+			ListFoundFile: ffi,
+		},
 	}
 
-	fmt.Printf("\tпринята информация о задаче с ID '%v', статус задачи - %v\n", resMsg.Info.TaskID, resMsg.Info.TaskStatus)
+	fmt.Printf("\tfunction 'ProcessingReceivedMsgTypeFiltering', принята информация о задаче с ID '%v', статус задачи - %v\n", resMsg.Info.TaskID, resMsg.Info.TaskStatus)
 
 	if resMsg.Info.TaskStatus == "execute" {
 		//отправляем в ядро, а от туда в БД и клиенту API
@@ -81,7 +84,7 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 		pprmtf.ChanInCore <- msg
 
 		//отправляем сообщение о снятии контроля за выполнением задачи
-		pprmtf.ChanInCore <- &msgCompliteTask
+		pprmtf.ChanInCore <- &msgCompleteTask
 
 		return
 	}
@@ -90,13 +93,16 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 
 	//отправка информации только после получения всех частей
 	if resMsg.Info.NumberMessagesParts[0] == resMsg.Info.NumberMessagesParts[1] {
+
+		fmt.Printf("function 'ProcessingReceivedMsgTypeFiltering', полученно сообщение %v\n", resMsg.Info.TaskStatus)
+
 		//отправляем в ядро, а от туда в БД и клиенту API
 		pprmtf.ChanInCore <- msg
 
 		//отправляем сообщение о снятии контроля за выполнением задачи
-		pprmtf.ChanInCore <- &msgCompliteTask
+		pprmtf.ChanInCore <- &msgCompleteTask
 
-		resConfirmComplite := configure.MsgTypeFiltrationControl{
+		resConfirmComplete := configure.MsgTypeFiltrationControl{
 			MsgType: "filtration",
 			Info: configure.SettingsFiltrationControl{
 				TaskID:  resMsg.Info.TaskID,
@@ -104,12 +110,14 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 			},
 		}
 
-		msgJSON, err := json.Marshal(resConfirmComplite)
+		msgJSON, err := json.Marshal(resConfirmComplete)
 		if err != nil {
 			_ = pprmtf.SaveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 			return
 		}
+
+		fmt.Println("\tfunction 'ProcessingReceivedMsgTypeFiltering', send source message 'confirm complete'")
 
 		//отправляем источнику сообщение типа 'confirm complete' для того что бы подтвердить останов задачи
 		pprmtf.CwtRes <- configure.MsgWsTransmission{

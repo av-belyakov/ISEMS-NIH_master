@@ -22,7 +22,7 @@ type QueueTaskStorage struct {
 // TaskStatus - статус задачи 'wait', 'execution', 'complete'
 // TimeUpdate - время последнего обновления задачи (используется для
 //  удаления 'подвисших' задач)
-// TaskType - тип задачи 'filtration', 'download'
+// TaskType - тип задачи ('filtration control', 'download control')
 // CheckingStatusItems - проверка пунктов
 // TaskParameters - параметры задачи
 type QueueTaskInformation struct {
@@ -152,7 +152,7 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				qts.StorageList[msg.SourceID][msg.TaskID].IDClientAPI = msg.IDClientAPI
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskIDClientAPI = msg.TaskIDClientAPI
 
-				if msg.TaskType == "filtration" {
+				if msg.TaskType == "filtration control" {
 					qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.FilterationParameters = msg.AdditionalOption.FilterationParameters
 					msg.ChanRes <- msgRes
 
@@ -330,7 +330,7 @@ func (qts QueueTaskStorage) IsExistTaskDownloadQueueTaskStorage(sourceID int) bo
 	}
 
 	for _, info := range list {
-		if info.TaskType == "download" {
+		if info.TaskType == "download control" {
 			return true
 		}
 	}
@@ -697,8 +697,10 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 					if taskInfo.TaskStatus == "complete" {
 						_ = qts.DelQueueTaskStorage(sourceID, taskID)
 
+						fmt.Println("function 'CheckTimeQueueTaskStorage' - task status is 'COMPLETE', delete task")
+
 						//удаляем задачу из списка отслеживания кол-ва выполняемых задач
-						if taskInfo.TaskType == "download" {
+						if taskInfo.TaskType == "download control" {
 							et.downloadTask = []string{}
 						} else {
 							for key, tID := range et.filtrationTask {
@@ -715,19 +717,20 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 					}
 
 					/*
-					   Для скачивания файлов
+					   Для фильтрации файлов
 					*/
-					if taskInfo.TaskType == "download" {
-						//выполняется ли задача
-						if len(et.downloadTask) > 0 {
+					if taskInfo.TaskType == "filtration control" {
+						if len(et.filtrationTask) == maxProcessFiltration {
 							continue
 						}
 
-						//если задача не выполнялась, источник подключен и есть файлы для скачивания
-						if (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection && taskInfo.CheckingStatusItems.AvailabilityFilesDownload {
+						//если задача не выполнялась и источник подключен
+						if (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection {
 							if err := qts.ChangeTaskStatusQueueTask(sourceID, taskID, "execution"); err == nil {
 								//добавляем в массив выполняющихся задач
-								et.downloadTask = append(et.downloadTask, taskID)
+								et.filtrationTask = append(et.filtrationTask, taskID)
+
+								fmt.Println("function 'CheckTimeQueueTaskStorage' - start filtration task")
 
 								//запускаем выполнение задачи
 								chanMsgInfoQueueTaskStorage <- MessageInformationQueueTaskStorage{
@@ -739,18 +742,23 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 					}
 
 					/*
-					   Для фильтрации файлов
+					   Для скачивания файлов
 					*/
-					if taskInfo.TaskType == "filtration" {
-						if len(et.filtrationTask) == maxProcessFiltration {
+					if taskInfo.TaskType == "download control" {
+						//выполняется ли задача
+						if len(et.downloadTask) > 0 {
+							fmt.Println("function 'CheckTimeQueueTaskStorage' - задача по скачиванию уже выполняется, пропускаем задачу")
+
 							continue
 						}
 
-						//если задача не выполнялась и источник подключен
-						if (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection {
+						//если задача не выполнялась, источник подключен и есть файлы для скачивания
+						if (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection && taskInfo.CheckingStatusItems.AvailabilityFilesDownload {
 							if err := qts.ChangeTaskStatusQueueTask(sourceID, taskID, "execution"); err == nil {
 								//добавляем в массив выполняющихся задач
-								et.filtrationTask = append(et.filtrationTask, taskID)
+								et.downloadTask = append(et.downloadTask, taskID)
+
+								fmt.Println("function 'CheckTimeQueueTaskStorage' - start download file task")
 
 								//запускаем выполнение задачи
 								chanMsgInfoQueueTaskStorage <- MessageInformationQueueTaskStorage{

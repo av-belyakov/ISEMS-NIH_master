@@ -62,10 +62,14 @@ func Routing(
 
 			qti, err := qts.GetQueueTaskStorage(msg.SourceID, msg.TaskID)
 			if err != nil {
+				fmt.Printf("function 'routing' Core module - ERROR %v", err)
+
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 				continue
 			}
+
+			fmt.Printf("function 'routing' Core module - sent new task type %v", qti.TaskType)
 
 			emt.TaskIDClientAPI = qti.TaskIDClientAPI
 			emt.IDClientAPI = qti.IDClientAPI
@@ -90,7 +94,7 @@ func Routing(
 				continue
 			}
 
-			if qti.TaskType == "filtration" {
+			if qti.TaskType == "filtration control" {
 				emt.Section = "filtration control"
 
 				//добавляем задачу в 'StoringMemoryTask'
@@ -124,9 +128,11 @@ func Routing(
 					TaskIDClientAPI: qti.TaskIDClientAPI,
 					AdvancedOptions: msg.SourceID,
 				}
+
+				fmt.Println("function 'routing' Core module - add task FILTRATION in StoringMemoryTask and send insert DB module")
 			}
 
-			if qti.TaskType == "download" {
+			if qti.TaskType == "download control" {
 				emt.Section = "download control"
 
 				npfp := directorypathshaper.NecessaryParametersFiltrationProblem{
@@ -193,6 +199,8 @@ func Routing(
 					Command:    "start",
 					SourceID:   msg.SourceID,
 				}
+
+				fmt.Println("function 'routing' Core module - add task DOWNLOAD in StoringMemoryTask and send NI module")
 			}
 		}
 	}()

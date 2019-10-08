@@ -15,7 +15,7 @@ type StoringMemoryTask struct {
 //TaskDescription описание задачи
 // ClientID - уникальный идентификатор клиента
 // ClientTaskID - идентификатор задачи полученный от клиента
-// TaskType - тип выполняемой задачи
+// TaskType - тип выполняемой задачи ("filtration control", "download control")
 // TaskStatus - статус задачи, false выполняется, true завершена
 // ModuleThatSetTask - модуль от которого поступила задача
 // ModuleResponsibleImplementation - модуль который должен выполнить обработку
@@ -288,14 +288,6 @@ func (smt StoringMemoryTask) RecoverStoringMemoryTask(td TaskDescription, taskID
 	<-chanRes
 }
 
-//delStoringMemoryTask удалить задачу
-func (smt StoringMemoryTask) delStoringMemoryTask(taskID string) {
-	smt.channelReq <- ChanStoringMemoryTask{
-		ActionType: "delete",
-		TaskID:     taskID,
-	}
-}
-
 //CompleteStoringMemoryTask установить статус 'выполненно' для задачи
 func (smt *StoringMemoryTask) CompleteStoringMemoryTask(taskID string) {
 	chanRes := make(chan channelResSettings)
@@ -459,6 +451,14 @@ func (smt *StoringMemoryTask) UpdateTaskDownloadFileIsLoaded(taskID string, dtp 
 	}
 
 	<-chanRes
+}
+
+//delStoringMemoryTask удалить задачу
+func (smt StoringMemoryTask) delStoringMemoryTask(taskID string) {
+	smt.channelReq <- ChanStoringMemoryTask{
+		ActionType: "delete",
+		TaskID:     taskID,
+	}
 }
 
 func (smt *StoringMemoryTask) updateTaskFiltrationAllParameters(taskID string, td *TaskDescription) {

@@ -5,12 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	//"github.com/mongodb/mongo-go-driver/mongo/options"
-	//"github.com/mongodb/mongo-go-driver/bson"
+	"github.com/mongodb/mongo-go-driver/bson"
 
 	"ISEMS-NIH_master/configure"
-
-	"github.com/mongodb/mongo-go-driver/bson"
 )
 
 //CreateNewFiltrationTask запись информации о новой фильтрации
@@ -20,6 +17,8 @@ func CreateNewFiltrationTask(
 	req *configure.MsgBetweenCoreAndDB,
 	qp QueryParameters,
 	qts *configure.QueueTaskStorage) {
+
+	fmt.Println("function 'CreateNewFiltrationTask' START insert data in DB")
 
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
@@ -156,6 +155,15 @@ func UpdateParametersFiltrationTask(
 
 	var err error
 
+	infoMsg := configure.MsgBetweenCoreAndDB{
+		MsgGenerator: "DB module",
+		MsgRecipient: "API module",
+		MsgSection:   "filtration control",
+		Instruction:  "filtration complete",
+		IDClientAPI:  req.IDClientAPI,
+		TaskID:       req.TaskID,
+	}
+
 	//получаем всю информацию по выполняемой задаче
 	taskInfo, ok := smt.GetStoringMemoryTask(req.TaskID)
 	if !ok {
@@ -172,6 +180,15 @@ func UpdateParametersFiltrationTask(
 		}
 
 		itd := (*taskInfoFromDB)[0]
+		infoMsg.TaskIDClientAPI = itd.ClientTaskID
+
+		taskStatusRecovery := itd.DetailedInformationOnFiltering.TaskStatus
+
+		tfmffiats, convertAOIsOK := req.AdvancedOptions.(configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus)
+		if convertAOIsOK {
+			taskStatusRecovery = tfmffiats.TaskStatus
+		}
+
 		smt.RecoverStoringMemoryTask(configure.TaskDescription{
 			ClientID:                        itd.ClientID,
 			ClientTaskID:                    itd.ClientTaskID,
@@ -186,7 +203,7 @@ func UpdateParametersFiltrationTask(
 			TaskParameter: configure.DescriptionTaskParameters{
 				FiltrationTask: configure.FiltrationTaskParameters{
 					ID:                              itd.SourceID,
-					Status:                          itd.DetailedInformationOnFiltering.TaskStatus,
+					Status:                          taskStatusRecovery,
 					UseIndex:                        itd.DetailedInformationOnFiltering.WasIndexUsed,
 					NumberFilesMeetFilterParameters: itd.DetailedInformationOnFiltering.NumberFilesMeetFilterParameters,
 					NumberProcessedFiles:            itd.DetailedInformationOnFiltering.NumberProcessedFiles,
@@ -200,10 +217,27 @@ func UpdateParametersFiltrationTask(
 			},
 		}, req.TaskID)
 
+		//если статус задачи "stop" или "complete" через ядро останавливаем задачу и оповещаем пользователя
+		if taskStatusRecovery == "complete" || taskStatusRecovery == "stop" {
+			//обновление статуса задачи
+			commonValueUpdate := bson.D{
+				bson.E{Key: "$set", Value: bson.D{
+					bson.E{Key: "detailed_information_on_filtering.task_status", Value: taskStatusRecovery},
+				}}}
+
+			err = qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, commonValueUpdate)
+
+			fmt.Println("function 'UpdateParametersFiltrationTask', status filtration 'stop' or 'complete' 11111")
+
+			chanIn <- &infoMsg
+		}
+
 		return fmt.Errorf("task with ID '%v' not found (DB module)", req.TaskID)
 	}
 
 	ti := taskInfo.TaskParameter.FiltrationTask
+
+	infoMsg.TaskIDClientAPI = taskInfo.ClientTaskID
 
 	//выполнять обновление информации в БД для сообщения типа 'complete' всегда,
 	// для сообщения типа 'execute' только раз 31 секунду
@@ -262,27 +296,13 @@ func UpdateParametersFiltrationTask(
 	//обновление таймера вставки информации в БД
 	smt.TimerUpdateTaskInsertDB(req.TaskID)
 
-	infoMsg := configure.MsgBetweenCoreAndDB{
-		MsgGenerator:    "DB module",
-		MsgRecipient:    "API module",
-		MsgSection:      "filtration control",
-		Instruction:     "filtration complete",
-		IDClientAPI:     req.IDClientAPI,
-		TaskID:          req.TaskID,
-		TaskIDClientAPI: taskInfo.ClientTaskID,
-	}
-
 	//если статус задачи "stop" или "complete" через ядро останавливаем задачу и оповещаем пользователя
 	if ti.Status == "stop" || ti.Status == "complete" {
+
+		fmt.Println("function 'UpdateParametersFiltrationTask', status filtration 'stop' or 'complete' 22222")
+
 		chanIn <- &infoMsg
 	}
-
-	//если статус задачи "refused" то есть, задача была отклонена
-	/*if ti.Status == "refused" {
-		infoMsg.Instruction = "filtration refused"
-
-		chanIn <- &infoMsg
-	}*/
 
 	return err
 }

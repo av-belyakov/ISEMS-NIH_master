@@ -182,6 +182,8 @@ func handlerFiltrationControlTypeStart(
 		return
 	}
 
+	fmt.Println("function 'handlerFiltrationControlTypeStart' - decode JSON")
+
 	//проверяем параметры фильтрации
 	if msg, ok := сheckParametersFiltration(&fcts.MsgOption); !ok {
 		_ = saveMessageApp.LogMessage("error", "incorrect parameters for filtering are set"+funcName)
@@ -206,6 +208,8 @@ func handlerFiltrationControlTypeStart(
 
 		return
 	}
+
+	fmt.Println("function 'handlerFiltrationControlTypeStart' - check parameters filtration")
 
 	//проверяем состояние подключения источника
 	connectionStatus, err := hsm.ISL.GetSourceConnectionStatus(fcts.MsgOption.ID)
@@ -233,14 +237,18 @@ func handlerFiltrationControlTypeStart(
 		return
 	}
 
+	fmt.Println("function 'handlerFiltrationControlTypeStart' - check connection status")
+
 	//получаем новый идентификатор задачи
 	taskID := common.GetUniqIDFormatMD5(clientID)
+
+	fmt.Println("function 'handlerFiltrationControlTypeStart' - add task QueueTaskStorage")
 
 	//добавляем новую задачу в очередь задач
 	hsm.QTS.AddQueueTaskStorage(taskID, fcts.MsgOption.ID, configure.CommonTaskInfo{
 		IDClientAPI:     clientID,
 		TaskIDClientAPI: fcts.ClientTaskID,
-		TaskType:        "filtration",
+		TaskType:        "filtration control",
 	}, &configure.DescriptionParametersReceivedFromUser{
 		FilterationParameters: configure.FilteringOption{
 			DateTime: configure.TimeInterval{
@@ -268,4 +276,9 @@ func handlerFiltrationControlTypeStart(
 		},
 		DownloadList: []string{},
 	})
+
+	//устанавливаем проверочный статус источника для данной задачи как подключен
+	if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(fcts.MsgOption.ID, taskID); err != nil {
+		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+	}
 }

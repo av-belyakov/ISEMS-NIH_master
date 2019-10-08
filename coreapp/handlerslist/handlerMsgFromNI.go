@@ -24,8 +24,8 @@ func HandlerMsgFromNI(
 
 	funcName := ", function 'HandlerMsgFromNI'"
 
-	taskInfo, ok := hsm.SMT.GetStoringMemoryTask(msg.TaskID)
-	if ok {
+	taskInfo, taskInfoIsExist := hsm.SMT.GetStoringMemoryTask(msg.TaskID)
+	if taskInfoIsExist {
 		hsm.SMT.TimerUpdateStoringMemoryTask(msg.TaskID)
 	}
 
@@ -139,7 +139,7 @@ func HandlerMsgFromNI(
 		outCoreChans.OutCoreChanDB <- &msgChan
 
 		//если задача найдена
-		if ok {
+		if taskInfoIsExist {
 			/* упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
 			при чем если статус 'execute', то отправляем еще и содержимое поля 'FoundFilesInformation',
 			а если статус фильтрации 'stop' или 'complete' то данное поле не заполняем */
@@ -151,19 +151,18 @@ func HandlerMsgFromNI(
 	case "download control":
 		fmt.Println("func 'HandlerMsgFromNI', section DOWNLOAD CONTROL")
 
-		ti, ok := hsm.SMT.GetStoringMemoryTask(msg.TaskID)
-		if !ok {
+		if !taskInfoIsExist {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("there is no task with the specified ID %v", msg.TaskID))
 
 			return
 		}
 
-		sourceID := ti.TaskParameter.DownloadTask.ID
+		sourceID := taskInfo.TaskParameter.DownloadTask.ID
 
 		msgToAPI := configure.MsgBetweenCoreAndAPI{
 			MsgGenerator: "Core module",
 			MsgRecipient: "API module",
-			IDClientAPI:  ti.ClientID,
+			IDClientAPI:  taskInfo.ClientID,
 		}
 
 		ns := notifications.NotificationSettingsToClientAPI{
@@ -176,16 +175,16 @@ func HandlerMsgFromNI(
 				ID:                                  sourceID,
 				Status:                              "execute",
 				TaskIDApp:                           msg.TaskID,
-				NumberFilesTotal:                    ti.TaskParameter.DownloadTask.NumberFilesTotal,
-				NumberFilesDownloaded:               ti.TaskParameter.DownloadTask.NumberFilesDownloaded,
-				NumberFilesDownloadedError:          ti.TaskParameter.DownloadTask.NumberFilesDownloadedError,
-				PathDirectoryStorageDownloadedFiles: ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles,
+				NumberFilesTotal:                    taskInfo.TaskParameter.DownloadTask.NumberFilesTotal,
+				NumberFilesDownloaded:               taskInfo.TaskParameter.DownloadTask.NumberFilesDownloaded,
+				NumberFilesDownloadedError:          taskInfo.TaskParameter.DownloadTask.NumberFilesDownloadedError,
+				PathDirectoryStorageDownloadedFiles: taskInfo.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles,
 				DetailedFileInformation: configure.MoreFileInformation{
-					Name:                ti.TaskParameter.DownloadTask.FileInformation.Name,
-					Hex:                 ti.TaskParameter.DownloadTask.FileInformation.Hex,
-					FullSizeByte:        ti.TaskParameter.DownloadTask.FileInformation.FullSizeByte,
-					AcceptedSizeByte:    ti.TaskParameter.DownloadTask.FileInformation.AcceptedSizeByte,
-					AcceptedSizePercent: ti.TaskParameter.DownloadTask.FileInformation.AcceptedSizePercent,
+					Name:                taskInfo.TaskParameter.DownloadTask.FileInformation.Name,
+					Hex:                 taskInfo.TaskParameter.DownloadTask.FileInformation.Hex,
+					FullSizeByte:        taskInfo.TaskParameter.DownloadTask.FileInformation.FullSizeByte,
+					AcceptedSizeByte:    taskInfo.TaskParameter.DownloadTask.FileInformation.AcceptedSizeByte,
+					AcceptedSizePercent: taskInfo.TaskParameter.DownloadTask.FileInformation.AcceptedSizePercent,
 				},
 			},
 		}
@@ -196,7 +195,7 @@ func HandlerMsgFromNI(
 		hdtsct := handlerDownloadTaskStatusCompleteType{
 			SourceID:       sourceID,
 			TaskID:         msg.TaskID,
-			TI:             ti,
+			TI:             taskInfo,
 			QTS:            hsm.QTS,
 			NS:             ns,
 			ResMsgInfo:     resMsgInfo,
@@ -214,6 +213,7 @@ func HandlerMsgFromNI(
 
 				return
 			}
+
 			msgToAPI.MsgJSON = msgJSONInfo
 			outCoreChans.OutCoreChanAPI <- &msgToAPI
 
@@ -281,7 +281,7 @@ func HandlerMsgFromNI(
 			//отправляем информационное сообщение клиенту API
 			ns.MsgType = "warning"
 			ns.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника ID %v была аварийно завершена из-за потери сетевого соединения", msg.SourceID)
-			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, ti.ClientTaskID, ti.ClientID)
+			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
 
 			hdtsct.ResMsgInfo.MsgOption.Status = "stop"
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
@@ -316,7 +316,7 @@ func HandlerMsgFromNI(
 		}
 
 	case "error notification":
-		if taskInfo == nil {
+		if !taskInfoIsExist {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", msg.TaskID))
 
 			return
@@ -353,7 +353,7 @@ func HandlerMsgFromNI(
 				return
 			}
 
-			if taskInfo == nil {
+			if !taskInfoIsExist {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", msg.TaskID))
 
 				return
@@ -371,6 +371,12 @@ func HandlerMsgFromNI(
 	case "monitoring task performance":
 		if msg.Command == "complete task" {
 			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
+
+			if !taskInfoIsExist {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", msg.TaskID))
+
+				return
+			}
 
 			if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, msg.TaskID, "complete"); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))

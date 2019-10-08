@@ -17,3 +17,9 @@ type TypeFiltrationMsgFoundIndex struct {
 	IndexIsFound    bool
 	IndexData       map[string][]string
 }
+
+//TypeFiltrationMsgFoundFileInformationAndTaskStatus тип 'фильтрация', информация о найденных файлах и статусе задачи
+type TypeFiltrationMsgFoundFileInformationAndTaskStatus struct {
+	TaskStatus    string
+	ListFoundFile map[string]*FoundFilesInformation
+}

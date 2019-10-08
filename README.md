@@ -1,4 +1,4 @@
-Application ISEMS-NIH master, v0.22
+Application ISEMS-NIH master, v0.31
 Information Security Event Management System Network Interaction Handler (ISEMS-NIH)
 
 Сервер сетевого взаимодействия с территориально удаленными источниками ISEMS-NIH slave.
@@ -15,4 +15,4 @@ db.createUser({
 	    clientSource:["127.0.0.1","195.161.164.38","81.177.34.205"], 
 	    serverAddress:["127.0.0.1","195.161.164.38","81.177.34.205"]
 	}]
-    })
+})
