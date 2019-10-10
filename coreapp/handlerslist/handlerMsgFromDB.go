@@ -106,32 +106,64 @@ func HandlerMsgFromDB(
 
 			fmt.Println("function 'handlerMsgFromDB', add task download after filtration to QueueTaskStorage")
 
+			sourceID := taskInfo.TaskParameter.FiltrationTask.ID
+
+			//получаем параметры фильтрации
+			qti, err := hsm.QTS.GetQueueTaskStorage(sourceID, res.TaskID)
+			if err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+				return
+			}
+			fmt.Printf("--- BEFORE ADD QTS: %v\n", qti)
+
 			//добавляем задачу в очередь
-			hsm.QTS.AddQueueTaskStorage(res.TaskID, taskInfo.TaskParameter.FiltrationTask.ID, configure.CommonTaskInfo{
+			hsm.QTS.AddQueueTaskStorage(res.TaskID, sourceID, configure.CommonTaskInfo{
 				IDClientAPI:     res.IDClientAPI,
 				TaskIDClientAPI: res.TaskIDClientAPI,
 				TaskType:        "download control",
 			}, &configure.DescriptionParametersReceivedFromUser{
-				DownloadList: []string{},
+				FilterationParameters:         qti.TaskParameters.FilterationParameters,
+				PathDirectoryForFilteredFiles: taskInfo.TaskParameter.FiltrationTask.PathStorageSource,
+				DownloadList:                  []string{},
 			})
 
+			one, _ := hsm.QTS.GetQueueTaskStorage(sourceID, res.TaskID)
+			fmt.Printf("--- AFTER ADD QTS: %v\n", one)
+
 			//устанавливаем проверочный статус источника для данной задачи как подключен
-			if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID); err != nil {
+			if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(sourceID, res.TaskID); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
 
 			//изменяем статус наличия файлов для скачивания
-			if err := hsm.QTS.ChangeAvailabilityFilesDownload(taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID); err != nil {
+			if err := hsm.QTS.ChangeAvailabilityFilesDownload(sourceID, res.TaskID); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
 
+			two, _ := hsm.QTS.GetQueueTaskStorage(sourceID, res.TaskID)
+			fmt.Printf("--- AFTER CHANGE QTS: %v\n", two)
+
 			/*
-			   До сего момента вроде все правельно,
-			   а вот дальше не понятно и ничего не работает
+				   До сего момента вроде все правельно,
+				   а вот дальше не понятно и ничего не работает
+				   наверное стоит убрать вызов CompleteStoringMemoryTask
+
+				   !!! еще проверить по фильтрации !!!
+					1. останов фильтрации (YES)
+					2. выполнение нескольких процессов фильтрации
+					в том числе обработку при превышении кол-во одновременно
+					запущеных процессов фильтрации (несколько процессов выполняются
+					успешно, однако выполнение всех процессов прерывается если
+				останавливаешь один из них)
+					3. обработку сообщений при отключении и подключении клиента
+					API при выполнении фильтрации
+					4. отключение и подключения самого мастера при выполнении
+					фильтрации
 			*/
 
 			//устанавливаем статус задачи в "complete" для ее последующего удаления
-			hsm.SMT.CompleteStoringMemoryTask(res.TaskID)
+			//hsm.SMT.CompleteStoringMemoryTask(res.TaskID)
 
 			fmt.Println("function 'handlerMsgFromDB', complete storing memory task --- ")
 

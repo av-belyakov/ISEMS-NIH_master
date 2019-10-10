@@ -152,8 +152,9 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				qts.StorageList[msg.SourceID][msg.TaskID].IDClientAPI = msg.IDClientAPI
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskIDClientAPI = msg.TaskIDClientAPI
 
+				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.FilterationParameters = msg.AdditionalOption.FilterationParameters
+
 				if msg.TaskType == "filtration control" {
-					qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.FilterationParameters = msg.AdditionalOption.FilterationParameters
 					msg.ChanRes <- msgRes
 
 					break

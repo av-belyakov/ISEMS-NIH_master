@@ -70,6 +70,7 @@ func Routing(
 			}
 
 			fmt.Printf("function 'routing' Core module - sent new task type %v", qti.TaskType)
+			fmt.Println(qti)
 
 			emt.TaskIDClientAPI = qti.TaskIDClientAPI
 			emt.IDClientAPI = qti.IDClientAPI

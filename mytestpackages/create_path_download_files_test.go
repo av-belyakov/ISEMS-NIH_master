@@ -171,13 +171,13 @@ func CreateFileReadme(pathStorage string, npfp *NecessaryParametersFiltrationPro
 }
 
 var _ = Describe("Mytestpackages/CreatePathDownloadFiles", func() {
-	validePath := "/home/ISEMS_NIH_master/ISEMS_NIH_master_OBJECT/313-OBU_ITC_Lipetsk/2019/August/11/11.08.2019T15:45-12.08.2019T07:23_hfeh8e83h38gh88485hg48"
+	validePath := "/home/ISEMS_NIH_master/ISEMS_NIH_master_RAW/313-OBU_ITC_Lipetsk/2019/August/11/11.08.2019T15:45-12.08.2019T07:23_hfeh8e83h38gh88485hg48"
 
 	npfp := NecessaryParametersFiltrationProblem{
 		SourceID:        313,
 		SourceShortName: "OBU ITC Lipetsk",
 		TaskID:          "hfeh8e83h38gh88485hg48",
-		PathRoot:        "/home/ISEMS_NIH_master/ISEMS_NIH_master_OBJECT/",
+		PathRoot:        "/home/ISEMS_NIH_master/ISEMS_NIH_master_RAW/",
 		FiltrationOption: configure.FilteringOption{
 			DateTime: configure.TimeInterval{
 				Start: 1565538300, // 11.08.2019 15:45:00
@@ -229,7 +229,7 @@ var _ = Describe("Mytestpackages/CreatePathDownloadFiles", func() {
 	Context("Тест 2: Наличие директории для хранения файлов", func() {
 		It("Должна быть создана директория для хранения файлов", func() {
 
-			dirIsExist := checkDirExist("/home/ISEMS_NIH_master/ISEMS_NIH_master_OBJECT/313-OBU_ITC_Lipetsk/2019/August/11/", "11.08.2019T15:45-12.08.2019T07:23_hfeh8e83h38gh88485hg48")
+			dirIsExist := checkDirExist("/home/ISEMS_NIH_master/ISEMS_NIH_master_RAW/313-OBU_ITC_Lipetsk/2019/August/11/", "11.08.2019T15:45-12.08.2019T07:23_hfeh8e83h38gh88485hg48")
 
 			Expect(dirIsExist).Should(BeTrue())
 		})

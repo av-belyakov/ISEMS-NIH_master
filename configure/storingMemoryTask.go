@@ -94,7 +94,7 @@ type FoundFilesInformation struct {
 // NumberErrorProcessedFiles - кол-во не обработанных файлов или файлов обработанных с ошибками
 // SizeFilesMeetFilterParameters - общий размер файлов (в байтах) удовлетворяющих параметрам фильтрации
 // SizeFilesFoundResultFiltering - общий размер найденных, в результате фильтрации, файлов (в байтах)
-// PathStorageSource — путь до директории в которой сохраняются файлы при
+// PathStorageSource — путь до директории в которой сохраняются файлы
 // FoundFilesInformation - информация о файлах, ключ - имя файла
 type FiltrationTaskParameters struct {
 	ID                              int
