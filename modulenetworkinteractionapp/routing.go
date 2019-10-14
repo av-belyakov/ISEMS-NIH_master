@@ -199,11 +199,11 @@ func RouteCoreRequest(
 //RouteWssConnectionResponse маршрутизирует сообщения от источников
 func RouteWssConnectionResponse(
 	cwtRes chan<- configure.MsgWsTransmission,
+	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
+	chanInCRRF chan<- *configure.MsgChannelReceivingFiles,
 	isl *configure.InformationSourcesList,
 	smt *configure.StoringMemoryTask,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
-	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
-	chanInCRRF chan<- *configure.MsgChannelReceivingFiles,
 	cwtReq <-chan configure.MsgWsTransmission) {
 
 	//MessageType содержит тип JSON сообщения

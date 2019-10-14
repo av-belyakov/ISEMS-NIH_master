@@ -157,6 +157,20 @@ func sendInformationFiltrationTask(
 		MsgJSON:      msgJSON,
 	}
 
+	if ti.Status == "complete" || ti.Status == "stop" {
+		ns := notifications.NotificationSettingsToClientAPI{
+			MsgType:        "success",
+			MsgDescription: fmt.Sprintf("Задача по фильтрации сетевого трафика на источнике с ID %v, успешно завершена", ti.ID),
+			Sources:        []int{ti.ID},
+		}
+
+		if ti.Status == "stop" {
+			ns.MsgDescription = fmt.Sprintf("задача по фильтрации сетевого трафика на источнике с ID %v, была успешно остановлена", ti.ID)
+		}
+
+		notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
+	}
+
 	return nil
 }
 
