@@ -290,6 +290,11 @@ func performActionSelectedSources(
 			typeAreaNetwork = "pppoe"
 		}
 
+		//проверяем максимальное кол-во одновременно запущеных задач фильтрации
+		if s.Argument.Settings.MaxCountProcessFiltration > 1 && 10 > s.Argument.Settings.MaxCountProcessFiltration {
+			mcpf = s.Argument.Settings.MaxCountProcessFiltration
+		}
+
 		//есть ли источник с таким ID
 		if sourceInfo, ok = isl.GetSourceSetting(s.ID); !ok {
 			if s.ActionType == "add" {
@@ -302,7 +307,7 @@ func performActionSelectedSources(
 					Settings: configure.InfoServiceSettings{
 						IfAsServerThenPort:        s.Argument.Settings.Port,
 						EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
-						MaxCountProcessFiltration: s.Argument.Settings.MaxCountProcessFiltration,
+						MaxCountProcessFiltration: mcpf,
 						StorageFolders:            s.Argument.Settings.StorageFolders,
 						TypeAreaNetwork:           typeAreaNetwork,
 					},
@@ -385,7 +390,7 @@ func performActionSelectedSources(
 				Settings: configure.InfoServiceSettings{
 					IfAsServerThenPort:        s.Argument.Settings.Port,
 					EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
-					MaxCountProcessFiltration: s.Argument.Settings.MaxCountProcessFiltration,
+					MaxCountProcessFiltration: mcpf,
 					StorageFolders:            s.Argument.Settings.StorageFolders,
 					TypeAreaNetwork:           typeAreaNetwork,
 				},
@@ -454,8 +459,7 @@ func performActionSelectedSources(
 }
 
 //getSourceListForWriteToDB получаем ID источников по которым нужно актуализировать информацию
-// в БД, к ним относятся источники для которых выполненно действие
-// add, delete, update
+// в БД, к ним относятся источники для которых выполненно действие add, delete, update
 func getSourceListsForWriteToDB(
 	ml *[]configure.DetailedListSources,
 	l *[]configure.ActionTypeListSources,
@@ -481,6 +485,11 @@ func getSourceListsForWriteToDB(
 		for _, s := range *ml {
 			if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe" {
 				typeAreaNetwork = "pppoe"
+			}
+
+			//проверяем максимальное кол-во одновременно запущеных задач фильтрации
+			if s.Argument.Settings.MaxCountProcessFiltration > 1 && 10 > s.Argument.Settings.MaxCountProcessFiltration {
+				mcpf = s.Argument.Settings.MaxCountProcessFiltration
 			}
 
 			if s.ID == source.ID {

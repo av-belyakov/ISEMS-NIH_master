@@ -152,6 +152,8 @@ func HandlerMsgFromAPI(
 					AdvancedOptions: scmo,
 				}
 
+				fmt.Printf("---- func 'handlerMsgFromAPI' -----\n%v\n", scmo)
+
 				return
 			}
 
@@ -262,7 +264,7 @@ func HandlerMsgFromAPI(
 				//ищем источник по указанному идентификатору
 				sourceInfo, ok := hsm.ISL.GetSourceSetting(dcts.MsgOption.ID)
 				if !ok {
-					nsErrJSON.MsgDescription = fmt.Sprintf("Ошибка, источника с ID %v не существует", dcts.MsgOption.ID)
+					nsErrJSON.MsgDescription = fmt.Sprintf("Ошибка, источника %v не существует", dcts.MsgOption.ID)
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v was not found%v", dcts.MsgOption.ID, funcName))
 
@@ -274,7 +276,7 @@ func HandlerMsgFromAPI(
 
 				//проверяем подключение источника
 				if !sourceInfo.ConnectionStatus {
-					nsErrJSON.MsgDescription = fmt.Sprintf("Ошибка, источник с ID %v не подключен", dcts.MsgOption.ID)
+					nsErrJSON.MsgDescription = fmt.Sprintf("Ошибка, источник %v не подключен", dcts.MsgOption.ID)
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v is not connected%v", dcts.MsgOption.ID, funcName))
 
@@ -320,7 +322,7 @@ func HandlerMsgFromAPI(
 
 				//устанавливаем проверочный статус источника для данной задачи как подключен
 				if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp); err != nil {
-					nsErrJSON.MsgDescription = fmt.Sprintf("Ошибка, запись для источника с ID %v отсутствует в памяти приложения", dcts.MsgOption.ID)
+					nsErrJSON.MsgDescription = fmt.Sprintf("Ошибка, запись для источника %v отсутствует в памяти приложения", dcts.MsgOption.ID)
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 

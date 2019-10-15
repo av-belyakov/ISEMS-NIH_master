@@ -221,7 +221,7 @@ func handlerFiltrationControlTypeStart(
 			chanToAPI,
 			notifications.NotificationSettingsToClientAPI{
 				MsgType:        "danger",
-				MsgDescription: fmt.Sprintf("Не возможно отправить запрос на фильтрацию, источник с ID %v не подключен", fcts.MsgOption.ID),
+				MsgDescription: fmt.Sprintf("Не возможно отправить запрос на фильтрацию, источник %v не подключен", fcts.MsgOption.ID),
 			},
 			fcts.ClientTaskID,
 			clientID)

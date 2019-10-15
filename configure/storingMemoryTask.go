@@ -550,7 +550,7 @@ func (smt *StoringMemoryTask) CheckTimeUpdateStoringMemoryTask(sec int) chan Msg
 
 					if t.TaskStatus && ((t.TimeUpdate + 60) < timeNow) {
 
-						//fmt.Println("delete task ID -", id)
+						fmt.Printf("//////// func 'CheckTimeUpdateStoringMemoryTask' ****** delete task ID - %v\n", id)
 
 						chanOut <- MsgChanStoringMemoryTask{
 							ID:          id,

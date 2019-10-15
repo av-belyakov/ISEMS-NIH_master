@@ -143,7 +143,10 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				ts := "wait"
 				msgRes.TaskStatus = ts
 
-				qts.StorageList[msg.SourceID] = map[string]*QueueTaskInformation{}
+				if len(qts.StorageList[msg.SourceID]) == 0 {
+					qts.StorageList[msg.SourceID] = map[string]*QueueTaskInformation{}
+				}
+
 				qts.StorageList[msg.SourceID][msg.TaskID] = &QueueTaskInformation{
 					TaskStatus: ts,
 					TimeUpdate: time.Now().Unix(),
@@ -396,6 +399,8 @@ func (qts *QueueTaskStorage) SearchTaskForClientIDQueueTaskStorage(clientTaskID 
 	if len(sourceList) == 0 {
 		return sourceID, taskID, errMsg
 	}
+
+	fmt.Printf("*-*-*-*GET sourceList (func SearchTaskForClientIDQueueTaskStorage)---\n%v\n", sourceList)
 
 	chanRes := make(chan chanResponse)
 	defer close(chanRes)
@@ -722,6 +727,9 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 					*/
 					if taskInfo.TaskType == "filtration control" {
 						if len(et.filtrationTask) == maxProcessFiltration {
+
+							fmt.Println("************** function 'CheckTimeQueueTaskStorage' MAX LIMIT PROCESS FILTRATION!!! ************")
+
 							continue
 						}
 
@@ -731,7 +739,7 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 								//добавляем в массив выполняющихся задач
 								et.filtrationTask = append(et.filtrationTask, taskID)
 
-								fmt.Println("function 'CheckTimeQueueTaskStorage' - start filtration task")
+								fmt.Printf("function 'CheckTimeQueueTaskStorage' - start filtration task %v\n", taskID)
 
 								//запускаем выполнение задачи
 								chanMsgInfoQueueTaskStorage <- MessageInformationQueueTaskStorage{

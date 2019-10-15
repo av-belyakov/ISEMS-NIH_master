@@ -280,7 +280,7 @@ func HandlerMsgFromNI(
 
 			//отправляем информационное сообщение клиенту API
 			ns.MsgType = "warning"
-			ns.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника ID %v была аварийно завершена из-за потери сетевого соединения", msg.SourceID)
+			ns.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника %v была аварийно завершена из-за потери сетевого соединения", msg.SourceID)
 			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
 
 			hdtsct.ResMsgInfo.MsgOption.Status = "stop"
@@ -370,13 +370,16 @@ func HandlerMsgFromNI(
 
 	case "monitoring task performance":
 		if msg.Command == "complete task" {
+
+			fmt.Printf("------ SECTOR: 'monitoring task performance', Command: 'complete task', %v\n", msg)
+
 			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
 
-			if !taskInfoIsExist {
+			/*if !taskInfoIsExist {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", msg.TaskID))
 
 				return
-			}
+			}*/
 
 			if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, msg.TaskID, "complete"); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))

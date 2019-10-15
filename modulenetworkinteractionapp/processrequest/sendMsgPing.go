@@ -11,9 +11,8 @@ func SendMsgPing(ss *configure.SourceSetting) ([]byte, error) {
 	msgPing := configure.MsgTypePingPong{
 		MsgType: "ping",
 		Info: configure.DetailInfoMsgPingPong{
-			MaxCountProcessFiltration: ss.Settings.MaxCountProcessFiltration,
-			EnableTelemetry:           ss.Settings.EnableTelemetry,
-			StorageFolders:            ss.Settings.StorageFolders,
+			EnableTelemetry: ss.Settings.EnableTelemetry,
+			StorageFolders:  ss.Settings.StorageFolders,
 		},
 	}
 

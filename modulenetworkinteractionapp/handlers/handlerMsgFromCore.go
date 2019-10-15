@@ -96,7 +96,7 @@ func HandlerMsgFromCore(
 					TypeActionPerformed:          "load list",
 					CriticalityMessage:           "warning",
 					Sources:                      listInvalidSource,
-					HumanDescriptionNotification: "Обновление списка сенсоров выполнено не полностью, параметры сенсоров: " + strSourceID + " содержат некорректные значения",
+					HumanDescriptionNotification: fmt.Sprintf("Обновление списка сенсоров выполнено не полностью, параметры сенсоров: %v содержат некорректные значения", strSourceID),
 				}
 
 				chanInCore <- &clientNotify
@@ -106,7 +106,7 @@ func HandlerMsgFromCore(
 
 				if len(executedSourcesList) > 0 {
 					strSourceID := createStringFromSourceList(executedSourcesList)
-					hdn = "На сенсорах: " + strSourceID + " выполняются задачи, в настоящее время изменение их настроек невозможно"
+					hdn = fmt.Sprintf("На сенсорах: %v выполняются задачи, в настоящее время изменение их настроек невозможно", strSourceID)
 					cm = "info"
 				}
 
@@ -211,7 +211,7 @@ func HandlerMsgFromCore(
 					TypeActionPerformed:          "perform actions on sources",
 					CriticalityMessage:           "warning",
 					Sources:                      *listInvalidSource,
-					HumanDescriptionNotification: "Невозможно выполнить действия над сенсорами:" + strSourceID + ", приняты некорректные значения",
+					HumanDescriptionNotification: fmt.Sprintf("Невозможно выполнить действия над сенсорами:%v, приняты некорректные значения", strSourceID),
 				}
 
 				chanInCore <- &clientNotify

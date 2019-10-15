@@ -80,19 +80,19 @@ func HandlerMsgFromDB(
 
 			fmt.Printf("function 'handlerMsgFromDB' INSTRACTION - %v\n", res.Instruction)
 			fmt.Printf("function 'handlerMsgFromDB' STATUS = %v\n", taskInfo.TaskParameter.FiltrationTask.Status)
-
-			//отправляем сообщение пользователю об завершении фильтрации
-			if (taskInfo.TaskParameter.FiltrationTask.Status == "complete") && (res.Instruction == "filtration complete") {
-				if err := sendMsgCompleteTaskFiltration(res.TaskID, taskInfo, outCoreChans.OutCoreChanAPI); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-				}
-			}
-
 			fmt.Printf("function 'handlerMsgFromDB' STATUS:%v, SIZE:%v, TASK TYPE:%v\n", taskInfo.TaskParameter.FiltrationTask.Status, taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering, taskInfo.TaskType)
 			fmt.Printf("function 'handlerMsgFromDB' resipient - API module, section - 'filtration control', isNotComplete - %v, SizeFilesFoundResultFiltering (%v) > mtsfda (%v), taskTypeNotFiltr - %v\n", isNotComplete, taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering, mtsfda, taskTypeNotFiltr)
 
 			if taskTypeNotFiltr || isNotComplete || moreThanMax {
 				fmt.Println("function 'handlerMsgFromDB', отмечаем задачу как завершенную в списке очередей")
+
+				/*
+
+				   Вот этот раздел не очень понятен
+				   и еще надо подробнее рассмотреть тспособы удаления
+				   задач из очереди StoringMemoryQuerueTask и StoringMemoryTask
+
+				*/
 
 				//отмечаем задачу как завершенную в списке очередей
 				if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID, "complete"); err != nil {

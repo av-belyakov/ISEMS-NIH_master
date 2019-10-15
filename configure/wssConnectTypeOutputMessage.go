@@ -3,14 +3,13 @@ package configure
 /*
 * Описание типов JSON сообщений отправляемых источникам
 *
-* Версия 0.13, дата релиза 22.04.2019
+* Версия 0.14, дата релиза 15.10.2019
 * */
 
 //DetailInfoMsgPingPong подробная информация
 type DetailInfoMsgPingPong struct {
-	MaxCountProcessFiltration int8     `json:"maxCountProcessFiltration"`
-	EnableTelemetry           bool     `json:"enableTelemetry"`
-	StorageFolders            []string `json:"storageFolders"`
+	EnableTelemetry bool     `json:"enableTelemetry"`
+	StorageFolders  []string `json:"storageFolders"`
 }
 
 //MsgTypePingPong сообщение типа ping

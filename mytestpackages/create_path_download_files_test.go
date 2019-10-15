@@ -246,4 +246,43 @@ var _ = Describe("Mytestpackages/CreatePathDownloadFiles", func() {
 			Expect(fileIsExist).Should(BeTrue())
 		})
 	})
+
+	Context("Тест 4: Создание многоуровневого отображения", func() {
+		type testType struct {
+			year, month, day int
+		}
+		testMap := map[int]map[string]*testType{}
+
+		fmt.Printf("11111 Before:%v\n", testMap)
+
+		if len(testMap[1]) == 0 {
+			fmt.Println("111 - FEW 0")
+
+			testMap[1] = map[string]*testType{}
+		}
+
+		testMap[1]["one"] = &testType{
+			year:  2019,
+			month: 1,
+			day:   10,
+		}
+
+		fmt.Printf("11111 After:%v\n", testMap)
+
+		if len(testMap[1]) > 0 {
+			fmt.Println("222 - MORE 0")
+		}
+
+		testMap[1]["two"] = &testType{
+			year:  2019,
+			month: 2,
+			day:   20,
+		}
+
+		fmt.Printf("22222 After:%v\n", testMap)
+
+		It("Должон быть добавленно несколько параметров в одно отображение", func() {
+			Expect(testMap[1]["one"].day).Should(Equal(10))
+		})
+	})
 })
