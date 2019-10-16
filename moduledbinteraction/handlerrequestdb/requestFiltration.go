@@ -160,7 +160,6 @@ func UpdateParametersFiltrationTask(
 		MsgRecipient: "API module",
 		MsgSection:   "filtration control",
 		Instruction:  "filtration complete",
-		IDClientAPI:  req.IDClientAPI,
 		TaskID:       req.TaskID,
 	}
 
@@ -237,6 +236,7 @@ func UpdateParametersFiltrationTask(
 
 	ti := taskInfo.TaskParameter.FiltrationTask
 
+	infoMsg.IDClientAPI = taskInfo.ClientID
 	infoMsg.TaskIDClientAPI = taskInfo.ClientTaskID
 
 	//выполнять обновление информации в БД для сообщения типа 'complete' всегда,

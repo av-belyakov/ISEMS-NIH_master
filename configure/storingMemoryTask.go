@@ -539,37 +539,35 @@ func (smt *StoringMemoryTask) CheckTimeUpdateStoringMemoryTask(sec int) chan Msg
 
 	go func() {
 		for range ticker.C {
-			if len(smt.tasks) > 0 {
-				timeNow := time.Now().Unix()
+			if len(smt.tasks) == 0 {
+				continue
+			}
 
-				//fmt.Println("task count =", len(smt.tasks))
+			timeNow := time.Now().Unix()
 
-				for id, t := range smt.tasks {
+			//fmt.Println("task count =", len(smt.tasks))
 
-					//fmt.Printf("Next Tick %v\n task status:%v, time task:%v < time now:%v (%v)\n", time.Now(), t.TaskStatus, (t.TimeUpdate + 60), timeNow, ((t.TimeUpdate + 60) < timeNow))
+			for id, t := range smt.tasks {
 
-					if t.TaskStatus && ((t.TimeUpdate + 60) < timeNow) {
+				//fmt.Printf("Next Tick %v\n task status:%v, time task:%v < time now:%v (%v)\n", time.Now(), t.TaskStatus, (t.TimeUpdate + 60), timeNow, ((t.TimeUpdate + 60) < timeNow))
 
-						fmt.Printf("//////// func 'CheckTimeUpdateStoringMemoryTask' ****** delete task ID - %v\n", id)
+				if t.TaskStatus && ((t.TimeUpdate + 60) < timeNow) {
 
-						chanOut <- MsgChanStoringMemoryTask{
-							ID:          id,
-							Type:        "danger",
-							Description: fmt.Sprintf("обработка задачи с ID %v была прервана", id),
-						}
+					fmt.Printf("//////// func 'CheckTimeUpdateStoringMemoryTask' ****** delete task ID - %v\n", id)
 
-						//если задача выполнена и прошло какое то время удаляем ее
-						smt.delStoringMemoryTask(id)
-					} else {
-						if (t.TimeUpdate + 60) < timeNow {
-							smt.CompleteStoringMemoryTask(id)
+					//если задача выполнена и прошло какое то время удаляем ее
+					smt.delStoringMemoryTask(id)
 
-							chanOut <- MsgChanStoringMemoryTask{
-								ID:          id,
-								Type:        "warning",
-								Description: fmt.Sprintf("информация по задаче с ID %v достаточно долго не обновлялась, возможно выполнение задачи было приостановленно", id),
-							}
-						}
+					continue
+				}
+
+				if (t.TimeUpdate + 61) < timeNow {
+					smt.CompleteStoringMemoryTask(id)
+
+					chanOut <- MsgChanStoringMemoryTask{
+						ID:          id,
+						Type:        "warning",
+						Description: fmt.Sprintf("информация по задаче с ID %v достаточно долго не обновлялась, возможно выполнение задачи было приостановленно", id),
 					}
 				}
 			}

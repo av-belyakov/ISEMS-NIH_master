@@ -71,7 +71,11 @@ func ControllerReceivingRequestedFiles(
 	chanIn := make(chan *configure.MsgChannelReceivingFiles)
 	lhrf := listHandlerReceivingFile{}
 
-	go func() {
+	go func(
+		lhrf listHandlerReceivingFile,
+		clientNotify configure.MsgBetweenCoreAndNI,
+		chanIn <-chan *configure.MsgChannelReceivingFiles) {
+
 		for msg := range chanIn {
 			clientNotify.TaskID = msg.TaskID
 			ao := configure.MessageNotification{
@@ -80,6 +84,8 @@ func ControllerReceivingRequestedFiles(
 				TypeActionPerformed: "task processing",
 				CriticalityMessage:  "warning",
 			}
+
+			fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' resived new msg DOWNLOAD TASK for task ID %v\n", msg.TaskID)
 
 			//получаем IP адрес и параметры источника
 			si, ok := isl.GetSourceSetting(msg.SourceID)
@@ -106,6 +112,8 @@ func ControllerReceivingRequestedFiles(
 				continue
 			}
 
+			fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' RESIVED SOURCE PARAMETERS: %v\n", si)
+
 			ao.HumanDescriptionNotification = fmt.Sprintf("Источник с ID %v не найден", msg.SourceID)
 			clientNotify.AdvancedOptions = ao
 
@@ -117,6 +125,8 @@ func ControllerReceivingRequestedFiles(
 				if len(lhrf[si.IP]) == 0 {
 					lhrf[si.IP] = listTaskReceivingFile{}
 				}
+
+				fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' запуск обработчика задачи по скачиванию файлов")
 
 				//запуск обработчика задачи по скачиванию файлов
 				channel, err := processorReceivingFiles(chanInCore, msg.SourceID, si.IP, msg.TaskID, smt, saveMessageApp, cwtRes)
@@ -211,7 +221,7 @@ func ControllerReceivingRequestedFiles(
 
 			}
 		}
-	}()
+	}(lhrf, clientNotify, chanIn)
 
 	return chanIn
 }
@@ -236,8 +246,13 @@ func processorReceivingFiles(
 	   6. Запрос нового файла 'give me the file' (master -> slave) цикл повторяется
 	*/
 
+	fmt.Println("\tDOWNLOAD: func 'processorReceivingFiles', START...")
+
 	ti, ok := smt.GetStoringMemoryTask(taskID)
 	if !ok {
+
+		fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', task with ID %v not found\n", taskID)
+
 		return nil, fmt.Errorf("task with ID %v not found", taskID)
 	}
 
@@ -257,6 +272,8 @@ func processorReceivingFiles(
 			},
 		}
 
+		fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', готовим начальный запрос %v not found, читаем список файлов %v\n", mtd, ti.TaskParameter.FiltrationTask.PathStorageSource)
+
 	DONE:
 		//читаем список файлов
 		for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
@@ -274,6 +291,8 @@ func processorReceivingFiles(
 
 				continue
 			}
+
+			fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', make ONE request to download file, %v\n", mtd)
 
 			cwtRes <- configure.MsgWsTransmission{
 				DestinationHost: sourceIP,

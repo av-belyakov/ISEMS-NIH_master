@@ -220,7 +220,7 @@ func NewRepositoryQTS() *QueueTaskStorage {
 					break
 				}
 
-				delete(qts.StorageList, msg.SourceID)
+				delete(qts.StorageList[msg.SourceID], msg.TaskID)
 
 				msg.ChanRes <- msgRes
 
@@ -347,6 +347,7 @@ func (qts *QueueTaskStorage) SearchTaskForIDQueueTaskStorage(taskID string) (int
 	var sourceID int
 
 	sourceList := qts.GetAllSourcesQueueTaskStorage()
+
 	if len(sourceList) == 0 {
 		return sourceID, nil, errors.New("error, empty queue of pending tasks")
 	}
@@ -396,11 +397,12 @@ func (qts *QueueTaskStorage) SearchTaskForClientIDQueueTaskStorage(clientTaskID 
 	errMsg := fmt.Errorf("error, client task ID %v not found", clientTaskID)
 
 	sourceList := qts.GetAllSourcesQueueTaskStorage()
+
+	fmt.Printf("++++++++++++ func 'SearchTaskForClientIDQueueTaskStorage', source list = %v\n", sourceList)
+
 	if len(sourceList) == 0 {
 		return sourceID, taskID, errMsg
 	}
-
-	fmt.Printf("*-*-*-*GET sourceList (func SearchTaskForClientIDQueueTaskStorage)---\n%v\n", sourceList)
 
 	chanRes := make(chan chanResponse)
 	defer close(chanRes)
@@ -528,21 +530,6 @@ func (qts *QueueTaskStorage) AddPathDirectoryFilteredFiles(sourceID int, taskID,
 	return (<-chanRes).ErrorDescription
 }
 
-//DelQueueTaskStorage удалить задачу из очереди
-func (qts *QueueTaskStorage) DelQueueTaskStorage(sourceID int, taskID string) error {
-	chanRes := make(chan chanResponse)
-	defer close(chanRes)
-
-	qts.ChannelReq <- chanRequest{
-		Action:   "delete task",
-		SourceID: sourceID,
-		TaskID:   taskID,
-		ChanRes:  chanRes,
-	}
-
-	return (<-chanRes).ErrorDescription
-}
-
 //ChangeTaskStatusQueueTask изменить статус задачи
 func (qts *QueueTaskStorage) ChangeTaskStatusQueueTask(sourceID int, taskID, newStatus string) error {
 	chanRes := make(chan chanResponse)
@@ -655,6 +642,21 @@ func (qts *QueueTaskStorage) ClearAllListFiles(sourceID int, taskID string) erro
 	return (<-chanRes).ErrorDescription
 }
 
+//delQueueTaskStorage удалить задачу из очереди
+func (qts *QueueTaskStorage) delQueueTaskStorage(sourceID int, taskID string) error {
+	chanRes := make(chan chanResponse)
+	defer close(chanRes)
+
+	qts.ChannelReq <- chanRequest{
+		Action:   "delete task",
+		SourceID: sourceID,
+		TaskID:   taskID,
+		ChanRes:  chanRes,
+	}
+
+	return (<-chanRes).ErrorDescription
+}
+
 //MessageInformationQueueTaskStorage краткая информация о задаче
 type MessageInformationQueueTaskStorage struct {
 	SourceID int
@@ -700,10 +702,10 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 
 				for taskID, taskInfo := range tasks {
 					//если задача помечена как выполненная удаляем ее
-					if taskInfo.TaskStatus == "complete" {
-						_ = qts.DelQueueTaskStorage(sourceID, taskID)
+					if taskInfo.TaskStatus == "complete" /*&& (time.Now().Unix() > (taskInfo.TimeUpdate + 30))*/ {
+						_ = qts.delQueueTaskStorage(sourceID, taskID)
 
-						fmt.Println("function 'CheckTimeQueueTaskStorage' - task status is 'COMPLETE', delete task")
+						fmt.Printf("*** function 'CheckTimeQueueTaskStorage' - task status is 'COMPLETE', delete task ID %v\n", taskID)
 
 						//удаляем задачу из списка отслеживания кол-ва выполняемых задач
 						if taskInfo.TaskType == "download control" {
@@ -712,6 +714,8 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 							for key, tID := range et.filtrationTask {
 								if tID == taskID {
 									et.filtrationTask = append(et.filtrationTask[:key], et.filtrationTask[key:]...)
+
+									fmt.Printf("function 'CheckTimeQueueTaskStorage' - AFTER DELETE TASK list filtartion task = %v\n", et.filtrationTask)
 								}
 							}
 						}
@@ -719,7 +723,10 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 
 					//удаляем задачу находящуюся в очереди более суток
 					if (taskInfo.TaskStatus == "wait") && (time.Now().Unix() > (taskInfo.TimeUpdate + 86400)) {
-						_ = qts.DelQueueTaskStorage(sourceID, taskID)
+
+						fmt.Printf(" function 'CheckTimeQueueTaskStorage' *-*-*-*-*--- удаляем задачу находящуюся в очереди более суток с ID %v\n", taskID)
+
+						_ = qts.delQueueTaskStorage(sourceID, taskID)
 					}
 
 					/*

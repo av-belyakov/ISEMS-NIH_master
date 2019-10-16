@@ -394,7 +394,7 @@ func HandlerMsgFromCore(
 	case "download control":
 		if msg.Command == "start" {
 
-			fmt.Println("function 'HandlerMsgFromCore', section - 'download control', send task 'START' to source")
+			fmt.Println("function 'HandlerMsgFromCore', section - 'download control', send task 'START' to source (отправляем запрос на скачивание файлов источнику)")
 
 			chanInCRRF <- &configure.MsgChannelReceivingFiles{
 				SourceID: msg.SourceID,

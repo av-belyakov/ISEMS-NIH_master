@@ -107,14 +107,16 @@ func sendChanStatusSourceForAPI(chanToAPI chan<- *configure.MsgBetweenCoreAndAPI
 func sendInformationFiltrationTask(
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
 	taskInfo *configure.TaskDescription,
-	msg *configure.MsgBetweenCoreAndNI) error {
+	tfmffiats *configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus,
+	sourceID int,
+	taskID string) error {
 
 	ti := taskInfo.TaskParameter.FiltrationTask
 	resMsg := configure.FiltrationControlTypeInfo{
 		MsgOption: configure.FiltrationControlMsgTypeInfo{
-			ID:                              msg.SourceID,
-			TaskIDApp:                       msg.TaskID,
-			Status:                          ti.Status,
+			ID:                              sourceID,
+			TaskIDApp:                       taskID,
+			Status:                          tfmffiats.TaskStatus,
 			NumberFilesMeetFilterParameters: ti.NumberFilesMeetFilterParameters,
 			NumberProcessedFiles:            ti.NumberProcessedFiles,
 			NumberFilesFoundResultFiltering: ti.NumberFilesFoundResultFiltering,
@@ -131,18 +133,16 @@ func sendInformationFiltrationTask(
 	resMsg.MsgInstruction = "task processing"
 	resMsg.ClientTaskID = taskInfo.ClientTaskID
 
-	if ti.Status == "execute" {
-		if tfmffiats, ok := msg.AdvancedOptions.(configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus); ok {
-			nffi := make(map[string]*configure.InputFilesInformation, len(tfmffiats.ListFoundFile))
-			for n, v := range tfmffiats.ListFoundFile {
-				nffi[n] = &configure.InputFilesInformation{
-					Size: v.Size,
-					Hex:  v.Hex,
-				}
+	if tfmffiats.TaskStatus == "execute" {
+		nffi := make(map[string]*configure.InputFilesInformation, len(tfmffiats.ListFoundFile))
+		for n, v := range tfmffiats.ListFoundFile {
+			nffi[n] = &configure.InputFilesInformation{
+				Size: v.Size,
+				Hex:  v.Hex,
 			}
-
-			resMsg.MsgOption.FoundFilesInformation = nffi
 		}
+
+		resMsg.MsgOption.FoundFilesInformation = nffi
 	}
 
 	msgJSON, err := json.Marshal(resMsg)
@@ -157,14 +157,14 @@ func sendInformationFiltrationTask(
 		MsgJSON:      msgJSON,
 	}
 
-	if ti.Status == "complete" || ti.Status == "stop" {
+	if (tfmffiats.TaskStatus == "complete") || (tfmffiats.TaskStatus == "stop") {
 		ns := notifications.NotificationSettingsToClientAPI{
 			MsgType:        "success",
 			MsgDescription: fmt.Sprintf("Задача по фильтрации сетевого трафика на источнике %v, успешно завершена", ti.ID),
 			Sources:        []int{ti.ID},
 		}
 
-		if ti.Status == "stop" {
+		if tfmffiats.TaskStatus == "stop" {
 			ns.MsgDescription = fmt.Sprintf("задача по фильтрации сетевого трафика на источнике %v, была успешно остановлена", ti.ID)
 		}
 

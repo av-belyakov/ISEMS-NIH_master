@@ -135,17 +135,25 @@ func HandlerMsgFromNI(
 			AdvancedOptions: msg.AdvancedOptions,
 		}
 
-		//отправляем иформацию о ходе фильтрации в БД
-		outCoreChans.OutCoreChanDB <- &msgChan
-
-		//если задача найдена
-		if taskInfoIsExist {
+		if ao, ok := msg.AdvancedOptions.(configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus); ok && taskInfoIsExist {
 			/* упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
 			при чем если статус 'execute', то отправляем еще и содержимое поля 'FoundFilesInformation',
 			а если статус фильтрации 'stop' или 'complete' то данное поле не заполняем */
-			if err := sendInformationFiltrationTask(outCoreChans.OutCoreChanAPI, taskInfo, msg); err != nil {
+			if err := sendInformationFiltrationTask(outCoreChans.OutCoreChanAPI, taskInfo, &ao, msg.SourceID, msg.TaskID); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
+
+			if (ao.TaskStatus == "complete") || (ao.TaskStatus == "stop") {
+				//для удаления задачи и из storingMemoryTask и storingMemoryQueueTask
+				hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
+
+				if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, msg.TaskID, "complete"); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				}
+			}
+
+			//отправляем иформацию о ходе фильтрации в БД
+			outCoreChans.OutCoreChanDB <- &msgChan
 		}
 
 	case "download control":

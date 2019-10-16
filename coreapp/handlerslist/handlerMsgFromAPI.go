@@ -182,9 +182,14 @@ func HandlerMsgFromAPI(
 			//команда на останов фильтрации
 			if msgc.MsgInstruction == "to cancel filtering" {
 				//ищем ожидающую в очереди задачу по ее ID
+
+				fmt.Printf("func 'handlerMsgFromAPI' - ищем ожидающую в очереди задачу по ее ID: %v\n", msgc.ClientTaskID)
+
 				sourceID, taskID, err := hsm.QTS.SearchTaskForClientIDQueueTaskStorage(msgc.ClientTaskID)
 				if err != nil {
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+					fmt.Printf("ERROR :::: Ошибка, по переданному идентификатору '%v' ожидающих или выполняемых задач не обнаружено\n", msgc.ClientTaskID)
 
 					nsErr := notifications.NotificationSettingsToClientAPI{
 						MsgType:        "danger",

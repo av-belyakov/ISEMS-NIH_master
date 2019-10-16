@@ -163,6 +163,8 @@ func Routing(
 					continue
 				}
 
+				fmt.Printf("Создали директорию '%v' для хранения файлов при скачивании (task ID %v)\n", pathStorage, msg.TaskID)
+
 				//изменяем статус задачи в StoringMemoryQueueTask
 				/*
 					if err := qts.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "execution"); err != nil {
@@ -191,6 +193,9 @@ func Routing(
 						},
 					},
 				})
+
+				nit, _ := smt.GetStoringMemoryTask(msg.TaskID)
+				fmt.Printf("добавили задачу по скачиванию (task ID %v) в StoringMemoryTask: %v\n", msg.TaskID, nit)
 
 				//отправляем в NI module для вызова обработчика задания
 				cc.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{

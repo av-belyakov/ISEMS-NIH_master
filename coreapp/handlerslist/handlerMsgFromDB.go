@@ -86,14 +86,6 @@ func HandlerMsgFromDB(
 			if taskTypeNotFiltr || isNotComplete || moreThanMax {
 				fmt.Println("function 'handlerMsgFromDB', отмечаем задачу как завершенную в списке очередей")
 
-				/*
-
-				   Вот этот раздел не очень понятен
-				   и еще надо подробнее рассмотреть тспособы удаления
-				   задач из очереди StoringMemoryQuerueTask и StoringMemoryTask
-
-				*/
-
 				//отмечаем задачу как завершенную в списке очередей
 				if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID, "complete"); err != nil {
 					fmt.Printf("function 'handlerMsgFromDB', ERROR = %v\n", err)

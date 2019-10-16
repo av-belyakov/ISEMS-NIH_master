@@ -242,24 +242,23 @@ func RouteWssConnectionResponse(
 				}
 
 			case "filtration":
-				pprmtf := processresponse.ParametersProcessingReceivedMsgTypeFiltering{
-					CwtRes:         cwtRes,
-					ChanInCore:     chanInCore,
-					CwtReq:         cwtReq,
-					Isl:            isl,
-					SMT:            smt,
-					Message:        message,
-					SourceID:       sourceID,
-					SourceIP:       sourceIP,
-					SaveMessageApp: saveMessageApp,
+				if err := processresponse.ProcessingReceivedMsgTypeFiltering(processresponse.ParametersProcessingReceivedMsgTypeFiltering{
+					SMT:      smt,
+					Message:  message,
+					SourceID: sourceID,
+					SourceIP: sourceIP,
+					Chans: processresponse.ChansMsgTypeFiltering{
+						CwtRes:     cwtRes,
+						ChanInCore: chanInCore,
+						CwtReq:     cwtReq,
+					},
+				}); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 				}
-
-				go processresponse.ProcessingReceivedMsgTypeFiltering(pprmtf)
 
 			case "download files":
 				var mtd configure.MsgTypeDownload
-				err := json.Unmarshal(*message, &mtd)
-				if err != nil {
+				if err := json.Unmarshal(*message, &mtd); err != nil {
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 					return
