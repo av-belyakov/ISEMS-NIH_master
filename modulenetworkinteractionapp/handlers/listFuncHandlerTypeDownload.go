@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 
 	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
+	"ISEMS-NIH_master/savemessageapp"
 )
 
 type parametersWritingBinaryFile struct {
@@ -15,6 +18,353 @@ type parametersWritingBinaryFile struct {
 	ListFileDescriptors map[string]*os.File
 	SMT                 *configure.StoringMemoryTask
 	ChanInCore          chan<- *configure.MsgBetweenCoreAndNI
+}
+
+type typeProcessingDownloadFile struct {
+	sourceID       int
+	sourceIP       string
+	taskID         string
+	taskInfo       *configure.TaskDescription
+	smt            *configure.StoringMemoryTask
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles
+	channels       listChannels
+}
+
+type listChannels struct {
+	chanInCore  chan<- *configure.MsgBetweenCoreAndNI
+	chanOutCore <-chan msgChannelProcessorReceivingFiles
+	cwtRes      chan<- configure.MsgWsTransmission
+}
+
+//processorReceivingFiles управляет приемом файлов в рамках одной задачи
+func processorReceivingFiles(
+	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
+	sourceID int,
+	sourceIP, taskID string,
+	smt *configure.StoringMemoryTask,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
+	cwtRes chan<- configure.MsgWsTransmission) (chan msgChannelProcessorReceivingFiles, error) {
+
+	/*
+	   Алгоритм передачи и приема файлов
+	   1. Запрос файла 'give me the file' (master -> slave)
+	   2.1. Сообщение 'ready for the transfer' - готовность к передачи файла (slave -> master)
+	   2.2. Сообщение 'file transfer not possible' - невозможно передать файл (slave -> master)
+	   3. Готовность к приему файла 'ready to receive file' (master -> slave)
+	   4. ПЕРЕДАЧА БИНАРНОГО ФАЙЛА
+	   5. завершением приема файла считается прием последнего части файла
+	   6. Запрос нового файла 'give me the file' (master -> slave) цикл повторяется
+	*/
+
+	fmt.Println("\tDOWNLOAD: func 'processorReceivingFiles', START...")
+
+	ti, ok := smt.GetStoringMemoryTask(taskID)
+	if !ok {
+
+		fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', task with ID %v not found\n", taskID)
+
+		return nil, fmt.Errorf("task with ID %v not found", taskID)
+	}
+
+	chanOut := make(chan msgChannelProcessorReceivingFiles)
+
+	fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', '%v'\n", ti.TaskParameter.DownloadTask.DownloadingFilesInformation)
+
+	//проверяем наличие файлов для скачивания
+	if len(ti.TaskParameter.DownloadTask.DownloadingFilesInformation) == 0 {
+		return chanOut, fmt.Errorf("the list of files suitable for downloading from the source is empty")
+	}
+
+	go processingDownloadFile(typeProcessingDownloadFile{
+		sourceID:       sourceID,
+		sourceIP:       sourceIP,
+		taskID:         taskID,
+		taskInfo:       ti,
+		smt:            smt,
+		saveMessageApp: saveMessageApp,
+		channels: listChannels{
+			chanInCore:  chanInCore,
+			chanOutCore: chanOut,
+			cwtRes:      cwtRes,
+		},
+	})
+
+	return chanOut, nil
+}
+
+func processingDownloadFile(tpdf typeProcessingDownloadFile) {
+
+	sdf := statusDownloadFile{Status: "success"}
+	listFileDescriptors := map[string]*os.File{}
+
+	//начальный запрос на передачу файла
+	mtd := configure.MsgTypeDownload{
+		MsgType: "download files",
+		Info: configure.DetailInfoMsgDownload{
+			TaskID:         tpdf.taskID,
+			PathDirStorage: tpdf.taskInfo.TaskParameter.FiltrationTask.PathStorageSource,
+		},
+	}
+
+	pathDirStorage := tpdf.taskInfo.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles
+
+	fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', готовим начальный запрос '%v', путь до списка файлов на источнике: '%v'\n", mtd, tpdf.taskInfo.TaskParameter.FiltrationTask.PathStorageSource)
+
+DONE:
+	//читаем список файлов
+	for fn, fi := range tpdf.taskInfo.TaskParameter.DownloadTask.DownloadingFilesInformation {
+		//делаем первый запрос на скачивание файла
+		mtd.Info.Command = "give me the file"
+		mtd.Info.FileOptions = configure.DownloadFileOptions{
+			Name: fn,
+			Size: fi.Size,
+			Hex:  fi.Hex,
+		}
+
+		msgJSON, err := json.Marshal(mtd)
+		if err != nil {
+			_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+			continue
+		}
+
+		fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', make ONE request to download file, %v\n", mtd)
+
+		tpdf.channels.cwtRes <- configure.MsgWsTransmission{
+			DestinationHost: tpdf.sourceIP,
+			Data:            &msgJSON,
+		}
+
+	NEWFILE:
+		for msg := range tpdf.channels.chanOutCore {
+			//обновляем значение таймера (что бы задача не была удалена по таймауту)
+			tpdf.smt.TimerUpdateStoringMemoryTask(tpdf.taskID)
+
+			/* текстовый тип сообщения */
+			if msg.MessageType == 1 {
+				msgReq := configure.MsgTypeDownload{
+					MsgType: "download files",
+					Info: configure.DetailInfoMsgDownload{
+						TaskID: tpdf.taskID,
+					},
+				}
+
+				if msg.MsgGenerator == "Core module" {
+					command := fmt.Sprint(*msg.Message)
+
+					//остановить скачивание файлов
+					if command == "stop receiving files" {
+						msgReq.Info.Command = "stop receiving files"
+
+						msgJSON, err := json.Marshal(msgReq)
+						if err != nil {
+							_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+							continue
+						}
+						tpdf.channels.cwtRes <- configure.MsgWsTransmission{
+							DestinationHost: tpdf.sourceIP,
+							Data:            &msgJSON,
+						}
+					}
+
+					//разрыв соединения (остановить загрузку файлов)
+					if command == "to stop the task because of a disconnection" {
+						//закрываем дескриптор файла
+						if w, ok := listFileDescriptors[fi.Hex]; ok {
+							w.Close()
+
+							//удаляем дескриптор файла
+							delete(listFileDescriptors, fi.Hex)
+						}
+
+						//удаляем файл
+						_ = os.Remove(path.Join(pathDirStorage, fn))
+
+						sdf.Status = "task stoped disconnect"
+
+						break DONE
+					}
+
+				} else if msg.MsgGenerator == "NI module" {
+					var msgRes configure.MsgTypeDownload
+					if err := json.Unmarshal(*msg.Message, &msgRes); err != nil {
+						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+						continue
+					}
+
+					/* получаем информацию о задаче */
+					ti, ok := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
+					if !ok {
+						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("task with ID %v not found", tpdf.taskID))
+
+						sdf.Status = "error"
+						sdf.ErrMsg = err
+
+						break DONE
+					}
+
+					fi := ti.TaskParameter.DownloadTask.FileInformation
+
+					switch msgRes.Info.Command {
+					//готовность к приему файла (slave -> master)
+					case "ready for the transfer":
+						if _, ok := listFileDescriptors[msgRes.Info.FileOptions.Hex]; ok {
+							continue
+						}
+
+						//создаем дескриптор файла для последующей записи в него
+						f, err := os.Create(path.Join(pathDirStorage, msgRes.Info.FileOptions.Name))
+						if err != nil {
+							_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+							sdf.Status = "error"
+							sdf.ErrMsg = err
+
+							break DONE
+						}
+
+						listFileDescriptors[msgRes.Info.FileOptions.Hex] = f
+
+						//обновляем информацию о задаче
+						tpdf.smt.UpdateTaskDownloadAllParameters(tpdf.taskID, configure.DownloadTaskParameters{
+							Status:                              "wait",
+							NumberFilesTotal:                    ti.TaskParameter.DownloadTask.NumberFilesTotal,
+							NumberFilesDownloaded:               ti.TaskParameter.DownloadTask.NumberFilesDownloaded,
+							PathDirectoryStorageDownloadedFiles: ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles,
+							FileInformation: configure.DetailedFileInformation{
+								Name:         fn,
+								Hex:          fi.Hex,
+								FullSizeByte: fi.FullSizeByte,
+								NumChunk:     msgRes.Info.FileOptions.NumChunk,
+								ChunkSize:    msgRes.Info.FileOptions.ChunkSize,
+							},
+						})
+
+						msgReq.Info.Command = "ready to receive file"
+						msgJSON, err := json.Marshal(msgReq)
+						if err != nil {
+							_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+							sdf.Status = "error"
+							sdf.ErrMsg = err
+
+							break DONE
+						}
+
+						tpdf.channels.cwtRes <- configure.MsgWsTransmission{
+							DestinationHost: tpdf.sourceIP,
+							Data:            &msgJSON,
+						}
+
+					//сообщение о невозможности передачи файла (slave -> master)
+					case "file transfer not possible":
+						dtp := ti.TaskParameter.DownloadTask
+						dtp.NumberFilesDownloadedError = dtp.NumberFilesDownloadedError + 1
+
+						//добавляем информацию о не принятом файле
+						tpdf.smt.UpdateTaskDownloadAllParameters(tpdf.taskID, dtp)
+
+						//отправляем информацию в Ядро
+						tpdf.channels.chanInCore <- &configure.MsgBetweenCoreAndNI{
+							TaskID:   tpdf.taskID,
+							Section:  "download control",
+							Command:  "file download process",
+							SourceID: tpdf.sourceID,
+						}
+
+						break NEWFILE
+
+					//передача файла успешно остановлена (slave -> master)
+					case "file transfer stopped":
+						//закрываем дескриптор файла
+						if w, ok := listFileDescriptors[fi.Hex]; ok {
+							w.Close()
+
+							//удаляем дескриптор файла
+							delete(listFileDescriptors, fi.Hex)
+						}
+
+						//удаляем файл
+						_ = os.Remove(path.Join(pathDirStorage, fn))
+
+						sdf.Status = "task stoped client"
+
+						break DONE
+
+					//невозможно остановить передачу файла
+					case "impossible to stop file transfer":
+						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("it is impossible to stop file transfer (source ID: %v, task ID: %v)", tpdf.sourceID, tpdf.taskID))
+
+					}
+				} else {
+					_ = tpdf.saveMessageApp.LogMessage("error", "unknown generator events")
+
+					break NEWFILE
+				}
+			}
+
+			/* бинарный тип сообщения */
+			if msg.MessageType == 2 {
+				fileIsLoaded, err := writingBinaryFile(parametersWritingBinaryFile{
+					SourceID:            tpdf.sourceID,
+					TaskID:              tpdf.taskID,
+					Data:                msg.Message,
+					ListFileDescriptors: listFileDescriptors,
+					SMT:                 tpdf.smt,
+					ChanInCore:          tpdf.channels.chanInCore,
+				})
+				if err != nil {
+					_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+					sdf.Status = "error"
+					sdf.ErrMsg = err
+
+					break DONE
+				}
+
+				//если файл полностью загружен запрашиваем следующий файл
+				if fileIsLoaded {
+					break NEWFILE
+				}
+			}
+		}
+	}
+
+	dtp := tpdf.taskInfo.TaskParameter.DownloadTask
+	dtp.Status = "complete"
+
+	/*
+		изменяем состояние задачи по которому данная задача будет
+		удалена через определенный промежуток времени
+	*/
+	tpdf.smt.UpdateTaskDownloadAllParameters(tpdf.taskID, dtp)
+
+	//задача завершена успешно
+	msgToCore := configure.MsgBetweenCoreAndNI{
+		TaskID:   tpdf.taskID,
+		Section:  "download control",
+		Command:  "task completed",
+		SourceID: tpdf.sourceID,
+	}
+
+	switch sdf.Status {
+	//задача остановлена пользователем
+	case "task stoped client":
+		msgToCore.Command = "file transfer stopped"
+
+	//задача остановлена в связи с разрывом соединения с источником
+	case "task stoped disconnect":
+		msgToCore.Command = "task stoped disconnect"
+
+	//задача остановлена из-за внутренней ошибки приложения
+	case "error":
+		msgToCore.Command = "task stoped error"
+
+	}
+
+	tpdf.channels.chanInCore <- &msgToCore
 }
 
 //writingBinaryFile осуществляет запись бинарного файла

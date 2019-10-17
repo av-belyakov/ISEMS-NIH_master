@@ -103,6 +103,8 @@ var _ = Describe("QueueTaskStorage", func() {
 	}
 	listFilesUser = append(listFilesUser, "file_0022")
 
+	testPathDirForFilterFiles := "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_June_17_0_0_b072340dc4e69d6df229a26c14edbfc8"
+
 	qts.AddQueueTaskStorage(
 		taskID,
 		sourceID,
@@ -112,7 +114,8 @@ var _ = Describe("QueueTaskStorage", func() {
 			TaskType:        "download control",
 		},
 		&configure.DescriptionParametersReceivedFromUser{
-			DownloadList: listFilesUser,
+			DownloadList:                  listFilesUser,
+			PathDirectoryForFilteredFiles: testPathDirForFilterFiles,
 		})
 
 	listFilesDB := make([]*configure.FilesInformation, 0, 10)
@@ -138,7 +141,7 @@ var _ = Describe("QueueTaskStorage", func() {
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(len(i.TaskParameters.DownloadList)).Should(Equal(6))
-
+			Expect(i.TaskParameters.PathDirectoryForFilteredFiles).Should(Equal(testPathDirForFilterFiles))
 		})
 	})
 

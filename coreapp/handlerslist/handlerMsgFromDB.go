@@ -98,6 +98,16 @@ func HandlerMsgFromDB(
 
 			fmt.Println("function 'handlerMsgFromDB', add task download after filtration to QueueTaskStorage")
 
+			listFoundFiles := taskInfo.TaskParameter.FiltrationTask.FoundFilesInformation
+
+			//готовим список файлов предназначенный для загрузки
+			listDownloadFiles := make(map[string]*configure.DownloadFilesInformation, len(listFoundFiles))
+			for fn, v := range listFoundFiles {
+				listDownloadFiles[fn] = &configure.DownloadFilesInformation{}
+				listDownloadFiles[fn].Size = v.Size
+				listDownloadFiles[fn].Hex = v.Hex
+			}
+
 			sourceID := taskInfo.TaskParameter.FiltrationTask.ID
 
 			//получаем параметры фильтрации
@@ -109,6 +119,8 @@ func HandlerMsgFromDB(
 			}
 			fmt.Printf("--- BEFORE ADD QTS: %v\n", qti)
 
+			fmt.Printf("\t!!! path directory to store source '%v'\n", taskInfo.TaskParameter.FiltrationTask.PathStorageSource)
+
 			//добавляем задачу в очередь
 			hsm.QTS.AddQueueTaskStorage(res.TaskID, sourceID, configure.CommonTaskInfo{
 				IDClientAPI:     res.IDClientAPI,
@@ -117,11 +129,12 @@ func HandlerMsgFromDB(
 			}, &configure.DescriptionParametersReceivedFromUser{
 				FilterationParameters:         qti.TaskParameters.FilterationParameters,
 				PathDirectoryForFilteredFiles: taskInfo.TaskParameter.FiltrationTask.PathStorageSource,
-				DownloadList:                  []string{},
 			})
 
-			one, _ := hsm.QTS.GetQueueTaskStorage(sourceID, res.TaskID)
-			fmt.Printf("--- AFTER ADD QTS: %v\n", one)
+			//добавляем подтвержденный список файлов для скачивания
+			if err := hsm.QTS.AddConfirmedListFiles(sourceID, res.TaskID, listDownloadFiles); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
 
 			//устанавливаем проверочный статус источника для данной задачи как подключен
 			if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(sourceID, res.TaskID); err != nil {
@@ -133,25 +146,39 @@ func HandlerMsgFromDB(
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
 
-			two, _ := hsm.QTS.GetQueueTaskStorage(sourceID, res.TaskID)
-			fmt.Printf("--- AFTER CHANGE QTS: %v\n", two)
-
 			/*
-				   До сего момента вроде все правельно,
-				   а вот дальше не понятно и ничего не работает
-				   наверное стоит убрать вызов CompleteStoringMemoryTask
+				one, _ := hsm.QTS.GetQueueTaskStorage(sourceID, res.TaskID)
+				fmt.Printf("--- AFTER ADD QTS: %v\n", one.TaskParameters.PathDirectoryForFilteredFiles)
 
-				   !!! еще проверить по фильтрации !!!
-					1. останов фильтрации (YES)
-					2. выполнение нескольких процессов фильтрации
-					в том числе обработку при превышении кол-во одновременно
-					запущеных процессов фильтрации (несколько процессов выполняются
-					успешно, однако выполнение всех процессов прерывается если
-				останавливаешь один из них)
-					3. обработку сообщений при отключении и подключении клиента
-					API при выполнении фильтрации
-					4. отключение и подключения самого мастера при выполнении
-					фильтрации
+				//устанавливаем проверочный статус источника для данной задачи как подключен
+				if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(sourceID, res.TaskID); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				}
+
+				//изменяем статус наличия файлов для скачивания
+				if err := hsm.QTS.ChangeAvailabilityFilesDownload(sourceID, res.TaskID); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				}
+
+				two, _ := hsm.QTS.GetQueueTaskStorage(sourceID, res.TaskID)
+				fmt.Printf("--- AFTER CHANGE QTS: %v\n", two)
+
+				/*
+					   До сего момента вроде все правельно,
+					   а вот дальше не понятно и ничего не работает
+					   наверное стоит убрать вызов CompleteStoringMemoryTask
+
+					   !!! еще проверить по фильтрации !!!
+						1. останов фильтрации (YES)
+						2. выполнение нескольких процессов фильтрации
+						в том числе обработку при превышении кол-во одновременно
+						запущеных процессов фильтрации (несколько процессов выполняются
+						успешно, однако выполнение всех процессов прерывается если
+					останавливаешь один из них)
+						3. обработку сообщений при отключении и подключении клиента
+						API при выполнении фильтрации
+						4. отключение и подключения самого мастера при выполнении
+						фильтрации
 			*/
 
 			//устанавливаем статус задачи в "complete" для ее последующего удаления

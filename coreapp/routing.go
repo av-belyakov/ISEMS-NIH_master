@@ -69,7 +69,7 @@ func Routing(
 				continue
 			}
 
-			fmt.Printf("function 'routing' Core module - sent new task type %v", qti.TaskType)
+			fmt.Printf("function 'routing' Core module - sent new task type %v\n", qti.TaskType)
 			fmt.Println(qti)
 
 			emt.TaskIDClientAPI = qti.TaskIDClientAPI
@@ -163,7 +163,7 @@ func Routing(
 					continue
 				}
 
-				fmt.Printf("Создали директорию '%v' для хранения файлов при скачивании (task ID %v)\n", pathStorage, msg.TaskID)
+				fmt.Printf("function 'routing' Core module - Создали директорию '%v' для хранения файлов при скачивании (task ID %v)\n", pathStorage, msg.TaskID)
 
 				//изменяем статус задачи в StoringMemoryQueueTask
 				/*
@@ -185,6 +185,9 @@ func Routing(
 						End:   time.Now().Unix(),
 					},
 					TaskParameter: configure.DescriptionTaskParameters{
+						FiltrationTask: configure.FiltrationTaskParameters{
+							PathStorageSource: qti.TaskParameters.PathDirectoryForFilteredFiles,
+						},
 						DownloadTask: configure.DownloadTaskParameters{
 							ID:                                  msg.SourceID,
 							Status:                              "wait",
@@ -195,7 +198,8 @@ func Routing(
 				})
 
 				nit, _ := smt.GetStoringMemoryTask(msg.TaskID)
-				fmt.Printf("добавили задачу по скачиванию (task ID %v) в StoringMemoryTask: %v\n", msg.TaskID, nit)
+
+				fmt.Printf("function 'routing' Core module - добавили задачу по скачиванию (task ID %v) в StoringMemoryTask: '%v'\n", msg.TaskID, nit)
 
 				//отправляем в NI module для вызова обработчика задания
 				cc.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{
@@ -206,7 +210,7 @@ func Routing(
 					SourceID:   msg.SourceID,
 				}
 
-				fmt.Println("function 'routing' Core module - add task DOWNLOAD in StoringMemoryTask and send NI module")
+				fmt.Println("function 'routing' Core module - function 'routing' Core module - add task DOWNLOAD in StoringMemoryTask and send NI module")
 			}
 		}
 	}()

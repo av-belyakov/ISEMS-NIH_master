@@ -165,6 +165,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 
 			case "add":
 				smt.tasks[msg.TaskID] = msg.Description
+				smt.tasks[msg.TaskID].TaskStatus = false
 				smt.tasks[msg.TaskID].TaskParameter.FiltrationTask.FoundFilesInformation = map[string]*FoundFilesInformation{}
 
 				if msg.Description.TaskParameter.DownloadTask.ID == 0 {

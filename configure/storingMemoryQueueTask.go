@@ -131,11 +131,8 @@ func NewRepositoryQTS() *QueueTaskStorage {
 					AvailabilityConnection:    settings.CheckingStatusItems.AvailabilityConnection,
 					AvailabilityFilesDownload: settings.CheckingStatusItems.AvailabilityFilesDownload,
 				}
-				msgRes.Settings = &DescriptionParametersReceivedFromUser{}
 
-				msgRes.Settings.FilterationParameters = settings.TaskParameters.FilterationParameters
-				msgRes.Settings.DownloadList = settings.TaskParameters.DownloadList
-				msgRes.Settings.ConfirmedListFiles = settings.TaskParameters.ConfirmedListFiles
+				msgRes.Settings = &settings.TaskParameters
 
 				msg.ChanRes <- msgRes
 
@@ -156,6 +153,7 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskIDClientAPI = msg.TaskIDClientAPI
 
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.FilterationParameters = msg.AdditionalOption.FilterationParameters
+				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.PathDirectoryForFilteredFiles = msg.AdditionalOption.PathDirectoryForFilteredFiles
 
 				if msg.TaskType == "filtration control" {
 					msg.ChanRes <- msgRes
