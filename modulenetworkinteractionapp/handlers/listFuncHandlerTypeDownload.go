@@ -140,6 +140,8 @@ DONE:
 			//обновляем значение таймера (что бы задача не была удалена по таймауту)
 			tpdf.smt.TimerUpdateStoringMemoryTask(tpdf.taskID)
 
+			fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', RESIVED MSG, %v\n", msg)
+
 			/* текстовый тип сообщения */
 			if msg.MessageType == 1 {
 				msgReq := configure.MsgTypeDownload{
@@ -194,6 +196,10 @@ DONE:
 						continue
 					}
 
+					fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', GENERATOR = 'NI module' RESIVED msg '%v'\n", msgRes)
+
+					fmt.Println("\tDOWNLOAD: func 'processorReceivingFiles', получаем информацию о задаче")
+
 					/* получаем информацию о задаче */
 					ti, ok := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
 					if !ok {
@@ -205,11 +211,16 @@ DONE:
 						break DONE
 					}
 
+					fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', TASK INFO '%v'\n", ti)
+
 					fi := ti.TaskParameter.DownloadTask.FileInformation
 
 					switch msgRes.Info.Command {
 					//готовность к приему файла (slave -> master)
 					case "ready for the transfer":
+
+						fmt.Println("\tDOWNLOAD: func 'processorReceivingFiles', command 'ready for the transfer'")
+
 						if _, ok := listFileDescriptors[msgRes.Info.FileOptions.Hex]; ok {
 							continue
 						}
@@ -252,6 +263,8 @@ DONE:
 
 							break DONE
 						}
+
+						fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', SEND MSG '%v'\n", msgReq)
 
 						tpdf.channels.cwtRes <- configure.MsgWsTransmission{
 							DestinationHost: tpdf.sourceIP,
@@ -363,6 +376,8 @@ DONE:
 		msgToCore.Command = "task stoped error"
 
 	}
+
+	fmt.Printf("DOWNLOAD: func 'processorReceivingFiles', TASK COMPLITE MSG:%v\n", msgToCore)
 
 	tpdf.channels.chanInCore <- &msgToCore
 }

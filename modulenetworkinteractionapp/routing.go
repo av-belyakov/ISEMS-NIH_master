@@ -325,8 +325,12 @@ func RouteWssConnectionResponse(
 		} else if msg.MsgType == 2 {
 			//обработка бинарных данных
 
+			fmt.Println("func 'RouteWssConnectionResponse', обработка бинарных данных")
+
 			//определяем принадлежность пакета
 			checkBytes := (*message)[:1]
+
+			fmt.Printf("func 'RouteWssConnectionResponse', checkBytes = %v\n, full msg = %v\n", checkBytes, (*message)[:67])
 
 			if string(checkBytes) == "1" {
 				/*

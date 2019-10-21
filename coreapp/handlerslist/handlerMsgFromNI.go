@@ -381,6 +381,10 @@ func HandlerMsgFromNI(
 
 			fmt.Printf("------ SECTOR: 'monitoring task performance', Command: 'complete task', %v\n", msg)
 
+			if !taskInfoIsExist {
+				return
+			}
+
 			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
 
 			/*if !taskInfoIsExist {

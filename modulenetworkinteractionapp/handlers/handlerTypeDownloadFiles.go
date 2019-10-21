@@ -82,7 +82,7 @@ func ControllerReceivingRequestedFiles(
 				CriticalityMessage:  "warning",
 			}
 
-			fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' resived new msg DOWNLOAD TASK for task ID %v\n", msg.TaskID)
+			fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' resived new msg DOWNLOAD TASK for task ID %v, MSG %v\n", msg.TaskID, msg)
 
 			//получаем IP адрес и параметры источника
 			si, ok := isl.GetSourceSetting(msg.SourceID)
@@ -193,6 +193,9 @@ func ControllerReceivingRequestedFiles(
 
 			//ответы приходящие от источника в рамках выполнения конкретной задачи
 			case "taken from the source":
+
+				fmt.Printf("func ' ControllerReceivingRequestedFiles', RESIVED MSG 'taken from the source': '%v'\n", msg)
+
 				if _, ok := lhrf[si.IP]; !ok {
 					_ = saveMessageApp.LogMessage("error", errMsg)
 
@@ -208,6 +211,8 @@ func ControllerReceivingRequestedFiles(
 
 					continue
 				}
+
+				fmt.Println("func ' ControllerReceivingRequestedFiles', send to handler func 'processorReceivingFiles'")
 
 				//ответы приходящие от источника (команды для processorReceivingFiles)
 				hrp.chanToHandler <- msgChannelProcessorReceivingFiles{
