@@ -330,7 +330,7 @@ func RouteWssConnectionResponse(
 			//определяем принадлежность пакета
 			checkBytes := (*message)[:1]
 
-			fmt.Printf("func 'RouteWssConnectionResponse', checkBytes = %v\n, full msg = %v\n", checkBytes, (*message)[:67])
+			fmt.Printf("func 'RouteWssConnectionResponse', checkBytes = %v\n, full msg = %v\n", string(checkBytes), (*message)[:67])
 
 			if string(checkBytes) == "1" {
 				/*
@@ -340,7 +340,7 @@ func RouteWssConnectionResponse(
 				chanInCRRF <- &configure.MsgChannelReceivingFiles{
 					SourceID: sourceID,
 					SourceIP: sourceIP,
-					TaskID:   fmt.Sprint((*message)[2:34]),
+					TaskID:   string((*message)[2:34]),
 					Command:  "taken from the source",
 					MsgType:  msg.MsgType,
 					Message:  message,

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"time"
 
 	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
@@ -245,9 +246,9 @@ DONE:
 							NumberFilesDownloaded:               ti.TaskParameter.DownloadTask.NumberFilesDownloaded,
 							PathDirectoryStorageDownloadedFiles: ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles,
 							FileInformation: configure.DetailedFileInformation{
-								Name:         fn,
-								Hex:          fi.Hex,
-								FullSizeByte: fi.FullSizeByte,
+								Name:         msgRes.Info.FileOptions.Name,
+								Hex:          msgRes.Info.FileOptions.Hex,
+								FullSizeByte: msgRes.Info.FileOptions.Size,
 								NumChunk:     msgRes.Info.FileOptions.NumChunk,
 								ChunkSize:    msgRes.Info.FileOptions.ChunkSize,
 							},
@@ -331,14 +332,19 @@ DONE:
 				if err != nil {
 					_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
+					fmt.Printf("------ ERROR: %v\n", fmt.Sprint(err))
+
 					sdf.Status = "error"
 					sdf.ErrMsg = err
 
-					break DONE
+					break NEWFILE
 				}
 
 				//если файл полностью загружен запрашиваем следующий файл
 				if fileIsLoaded {
+
+					fmt.Println("\t File success uploaded, REQUEST NEW FILE UPLOAD")
+
 					break NEWFILE
 				}
 			}
@@ -386,8 +392,9 @@ DONE:
 func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 	//получаем хеш принимаемого файла
 	fileHex := string((*pwbf.Data)[35:67])
+
 	w, ok := pwbf.ListFileDescriptors[fileHex]
-	if ok {
+	if !ok {
 		return false, fmt.Errorf("no file descriptor found for the specified hash %v (task ID %v, source ID %v)", fileHex, pwbf.TaskID, pwbf.SourceID)
 	}
 
@@ -405,6 +412,10 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 	fi := ti.TaskParameter.DownloadTask.FileInformation
 
 	writeByte := fi.AcceptedSizeByte + int64(numWriteByte)
+
+	fmt.Printf("func 'writingBinaryFile', AcceptedSizeByte = %v, int64(numWriteByte) = %v, writeByte = %v\n", fi.AcceptedSizeByte, int64(numWriteByte), writeByte)
+	fmt.Printf("fi.FullSizeByte: %v\n", fi.FullSizeByte)
+
 	writePercent := int(writeByte / (fi.FullSizeByte / 100))
 	numAcceptedChunk := fi.NumAcceptedChunk + 1
 
@@ -446,8 +457,10 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 		//удаляем дескриптор файла
 		delete(pwbf.ListFileDescriptors, fi.Hex)
 
+		filePath := path.Join(ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles, fi.Name)
+
 		//проверяем хеш-сумму файла
-		ok := checkDownloadedFile(ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles, fi.Hex, fi.FullSizeByte)
+		ok := checkDownloadedFile(filePath, fi.Hex, fi.FullSizeByte)
 		if !ok {
 			pwbf.SMT.IncrementNumberFilesDownloadedError(pwbf.TaskID)
 
@@ -456,15 +469,24 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 
 		msgToCore.Command = "file download complete"
 
+		newFileInfo := configure.DownloadFilesInformation{
+			IsLoaded:     true,
+			TimeDownload: time.Now().Unix(),
+		}
+		newFileInfo.Size = fi.FullSizeByte
+		newFileInfo.Hex = fi.Hex
+
 		//отмечаем файл как успешно принятый
 		pwbf.SMT.UpdateTaskDownloadFileIsLoaded(pwbf.TaskID, configure.DownloadTaskParameters{
 			DownloadingFilesInformation: map[string]*configure.DownloadFilesInformation{
-				fi.Name: &configure.DownloadFilesInformation{},
+				fi.Name: &newFileInfo,
 			},
 		})
 
 		//увеличиваем количество принятых файлов на 1
 		pwbf.SMT.IncrementNumberFilesDownloaded(pwbf.TaskID)
+
+		fmt.Printf("func 'writingBinaryFile', file name:%v, success uploaded\n", fi.Name)
 
 		pwbf.ChanInCore <- &msgToCore
 

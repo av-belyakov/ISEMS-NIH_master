@@ -68,8 +68,8 @@ func UpdateInformationAboutTask(
 	commonValueUpdate := bson.D{
 		bson.E{Key: "$set", Value: bson.D{
 			bson.E{Key: "detailed_information_on_downloading.task_status", Value: taskStatus},
+			bson.E{Key: "detailed_information_on_downloading.time_interval_task_execution.start", Value: ti.TimeInterval.Start},
 			bson.E{Key: "detailed_information_on_downloading.time_interval_task_execution.end", Value: time.Now().Unix()},
-			bson.E{Key: "detailed_information_on_downloading.number_files_total", Value: ti.TaskParameter.DownloadTask.NumberFilesTotal},
 			bson.E{Key: "detailed_information_on_downloading.number_files_downloaded", Value: ti.TaskParameter.DownloadTask.NumberFilesDownloaded},
 			bson.E{Key: "detailed_information_on_downloading.number_files_downloaded_error", Value: ti.TaskParameter.DownloadTask.NumberFilesDownloadedError},
 			bson.E{Key: "detailed_information_on_downloading.path_directory_storage_downloaded_files", Value: ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles},
@@ -79,6 +79,8 @@ func UpdateInformationAboutTask(
 	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, commonValueUpdate); err != nil {
 		return err
 	}
+
+	fmt.Printf("*-*-*- FUNC 'UpdateInformationAboutTask', NumberFilesDownloaded = %v\n", ti.TaskParameter.DownloadTask.NumberFilesDownloaded)
 
 	var arrayFiles []interface{}
 	if ti.TaskParameter.DownloadTask.Status == "complete" {

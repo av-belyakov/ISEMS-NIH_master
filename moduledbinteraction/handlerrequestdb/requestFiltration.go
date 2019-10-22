@@ -258,6 +258,7 @@ func UpdateParametersFiltrationTask(
 			bson.E{Key: "detailed_information_on_filtering.size_files_meet_filter_parameters", Value: ti.SizeFilesMeetFilterParameters},
 			bson.E{Key: "detailed_information_on_filtering.size_files_found_result_filtering", Value: ti.SizeFilesFoundResultFiltering},
 			bson.E{Key: "detailed_information_on_filtering.path_directory_for_filtered_files", Value: ti.PathStorageSource},
+			bson.E{Key: "detailed_information_on_downloading.number_files_total", Value: ti.NumberFilesFoundResultFiltering},
 		}}}
 
 	//обновляем детальную информацию о ходе фильтрации

@@ -562,7 +562,7 @@ func (smt *StoringMemoryTask) CheckTimeUpdateStoringMemoryTask(sec int) chan Msg
 					continue
 				}
 
-				if (t.TimeUpdate + 61) < timeNow {
+				if (t.TimeUpdate + 121) < timeNow {
 					smt.CompleteStoringMemoryTask(id)
 
 					chanOut <- MsgChanStoringMemoryTask{

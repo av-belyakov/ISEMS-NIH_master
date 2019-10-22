@@ -191,11 +191,19 @@ func Routing(
 						DownloadTask: configure.DownloadTaskParameters{
 							ID:                                  msg.SourceID,
 							Status:                              "wait",
+							NumberFilesTotal:                    len(qti.TaskParameters.ConfirmedListFiles),
 							PathDirectoryStorageDownloadedFiles: pathStorage,
 							DownloadingFilesInformation:         qti.TaskParameters.ConfirmedListFiles,
 						},
 					},
 				})
+				/*
+				   Параметр TaskDescription.TaskParameter.DownloadTask.NumberFilesTotal
+				   содержит общее кол-во файлов запрашиваемых пользователем или их
+				   общее кол-во когда пользователь список не присылал. Данный параметр
+				   может отличатся от аналогичного в таблице БД где он обозночает
+				   общее кол-во файлов которые можно скачать, а не запрошенные пользователем
+				*/
 
 				nit, _ := smt.GetStoringMemoryTask(msg.TaskID)
 

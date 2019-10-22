@@ -212,7 +212,7 @@ func ControllerReceivingRequestedFiles(
 					continue
 				}
 
-				fmt.Println("func ' ControllerReceivingRequestedFiles', send to handler func 'processorReceivingFiles'")
+				fmt.Println("func ' ControllerReceivingRequestedFiles', send ---> to handler func 'processorReceivingFiles'")
 
 				//ответы приходящие от источника (команды для processorReceivingFiles)
 				hrp.chanToHandler <- msgChannelProcessorReceivingFiles{
