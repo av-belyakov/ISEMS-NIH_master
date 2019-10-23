@@ -95,6 +95,11 @@ func Routing(
 				continue
 			}
 
+			ns := notifications.NotificationSettingsToClientAPI{
+				MsgType: "success",
+				Sources: []int{msg.SourceID},
+			}
+
 			if qti.TaskType == "filtration control" {
 				emt.Section = "filtration control"
 
@@ -129,6 +134,11 @@ func Routing(
 					TaskIDClientAPI: qti.TaskIDClientAPI,
 					AdvancedOptions: msg.SourceID,
 				}
+
+				ns.MsgDescription = fmt.Sprintf("Начата подготовка задачи по фильтрации сетевого трафика для источника %v", msg.SourceID)
+
+				//отправляем информационное сообщение пользователю о начале выполнения задачи
+				notifications.SendNotificationToClientAPI(cc.OutCoreChanAPI, ns, qti.TaskIDClientAPI, qti.IDClientAPI)
 
 				fmt.Println("function 'routing' Core module - add task FILTRATION in StoringMemoryTask and send insert DB module")
 			}
@@ -208,6 +218,11 @@ func Routing(
 				nit, _ := smt.GetStoringMemoryTask(msg.TaskID)
 
 				fmt.Printf("function 'routing' Core module - добавили задачу по скачиванию (task ID %v) в StoringMemoryTask: '%v'\n", msg.TaskID, nit)
+
+				ns.MsgDescription = fmt.Sprintf("Начата подготовка задачи по скачиванию файлов с источника %v", msg.SourceID)
+
+				//отправляем информационное сообщение пользователю о начале выполнения задачи
+				notifications.SendNotificationToClientAPI(cc.OutCoreChanAPI, ns, qti.TaskIDClientAPI, qti.IDClientAPI)
 
 				//отправляем в NI module для вызова обработчика задания
 				cc.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{

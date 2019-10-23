@@ -281,4 +281,15 @@ func handlerFiltrationControlTypeStart(
 	if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(fcts.MsgOption.ID, taskID); err != nil {
 		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 	}
+
+	//информационное сообщение о том что задача добавлена в очередь
+	notifications.SendNotificationToClientAPI(
+		chanToAPI,
+		notifications.NotificationSettingsToClientAPI{
+			MsgType:        "success",
+			MsgDescription: fmt.Sprintf("Задача по фильтрации сетевого трафика на источнике %v, добавлена в очередь", fcts.MsgOption.ID),
+			Sources:        []int{fcts.MsgOption.ID},
+		},
+		fcts.ClientTaskID,
+		clientID)
 }

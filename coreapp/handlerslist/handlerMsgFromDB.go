@@ -96,8 +96,6 @@ func HandlerMsgFromDB(
 				return
 			}
 
-			fmt.Println("function 'handlerMsgFromDB', add task download after filtration to QueueTaskStorage")
-
 			listFoundFiles := taskInfo.TaskParameter.FiltrationTask.FoundFilesInformation
 
 			//готовим список файлов предназначенный для загрузки
@@ -117,9 +115,6 @@ func HandlerMsgFromDB(
 
 				return
 			}
-			fmt.Printf("--- BEFORE ADD QTS: %v\n", qti)
-
-			fmt.Printf("\t!!! path directory to store source '%v'\n", taskInfo.TaskParameter.FiltrationTask.PathStorageSource)
 
 			//добавляем задачу в очередь
 			hsm.QTS.AddQueueTaskStorage(res.TaskID, sourceID, configure.CommonTaskInfo{
@@ -130,6 +125,17 @@ func HandlerMsgFromDB(
 				FilterationParameters:         qti.TaskParameters.FilterationParameters,
 				PathDirectoryForFilteredFiles: taskInfo.TaskParameter.FiltrationTask.PathStorageSource,
 			})
+
+			//информационное сообщение о том что задача добавлена в очередь
+			notifications.SendNotificationToClientAPI(
+				outCoreChans.OutCoreChanAPI,
+				notifications.NotificationSettingsToClientAPI{
+					MsgType:        "success",
+					MsgDescription: fmt.Sprintf("Задача по скачиванию файлов с источника %v, автоматически добавлена в очередь", sourceID),
+					Sources:        []int{sourceID},
+				},
+				res.TaskIDClientAPI,
+				res.IDClientAPI)
 
 			//добавляем подтвержденный список файлов для скачивания
 			if err := hsm.QTS.AddConfirmedListFiles(sourceID, res.TaskID, listDownloadFiles); err != nil {
@@ -145,66 +151,6 @@ func HandlerMsgFromDB(
 			if err := hsm.QTS.ChangeAvailabilityFilesDownload(sourceID, res.TaskID); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
-
-			/*
-				one, _ := hsm.QTS.GetQueueTaskStorage(sourceID, res.TaskID)
-				fmt.Printf("--- AFTER ADD QTS: %v\n", one.TaskParameters.PathDirectoryForFilteredFiles)
-
-				//устанавливаем проверочный статус источника для данной задачи как подключен
-				if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(sourceID, res.TaskID); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-				}
-
-				//изменяем статус наличия файлов для скачивания
-				if err := hsm.QTS.ChangeAvailabilityFilesDownload(sourceID, res.TaskID); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-				}
-
-				two, _ := hsm.QTS.GetQueueTaskStorage(sourceID, res.TaskID)
-				fmt.Printf("--- AFTER CHANGE QTS: %v\n", two)
-
-				/*
-					   До сего момента вроде все правельно,
-					   а вот дальше не понятно и ничего не работает
-					   наверное стоит убрать вызов CompleteStoringMemoryTask
-
-					   !!! еще проверить по фильтрации !!!
-						1. останов фильтрации (YES)
-						2. выполнение нескольких процессов фильтрации
-						в том числе обработку при превышении кол-во одновременно
-						запущеных процессов фильтрации (несколько процессов выполняются
-						успешно, однако выполнение всех процессов прерывается если
-					останавливаешь один из них)
-						3. обработку сообщений при отключении и подключении клиента
-						API при выполнении фильтрации
-						4. отключение и подключения самого мастера при выполнении
-						фильтрации
-			*/
-
-			//устанавливаем статус задачи в "complete" для ее последующего удаления
-			//hsm.SMT.CompleteStoringMemoryTask(res.TaskID)
-
-			fmt.Println("function 'handlerMsgFromDB', complete storing memory task --- ")
-
-			/*
-				!!!!
-				   Не доделал очереди для фильтрации.
-				   // - Добавление задачи в очередь и удаление ее из очереди при завершении
-				   // фильтрации вроде бы сделал, на до бы еще проверить логику.
-
-				   // !!! ДУМАЮ СТОИТ ПРОДУМАТЬ удаления задачи из очереди
-				   // через событие 'monitoring task performance'
-
-				   // - Нужно сделать удаление при отмене фильтрации.
-
-				   // - Продумать действия при подвисании задачи!!!
-				    - На основании полученной логики с очередями по фильтрации продумать
-				    автоматическую загрузку файлов при завершении фильтрации. Здесь
-				    основная сложность это совпадение ID задачи, так как задача по фильтрации
-				    еще не удалилась а уже нужно добавлять задачу по скачиванию с таким же ID.
-				    По этому не проходит проверка на наличие дубликатов задач.
-				!!!!
-			*/
 
 		case "download control":
 			//пока заглушка

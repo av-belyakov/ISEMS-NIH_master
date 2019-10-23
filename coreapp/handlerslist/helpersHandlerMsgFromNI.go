@@ -13,6 +13,7 @@ type handlerDownloadTaskStatusCompleteType struct {
 	TaskID         string
 	TI             *configure.TaskDescription
 	QTS            *configure.QueueTaskStorage
+	SMT            *configure.StoringMemoryTask
 	NS             notifications.NotificationSettingsToClientAPI
 	ResMsgInfo     configure.DownloadControlTypeInfo
 	OutCoreChanAPI chan<- *configure.MsgBetweenCoreAndAPI
@@ -205,6 +206,9 @@ func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteT
 	if err := hdtsct.QTS.ChangeTaskStatusQueueTask(hdtsct.SourceID, hdtsct.TaskID, "complete"); err != nil {
 		return err
 	}
+
+	//устанавливаем статус задачи в StoringMemoryTask как завершенный
+	hdtsct.SMT.CompleteStoringMemoryTask(hdtsct.TaskID)
 
 	return nil
 }

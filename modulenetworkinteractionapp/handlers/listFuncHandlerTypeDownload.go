@@ -445,7 +445,7 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 
 	//отправляем сообщение Ядру приложения, только если
 	// процент увеличился на 1
-	if writePercent > fi.AcceptedSizePercent {
+	if (writePercent > fi.AcceptedSizePercent) && (writePercent != 100) {
 		pwbf.ChanInCore <- &msgToCore
 	}
 

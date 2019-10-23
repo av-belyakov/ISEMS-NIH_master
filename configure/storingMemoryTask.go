@@ -348,7 +348,7 @@ func (smt StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescripti
 }
 
 //GetAllStoringMemoryTask получить все ID задач для выбранного клиента
-func (smt StoringMemoryTask) GetAllStoringMemoryTask(clientID string) []string {
+/*func (smt StoringMemoryTask) GetAllStoringMemoryTask(clientID string) []string {
 	foundTask := make([]string, 0, len(smt.tasks))
 
 	for tid, v := range smt.tasks {
@@ -360,7 +360,7 @@ func (smt StoringMemoryTask) GetAllStoringMemoryTask(clientID string) []string {
 	return foundTask
 }
 
-//GetStoringMemoryTaskForClientID получить всю инофрмацию о задаче по ID клиента
+//GetStoringMemoryTaskForClientID получить всю инофрмацию о задаче по ID клиента и taskID клиента
 func (smt StoringMemoryTask) GetStoringMemoryTaskForClientID(clientID, ClientTaskID string) (string, *TaskDescription, bool) {
 	listTask := smt.GetAllStoringMemoryTask(clientID)
 	if len(listTask) == 0 {
@@ -379,7 +379,7 @@ func (smt StoringMemoryTask) GetStoringMemoryTaskForClientID(clientID, ClientTas
 	}
 
 	return "", nil, false
-}
+}*/
 
 //IncrementNumberFilesDownloaded увеличить кол-во успешно скаченных файлов на 1
 func (smt StoringMemoryTask) IncrementNumberFilesDownloaded(taskID string) {

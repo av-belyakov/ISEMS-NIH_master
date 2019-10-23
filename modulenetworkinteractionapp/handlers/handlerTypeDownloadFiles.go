@@ -125,6 +125,18 @@ func ControllerReceivingRequestedFiles(
 
 				fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' запуск обработчика задачи по скачиванию файлов")
 
+				/*ao := configure.MessageNotification{
+					SourceReport:                 "NI module",
+					Section:                      "download control",
+					TypeActionPerformed:          "task processing",
+					CriticalityMessage:           "success",
+					HumanDescriptionNotification: fmt.Sprintf("Инициализирована задача по скачиванию файлов с источника %v, идет подготовка списка загружаемых файлов", msg.SourceID),
+				}
+				clientNotify.AdvancedOptions = ao
+
+				//отправляем сообщение о начале выполнения задачи по скачиванию файлов
+				handlerTaskWarning(msg.TaskID, clientNotify)*/
+
 				//запуск обработчика задачи по скачиванию файлов
 				channel, err := processorReceivingFiles(chanInCore, msg.SourceID, si.IP, msg.TaskID, smt, saveMessageApp, cwtRes)
 				if err != nil {

@@ -270,7 +270,7 @@ func HandlerMsgFromAPI(
 				sourceInfo, ok := hsm.ISL.GetSourceSetting(dcts.MsgOption.ID)
 				if !ok {
 					nsErrJSON.MsgDescription = fmt.Sprintf("Ошибка, источника %v не существует", dcts.MsgOption.ID)
-					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v was not found%v", dcts.MsgOption.ID, funcName))
 
 					//сообщение о том что задача была отклонена
@@ -282,7 +282,7 @@ func HandlerMsgFromAPI(
 				//проверяем подключение источника
 				if !sourceInfo.ConnectionStatus {
 					nsErrJSON.MsgDescription = fmt.Sprintf("Ошибка, источник %v не подключен", dcts.MsgOption.ID)
-					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v is not connected%v", dcts.MsgOption.ID, funcName))
 
 					//сообщение о том что задача была отклонена
@@ -307,7 +307,7 @@ func HandlerMsgFromAPI(
 						nsErrJSON.MsgDescription = fmt.Sprintf("Невозможно добавить задачу с ID '%v'. Задача была выполнена, однако из списка задач ожидающих выполнения пока не удалена", dcts.MsgOption.ID)
 					}
 
-					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", errMsg)
 
 					//сообщение о том что задача была отклонена
@@ -328,7 +328,7 @@ func HandlerMsgFromAPI(
 				//устанавливаем проверочный статус источника для данной задачи как подключен
 				if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp); err != nil {
 					nsErrJSON.MsgDescription = fmt.Sprintf("Ошибка, запись для источника %v отсутствует в памяти приложения", dcts.MsgOption.ID)
-					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 					//сообщение о том что задача была отклонена
@@ -347,6 +347,17 @@ func HandlerMsgFromAPI(
 					TaskID:          dcts.MsgOption.TaskIDApp,
 					TaskIDClientAPI: dcts.ClientTaskID,
 				}
+
+				//информационное сообщение о том что задача добавлена в очередь
+				notifications.SendNotificationToClientAPI(
+					outCoreChans.OutCoreChanAPI,
+					notifications.NotificationSettingsToClientAPI{
+						MsgType:        "success",
+						MsgDescription: fmt.Sprintf("Задача по скачиванию файлов с источника %v, добавлена в очередь", dcts.MsgOption.ID),
+						Sources:        []int{dcts.MsgOption.ID},
+					},
+					msgc.ClientTaskID,
+					msg.IDClientAPI)
 			}
 
 			if msgc.MsgInstruction == "to cancel downloading" {
@@ -360,13 +371,6 @@ func HandlerMsgFromAPI(
 
 					return
 				}
-
-				/*
-					   Проверить, выполняется ли задача с указанным ID
-
-					   	//сообщение о том что задача была отклонена
-						outCoreChans.OutCoreChanAPI <- &msgToAPI
-				*/
 
 				outCoreChans.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{
 					TaskID:     dcts.MsgOption.TaskIDApp,

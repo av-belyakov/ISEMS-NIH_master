@@ -205,6 +205,7 @@ func HandlerMsgFromNI(
 			TaskID:         msg.TaskID,
 			TI:             taskInfo,
 			QTS:            hsm.QTS,
+			SMT:            hsm.SMT,
 			NS:             ns,
 			ResMsgInfo:     resMsgInfo,
 			OutCoreChanAPI: outCoreChans.OutCoreChanAPI,
@@ -240,6 +241,8 @@ func HandlerMsgFromNI(
 				TaskID:       msg.TaskID,
 			}
 
+			fmt.Printf("____ func 'handlerMsgFromNI', RESIVED command ', UPLOADED FILE:%v, Byte: %v, Percent: %v\n", taskInfo.TaskParameter.DownloadTask.FileInformation.Name, taskInfo.TaskParameter.DownloadTask.FileInformation.AcceptedSizeByte, taskInfo.TaskParameter.DownloadTask.FileInformation.AcceptedSizePercent)
+
 			//отправляем информацию клиенту API
 			msgJSONInfo, err := json.Marshal(resMsgInfo)
 			if err != nil {
@@ -253,8 +256,12 @@ func HandlerMsgFromNI(
 
 		//при завершении задачи по скачиванию файлов
 		case "task completed":
+
+			fmt.Println("____ func 'handlerMsgFromNI', RESIVED command 'task completed'")
+			fmt.Printf("NUM RESIVED FILES:%v\n", hdtsct.ResMsgInfo.MsgOption.NumberFilesDownloaded)
+
 			hdtsct.NS.MsgType = "success"
-			hdtsct.NS.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника '%v' выполнена успешно", sourceID)
+			hdtsct.NS.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника %v выполнена успешно", sourceID)
 
 			hdtsct.ResMsgInfo.MsgOption.Status = "complete"
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
@@ -265,8 +272,11 @@ func HandlerMsgFromNI(
 
 		//останов задачи пользователем
 		case "file transfer stopped":
+
+			fmt.Println("____ func 'handlerMsgFromNI', RESIVED command 'file transfer stopped' (при останове задачи пользователем)")
+
 			hdtsct.NS.MsgType = "success"
-			hdtsct.NS.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника '%v' была успешно остановлена", sourceID)
+			hdtsct.NS.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника %v была успешно остановлена", sourceID)
 
 			hdtsct.ResMsgInfo.MsgOption.Status = "complete"
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
@@ -277,6 +287,9 @@ func HandlerMsgFromNI(
 
 		//останов задачи в связи с разрывом соединения с источником
 		case "task stoped disconnect":
+
+			fmt.Println("____ func 'handlerMsgFromNI', RESIVED command 'task stoped disconnect' (останов задачи в связи с разрывом соединения с источником)")
+
 			//записываем информацию в БД
 			hdtsct.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 				MsgGenerator: "NI module",
@@ -299,6 +312,9 @@ func HandlerMsgFromNI(
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 			}
 
+			//отмечаем задачу как завершенную для ее последующего удаления
+			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
+
 			//отправляем информацию по задаче клиенту API
 			msgJSONInfo, err := json.Marshal(hdtsct.ResMsgInfo)
 			if err != nil {
@@ -311,8 +327,11 @@ func HandlerMsgFromNI(
 
 		//задача остановлена из-за внутренней ошибки приложения
 		case "task stoped error":
+
+			fmt.Println("____ func 'handlerMsgFromNI', RESIVED command 'task stoped error', (задача остановлена из-за внутренней ошибки приложения)")
+
 			hdtsct.NS.MsgType = "danger"
-			hdtsct.NS.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника '%v' была остановлена из-за внутренней ошибки приложения", sourceID)
+			hdtsct.NS.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника %v была остановлена из-за внутренней ошибки приложения", sourceID)
 
 			hdtsct.ResMsgInfo.MsgOption.Status = "stop"
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
@@ -382,16 +401,12 @@ func HandlerMsgFromNI(
 			fmt.Printf("------ SECTOR: 'monitoring task performance', Command: 'complete task', %v\n", msg)
 
 			if !taskInfoIsExist {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("Section: 'monitoring task performance', task with %v not found", msg.TaskID))
+
 				return
 			}
 
 			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
-
-			/*if !taskInfoIsExist {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", msg.TaskID))
-
-				return
-			}*/
 
 			if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, msg.TaskID, "complete"); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
