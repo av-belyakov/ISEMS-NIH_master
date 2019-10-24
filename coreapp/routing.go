@@ -135,7 +135,7 @@ func Routing(
 					AdvancedOptions: msg.SourceID,
 				}
 
-				ns.MsgDescription = fmt.Sprintf("Начата подготовка задачи по фильтрации сетевого трафика для источника %v", msg.SourceID)
+				ns.MsgDescription = fmt.Sprintf("Начата подготовка к выполнению задачи по фильтрации сетевого трафика для источника %v", msg.SourceID)
 
 				//отправляем информационное сообщение пользователю о начале выполнения задачи
 				notifications.SendNotificationToClientAPI(cc.OutCoreChanAPI, ns, qti.TaskIDClientAPI, qti.IDClientAPI)
@@ -219,7 +219,7 @@ func Routing(
 
 				fmt.Printf("function 'routing' Core module - добавили задачу по скачиванию (task ID %v) в StoringMemoryTask: '%v'\n", msg.TaskID, nit)
 
-				ns.MsgDescription = fmt.Sprintf("Начата подготовка задачи по скачиванию файлов с источника %v", msg.SourceID)
+				ns.MsgDescription = fmt.Sprintf("Начата подготовка к выполнению задачи по скачиванию файлов с источника %v", msg.SourceID)
 
 				//отправляем информационное сообщение пользователю о начале выполнения задачи
 				notifications.SendNotificationToClientAPI(cc.OutCoreChanAPI, ns, qti.TaskIDClientAPI, qti.IDClientAPI)

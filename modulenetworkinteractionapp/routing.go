@@ -223,7 +223,7 @@ func RouteWssConnectionResponse(
 		}
 
 		if msg.MsgType == 1 {
-			//обработка текстовых данных
+			/* обработка текстовых данных */
 
 			if err := json.Unmarshal(*message, &messageType); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
@@ -323,14 +323,10 @@ func RouteWssConnectionResponse(
 				chanInCore <- &errNotify
 			}
 		} else if msg.MsgType == 2 {
-			//обработка бинарных данных
-
-			fmt.Println("func 'RouteWssConnectionResponse', обработка бинарных данных")
+			/* обработка бинарных данных */
 
 			//определяем принадлежность пакета
 			checkBytes := (*message)[:1]
-
-			fmt.Printf("func 'RouteWssConnectionResponse', checkBytes = %v\n, full msg = %v\n", string(checkBytes), (*message)[:67])
 
 			if string(checkBytes) == "1" {
 				/*

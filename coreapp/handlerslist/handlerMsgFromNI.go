@@ -126,7 +126,8 @@ func HandlerMsgFromNI(
 		}
 
 	case "filtration control":
-		msgChan := configure.MsgBetweenCoreAndDB{
+		//отправляем иформацию о ходе фильтрации в БД
+		outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 			MsgGenerator:    "NI module",
 			MsgRecipient:    "DB module",
 			MsgSection:      "filtration control",
@@ -135,6 +136,7 @@ func HandlerMsgFromNI(
 			AdvancedOptions: msg.AdvancedOptions,
 		}
 
+		//клиенту API
 		if ao, ok := msg.AdvancedOptions.(configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus); ok && taskInfoIsExist {
 			/* упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
 			при чем если статус 'execute', то отправляем еще и содержимое поля 'FoundFilesInformation',
@@ -151,13 +153,10 @@ func HandlerMsgFromNI(
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 				}
 			}
-
-			//отправляем иформацию о ходе фильтрации в БД
-			outCoreChans.OutCoreChanDB <- &msgChan
 		}
 
 	case "download control":
-		fmt.Println("func 'HandlerMsgFromNI', section DOWNLOAD CONTROL")
+		//fmt.Println("func 'HandlerMsgFromNI', section DOWNLOAD CONTROL")
 
 		if !taskInfoIsExist {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("there is no task with the specified ID %v", msg.TaskID))
@@ -177,7 +176,6 @@ func HandlerMsgFromNI(
 			Sources: []int{sourceID},
 		}
 
-		//отправляем сообщение о том что задача была отклонена
 		resMsgInfo := configure.DownloadControlTypeInfo{
 			MsgOption: configure.DownloadControlMsgTypeInfo{
 				ID:                                  sourceID,
@@ -373,12 +371,17 @@ func HandlerMsgFromNI(
 
 	case "message notification":
 		if msg.Command == "send client API" {
+
+			fmt.Printf("\tfunc 'handlerMsgFromNI', Section:'message notification', Command:'send client API', MSG:'%v'\n", msg.AdvancedOptions)
+
 			ao, ok := msg.AdvancedOptions.(configure.MessageNotification)
 			if !ok {
 				_ = saveMessageApp.LogMessage("error", "type conversion error"+funcName)
 
 				return
 			}
+
+			fmt.Printf("\tfunc 'handlerMsgFromNI', Section:'message notification', Command:'send client API', OK MSG:'%v'\n", msg.AdvancedOptions)
 
 			if !taskInfoIsExist {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found", msg.TaskID))
@@ -391,6 +394,8 @@ func HandlerMsgFromNI(
 				MsgDescription: ao.HumanDescriptionNotification,
 				Sources:        ao.Sources,
 			}
+
+			fmt.Println("\tfunc 'handlerMsgFromNI', Section:'message notification', Command:'send client API', SEND ---->")
 
 			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
 		}

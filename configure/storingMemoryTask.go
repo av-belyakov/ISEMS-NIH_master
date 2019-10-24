@@ -243,13 +243,25 @@ func NewRepositorySMT() *StoringMemoryTask {
 				}
 
 			case "increment number files downloaded":
+				before := smt.tasks[msg.TaskID].TaskParameter.DownloadTask.NumberFilesDownloaded
+
 				if ti, ok := smt.tasks[msg.TaskID]; ok {
 					smt.tasks[msg.TaskID].TaskParameter.DownloadTask.NumberFilesDownloaded = ti.TaskParameter.DownloadTask.NumberFilesDownloaded + 1
+				}
+
+				fmt.Printf("-=-=-=-=-=-== 'increment number files downloaded' with: '%v' to '%v'\n", before, smt.tasks[msg.TaskID].TaskParameter.DownloadTask.NumberFilesDownloaded)
+
+				msg.ChannelRes <- channelResSettings{
+					TaskID: msg.TaskID,
 				}
 
 			case "increment number files downloaded error":
 				if ti, ok := smt.tasks[msg.TaskID]; ok {
 					smt.tasks[msg.TaskID].TaskParameter.DownloadTask.NumberFilesDownloadedError = ti.TaskParameter.DownloadTask.NumberFilesDownloadedError + 1
+				}
+
+				msg.ChannelRes <- channelResSettings{
+					TaskID: msg.TaskID,
 				}
 
 			}
@@ -347,54 +359,32 @@ func (smt StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescripti
 	return info.Description, info.IsExist
 }
 
-//GetAllStoringMemoryTask получить все ID задач для выбранного клиента
-/*func (smt StoringMemoryTask) GetAllStoringMemoryTask(clientID string) []string {
-	foundTask := make([]string, 0, len(smt.tasks))
-
-	for tid, v := range smt.tasks {
-		if clientID == v.ClientID {
-			foundTask = append(foundTask, tid)
-		}
-	}
-
-	return foundTask
-}
-
-//GetStoringMemoryTaskForClientID получить всю инофрмацию о задаче по ID клиента и taskID клиента
-func (smt StoringMemoryTask) GetStoringMemoryTaskForClientID(clientID, ClientTaskID string) (string, *TaskDescription, bool) {
-	listTask := smt.GetAllStoringMemoryTask(clientID)
-	if len(listTask) == 0 {
-		return "", nil, false
-	}
-
-	for _, id := range listTask {
-		info, ok := smt.GetStoringMemoryTask(id)
-		if !ok {
-			continue
-		}
-
-		if info.ClientTaskID == ClientTaskID {
-			return id, info, true
-		}
-	}
-
-	return "", nil, false
-}*/
-
 //IncrementNumberFilesDownloaded увеличить кол-во успешно скаченных файлов на 1
 func (smt StoringMemoryTask) IncrementNumberFilesDownloaded(taskID string) {
+	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
+
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "increment number files downloaded",
 		TaskID:     taskID,
+		ChannelRes: chanRes,
 	}
+
+	<-chanRes
 }
 
 //IncrementNumberFilesDownloadedError увеличить кол-во успешно скаченных файлов на 1
 func (smt StoringMemoryTask) IncrementNumberFilesDownloadedError(taskID string) {
+	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
+
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "increment number files downloaded error",
 		TaskID:     taskID,
+		ChannelRes: chanRes,
 	}
+
+	<-chanRes
 }
 
 //UpdateTaskFiltrationAllParameters управление задачами по фильтрации

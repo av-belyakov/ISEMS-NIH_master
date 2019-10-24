@@ -82,7 +82,7 @@ func ControllerReceivingRequestedFiles(
 				CriticalityMessage:  "warning",
 			}
 
-			fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' resived new msg DOWNLOAD TASK for task ID %v, MSG %v\n", msg.TaskID, msg)
+			//fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' resived new msg DOWNLOAD TASK for task ID %v, MSG %v\n", msg.TaskID, msg)
 
 			//получаем IP адрес и параметры источника
 			si, ok := isl.GetSourceSetting(msg.SourceID)
@@ -109,7 +109,7 @@ func ControllerReceivingRequestedFiles(
 				continue
 			}
 
-			fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' RESIVED SOURCE PARAMETERS: %v\n", si)
+			//fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' RESIVED SOURCE PARAMETERS: %v\n", si)
 
 			ao.HumanDescriptionNotification = fmt.Sprintf("Источник с ID %v не найден", msg.SourceID)
 			clientNotify.AdvancedOptions = ao
@@ -123,19 +123,7 @@ func ControllerReceivingRequestedFiles(
 					lhrf[si.IP] = listTaskReceivingFile{}
 				}
 
-				fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' запуск обработчика задачи по скачиванию файлов")
-
-				/*ao := configure.MessageNotification{
-					SourceReport:                 "NI module",
-					Section:                      "download control",
-					TypeActionPerformed:          "task processing",
-					CriticalityMessage:           "success",
-					HumanDescriptionNotification: fmt.Sprintf("Инициализирована задача по скачиванию файлов с источника %v, идет подготовка списка загружаемых файлов", msg.SourceID),
-				}
-				clientNotify.AdvancedOptions = ao
-
-				//отправляем сообщение о начале выполнения задачи по скачиванию файлов
-				handlerTaskWarning(msg.TaskID, clientNotify)*/
+				//fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' запуск обработчика задачи по скачиванию файлов")
 
 				//запуск обработчика задачи по скачиванию файлов
 				channel, err := processorReceivingFiles(chanInCore, msg.SourceID, si.IP, msg.TaskID, smt, saveMessageApp, cwtRes)
@@ -206,7 +194,7 @@ func ControllerReceivingRequestedFiles(
 			//ответы приходящие от источника в рамках выполнения конкретной задачи
 			case "taken from the source":
 
-				fmt.Printf("func ' ControllerReceivingRequestedFiles', RESIVED MSG 'taken from the source': '%v'\n", msg)
+				//fmt.Printf("func ' ControllerReceivingRequestedFiles', RESIVED MSG 'taken from the source': '%v'\n", msg)
 
 				if _, ok := lhrf[si.IP]; !ok {
 					_ = saveMessageApp.LogMessage("error", errMsg)
@@ -224,7 +212,7 @@ func ControllerReceivingRequestedFiles(
 					continue
 				}
 
-				fmt.Println("func ' ControllerReceivingRequestedFiles', send ---> to handler func 'processorReceivingFiles'")
+				//fmt.Println("func ' ControllerReceivingRequestedFiles', send ---> to handler func 'processorReceivingFiles'")
 
 				//ответы приходящие от источника (команды для processorReceivingFiles)
 				hrp.chanToHandler <- msgChannelProcessorReceivingFiles{

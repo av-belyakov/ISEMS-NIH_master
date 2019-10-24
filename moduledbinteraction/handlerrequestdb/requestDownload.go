@@ -80,7 +80,7 @@ func UpdateInformationAboutTask(
 		return err
 	}
 
-	fmt.Printf("*-*-*- FUNC 'UpdateInformationAboutTask', NumberFilesDownloaded = %v\n", ti.TaskParameter.DownloadTask.NumberFilesDownloaded)
+	//fmt.Printf("*-*-*- FUNC 'UpdateInformationAboutTask', NumberFilesDownloaded = %v\n", ti.TaskParameter.DownloadTask.NumberFilesDownloaded)
 
 	var arrayFiles []interface{}
 	if ti.TaskParameter.DownloadTask.Status == "complete" {

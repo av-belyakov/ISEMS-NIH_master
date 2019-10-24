@@ -185,9 +185,6 @@ func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteT
 		TaskID:       hdtsct.TaskID,
 	}
 
-	//отправляем информационное сообщение клиенту API
-	notifications.SendNotificationToClientAPI(hdtsct.OutCoreChanAPI, hdtsct.NS, hdtsct.TaskID, hdtsct.TI.ClientID)
-
 	//отправляем информацию по задаче клиенту API
 	msgJSONInfo, err := json.Marshal(hdtsct.ResMsgInfo)
 	if err != nil {
@@ -199,6 +196,9 @@ func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteT
 		IDClientAPI:  hdtsct.TI.ClientID,
 		MsgJSON:      msgJSONInfo,
 	}
+
+	//отправляем информационное сообщение клиенту API
+	notifications.SendNotificationToClientAPI(hdtsct.OutCoreChanAPI, hdtsct.NS, hdtsct.TaskID, hdtsct.TI.ClientID)
 
 	//изменяем статус задачи в storingMemoryQueueTask
 	// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
