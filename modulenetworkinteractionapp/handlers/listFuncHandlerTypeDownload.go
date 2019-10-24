@@ -82,6 +82,7 @@ func processorReceivingFiles(
 			TypeActionPerformed:          "task processing",
 			CriticalityMessage:           "success",
 			HumanDescriptionNotification: fmt.Sprintf("Инициализирована задача по скачиванию файлов с источника %v, идет подготовка списка загружаемых файлов", sourceID),
+			Sources:                      []int{ti.TaskParameter.DownloadTask.ID},
 		},
 	}
 

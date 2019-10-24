@@ -264,6 +264,7 @@ func Routing(
 		//CHANNEL FROM NETWORK INTERACTION
 		case data := <-cc.InCoreChanNI:
 			go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, saveMessageApp)
+			//handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, saveMessageApp)
 
 		//сообщение клиенту API о том что задача с указанным ID долго выполняется
 		case infoHungTask := <-chanCheckTask:

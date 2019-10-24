@@ -272,7 +272,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 }
 
 //AddStoringMemoryTask добавить задачу
-func (smt StoringMemoryTask) AddStoringMemoryTask(taskID string, td TaskDescription) {
+func (smt *StoringMemoryTask) AddStoringMemoryTask(taskID string, td TaskDescription) {
 	chanRes := make(chan channelResSettings)
 	defer close(chanRes)
 
@@ -287,7 +287,7 @@ func (smt StoringMemoryTask) AddStoringMemoryTask(taskID string, td TaskDescript
 }
 
 //RecoverStoringMemoryTask восстанавливает всю информацию о выполяемой задаче
-func (smt StoringMemoryTask) RecoverStoringMemoryTask(td TaskDescription, taskID string) {
+func (smt *StoringMemoryTask) RecoverStoringMemoryTask(td TaskDescription, taskID string) {
 	chanRes := make(chan channelResSettings)
 	defer close(chanRes)
 
@@ -344,7 +344,7 @@ func (smt *StoringMemoryTask) TimerUpdateTaskInsertDB(taskID string) {
 }
 
 //GetStoringMemoryTask получить информацию о задаче по ее ID
-func (smt StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescription, bool) {
+func (smt *StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescription, bool) {
 	chanRes := make(chan channelResSettings)
 	defer close(chanRes)
 
@@ -360,7 +360,7 @@ func (smt StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescripti
 }
 
 //IncrementNumberFilesDownloaded увеличить кол-во успешно скаченных файлов на 1
-func (smt StoringMemoryTask) IncrementNumberFilesDownloaded(taskID string) {
+func (smt *StoringMemoryTask) IncrementNumberFilesDownloaded(taskID string) {
 	chanRes := make(chan channelResSettings)
 	defer close(chanRes)
 
@@ -374,7 +374,7 @@ func (smt StoringMemoryTask) IncrementNumberFilesDownloaded(taskID string) {
 }
 
 //IncrementNumberFilesDownloadedError увеличить кол-во успешно скаченных файлов на 1
-func (smt StoringMemoryTask) IncrementNumberFilesDownloadedError(taskID string) {
+func (smt *StoringMemoryTask) IncrementNumberFilesDownloadedError(taskID string) {
 	chanRes := make(chan channelResSettings)
 	defer close(chanRes)
 
