@@ -25,7 +25,7 @@ type typeProcessingDownloadFile struct {
 	sourceID       int
 	sourceIP       string
 	taskID         string
-	taskInfo       *configure.TaskDescription
+	taskInfo       configure.TaskDescription
 	smt            *configure.StoringMemoryTask
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles
 	channels       listChannels
@@ -80,7 +80,7 @@ func processorReceivingFiles(
 			SourceReport:                 "NI module",
 			Section:                      "download control",
 			TypeActionPerformed:          "task processing",
-			CriticalityMessage:           "success",
+			CriticalityMessage:           "info",
 			HumanDescriptionNotification: fmt.Sprintf("Инициализирована задача по скачиванию файлов с источника %v, идет подготовка списка загружаемых файлов", sourceID),
 			Sources:                      []int{ti.TaskParameter.DownloadTask.ID},
 		},
@@ -365,15 +365,6 @@ DONE:
 			}
 		}
 	}
-
-	dtp := tpdf.taskInfo.TaskParameter.DownloadTask
-	dtp.Status = "complete"
-
-	/*
-		изменяем состояние задачи по которому данная задача будет
-		удалена через определенный промежуток времени
-	*/
-	tpdf.smt.UpdateTaskDownloadAllParameters(tpdf.taskID, dtp)
 
 	//задача завершена успешно
 	msgToCore := configure.MsgBetweenCoreAndNI{

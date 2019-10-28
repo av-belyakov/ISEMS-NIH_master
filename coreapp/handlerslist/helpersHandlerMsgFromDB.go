@@ -13,7 +13,7 @@ import (
 func getCurrentSourceListForAPI(
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
 	res *configure.MsgBetweenCoreAndDB,
-	smt *configure.StoringMemoryTask) error {
+	clientID, clientTaskID string) error {
 
 	funcName := ", function 'getCurrentSourceListForAPI'"
 
@@ -34,11 +34,6 @@ func getCurrentSourceListForAPI(
 		})
 	}
 
-	st, ok := smt.GetStoringMemoryTask(res.TaskID)
-	if !ok {
-		return fmt.Errorf("task with %v not found", res.TaskID)
-	}
-
 	msg := configure.SourceControlCurrentListSources{
 		MsgOptions: configure.SourceControlCurrentListSourcesList{
 			TaskInfo: configure.MsgTaskInfo{
@@ -50,12 +45,16 @@ func getCurrentSourceListForAPI(
 	msg.MsgType = "information"
 	msg.MsgSection = "source control"
 	msg.MsgInstruction = "send current source list"
-	msg.ClientTaskID = st.ClientTaskID
+	msg.ClientTaskID = clientTaskID
 
 	msgjson, _ := json.Marshal(&msg)
 
-	if err := senderMsgToAPI(chanToAPI, smt, res.TaskID, st.ClientID, msgjson); err != nil {
-		return err
+	//отправляем данные клиенту
+	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+		MsgGenerator: "Core module",
+		MsgRecipient: "API module",
+		IDClientAPI:  clientID,
+		MsgJSON:      msgjson,
 	}
 
 	return nil

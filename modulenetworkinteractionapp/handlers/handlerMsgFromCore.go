@@ -36,6 +36,8 @@ func HandlerMsgFromCore(
 		Command: "send client API",
 	}
 
+	fmt.Printf("*** func 'handlerMsgFromCore'... SECTION:%v, COMMAND:%v\n", msg.Section, msg.Command)
+
 	switch msg.Section {
 	case "source control":
 		if msg.Command == "create list" {
@@ -278,19 +280,29 @@ func HandlerMsgFromCore(
 		}
 
 	case "filtration control":
+		//проверяем наличие подключения для заданного источника
+		si, ok := isl.GetSourceSetting(msg.SourceID)
+		if !ok {
+			//отправляем сообщение пользователю
+			clientNotify.AdvancedOptions = configure.MessageNotification{
+				SourceReport:                 "NI module",
+				Section:                      "filtration control",
+				TypeActionPerformed:          "start",
+				CriticalityMessage:           "warning",
+				HumanDescriptionNotification: fmt.Sprintf("Источник с ID %v не найден", msg.SourceID),
+			}
+
+			chanInCore <- &clientNotify
+
+			return
+		}
+
 		if msg.Command == "start" {
 
 			fmt.Println("function 'HandlerMsgFromCore', section - 'filtration control', command - 'START'")
 
-			//проверяем наличие подключения для заданного источника
-			si, ok := isl.GetSourceSetting(msg.SourceID)
-			if !ok || !si.ConnectionStatus {
-				humanNotify := fmt.Sprintf("Не возможно отправить запрос на фильтрацию, источник с ID %v не подключен", msg.SourceID)
-				if !ok {
-					humanNotify = fmt.Sprintf("Источник с ID %v не найден", msg.SourceID)
-				}
-
-				if ti, ok := smt.GetStoringMemoryTask(msg.TaskID); !ok {
+			if !si.ConnectionStatus {
+				if ti, ok := smt.GetStoringMemoryTask(msg.TaskID); ok {
 					//останавливаем передачу списка файлов (найденных в результате поиска по индексам)
 					ti.ChanStopTransferListFiles <- struct{}{}
 				}
@@ -301,7 +313,7 @@ func HandlerMsgFromCore(
 					Section:                      "filtration control",
 					TypeActionPerformed:          "start",
 					CriticalityMessage:           "warning",
-					HumanDescriptionNotification: humanNotify,
+					HumanDescriptionNotification: fmt.Sprintf("Не возможно отправить запрос для выполнения задачи по фильтрации, источник с ID %v не подключен", msg.SourceID),
 				}
 
 				chanInCore <- &clientNotify
@@ -349,45 +361,43 @@ func HandlerMsgFromCore(
 
 			fmt.Println("function 'HandlerMsgFromCore', section - 'filtration control', command - 'STOP'")
 
-			if si, ok := isl.GetSourceSetting(msg.SourceID); ok {
-				//проверяем наличие подключения для заданного источника
-				if !si.ConnectionStatus {
-					//отправляем сообщение пользователю
-					clientNotify.AdvancedOptions = configure.MessageNotification{
-						SourceReport:                 "NI module",
-						Section:                      "filtration control",
-						TypeActionPerformed:          "stop",
-						CriticalityMessage:           "warning",
-						HumanDescriptionNotification: fmt.Sprintf("Не возможно отправить запрос на фильтрацию, источник с ID %v не подключен", msg.SourceID),
-					}
-
-					chanInCore <- &clientNotify
-
-					return
+			//проверяем наличие подключения для заданного источника
+			if !si.ConnectionStatus {
+				//отправляем сообщение пользователю
+				clientNotify.AdvancedOptions = configure.MessageNotification{
+					SourceReport:                 "NI module",
+					Section:                      "filtration control",
+					TypeActionPerformed:          "stop",
+					CriticalityMessage:           "warning",
+					HumanDescriptionNotification: fmt.Sprintf("Не возможно отправить запрос на останов задачи по фильтрации, источник с ID %v не подключен", msg.SourceID),
 				}
 
-				reqTypeStop := configure.MsgTypeFiltrationControl{
-					MsgType: "filtration",
-					Info: configure.SettingsFiltrationControl{
-						TaskID:  msg.TaskID,
-						Command: "stop",
-					},
-				}
+				chanInCore <- &clientNotify
 
-				msgJSON, err := json.Marshal(reqTypeStop)
-				if err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				return
+			}
 
-					return
-				}
+			reqTypeStop := configure.MsgTypeFiltrationControl{
+				MsgType: "filtration",
+				Info: configure.SettingsFiltrationControl{
+					TaskID:  msg.TaskID,
+					Command: "stop",
+				},
+			}
 
-				fmt.Println("function 'HandlerMsgFromCore', section - 'filtration control', send task 'STOP' to source")
+			msgJSON, err := json.Marshal(reqTypeStop)
+			if err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
-				//отправляем источнику сообщение типа 'confirm complete' для того что бы подтвердить останов задачи
-				cwt <- configure.MsgWsTransmission{
-					DestinationHost: si.IP,
-					Data:            &msgJSON,
-				}
+				return
+			}
+
+			fmt.Println("function 'HandlerMsgFromCore', section - 'filtration control', send task 'STOP' to source")
+
+			//отправляем источнику сообщение типа 'confirm complete' для того что бы подтвердить останов задачи
+			cwt <- configure.MsgWsTransmission{
+				DestinationHost: si.IP,
+				Data:            &msgJSON,
 			}
 		}
 

@@ -35,6 +35,8 @@ func connClose(
 	//удаляем дескриптор соединения
 	isl.DelLinkWebsocketConnection(ip)
 
+	fmt.Printf("SOURCE with %v, DISCONNECT\n", ip)
+
 	//отправляем сообщение о разрыве соединения
 	COut <- [2]string{ip, "disconnect"}
 }
@@ -54,12 +56,12 @@ func MainNetworkInteraction(
 
 	//инициализируем каналы для передачи данных между ядром приложения и текущем модулем
 	chanOutCore = make(chan *configure.MsgBetweenCoreAndNI)
-	chanInCore = make(chan *configure.MsgBetweenCoreAndNI)
+	chanInCore = make(chan *configure.MsgBetweenCoreAndNI, 100)
 
 	//инициализация каналов управления и состояния источников
 	chansStatSource := map[string]chan [2]string{
-		"outWssModuleServer": make(chan [2]string, 10),
-		"outWssModuleClient": make(chan [2]string, 10),
+		"outWssModuleServer": make(chan [2]string),
+		"outWssModuleClient": make(chan [2]string),
 	}
 
 	//обработчик процессов по скачиванию запрошенных файлов

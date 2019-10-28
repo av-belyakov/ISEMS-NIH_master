@@ -11,7 +11,7 @@ import (
 type handlerDownloadTaskStatusCompleteType struct {
 	SourceID       int
 	TaskID         string
-	TI             *configure.TaskDescription
+	ClientID       string
 	QTS            *configure.QueueTaskStorage
 	SMT            *configure.StoringMemoryTask
 	NS             notifications.NotificationSettingsToClientAPI
@@ -25,19 +25,13 @@ type handlerDownloadTaskStatusCompleteType struct {
 func getConfirmActionSourceListForAPI(
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
 	res *configure.MsgBetweenCoreAndNI,
-	smt *configure.StoringMemoryTask) error {
+	clientID, clientTaskID string) error {
 
 	funcName := ", function 'getConfirmActionSourceListForAPI'"
 
 	listSource, ok := res.AdvancedOptions.(*[]configure.ActionTypeListSources)
 	if !ok {
 		return fmt.Errorf("type conversion error section type 'error notification'%v", funcName)
-	}
-
-	//получаем ID клиента API
-	st, ok := smt.GetStoringMemoryTask(res.TaskID)
-	if !ok {
-		return fmt.Errorf("task with %v not found", res.TaskID)
 	}
 
 	msg := configure.SourceControlConfirmActionSource{
@@ -51,12 +45,19 @@ func getConfirmActionSourceListForAPI(
 	msg.MsgType = "information"
 	msg.MsgSection = "source control"
 	msg.MsgInstruction = "confirm the action"
-	msg.ClientTaskID = st.ClientTaskID
+	msg.ClientTaskID = clientTaskID
 
-	msgjson, _ := json.Marshal(&msg)
-
-	if err := senderMsgToAPI(chanToAPI, smt, res.TaskID, st.ClientID, msgjson); err != nil {
+	msgjson, err := json.Marshal(&msg)
+	if err != nil {
 		return err
+	}
+
+	//отправляем данные клиенту
+	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+		MsgGenerator: "Core module",
+		MsgRecipient: "API module",
+		IDClientAPI:  clientID,
+		MsgJSON:      msgjson,
 	}
 
 	return nil
@@ -91,7 +92,10 @@ func sendChanStatusSourceForAPI(chanToAPI chan<- *configure.MsgBetweenCoreAndAPI
 	msg.MsgSection = "source control"
 	msg.MsgInstruction = "change status source"
 
-	msgjson, _ := json.Marshal(&msg)
+	msgjson, err := json.Marshal(&msg)
+	if err != nil {
+		return err
+	}
 
 	//отправляем данные клиенту
 	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
@@ -107,7 +111,7 @@ func sendChanStatusSourceForAPI(chanToAPI chan<- *configure.MsgBetweenCoreAndAPI
 //sendInformationFiltrationTask отправляет информационное сообщение о ходе фильтрации
 func sendInformationFiltrationTask(
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
-	taskInfo *configure.TaskDescription,
+	taskInfo configure.TaskDescription,
 	tfmffiats *configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus,
 	sourceID int,
 	taskID string) error {
@@ -193,12 +197,12 @@ func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteT
 	hdtsct.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
 		MsgGenerator: "Core module",
 		MsgRecipient: "API module",
-		IDClientAPI:  hdtsct.TI.ClientID,
+		IDClientAPI:  hdtsct.ClientID,
 		MsgJSON:      msgJSONInfo,
 	}
 
 	//отправляем информационное сообщение клиенту API
-	notifications.SendNotificationToClientAPI(hdtsct.OutCoreChanAPI, hdtsct.NS, hdtsct.TaskID, hdtsct.TI.ClientID)
+	notifications.SendNotificationToClientAPI(hdtsct.OutCoreChanAPI, hdtsct.NS, hdtsct.TaskID, hdtsct.ClientID)
 
 	//изменяем статус задачи в storingMemoryQueueTask
 	// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА

@@ -96,7 +96,7 @@ func Routing(
 			}
 
 			ns := notifications.NotificationSettingsToClientAPI{
-				MsgType: "success",
+				MsgType: "info",
 				Sources: []int{msg.SourceID},
 			}
 
@@ -175,13 +175,6 @@ func Routing(
 
 				fmt.Printf("function 'routing' Core module - Создали директорию '%v' для хранения файлов при скачивании (task ID %v)\n", pathStorage, msg.TaskID)
 
-				//изменяем статус задачи в StoringMemoryQueueTask
-				/*
-					if err := qts.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "execution"); err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-					}
-				*/
-
 				//добавляем задачу в 'StoringMemoryTask'
 				smt.AddStoringMemoryTask(msg.TaskID, configure.TaskDescription{
 					ClientID:                        qti.IDClientAPI,
@@ -211,7 +204,7 @@ func Routing(
 				   Параметр TaskDescription.TaskParameter.DownloadTask.NumberFilesTotal
 				   содержит общее кол-во файлов запрашиваемых пользователем или их
 				   общее кол-во когда пользователь список не присылал. Данный параметр
-				   может отличатся от аналогичного в таблице БД где он обозночает
+				   может отличатся от аналогичного в таблице БД где он обозначает
 				   общее кол-во файлов которые можно скачать, а не запрошенные пользователем
 				*/
 
@@ -253,18 +246,20 @@ func Routing(
 	//обработчик запросов от модулей приложения
 	for {
 		select {
-		//CHANNEL FROM DATABASE
-		case data := <-cc.InCoreChanDB:
-			go handlerslist.HandlerMsgFromDB(OutCoreChans, data, hsm, appConf.MaximumTotalSizeFilesDownloadedAutomatically, saveMessageApp, cc.ChanDropNI)
-
 		//CHANNEL FROM API
 		case data := <-cc.InCoreChanAPI:
 			go handlerslist.HandlerMsgFromAPI(OutCoreChans, data, hsm, saveMessageApp)
 
+			//CHANNEL FROM DATABASE
+		case data := <-cc.InCoreChanDB:
+			go handlerslist.HandlerMsgFromDB(OutCoreChans, data, hsm, appConf.MaximumTotalSizeFilesDownloadedAutomatically, saveMessageApp, cc.ChanDropNI)
+
 		//CHANNEL FROM NETWORK INTERACTION
 		case data := <-cc.InCoreChanNI:
-			go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, saveMessageApp)
-			//handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, saveMessageApp)
+			//go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, saveMessageApp)
+			if err := handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm); err != nil {
+				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			}
 
 		//сообщение клиенту API о том что задача с указанным ID долго выполняется
 		case infoHungTask := <-chanCheckTask:

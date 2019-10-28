@@ -172,6 +172,8 @@ func (settingsServerAPI *settingsServerAPI) serverWss(w http.ResponseWriter, req
 
 	storingMemoryAPI.SaveWssClientConnection(clientID, c)
 
+	log.Println("Client API whis ip", remoteIP, "is CONNECTED")
+
 	//при подключении клиента отправляем запрос на получение списка источников
 	sendMsgGetSourceList(clientID)
 

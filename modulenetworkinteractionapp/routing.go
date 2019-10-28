@@ -107,6 +107,8 @@ func RouteCoreRequest(
 		case msg := <-chanColl["outWssModuleServer"]:
 			sourceIP, action := msg[0], msg[1]
 
+			fmt.Printf("func 'RouteCoreRequest', module - wssServer, action:%v\n", action)
+
 			_ = saveMessageApp.LogMessage("info", fmt.Sprintf("SERVER: source with IP %v has success %v", sourceIP, action))
 
 			sourceID, ok := isl.GetSourceIDOnIP(sourceIP)
@@ -149,6 +151,8 @@ func RouteCoreRequest(
 		//модуль wssClient
 		case msg := <-chanColl["outWssModuleClient"]:
 			sourceIP, action := msg[0], msg[1]
+
+			fmt.Printf("func 'RouteCoreRequest', module - wssClient, action:%v\n", action)
 
 			_ = saveMessageApp.LogMessage("info", fmt.Sprintf("CLIENT: source with IP %v has success %v", sourceIP, action))
 

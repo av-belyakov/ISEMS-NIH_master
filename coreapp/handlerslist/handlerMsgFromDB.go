@@ -21,8 +21,6 @@ func HandlerMsgFromDB(
 
 	funcName := ", function 'HandlerMsgFromDB'"
 
-	taskInfo, taskIDIsExist := hsm.SMT.GetStoringMemoryTask(res.TaskID)
-
 	switch res.MsgRecipient {
 	case "Core module":
 		switch res.MsgSection {
@@ -44,7 +42,8 @@ func HandlerMsgFromDB(
 		}
 
 	case "API module":
-		if !taskIDIsExist {
+		taskInfo, taskIsExist := hsm.SMT.GetStoringMemoryTask(res.TaskID)
+		if !taskIsExist {
 			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found%v", res.TaskID, funcName))
 
 			return
@@ -52,9 +51,14 @@ func HandlerMsgFromDB(
 
 		switch res.MsgSection {
 		case "source list":
-			if err := getCurrentSourceListForAPI(outCoreChans.OutCoreChanAPI, res, hsm.SMT); err != nil {
+			if err := getCurrentSourceListForAPI(outCoreChans.OutCoreChanAPI, res, taskInfo.ClientID, taskInfo.ClientTaskID); err != nil {
 				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+				return
 			}
+
+			//устанавливаем статус задачи как выполненую
+			hsm.SMT.CompleteStoringMemoryTask(res.TaskID)
 
 		case "source control":
 			//пока заглушка
@@ -65,14 +69,6 @@ func HandlerMsgFromDB(
 		case "filtration control":
 
 			fmt.Println("function 'handlerMsgFromDB' SECTION - 'filtration source'")
-
-			//получаем всю информацию по выполняемой задаче
-			taskInfo, ok := hsm.SMT.GetStoringMemoryTask(res.TaskID)
-			if !ok {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with ID %v not found", res.TaskID))
-
-				return
-			}
 
 			isNotComplete := taskInfo.TaskParameter.FiltrationTask.Status != "complete"
 			moreThanMax := taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering > mtsfda

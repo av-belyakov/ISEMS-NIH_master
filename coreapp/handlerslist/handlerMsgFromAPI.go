@@ -152,8 +152,6 @@ func HandlerMsgFromAPI(
 					AdvancedOptions: scmo,
 				}
 
-				fmt.Printf("---- func 'handlerMsgFromAPI' -----\n%v\n", scmo)
-
 				return
 			}
 
@@ -201,7 +199,7 @@ func HandlerMsgFromAPI(
 				}
 
 				//проверяем наличие задачи в StoringMemoryTask
-				_, isExist := hsm.SMT.GetStoringMemoryTask(taskID)
+				isExist := hsm.SMT.CheckIsExistMemoryTask(taskID)
 				if !isExist {
 
 					return
@@ -238,8 +236,6 @@ func HandlerMsgFromAPI(
 			resMsgRefused.MsgInstruction = "task processing"
 
 			if msgc.MsgInstruction == "to start downloading" {
-				fmt.Println("START task 'DOWNLOADING'")
-
 				var dcts configure.DownloadControlTypeStart
 
 				if err := json.Unmarshal(msgJSON, &dcts); err != nil {
@@ -361,8 +357,6 @@ func HandlerMsgFromAPI(
 			}
 
 			if msgc.MsgInstruction == "to cancel downloading" {
-				fmt.Println("STOP task 'DOWNLOADING'")
-
 				var dcts configure.DownloadControlTypeStart
 
 				if err := json.Unmarshal(msgJSON, &dcts); err != nil {
