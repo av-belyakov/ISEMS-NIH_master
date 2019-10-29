@@ -360,6 +360,25 @@ DONE:
 
 					//fmt.Println("\t File success uploaded, REQUEST NEW FILE UPLOAD")
 
+					//отправляем сообщение источнику подтверждающее успешный прием файла
+					msgJSON, err := json.Marshal(configure.MsgTypeDownload{
+						MsgType: "download files",
+						Info: configure.DetailInfoMsgDownload{
+							TaskID:  tpdf.taskID,
+							Command: "file successfully accepted",
+						},
+					})
+					if err != nil {
+						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+						break NEWFILE
+					}
+
+					tpdf.channels.cwtRes <- configure.MsgWsTransmission{
+						DestinationHost: tpdf.sourceIP,
+						Data:            &msgJSON,
+					}
+
 					break NEWFILE
 				}
 			}

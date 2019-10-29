@@ -28,6 +28,9 @@ func FindingInformationAboutTask(
 	//восстанавливаем задачу по ее ID
 	taskInfo, err := getInfoTaskForID(qp, req.TaskID)
 	if err != nil {
+
+		fmt.Printf("func 'FindingInformationAboutTask', ERROR: %v\n", err)
+
 		msgRes.MsgSection = "error notification"
 		msgRes.AdvancedOptions = configure.ErrorNotification{
 			SourceReport:          "DB module",
@@ -39,6 +42,8 @@ func FindingInformationAboutTask(
 	}
 
 	msgRes.AdvancedOptions = taskInfo
+
+	fmt.Printf("func FindingInformationAboutTask, send -> Core, INFO: %v\n", taskInfo)
 
 	chanIn <- &msgRes
 }

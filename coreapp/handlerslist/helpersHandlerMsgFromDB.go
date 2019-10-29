@@ -134,6 +134,7 @@ func checkParametersDownloadTask(
 		Section:         res.MsgSection,
 		Instruction:     res.Instruction,
 		MsgType:         "danger",
+		Sources:         []int{tidb.SourceID},
 		ChanToAPI:       chanToAPI,
 	}
 

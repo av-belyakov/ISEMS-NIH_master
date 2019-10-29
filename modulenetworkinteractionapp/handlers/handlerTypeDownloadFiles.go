@@ -53,9 +53,11 @@ func ControllerReceivingRequestedFiles(
 
 	//сообщение об ошибке и сопутствующие действия
 	handlerTaskWarning := func(taskID string, msg configure.MsgBetweenCoreAndNI) {
-		chanInCore <- &clientNotify
+		chanInCore <- &msg
 
 		smt.UpdateTaskDownloadAllParameters(taskID, configure.DownloadTaskParameters{Status: "refused"})
+
+		fmt.Println("func 'handlerTaskWarning', снимаем отслеживание выполнения задачи")
 
 		//снимаем отслеживание выполнения задачи
 		chanInCore <- &configure.MsgBetweenCoreAndNI{
@@ -73,14 +75,16 @@ func ControllerReceivingRequestedFiles(
 		clientNotify configure.MsgBetweenCoreAndNI,
 		chanIn <-chan *configure.MsgChannelReceivingFiles) {
 
+		ao := configure.MessageNotification{
+			SourceReport:        "NI module",
+			Section:             "download control",
+			TypeActionPerformed: "task processing",
+			CriticalityMessage:  "warning",
+		}
+
 		for msg := range chanIn {
 			clientNotify.TaskID = msg.TaskID
-			ao := configure.MessageNotification{
-				SourceReport:        "NI module",
-				Section:             "download control",
-				TypeActionPerformed: "task processing",
-				CriticalityMessage:  "warning",
-			}
+			ao.Sources = []int{msg.SourceID}
 
 			//fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' resived new msg DOWNLOAD TASK for task ID %v, MSG %v\n", msg.TaskID, msg)
 
@@ -141,10 +145,13 @@ func ControllerReceivingRequestedFiles(
 
 			//останов выполнения задачи (запрос из Ядра)
 			case "stop receiving files":
+
+				fmt.Println("func 'ControllerReceivingRequestedFiles', COMMAND: 'stop receiving files'")
+
 				if _, ok := lhrf[si.IP]; !ok {
 					_ = saveMessageApp.LogMessage("error", errMsg)
 
-					handlerTaskWarning(msg.TaskID, clientNotify)
+					//handlerTaskWarning(msg.TaskID, clientNotify)
 
 					continue
 				}
@@ -152,7 +159,7 @@ func ControllerReceivingRequestedFiles(
 				if !ok {
 					_ = saveMessageApp.LogMessage("error", errMsg)
 
-					handlerTaskWarning(msg.TaskID, clientNotify)
+					//handlerTaskWarning(msg.TaskID, clientNotify)
 
 					continue
 				}

@@ -17,6 +17,7 @@ type ErrorMessageType struct {
 	Instruction     string
 	MsgType         string
 	MsgHuman        string
+	Sources         []int
 	ChanToAPI       chan<- *configure.MsgBetweenCoreAndAPI
 }
 
@@ -28,6 +29,7 @@ func ErrorMessage(emt ErrorMessageType) error {
 		notifications.NotificationSettingsToClientAPI{
 			MsgType:        emt.MsgType,
 			MsgDescription: emt.MsgHuman,
+			Sources:        emt.Sources,
 		},
 		emt.TaskIDClientAPI,
 		emt.IDClientAPI)

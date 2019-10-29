@@ -2,7 +2,6 @@ package handlerrequestdb
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/mongodb/mongo-go-driver/bson"
 
@@ -10,8 +9,6 @@ import (
 )
 
 func getInfoTaskForID(qp QueryParameters, taskID string) (*[]configure.InformationAboutTask, error) {
-	fmt.Println("START function 'getInfoTaskForID'...")
-
 	itf := []configure.InformationAboutTask{}
 
 	cur, err := qp.Find(bson.D{bson.E{Key: "task_id", Value: taskID}})

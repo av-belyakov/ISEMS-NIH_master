@@ -350,14 +350,24 @@ func HandlerMsgFromNI(
 
 			fmt.Printf("\tfunc 'handlerMsgFromNI', Section:'message notification', Command:'send client API', OK MSG:'%v'\n", msg.AdvancedOptions)
 
-			if !taskInfoIsExist {
-				return fmt.Errorf("task with %v not found", msg.TaskID)
-			}
-
 			ns := notifications.NotificationSettingsToClientAPI{
 				MsgType:        ao.CriticalityMessage,
 				MsgDescription: ao.HumanDescriptionNotification,
 				Sources:        ao.Sources,
+			}
+
+			if !taskInfoIsExist {
+				_, qti, err := hsm.QTS.SearchTaskForIDQueueTaskStorage(msg.TaskID)
+				if err != nil {
+
+					fmt.Printf("func 'handlerMsgForNI', ERROR: '%v'\n", err)
+
+					return err
+				}
+
+				notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, qti.TaskIDClientAPI, qti.IDClientAPI)
+
+				return fmt.Errorf("task with %v not found", msg.TaskID)
 			}
 
 			fmt.Println("\tfunc 'handlerMsgFromNI', Section:'message notification', Command:'send client API', SEND ---->")
@@ -370,11 +380,11 @@ func HandlerMsgFromNI(
 
 			fmt.Printf("------ SECTOR: 'monitoring task performance', Command: 'complete task', %v\n", msg)
 
+			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
+
 			if !taskInfoIsExist {
 				return fmt.Errorf("Section: 'monitoring task performance', task with %v not found", msg.TaskID)
 			}
-
-			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
 
 			err = hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, msg.TaskID, "complete")
 		}
