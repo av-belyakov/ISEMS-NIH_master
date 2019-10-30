@@ -90,12 +90,17 @@ func ControllerReceivingRequestedFiles(
 
 			//получаем IP адрес и параметры источника
 			si, ok := isl.GetSourceSetting(msg.SourceID)
+
+			//fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' SOURCE INFO: %v, OK %v\n", si, ok)
+
 			if !ok || !si.ConnectionStatus {
 				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("it is not possible to send a request to download files, the source with ID %v is not connected", msg.SourceID))
 
 				humanNotify := fmt.Sprintf("Не возможно отправить запрос на скачивание файлов, источник с ID %v не подключен", msg.SourceID)
 				if !ok {
 					humanNotify = fmt.Sprintf("Источник с ID %v не найден", msg.SourceID)
+
+					fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' ERROR 1111")
 
 					//изменяем статус задачи в storingMemoryQueueTask
 					// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
@@ -120,6 +125,8 @@ func ControllerReceivingRequestedFiles(
 
 			errMsg := fmt.Sprintf("Source with ID %v not found", msg.SourceID)
 
+			//fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' 222222222")
+
 			switch msg.Command {
 			//начало выполнения задачи (запрос из Ядра)
 			case "give my the files":
@@ -133,6 +140,11 @@ func ControllerReceivingRequestedFiles(
 				channel, err := processorReceivingFiles(chanInCore, msg.SourceID, si.IP, msg.TaskID, smt, saveMessageApp, cwtRes)
 				if err != nil {
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+
+					fmt.Printf("func 'handlerTypeDownloadFiles', ERROR (processorReceivingFiles):%v\n", err)
+
+					ao.HumanDescriptionNotification = fmt.Sprintf("Отмена выполнения задачи по скачиванию файлов с источника ID %v, не найдены файлы для скачивания", msg.SourceID)
+					clientNotify.AdvancedOptions = ao
 
 					handlerTaskWarning(msg.TaskID, clientNotify)
 
@@ -165,6 +177,8 @@ func ControllerReceivingRequestedFiles(
 				}
 
 				c := []byte("stop receiving files")
+
+				fmt.Println("func 'ControllerReceivingRequestedFiles', SEND MSG 'stop receiving files' TO HANDLER --->>>>")
 
 				hrp.chanToHandler <- msgChannelProcessorReceivingFiles{
 					MessageType:  1,

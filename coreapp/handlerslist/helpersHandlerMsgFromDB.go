@@ -288,6 +288,8 @@ func checkParametersDownloadTask(
 
 	emt.MsgHuman = "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
 
+	fmt.Printf("_______ func 'helpersHandlerMsgFromDB', добавляем список подтвержденных и ранее не загружавшихся файлов, LIST: '%v'\n", confirmedListFiles)
+
 	//добавляем список подтвержденных и ранее не загружавшихся файлов
 	if err := hsm.QTS.AddConfirmedListFiles(sourceID, res.TaskID, confirmedListFiles); err != nil {
 		if err := ErrorMessage(emt); err != nil {

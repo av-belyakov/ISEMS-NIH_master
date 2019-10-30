@@ -43,8 +43,6 @@ func FindingInformationAboutTask(
 
 	msgRes.AdvancedOptions = taskInfo
 
-	fmt.Printf("func FindingInformationAboutTask, send -> Core, INFO: %v\n", taskInfo)
-
 	chanIn <- &msgRes
 }
 

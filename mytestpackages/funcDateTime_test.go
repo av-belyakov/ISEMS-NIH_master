@@ -27,11 +27,22 @@ var _ = Describe("Mytestpackages/FuncDateTime", func() {
 		})
 	})
 
-	/*
-	   Context("", func(){
-	   	It("", func(){
+	Context("Тест 2. Преобразование строки в байты и обратно", func() {
+		It("Строка должна быть преобразована в срез байт и потом обратно в строку", func() {
+			type TestStruct struct {
+				Msg *[]byte
+			}
 
-	   	})
-	   })
-	*/
+			str := "test convert string"
+			s := []byte(str)
+			ts := TestStruct{
+				Msg: &s,
+			}
+
+			newStr := string(*ts.Msg)
+
+			Expect(newStr).Should(Equal(str))
+		})
+	})
+
 })

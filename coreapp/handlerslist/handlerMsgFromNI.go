@@ -185,10 +185,12 @@ func HandlerMsgFromNI(
 		resMsgInfo.MsgType = "information"
 		resMsgInfo.MsgSection = "download control"
 		resMsgInfo.MsgInstruction = "task processing"
+		resMsgInfo.ClientTaskID = taskInfo.ClientTaskID
 
 		hdtsct := handlerDownloadTaskStatusCompleteType{
 			SourceID:       sourceID,
 			TaskID:         msg.TaskID,
+			ClientTaskID:   taskInfo.ClientTaskID,
 			QTS:            hsm.QTS,
 			SMT:            hsm.SMT,
 			NS:             ns,

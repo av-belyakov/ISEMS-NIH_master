@@ -12,6 +12,7 @@ type handlerDownloadTaskStatusCompleteType struct {
 	SourceID       int
 	TaskID         string
 	ClientID       string
+	ClientTaskID   string
 	QTS            *configure.QueueTaskStorage
 	SMT            *configure.StoringMemoryTask
 	NS             notifications.NotificationSettingsToClientAPI
@@ -202,7 +203,7 @@ func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteT
 	}
 
 	//отправляем информационное сообщение клиенту API
-	notifications.SendNotificationToClientAPI(hdtsct.OutCoreChanAPI, hdtsct.NS, hdtsct.TaskID, hdtsct.ClientID)
+	notifications.SendNotificationToClientAPI(hdtsct.OutCoreChanAPI, hdtsct.NS, hdtsct.ClientTaskID, hdtsct.ClientID)
 
 	//изменяем статус задачи в storingMemoryQueueTask
 	// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА

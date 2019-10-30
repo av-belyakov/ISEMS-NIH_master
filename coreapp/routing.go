@@ -69,8 +69,8 @@ func Routing(
 				continue
 			}
 
-			fmt.Printf("function 'routing' Core module - sent new task type %v\n", qti.TaskType)
-			fmt.Println(qti)
+			//fmt.Printf("function 'routing' Core module - sent new task type %v\n", qti.TaskType)
+			//fmt.Println(qti)
 
 			emt.TaskIDClientAPI = qti.TaskIDClientAPI
 			emt.IDClientAPI = qti.IDClientAPI
@@ -208,9 +208,9 @@ func Routing(
 				   общее кол-во файлов которые можно скачать, а не запрошенные пользователем
 				*/
 
-				nit, _ := smt.GetStoringMemoryTask(msg.TaskID)
+				//nit, _ := smt.GetStoringMemoryTask(msg.TaskID)
 
-				fmt.Printf("function 'routing' Core module - добавили задачу по скачиванию (task ID %v) в StoringMemoryTask: '%v'\n", msg.TaskID, nit)
+				//fmt.Printf("function 'routing' Core module - добавили задачу по скачиванию (task ID %v) в StoringMemoryTask: '%v'\n", msg.TaskID, nit)
 
 				ns.MsgDescription = fmt.Sprintf("Начата подготовка к выполнению задачи по скачиванию файлов с источника %v", msg.SourceID)
 

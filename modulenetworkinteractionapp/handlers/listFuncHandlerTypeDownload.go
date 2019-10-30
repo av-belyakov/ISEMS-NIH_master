@@ -69,7 +69,7 @@ func processorReceivingFiles(
 
 	chanOut := make(chan msgChannelProcessorReceivingFiles)
 
-	fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', '%v'\n", ti.TaskParameter.DownloadTask.DownloadingFilesInformation)
+	//fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', '%v'\n", ti)
 
 	//отправляем информационное сообщение пользователю
 	chanInCore <- &configure.MsgBetweenCoreAndNI{
@@ -126,6 +126,19 @@ func processingDownloadFile(tpdf typeProcessingDownloadFile) {
 
 	fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', готовим начальный запрос '%v', путь до списка файлов на источнике: '%v'\n", mtd, tpdf.taskInfo.TaskParameter.FiltrationTask.PathStorageSource)
 
+	stopWriteFile := func(listFileDescriptors map[string]*os.File, fileHex, filePath string) {
+		//закрываем дескриптор файла
+		if w, ok := listFileDescriptors[fileHex]; ok {
+			w.Close()
+
+			//удаляем дескриптор файла
+			delete(listFileDescriptors, fileHex)
+		}
+
+		//удаляем файл
+		_ = os.Remove(filePath)
+	}
+
 DONE:
 	//читаем список файлов
 	for fn, fi := range tpdf.taskInfo.TaskParameter.DownloadTask.DownloadingFilesInformation {
@@ -168,7 +181,9 @@ DONE:
 				}
 
 				if msg.MsgGenerator == "Core module" {
-					command := fmt.Sprint(*msg.Message)
+					command := string(*msg.Message)
+
+					fmt.Printf("func 'listFuncHandlerTypeDownload', RESIVED COMMAND:%v\n", command)
 
 					//остановить скачивание файлов
 					if command == "stop receiving files" {
@@ -180,16 +195,29 @@ DONE:
 
 							continue
 						}
+
+						fmt.Printf("func 'listFuncHandlerTypeDownload', SEND ---> SLAVE MSG:%v\n", msgReq)
+
+						//отправляем команду останов на slave
 						tpdf.channels.cwtRes <- configure.MsgWsTransmission{
 							DestinationHost: tpdf.sourceIP,
 							Data:            &msgJSON,
 						}
+
+						//закрываем дескриптор файла и удаляем файл
+						stopWriteFile(listFileDescriptors, fi.Hex, path.Join(pathDirStorage, fn))
+
+						sdf.Status = "task stoped client"
+
+						break DONE
 					}
 
 					//разрыв соединения (остановить загрузку файлов)
 					if command == "to stop the task because of a disconnection" {
-						//закрываем дескриптор файла
-						if w, ok := listFileDescriptors[fi.Hex]; ok {
+						//закрываем дескриптор файла и удаляем файл
+						stopWriteFile(listFileDescriptors, fi.Hex, path.Join(pathDirStorage, fn))
+
+						/*if w, ok := listFileDescriptors[fi.Hex]; ok {
 							w.Close()
 
 							//удаляем дескриптор файла
@@ -197,7 +225,7 @@ DONE:
 						}
 
 						//удаляем файл
-						_ = os.Remove(path.Join(pathDirStorage, fn))
+						_ = os.Remove(path.Join(pathDirStorage, fn))*/
 
 						sdf.Status = "task stoped disconnect"
 
@@ -229,7 +257,7 @@ DONE:
 
 					//fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', TASK INFO '%v'\n", ti)
 
-					fi := ti.TaskParameter.DownloadTask.FileInformation
+					//fi := ti.TaskParameter.DownloadTask.FileInformation
 
 					switch msgRes.Info.Command {
 					//готовность к приему файла (slave -> master)
@@ -306,21 +334,26 @@ DONE:
 						break NEWFILE
 
 					//передача файла успешно остановлена (slave -> master)
-					case "file transfer stopped":
-						//закрываем дескриптор файла
-						if w, ok := listFileDescriptors[fi.Hex]; ok {
-							w.Close()
+					/*
+						case "file transfer stopped":
 
-							//удаляем дескриптор файла
-							delete(listFileDescriptors, fi.Hex)
-						}
+								fmt.Println("func 'listFuncHandlerTypeDownload', RESIVED MSG:'file transfer stopped' передача файла успешно остановлена (slave -> master)")
 
-						//удаляем файл
-						_ = os.Remove(path.Join(pathDirStorage, fn))
+								//закрываем дескриптор файла
+								if w, ok := listFileDescriptors[fi.Hex]; ok {
+									w.Close()
 
-						sdf.Status = "task stoped client"
+									//удаляем дескриптор файла
+									delete(listFileDescriptors, fi.Hex)
+								}
 
-						break DONE
+								//удаляем файл
+								_ = os.Remove(path.Join(pathDirStorage, fn))
+
+								sdf.Status = "task stoped client"
+
+								break DONE
+					*/
 
 					//невозможно остановить передачу файла
 					case "impossible to stop file transfer":
