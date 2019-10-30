@@ -29,7 +29,14 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	chanCheckTask := smt.CheckTimeUpdateStoringMemoryTask(55)
 
 	//инициализация отслеживания очередности выполнения задач
-	chanMsgInfoQueueTaskStorage := qts.CheckTimeQueueTaskStorage(isl, 3)
+	chanMsgInfoQueueTaskStorage := qts.CheckTimeQueueTaskStorage(isl, 4)
+	/****************************************************************
+
+		4 секунды ожидания перед выполнением задачи это для
+		тестов, познее уменьшить до 1 секунды!!!!
+
+
+	****************************************************************/
 
 	//инициализация модуля для взаимодействия с БД
 	chanOutCoreDB, chanInCoreDB := moduledbinteraction.MainDBInteraction(appConf.ConnectionDB.NameDB, linkConnection, smt, qts, saveMessageApp)

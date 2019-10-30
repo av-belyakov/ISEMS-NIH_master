@@ -145,7 +145,7 @@ type channelResSettings struct {
 	Description TaskDescription
 }
 
-//NewRepositorySMT создание нового рапозитория для хранения выполняемых задач
+//NewRepositorySMT создание нового репозитория для хранения выполняемых задач
 func NewRepositorySMT() *StoringMemoryTask {
 	smt := StoringMemoryTask{}
 	smt.tasks = map[string]*TaskDescription{}

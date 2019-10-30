@@ -13,12 +13,12 @@ import (
 )
 
 type parametersWritingBinaryFile struct {
-	SourceID            int
-	TaskID              string
-	Data                *[]byte
-	ListFileDescriptors map[string]*os.File
-	SMT                 *configure.StoringMemoryTask
-	ChanInCore          chan<- *configure.MsgBetweenCoreAndNI
+	SourceID   int
+	TaskID     string
+	Data       *[]byte
+	LFD        *ListFileDescription
+	SMT        *configure.StoringMemoryTask
+	ChanInCore chan<- *configure.MsgBetweenCoreAndNI
 }
 
 type typeProcessingDownloadFile struct {
@@ -35,6 +35,109 @@ type listChannels struct {
 	chanInCore  chan<- *configure.MsgBetweenCoreAndNI
 	chanOutCore <-chan msgChannelProcessorReceivingFiles
 	cwtRes      chan<- configure.MsgWsTransmission
+}
+
+//ListFileDescription хранит список файловых дескрипторов и канал для доступа к ним
+type ListFileDescription struct {
+	list    map[string]*os.File
+	chanReq chan channelReqSettings
+}
+
+type channelReqSettings struct {
+	command, fileHex, filePath string
+	channelRes                 chan channelResSettings
+}
+
+type channelResSettings struct {
+	fd  *os.File
+	err error
+}
+
+//NewListFileDescription создание нового репозитория со списком дескрипторов файлов
+func NewListFileDescription() *ListFileDescription {
+	lfd := ListFileDescription{}
+	lfd.list = map[string]*os.File{}
+	lfd.chanReq = make(chan channelReqSettings)
+
+	go func() {
+		for msg := range lfd.chanReq {
+			switch msg.command {
+			case "add":
+				crs := channelResSettings{}
+				if _, ok := lfd.list[msg.fileHex]; !ok {
+					f, err := os.Create(msg.filePath)
+					if err != nil {
+						crs.err = err
+					} else {
+						lfd.list[msg.fileHex] = f
+					}
+				}
+
+				msg.channelRes <- crs
+
+				close(msg.channelRes)
+
+			case "get":
+				crs := channelResSettings{}
+				fd, ok := lfd.list[msg.fileHex]
+				if !ok {
+					crs.err = fmt.Errorf("file descriptor not found")
+				} else {
+					crs.fd = fd
+				}
+
+				msg.channelRes <- crs
+
+				close(msg.channelRes)
+
+			case "del":
+				delete(lfd.list, msg.fileHex)
+
+				close(msg.channelRes)
+			}
+		}
+	}()
+
+	return &lfd
+}
+
+func (lfd *ListFileDescription) addFileDescription(fh, fp string) error {
+	chanRes := make(chan channelResSettings)
+
+	lfd.chanReq <- channelReqSettings{
+		command:    "add",
+		fileHex:    fh,
+		filePath:   fp,
+		channelRes: chanRes,
+	}
+
+	return (<-chanRes).err
+}
+
+func (lfd *ListFileDescription) getFileDescription(fh string) (*os.File, error) {
+	chanRes := make(chan channelResSettings)
+
+	lfd.chanReq <- channelReqSettings{
+		command:    "get",
+		fileHex:    fh,
+		channelRes: chanRes,
+	}
+
+	res := <-chanRes
+
+	return res.fd, res.err
+}
+
+func (lfd *ListFileDescription) delFileDescription(fh string) {
+	chanRes := make(chan channelResSettings)
+
+	lfd.chanReq <- channelReqSettings{
+		command:    "del",
+		fileHex:    fh,
+		channelRes: chanRes,
+	}
+
+	<-chanRes
 }
 
 //processorReceivingFiles управляет приемом файлов в рамках одной задачи
@@ -109,9 +212,8 @@ func processorReceivingFiles(
 }
 
 func processingDownloadFile(tpdf typeProcessingDownloadFile) {
-
 	sdf := statusDownloadFile{Status: "success"}
-	listFileDescriptors := map[string]*os.File{}
+	lfd := NewListFileDescription()
 
 	//начальный запрос на передачу файла
 	mtd := configure.MsgTypeDownload{
@@ -125,19 +227,6 @@ func processingDownloadFile(tpdf typeProcessingDownloadFile) {
 	pathDirStorage := tpdf.taskInfo.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles
 
 	fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', готовим начальный запрос '%v', путь до списка файлов на источнике: '%v'\n", mtd, tpdf.taskInfo.TaskParameter.FiltrationTask.PathStorageSource)
-
-	stopWriteFile := func(listFileDescriptors map[string]*os.File, fileHex, filePath string) {
-		//закрываем дескриптор файла
-		if w, ok := listFileDescriptors[fileHex]; ok {
-			w.Close()
-
-			//удаляем дескриптор файла
-			delete(listFileDescriptors, fileHex)
-		}
-
-		//удаляем файл
-		_ = os.Remove(filePath)
-	}
 
 DONE:
 	//читаем список файлов
@@ -205,7 +294,8 @@ DONE:
 						}
 
 						//закрываем дескриптор файла и удаляем файл
-						stopWriteFile(listFileDescriptors, fi.Hex, path.Join(pathDirStorage, fn))
+						lfd.delFileDescription(fi.Hex)
+						_ = os.Remove(path.Join(pathDirStorage, fn))
 
 						sdf.Status = "task stoped client"
 
@@ -215,17 +305,8 @@ DONE:
 					//разрыв соединения (остановить загрузку файлов)
 					if command == "to stop the task because of a disconnection" {
 						//закрываем дескриптор файла и удаляем файл
-						stopWriteFile(listFileDescriptors, fi.Hex, path.Join(pathDirStorage, fn))
-
-						/*if w, ok := listFileDescriptors[fi.Hex]; ok {
-							w.Close()
-
-							//удаляем дескриптор файла
-							delete(listFileDescriptors, fi.Hex)
-						}
-
-						//удаляем файл
-						_ = os.Remove(path.Join(pathDirStorage, fn))*/
+						lfd.delFileDescription(fi.Hex)
+						_ = os.Remove(path.Join(pathDirStorage, fn))
 
 						sdf.Status = "task stoped disconnect"
 
@@ -257,30 +338,11 @@ DONE:
 
 					//fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', TASK INFO '%v'\n", ti)
 
-					//fi := ti.TaskParameter.DownloadTask.FileInformation
-
 					switch msgRes.Info.Command {
 					//готовность к приему файла (slave -> master)
 					case "ready for the transfer":
-
-						//fmt.Println("\tDOWNLOAD: func 'processorReceivingFiles', command 'ready for the transfer'")
-
-						if _, ok := listFileDescriptors[msgRes.Info.FileOptions.Hex]; ok {
-							continue
-						}
-
 						//создаем дескриптор файла для последующей записи в него
-						f, err := os.Create(path.Join(pathDirStorage, msgRes.Info.FileOptions.Name))
-						if err != nil {
-							_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
-
-							sdf.Status = "error"
-							sdf.ErrMsg = err
-
-							break DONE
-						}
-
-						listFileDescriptors[msgRes.Info.FileOptions.Hex] = f
+						lfd.addFileDescription(msgRes.Info.FileOptions.Hex, path.Join(pathDirStorage, msgRes.Info.FileOptions.Name))
 
 						//обновляем информацию о задаче
 						tpdf.smt.UpdateTaskDownloadAllParameters(tpdf.taskID, configure.DownloadTaskParameters{
@@ -333,28 +395,6 @@ DONE:
 
 						break NEWFILE
 
-					//передача файла успешно остановлена (slave -> master)
-					/*
-						case "file transfer stopped":
-
-								fmt.Println("func 'listFuncHandlerTypeDownload', RESIVED MSG:'file transfer stopped' передача файла успешно остановлена (slave -> master)")
-
-								//закрываем дескриптор файла
-								if w, ok := listFileDescriptors[fi.Hex]; ok {
-									w.Close()
-
-									//удаляем дескриптор файла
-									delete(listFileDescriptors, fi.Hex)
-								}
-
-								//удаляем файл
-								_ = os.Remove(path.Join(pathDirStorage, fn))
-
-								sdf.Status = "task stoped client"
-
-								break DONE
-					*/
-
 					//невозможно остановить передачу файла
 					case "impossible to stop file transfer":
 						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("it is impossible to stop file transfer (source ID: %v, task ID: %v)", tpdf.sourceID, tpdf.taskID))
@@ -370,12 +410,12 @@ DONE:
 			/* бинарный тип сообщения */
 			if msg.MessageType == 2 {
 				fileIsLoaded, err := writingBinaryFile(parametersWritingBinaryFile{
-					SourceID:            tpdf.sourceID,
-					TaskID:              tpdf.taskID,
-					Data:                msg.Message,
-					ListFileDescriptors: listFileDescriptors,
-					SMT:                 tpdf.smt,
-					ChanInCore:          tpdf.channels.chanInCore,
+					SourceID:   tpdf.sourceID,
+					TaskID:     tpdf.taskID,
+					Data:       msg.Message,
+					LFD:        lfd,
+					SMT:        tpdf.smt,
+					ChanInCore: tpdf.channels.chanInCore,
 				})
 				if err != nil {
 					_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
@@ -451,9 +491,9 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 	//получаем хеш принимаемого файла
 	fileHex := string((*pwbf.Data)[35:67])
 
-	w, ok := pwbf.ListFileDescriptors[fileHex]
-	if !ok {
-		return false, fmt.Errorf("no file descriptor found for the specified hash %v (task ID %v, source ID %v)", fileHex, pwbf.TaskID, pwbf.SourceID)
+	w, err := pwbf.LFD.getFileDescription(fileHex)
+	if err != nil {
+		return false, err
 	}
 
 	//запись принятых байт
@@ -513,7 +553,7 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 		w.Close()
 
 		//удаляем дескриптор файла
-		delete(pwbf.ListFileDescriptors, fi.Hex)
+		pwbf.LFD.delFileDescription(fi.Hex)
 
 		filePath := path.Join(ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles, fi.Name)
 

@@ -370,6 +370,18 @@ func HandlerMsgFromAPI(
 				}
 
 				if _, ok := hsm.SMT.GetStoringMemoryTask(dcts.MsgOption.TaskIDApp); !ok {
+
+					fmt.Println("func 'handlerMsgFromAPI', StoringMemoryTask task is not found!!!")
+
+					//если задача есть вочереди но еще не выполнялась ставим
+					// ей статус 'complete'
+					if err := hsm.QTS.ChangeTaskStatusQueueTask(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp, "complete"); err != nil {
+
+						fmt.Printf("func 'handlerMsgFromAPI', ERROR: %v (hsm.QTS.ChangeTaskStatusQueueTask)\n", err)
+
+						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					}
+
 					if err := ErrorMessage(emt); err != nil {
 						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 					}
