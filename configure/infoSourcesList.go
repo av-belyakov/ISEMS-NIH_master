@@ -49,6 +49,20 @@ type SourceSetting struct {
 type InformationSourcesList struct {
 	sourcesListSetting
 	sourcesListConnection
+	chanReq chan chanReqSetting
+}
+
+type chanReqSetting struct {
+	actionType string
+	id         int
+	setting    SourceSetting
+	chanRes    chan chanResSetting
+}
+
+type chanResSetting struct {
+	err     error
+	id      int
+	setting SourceSetting
 }
 
 //sourcesListConnection дескрипторы соединения с источниками по протоколу websocket
@@ -65,52 +79,229 @@ func NewRepositoryISL() *InformationSourcesList {
 	isl := InformationSourcesList{}
 	isl.sourcesListSetting = sourcesListSetting{}
 	isl.sourcesListConnection = sourcesListConnection{}
+	isl.chanReq = make(chan chanReqSetting)
+
+	go func() {
+		for msg := range isl.chanReq {
+			switch msg.actionType {
+			case "add source settings":
+				isl.sourcesListSetting[msg.id] = msg.setting
+
+				msg.chanRes <- chanResSetting{}
+				close(msg.chanRes)
+
+			case "del info about source":
+				delete(isl.sourcesListSetting, msg.id)
+
+				msg.chanRes <- chanResSetting{}
+				close(msg.chanRes)
+
+			case "source authentication by ip and token":
+				var sourceID int
+				for id, s := range isl.sourcesListSetting {
+					if s.IP == msg.setting.IP && s.Token == msg.setting.Token {
+						//разрешаем соединение с данным источником
+						s.AccessIsAllowed = true
+						isl.sourcesListSetting[id] = s
+						sourceID = id
+
+						break
+					}
+				}
+
+				msgRes := chanResSetting{id: sourceID}
+
+				if sourceID == 0 {
+					msgRes.err = fmt.Errorf("source with ip address %v not found", msg.setting.IP)
+				}
+
+				msg.chanRes <- msgRes
+				close(msg.chanRes)
+
+			case "get source setting by id":
+				si, ok := isl.sourcesListSetting[msg.id]
+				if ok {
+					msg.chanRes <- chanResSetting{
+						setting: si,
+					}
+				} else {
+					msg.chanRes <- chanResSetting{
+						err: fmt.Errorf("source with ID %v not found", msg.id),
+					}
+				}
+
+				close(msg.chanRes)
+
+			case "get source id by ip":
+				var sourceID int
+				for id, s := range isl.sourcesListSetting {
+					if s.IP == msg.setting.IP {
+						sourceID = id
+
+						break
+					}
+				}
+
+				if sourceID == 0 {
+					msg.chanRes <- chanResSetting{
+						err: fmt.Errorf("source with ip address %v not found", msg.setting.IP),
+					}
+				} else {
+					msg.chanRes <- chanResSetting{id: sourceID}
+				}
+
+				close(msg.chanRes)
+
+			case "get source connection status":
+				s, ok := isl.sourcesListSetting[msg.id]
+				if !ok {
+					msg.chanRes <- chanResSetting{
+						err: fmt.Errorf("source with ID %v not found", msg.id),
+					}
+					close(msg.chanRes)
+
+					break
+				}
+
+				msg.chanRes <- chanResSetting{setting: SourceSetting{ConnectionStatus: s.ConnectionStatus}}
+				close(msg.chanRes)
+
+			case "change source connection status":
+				s, ok := isl.sourcesListSetting[msg.id]
+				if !ok {
+					msg.chanRes <- chanResSetting{
+						err: fmt.Errorf("source with ID %v not found", msg.id),
+					}
+					close(msg.chanRes)
+
+					break
+				}
+				s.ConnectionStatus = msg.setting.ConnectionStatus
+
+				if msg.setting.ConnectionStatus {
+					s.DateLastConnected = time.Now().Unix()
+				} else {
+					s.AccessIsAllowed = false
+				}
+
+				isl.sourcesListSetting[msg.id] = s
+
+				msg.chanRes <- chanResSetting{}
+				close(msg.chanRes)
+
+			case "get access is allowed":
+				var aia bool
+				for _, s := range isl.sourcesListSetting {
+					if s.IP == msg.setting.IP {
+						aia = s.AccessIsAllowed
+					}
+				}
+
+				msg.chanRes <- chanResSetting{setting: SourceSetting{AccessIsAllowed: aia}}
+				close(msg.chanRes)
+
+			case "set access is allowed":
+				if s, ok := isl.sourcesListSetting[msg.id]; ok {
+					s.AccessIsAllowed = true
+					isl.sourcesListSetting[msg.id] = s
+				}
+
+				msg.chanRes <- chanResSetting{}
+			}
+		}
+	}()
 
 	return &isl
 }
 
 //AddSourceSettings добавляет настройки источника
 func (isl *InformationSourcesList) AddSourceSettings(id int, settings SourceSetting) {
-	isl.sourcesListSetting[id] = settings
+	chanRes := make(chan chanResSetting)
+
+	isl.chanReq <- chanReqSetting{
+		actionType: "add source settings",
+		id:         id,
+		setting:    settings,
+		chanRes:    chanRes,
+	}
+
+	<-chanRes
 }
 
 //DelSourceSettings удаляет информацию об источнике
 func (isl *InformationSourcesList) DelSourceSettings(id int) {
-	delete(isl.sourcesListSetting, id)
-}
+	chanRes := make(chan chanResSetting)
 
-//SearchSourceIPAndToken поиск id источника по его ip и токену
-func (isl *InformationSourcesList) SearchSourceIPAndToken(ip, token string) (int, bool) {
-	for id, s := range isl.sourcesListSetting {
-		if s.IP == ip && s.Token == token {
-			//разрешаем соединение с данным источником
-			s.AccessIsAllowed = true
-
-			return id, true
-		}
+	isl.chanReq <- chanReqSetting{
+		actionType: "del info about source",
+		id:         id,
+		chanRes:    chanRes,
 	}
 
-	return 0, false
+	<-chanRes
 }
 
-//GetSourceIDOnIP возвращает ID источника по его IP
-func (isl *InformationSourcesList) GetSourceIDOnIP(ip string) (int, bool) {
-	for id, s := range isl.sourcesListSetting {
-		if s.IP == ip {
-			return id, true
-		}
+//SourceAuthenticationByIPAndToken поиск id источника по его ip и токену
+func (isl *InformationSourcesList) SourceAuthenticationByIPAndToken(ip, token string) (int, bool) {
+	chanRes := make(chan chanResSetting)
+
+	isl.chanReq <- chanReqSetting{
+		actionType: "source authentication by ip and token",
+		setting: SourceSetting{
+			IP:    ip,
+			Token: token,
+		},
+		chanRes: chanRes,
 	}
 
-	return 0, false
+	resMsg := <-chanRes
+
+	if resMsg.err != nil {
+		return 0, false
+	}
+
+	return resMsg.id, true
 }
 
 //GetSourceSetting возвращает все настройки источника по его ID
 func (isl *InformationSourcesList) GetSourceSetting(id int) (*SourceSetting, bool) {
-	if s, ok := isl.sourcesListSetting[id]; ok {
-		return &s, true
+	chanRes := make(chan chanResSetting)
+
+	isl.chanReq <- chanReqSetting{
+		actionType: "get source setting by id",
+		id:         id,
+		chanRes:    chanRes,
 	}
 
-	return nil, false
+	resMsg := <-chanRes
+
+	if resMsg.err != nil {
+		return nil, false
+	}
+
+	return &resMsg.setting, true
+}
+
+//GetSourceIDOnIP возвращает ID источника по его IP
+func (isl *InformationSourcesList) GetSourceIDOnIP(ip string) (int, bool) {
+	chanRes := make(chan chanResSetting)
+
+	isl.chanReq <- chanReqSetting{
+		actionType: "get source id by ip",
+		setting: SourceSetting{
+			IP: ip,
+		},
+		chanRes: chanRes,
+	}
+
+	resMsg := <-chanRes
+
+	var isExist bool
+	if resMsg.err == nil {
+		isExist = true
+	}
+
+	return resMsg.id, isExist
 }
 
 //GetSourceList возвращает список источников
@@ -126,50 +317,65 @@ func (isl *InformationSourcesList) GetSourceList() *map[int]SourceSetting {
 
 //GetSourceConnectionStatus возвращает состояние соединения с источником
 func (isl *InformationSourcesList) GetSourceConnectionStatus(id int) (bool, error) {
-	s, ok := isl.sourcesListSetting[id]
-	if !ok {
-		return false, fmt.Errorf("source with ID %v not found", id)
+	chanRes := make(chan chanResSetting)
+
+	isl.chanReq <- chanReqSetting{
+		actionType: "get source connection status",
+		id:         id,
+		chanRes:    chanRes,
 	}
 
-	return s.ConnectionStatus, nil
+	resMsg := <-chanRes
+
+	return resMsg.setting.ConnectionStatus, resMsg.err
 }
 
 //ChangeSourceConnectionStatus изменяет состояние источника
 func (isl *InformationSourcesList) ChangeSourceConnectionStatus(id int, status bool) bool {
-	if s, ok := isl.sourcesListSetting[id]; ok {
-		s.ConnectionStatus = status
+	chanRes := make(chan chanResSetting)
 
-		if status {
-			s.DateLastConnected = time.Now().Unix()
-		} else {
-			s.AccessIsAllowed = false
-		}
-
-		isl.sourcesListSetting[id] = s
-
-		return true
+	isl.chanReq <- chanReqSetting{
+		actionType: "change source connection status",
+		id:         id,
+		setting: SourceSetting{
+			ConnectionStatus: status,
+		},
+		chanRes: chanRes,
 	}
 
-	return false
+	if (<-chanRes).err != nil {
+		return false
+	}
+
+	return true
 }
 
 //GetAccessIsAllowed возвращает значение подтверждающее или отклоняющее права доступа источника
 func (isl *InformationSourcesList) GetAccessIsAllowed(ip string) bool {
-	for _, s := range isl.sourcesListSetting {
-		if s.IP == ip {
-			return s.AccessIsAllowed
-		}
+	chanRes := make(chan chanResSetting)
+
+	isl.chanReq <- chanReqSetting{
+		actionType: "get access is allowed",
+		setting:    SourceSetting{IP: ip},
+		chanRes:    chanRes,
 	}
 
-	return false
+	return (<-chanRes).setting.AccessIsAllowed
 }
 
 //SetAccessIsAllowed устанавливает статус позволяющий продолжать wss соединение
 func (isl *InformationSourcesList) SetAccessIsAllowed(id int) {
-	if s, ok := isl.sourcesListSetting[id]; ok {
-		s.AccessIsAllowed = true
-		isl.sourcesListSetting[id] = s
+	chanRes := make(chan chanResSetting)
+
+	isl.chanReq <- chanReqSetting{
+		actionType: "set access is allowed",
+		setting: SourceSetting{
+			AccessIsAllowed: true,
+		},
+		chanRes: chanRes,
 	}
+
+	<-chanRes
 }
 
 //GetCountSources возвращает общее количество источников
@@ -206,15 +412,15 @@ func (isl *InformationSourcesList) GetSourcesListConnection() map[string]WssConn
 }
 
 //AddLinkWebsocketConnect добавляет линк соединения по websocket
-func (isl *InformationSourcesList) AddLinkWebsocketConnect(host string, lwsc *websocket.Conn) {
-	isl.sourcesListConnection[host] = WssConnection{
+func (isl *InformationSourcesList) AddLinkWebsocketConnect(ip string, lwsc *websocket.Conn) {
+	isl.sourcesListConnection[ip] = WssConnection{
 		Link: lwsc,
 	}
 }
 
 //DelLinkWebsocketConnection удаляет дескриптор соединения при отключении источника
-func (isl *InformationSourcesList) DelLinkWebsocketConnection(host string) {
-	delete(isl.sourcesListConnection, host)
+func (isl *InformationSourcesList) DelLinkWebsocketConnection(ip string) {
+	delete(isl.sourcesListConnection, ip)
 	/*if _, ok := ism.SourcesListConnection[host]; ok {
 		ism.SourcesListConnection[host] = WssConnection{
 			Link: nil,
@@ -223,8 +429,8 @@ func (isl *InformationSourcesList) DelLinkWebsocketConnection(host string) {
 }
 
 //GetLinkWebsocketConnect возвращает линк соединения по websocket
-func (isl *InformationSourcesList) GetLinkWebsocketConnect(host string) (*WssConnection, bool) {
-	if conn, ok := isl.sourcesListConnection[host]; ok {
+func (isl *InformationSourcesList) GetLinkWebsocketConnect(ip string) (*WssConnection, bool) {
+	if conn, ok := isl.sourcesListConnection[ip]; ok {
 		return &conn, true
 	}
 

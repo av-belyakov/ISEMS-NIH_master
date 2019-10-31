@@ -66,7 +66,7 @@ func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWrit
 
 	remoteAddr := strings.Split(req.RemoteAddr, ":")[0]
 	//если токен валидный изменяем состояние AccessIsAllowed в true
-	_, validToken := settingsHTTPServer.SourceList.SearchSourceIPAndToken(remoteAddr, stringToken)
+	_, validToken := settingsHTTPServer.SourceList.SourceAuthenticationByIPAndToken(remoteAddr, stringToken)
 
 	if (len(stringToken) == 0) || !validToken {
 		w.Header().Set("Content-Length", strconv.Itoa(utf8.RuneCount(bodyHTTPResponseError)))

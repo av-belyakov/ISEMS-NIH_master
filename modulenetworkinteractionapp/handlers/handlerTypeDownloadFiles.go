@@ -86,7 +86,7 @@ func ControllerReceivingRequestedFiles(
 			clientNotify.TaskID = msg.TaskID
 			ao.Sources = []int{msg.SourceID}
 
-			//fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' resived new msg DOWNLOAD TASK for task ID %v, MSG %v\n", msg.TaskID, msg)
+			fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' resived new msg DOWNLOAD TASK for task ID %v, MSG %v\n", msg.TaskID, msg)
 
 			//получаем IP адрес и параметры источника
 			si, ok := isl.GetSourceSetting(msg.SourceID)
