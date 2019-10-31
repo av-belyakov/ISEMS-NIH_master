@@ -3,7 +3,7 @@ package configure
 /*
 * Описание типа для хранения в памяти часто используемых параметров
 *
-* Версия 0.13, дата релиза 28.05.2019
+* Версия 1.0, дата релиза 31.10.2019
 * */
 
 import (
@@ -113,16 +113,6 @@ func (isl *InformationSourcesList) GetSourceSetting(id int) (*SourceSetting, boo
 	return nil, false
 }
 
-//GetSourceConnectionStatus возвращает состояние соединения с источником
-func (isl *InformationSourcesList) GetSourceConnectionStatus(id int) (bool, error) {
-	s, ok := isl.sourcesListSetting[id]
-	if !ok {
-		return false, fmt.Errorf("source with ID %v not found", id)
-	}
-
-	return s.ConnectionStatus, nil
-}
-
 //GetSourceList возвращает список источников
 func (isl *InformationSourcesList) GetSourceList() *map[int]SourceSetting {
 	sl := map[int]SourceSetting{}
@@ -132,6 +122,16 @@ func (isl *InformationSourcesList) GetSourceList() *map[int]SourceSetting {
 	}
 
 	return &sl
+}
+
+//GetSourceConnectionStatus возвращает состояние соединения с источником
+func (isl *InformationSourcesList) GetSourceConnectionStatus(id int) (bool, error) {
+	s, ok := isl.sourcesListSetting[id]
+	if !ok {
+		return false, fmt.Errorf("source with ID %v not found", id)
+	}
+
+	return s.ConnectionStatus, nil
 }
 
 //ChangeSourceConnectionStatus изменяет состояние источника

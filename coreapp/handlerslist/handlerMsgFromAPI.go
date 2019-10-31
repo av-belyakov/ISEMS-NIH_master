@@ -279,25 +279,38 @@ func HandlerMsgFromAPI(
 				if err == nil {
 					var errMsg string
 
-					if ti.TaskStatus == "wait" {
-						errMsg = fmt.Sprintf("Unable to add task with ID '%v' because it is already pending", dcts.MsgOption.TaskIDApp)
-						emt.MsgHuman = fmt.Sprintf("Невозможно добавить задачу с ID '%v' так как она уже ожидает выполнения", dcts.MsgOption.TaskIDApp)
-					} else if ti.TaskStatus == "execution" {
-						errMsg = fmt.Sprintf("You cannot add a task with ID '%v' to a source with ID %v because it is already running", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
-						emt.MsgHuman = fmt.Sprintf("Невозможно добавить задачу с ID '%v', для источника с ID %v, так как она уже выполняется", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
+					if ti.TaskStatus == "execution" {
+						//проверяем наличие выполняемой задачи
+						if smti, ok := hsm.SMT.GetStoringMemoryTask(dcts.MsgOption.TaskIDApp); ok {
+							//проверяем завершена ли задача
+							if smti.TaskStatus {
+								errMsg = fmt.Sprintf("Task with ID '%v' for source ID %v rejected. You cannot add a task with the same ID many times in a short period of time.", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
+								emt.MsgHuman = "Задача отклонена. Нельзя добавлять задачу с одним и тем же идентификатором множество раз в течении небольшого периода времени"
+							} else {
+								errMsg = fmt.Sprintf("You cannot add a task with ID '%v' to a source with ID %v because it is already running", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
+								emt.MsgHuman = fmt.Sprintf("Невозможно добавить задачу с ID '%v', для источника с ID %v, так как она уже выполняется", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
+							}
+						}
 					} else {
-						errMsg = fmt.Sprintf("Unable to add task with ID '%v'. The task has been completed, but has not yet been removed from the pending task list", dcts.MsgOption.ID)
-						emt.MsgHuman = fmt.Sprintf("Невозможно добавить задачу с ID '%v'. Задача была выполнена, однако из списка задач ожидающих выполнения пока не удалена", dcts.MsgOption.ID)
+						if ti.TaskStatus == "wait" {
+							errMsg = fmt.Sprintf("Unable to add task with ID '%v' because it is already pending", dcts.MsgOption.TaskIDApp)
+							emt.MsgHuman = fmt.Sprintf("Невозможно добавить задачу с ID '%v' так как она уже ожидает выполнения", dcts.MsgOption.TaskIDApp)
+						} else {
+							errMsg = fmt.Sprintf("Unable to add task with ID '%v'. The task has been completed, but has not yet been removed from the pending task list", dcts.MsgOption.ID)
+							emt.MsgHuman = fmt.Sprintf("Невозможно добавить задачу с ID '%v'. Задача была выполнена, однако из списка задач ожидающих выполнения пока не удалена", dcts.MsgOption.ID)
+						}
 					}
 
-					_ = saveMessageApp.LogMessage("error", errMsg)
+					if len(errMsg) > 0 {
+						_ = saveMessageApp.LogMessage("error", errMsg)
 
-					//сообщение о том что задача была отклонена
-					if err := ErrorMessage(emt); err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+						//сообщение о том что задача была отклонена
+						if err := ErrorMessage(emt); err != nil {
+							_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+						}
+
+						return
 					}
-
-					return
 				}
 
 				//добавляем задачу в очередь
@@ -373,7 +386,7 @@ func HandlerMsgFromAPI(
 
 					fmt.Println("func 'handlerMsgFromAPI', StoringMemoryTask task is not found!!!")
 
-					//если задача есть вочереди но еще не выполнялась ставим
+					//если задача есть в очереди но еще не выполнялась ставим
 					// ей статус 'complete'
 					if err := hsm.QTS.ChangeTaskStatusQueueTask(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp, "complete"); err != nil {
 
@@ -382,9 +395,40 @@ func HandlerMsgFromAPI(
 						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 					}
 
-					if err := ErrorMessage(emt); err != nil {
+					//сообщение об успешном снятии задачи из очереди ожидания
+					resMsg := configure.DownloadControlTypeInfo{
+						MsgOption: configure.DownloadControlMsgTypeInfo{
+							ID:        dcts.MsgOption.ID,
+							TaskIDApp: dcts.MsgOption.TaskIDApp,
+							Status:    "stop",
+						},
+					}
+					resMsg.MsgType = "information"
+					resMsg.MsgSection = "download control"
+					resMsg.MsgInstruction = "task processing"
+					resMsg.ClientTaskID = dcts.ClientTaskID
+
+					msgJSON, err := json.Marshal(resMsg)
+					if err != nil {
 						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 					}
+
+					emt.ChanToAPI <- &configure.MsgBetweenCoreAndAPI{
+						MsgGenerator: "Core module",
+						MsgRecipient: "API module",
+						IDClientAPI:  msg.IDClientAPI,
+						MsgJSON:      msgJSON,
+					}
+
+					notifications.SendNotificationToClientAPI(
+						outCoreChans.OutCoreChanAPI,
+						notifications.NotificationSettingsToClientAPI{
+							MsgType:        "success",
+							MsgDescription: fmt.Sprintf("Задача по скачиванию файлов с источника ID %v, удалена из очереди ожидающих задач", dcts.MsgOption.ID),
+							Sources:        []int{dcts.MsgOption.ID},
+						},
+						dcts.ClientTaskID,
+						msg.IDClientAPI)
 
 					return
 				}

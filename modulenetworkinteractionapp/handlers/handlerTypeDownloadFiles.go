@@ -91,7 +91,7 @@ func ControllerReceivingRequestedFiles(
 			//получаем IP адрес и параметры источника
 			si, ok := isl.GetSourceSetting(msg.SourceID)
 
-			//fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' SOURCE INFO: %v, OK %v\n", si, ok)
+			fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' SOURCE INFO: %v, OK %v\n", si, ok)
 
 			if !ok || !si.ConnectionStatus {
 				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("it is not possible to send a request to download files, the source with ID %v is not connected", msg.SourceID))
