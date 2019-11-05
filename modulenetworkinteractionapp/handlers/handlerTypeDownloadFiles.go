@@ -75,6 +75,8 @@ func ControllerReceivingRequestedFiles(
 		clientNotify configure.MsgBetweenCoreAndNI,
 		chanIn <-chan *configure.MsgChannelReceivingFiles) {
 
+		defer fmt.Println("====== ATTEMPTED!!! go func in 'ControllerReceivingRequestedFiles' BE STOPED")
+
 		ao := configure.MessageNotification{
 			SourceReport:        "NI module",
 			Section:             "download control",
@@ -86,15 +88,17 @@ func ControllerReceivingRequestedFiles(
 			clientNotify.TaskID = msg.TaskID
 			ao.Sources = []int{msg.SourceID}
 
-			fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' resived new msg DOWNLOAD TASK for task ID %v, MSG %v\n", msg.TaskID, msg)
+			//fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' resived new msg DOWNLOAD TASK for task ID %v, MSG %v\n", msg.TaskID, msg)
 
 			//получаем IP адрес и параметры источника
 			si, ok := isl.GetSourceSetting(msg.SourceID)
 
-			fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' SOURCE INFO: %v, OK %v\n", si, ok)
+			//fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' SOURCE INFO: %v, OK %v\n", si, ok)
 
 			if !ok || !si.ConnectionStatus {
 				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("it is not possible to send a request to download files, the source with ID %v is not connected", msg.SourceID))
+
+				fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' ERROR 0000")
 
 				humanNotify := fmt.Sprintf("Не возможно отправить запрос на скачивание файлов, источник с ID %v не подключен", msg.SourceID)
 				if !ok {
@@ -134,7 +138,7 @@ func ControllerReceivingRequestedFiles(
 					lhrf[si.IP] = listTaskReceivingFile{}
 				}
 
-				//fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' запуск обработчика задачи по скачиванию файлов")
+				fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' запуск обработчика задачи по скачиванию файлов")
 
 				//запуск обработчика задачи по скачиванию файлов
 				channel, err := processorReceivingFiles(chanInCore, msg.SourceID, si.IP, msg.TaskID, smt, saveMessageApp, cwtRes)
@@ -178,13 +182,15 @@ func ControllerReceivingRequestedFiles(
 
 				c := []byte("stop receiving files")
 
-				fmt.Println("func 'ControllerReceivingRequestedFiles', SEND MSG 'stop receiving files' TO HANDLER --->>>>")
+				fmt.Println("func 'ControllerReceivingRequestedFiles', SEND MSG 'stop receiving files' TO HANDLER (=-BEFORE-=) --->>>>")
 
 				hrp.chanToHandler <- msgChannelProcessorReceivingFiles{
 					MessageType:  1,
 					MsgGenerator: "Core module",
 					Message:      &c,
 				}
+
+				fmt.Println("func 'ControllerReceivingRequestedFiles', SEND MSG 'stop receiving files' TO HANDLER (=-AFTER-=) --->>>>")
 
 			//останов выполнения задачи из-за разрыва соединения (запрос из Ядра)
 			case "to stop the task because of a disconnection":
