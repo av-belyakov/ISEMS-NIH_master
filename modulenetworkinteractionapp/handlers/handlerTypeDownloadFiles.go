@@ -7,14 +7,28 @@ import (
 	"ISEMS-NIH_master/savemessageapp"
 )
 
-//msgChannelProcessorReceivingFiles параметры канала взаимодействия между 'ControllerReceivingRequestedFiles' и 'processorReceivingFiles'
+//MsgChannelProcessorReceivingFiles параметры канала взаимодействия между 'ControllerReceivingRequestedFiles' и 'processorReceivingFiles'
 // MessageType - тип передаваемых данных (1 - text, 2 - binary)
 // MsgGenerator - источник сообщения ('Core module', 'NI module')
 // Message - информационное сообщение в бинарном виде
-type msgChannelProcessorReceivingFiles struct {
+type MsgChannelProcessorReceivingFiles struct {
 	MessageType  int
 	MsgGenerator string
 	Message      *[]byte
+}
+
+//TypeHandlerReceivingFile репозитория для хранения каналов взаимодействия с обработчиками записи файлов
+type TypeHandlerReceivingFile struct {
+	ListHandler             listHandlerReceivingFile
+	ChannelCommunicationReq chan typeChannelCommunication
+}
+
+type typeChannelCommunication struct {
+	handlerIP            string
+	handlerID            string
+	actionType           string
+	channel              chan handlerRecivingParameters
+	channelCommunication chan MsgChannelProcessorReceivingFiles
 }
 
 //listHandlerReceivingFile список задач по скачиванию файлов
@@ -27,7 +41,116 @@ type listTaskReceivingFile map[string]handlerRecivingParameters
 
 //handlerRecivingParameters описание параметров
 type handlerRecivingParameters struct {
-	chanToHandler chan msgChannelProcessorReceivingFiles
+	chanToHandler chan MsgChannelProcessorReceivingFiles
+}
+
+//NewListHandlerReceivingFile создание нового репозитория для хранения каналов взаимодействия с обработчиками записи файлов
+func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
+	thrf := TypeHandlerReceivingFile{}
+	thrf.ListHandler = listHandlerReceivingFile{}
+	thrf.ChannelCommunicationReq = make(chan typeChannelCommunication)
+
+	go func() {
+		for msg := range thrf.ChannelCommunicationReq {
+			switch msg.actionType {
+			case "set":
+				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
+					thrf.ListHandler[msg.handlerIP] = listTaskReceivingFile{}
+				}
+
+				thrf.ListHandler[msg.handlerIP][msg.handlerID] = handlerRecivingParameters{
+					chanToHandler: msg.channelCommunication,
+				}
+
+				msg.channel <- handlerRecivingParameters{}
+
+			case "get":
+				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
+					msg.channel <- handlerRecivingParameters{
+						chanToHandler: nil,
+					}
+				}
+				hrp, ok := thrf.ListHandler[msg.handlerIP][msg.handlerID]
+				if !ok {
+					msg.channel <- handlerRecivingParameters{
+						chanToHandler: nil,
+					}
+				}
+
+				msg.channel <- handlerRecivingParameters{
+					chanToHandler: hrp.chanToHandler,
+				}
+
+			case "del":
+				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
+					msg.channel <- handlerRecivingParameters{}
+
+					break
+				}
+				hrp, ok := thrf.ListHandler[msg.handlerIP][msg.handlerID]
+				if !ok {
+					msg.channel <- handlerRecivingParameters{}
+
+					break
+				}
+
+				close(hrp.chanToHandler)
+
+				thrf.ListHandler[msg.handlerIP][msg.handlerID] = handlerRecivingParameters{
+					chanToHandler: nil,
+				}
+
+				msg.channel <- handlerRecivingParameters{}
+			}
+		}
+	}()
+
+	return &thrf
+}
+
+//SetHendlerReceivingFile добавляет новый канал взаимодействия
+func (thrf *TypeHandlerReceivingFile) SetHendlerReceivingFile(ip, id string, channel chan MsgChannelProcessorReceivingFiles) {
+	chanRes := make(chan handlerRecivingParameters)
+
+	thrf.ChannelCommunicationReq <- typeChannelCommunication{
+		actionType:           "set",
+		handlerIP:            ip,
+		handlerID:            id,
+		channel:              chanRes,
+		channelCommunication: channel,
+	}
+
+	<-chanRes
+
+	return
+}
+
+//GetHendlerReceivingFile возврашает канал для доступа к обработчику файлов
+func (thrf *TypeHandlerReceivingFile) GetHendlerReceivingFile(ip, id string) chan MsgChannelProcessorReceivingFiles {
+	chanRes := make(chan handlerRecivingParameters)
+
+	thrf.ChannelCommunicationReq <- typeChannelCommunication{
+		actionType: "get",
+		handlerIP:  ip,
+		handlerID:  id,
+		channel:    chanRes,
+	}
+
+	return (<-chanRes).chanToHandler
+}
+
+//DelHendlerReceivingFile закрывает и удаляет канал
+func (thrf *TypeHandlerReceivingFile) DelHendlerReceivingFile(ip, id string) {
+	chanRes := make(chan handlerRecivingParameters)
+
+	thrf.ChannelCommunicationReq <- typeChannelCommunication{
+		actionType: "del",
+		handlerIP:  ip,
+		handlerID:  id,
+		channel:    chanRes,
+	}
+
+	<-chanRes
 }
 
 type messageFromCore string
@@ -75,7 +198,7 @@ func ControllerReceivingRequestedFiles(
 		clientNotify configure.MsgBetweenCoreAndNI,
 		chanIn <-chan *configure.MsgChannelReceivingFiles) {
 
-		defer fmt.Println("====== ATTEMPTED!!! go func in 'ControllerReceivingRequestedFiles' BE STOPED")
+		defer fmt.Println("====== ATTEMPTED!!! go func in 'ControllerReceivingRequestedFiles' BE STOPED =============")
 
 		ao := configure.MessageNotification{
 			SourceReport:        "NI module",
@@ -88,7 +211,9 @@ func ControllerReceivingRequestedFiles(
 			clientNotify.TaskID = msg.TaskID
 			ao.Sources = []int{msg.SourceID}
 
-			//fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' resived new msg DOWNLOAD TASK for task ID %v, MSG %v\n", msg.TaskID, msg)
+			if msg.Command != "taken from the source" {
+				fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' resived new msg DOWNLOAD TASK for task ID %v, MSG %v\n", msg.TaskID, msg)
+			}
 
 			//получаем IP адрес и параметры источника
 			si, ok := isl.GetSourceSetting(msg.SourceID)
@@ -184,11 +309,14 @@ func ControllerReceivingRequestedFiles(
 
 				fmt.Println("func 'ControllerReceivingRequestedFiles', SEND MSG 'stop receiving files' TO HANDLER (=-BEFORE-=) --->>>>")
 
-				hrp.chanToHandler <- msgChannelProcessorReceivingFiles{
+				hrp.chanToHandler <- MsgChannelProcessorReceivingFiles{
 					MessageType:  1,
 					MsgGenerator: "Core module",
 					Message:      &c,
 				}
+
+				close(hrp.chanToHandler)
+				hrp.chanToHandler = nil
 
 				fmt.Println("func 'ControllerReceivingRequestedFiles', SEND MSG 'stop receiving files' TO HANDLER (=-AFTER-=) --->>>>")
 
@@ -212,7 +340,7 @@ func ControllerReceivingRequestedFiles(
 
 				c := []byte("to stop the task because of a disconnection")
 
-				hrp.chanToHandler <- msgChannelProcessorReceivingFiles{
+				hrp.chanToHandler <- MsgChannelProcessorReceivingFiles{
 					MessageType:  1,
 					MsgGenerator: "Core module",
 					Message:      &c,
@@ -241,8 +369,14 @@ func ControllerReceivingRequestedFiles(
 
 				//fmt.Println("func ' ControllerReceivingRequestedFiles', send ---> to handler func 'processorReceivingFiles'")
 
+				if hrp.chanToHandler == nil {
+					fmt.Println("func 'ControllerReceivingRequestedFiles', Command: 'taken from the source', CHANNEL BE CLOSED")
+
+					continue
+				}
+
 				//ответы приходящие от источника (команды для processorReceivingFiles)
-				hrp.chanToHandler <- msgChannelProcessorReceivingFiles{
+				hrp.chanToHandler <- MsgChannelProcessorReceivingFiles{
 					MessageType:  msg.MsgType,
 					MsgGenerator: "NI module",
 					Message:      msg.Message,

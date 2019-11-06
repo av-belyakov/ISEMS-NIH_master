@@ -33,7 +33,7 @@ type typeProcessingDownloadFile struct {
 
 type listChannels struct {
 	chanInCore  chan<- *configure.MsgBetweenCoreAndNI
-	chanOutCore <-chan msgChannelProcessorReceivingFiles
+	chanOutCore <-chan MsgChannelProcessorReceivingFiles
 	cwtRes      chan<- configure.MsgWsTransmission
 }
 
@@ -147,7 +147,7 @@ func processorReceivingFiles(
 	sourceIP, taskID string,
 	smt *configure.StoringMemoryTask,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
-	cwtRes chan<- configure.MsgWsTransmission) (chan msgChannelProcessorReceivingFiles, error) {
+	cwtRes chan<- configure.MsgWsTransmission) (chan MsgChannelProcessorReceivingFiles, error) {
 
 	/*
 	   Алгоритм передачи и приема файлов
@@ -170,7 +170,7 @@ func processorReceivingFiles(
 		return nil, fmt.Errorf("task with ID %v not found", taskID)
 	}
 
-	chanOut := make(chan msgChannelProcessorReceivingFiles)
+	chanOut := make(chan MsgChannelProcessorReceivingFiles)
 
 	//fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', '%v'\n", ti)
 
@@ -272,7 +272,7 @@ DONE:
 				if msg.MsgGenerator == "Core module" {
 					command := string(*msg.Message)
 
-					fmt.Printf("func 'listFuncHandlerTypeDownload', RESIVED COMMAND:%v\n", command)
+					fmt.Printf("func 'listFuncHandlerTypeDownload', RESIVED COMMAND: '%v'\n", command)
 
 					//остановить скачивание файлов
 					if command == "stop receiving files" {

@@ -1,12 +1,160 @@
 package mytestpackages
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"ISEMS-NIH_master/configure"
 	//. "ISEMS-NIH_master"
 )
+
+//MsgChannelProcessorReceivingFiles параметры канала взаимодействия между 'ControllerReceivingRequestedFiles' и 'processorReceivingFiles'
+// MessageType - тип передаваемых данных (1 - text, 2 - binary)
+// MsgGenerator - источник сообщения ('Core module', 'NI module')
+// Message - информационное сообщение в бинарном виде
+type MsgChannelProcessorReceivingFiles struct {
+	MessageType  int
+	MsgGenerator string
+	Message      *[]byte
+}
+
+//TypeHandlerReceivingFile репозитория для хранения каналов взаимодействия с обработчиками записи файлов
+type TypeHandlerReceivingFile struct {
+	ListHandler             listHandlerReceivingFile
+	ChannelCommunicationReq chan typeChannelCommunication
+}
+
+type typeChannelCommunication struct {
+	handlerIP            string
+	handlerID            string
+	actionType           string
+	channel              chan handlerRecivingParameters
+	channelCommunication chan MsgChannelProcessorReceivingFiles
+}
+
+//listHandlerReceivingFile список задач по скачиванию файлов
+// ключ - IP источника
+type listHandlerReceivingFile map[string]listTaskReceivingFile
+
+//listTaskReceivingFile список задач по приему файлов на данном источнике
+// ключ - ID задачи
+type listTaskReceivingFile map[string]handlerRecivingParameters
+
+//handlerRecivingParameters описание параметров
+type handlerRecivingParameters struct {
+	chanToHandler chan MsgChannelProcessorReceivingFiles
+}
+
+//NewListHandlerReceivingFile создание нового репозитория для хранения каналов взаимодействия с обработчиками записи файлов
+func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
+	thrf := TypeHandlerReceivingFile{}
+	thrf.ListHandler = listHandlerReceivingFile{}
+	thrf.ChannelCommunicationReq = make(chan typeChannelCommunication)
+
+	go func() {
+		for msg := range thrf.ChannelCommunicationReq {
+			switch msg.actionType {
+			case "set":
+				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
+					thrf.ListHandler[msg.handlerIP] = listTaskReceivingFile{}
+				}
+
+				thrf.ListHandler[msg.handlerIP][msg.handlerID] = handlerRecivingParameters{
+					chanToHandler: msg.channelCommunication,
+				}
+
+				msg.channel <- handlerRecivingParameters{}
+
+			case "get":
+				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
+					msg.channel <- handlerRecivingParameters{
+						chanToHandler: nil,
+					}
+				}
+				hrp, ok := thrf.ListHandler[msg.handlerIP][msg.handlerID]
+				if !ok {
+					msg.channel <- handlerRecivingParameters{
+						chanToHandler: nil,
+					}
+				}
+
+				msg.channel <- handlerRecivingParameters{
+					chanToHandler: hrp.chanToHandler,
+				}
+
+			case "del":
+				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
+					msg.channel <- handlerRecivingParameters{}
+
+					break
+				}
+				hrp, ok := thrf.ListHandler[msg.handlerIP][msg.handlerID]
+				if !ok {
+					msg.channel <- handlerRecivingParameters{}
+
+					break
+				}
+
+				close(hrp.chanToHandler)
+
+				thrf.ListHandler[msg.handlerIP][msg.handlerID] = handlerRecivingParameters{
+					chanToHandler: nil,
+				}
+
+				msg.channel <- handlerRecivingParameters{}
+			}
+		}
+	}()
+
+	return &thrf
+}
+
+//SetHendlerReceivingFile добавляет новый канал взаимодействия
+func (thrf *TypeHandlerReceivingFile) SetHendlerReceivingFile(ip, id string, channel chan MsgChannelProcessorReceivingFiles) {
+	chanRes := make(chan handlerRecivingParameters)
+
+	thrf.ChannelCommunicationReq <- typeChannelCommunication{
+		actionType:           "set",
+		handlerIP:            ip,
+		handlerID:            id,
+		channel:              chanRes,
+		channelCommunication: channel,
+	}
+
+	<-chanRes
+
+	return
+}
+
+//GetHendlerReceivingFile возврашает канал для доступа к обработчику файлов
+func (thrf *TypeHandlerReceivingFile) GetHendlerReceivingFile(ip, id string) chan MsgChannelProcessorReceivingFiles {
+	chanRes := make(chan handlerRecivingParameters)
+
+	thrf.ChannelCommunicationReq <- typeChannelCommunication{
+		actionType: "get",
+		handlerIP:  ip,
+		handlerID:  id,
+		channel:    chanRes,
+	}
+
+	return (<-chanRes).chanToHandler
+}
+
+//DelHendlerReceivingFile закрывает и удаляет канал
+func (thrf *TypeHandlerReceivingFile) DelHendlerReceivingFile(ip, id string) {
+	chanRes := make(chan handlerRecivingParameters)
+
+	thrf.ChannelCommunicationReq <- typeChannelCommunication{
+		actionType: "del",
+		handlerIP:  ip,
+		handlerID:  id,
+		channel:    chanRes,
+	}
+
+	<-chanRes
+}
 
 var _ = Describe("Mytestpackages/InfoSourceList", func() {
 	sourceID := 1100
@@ -108,6 +256,65 @@ var _ = Describe("Mytestpackages/InfoSourceList", func() {
 
 			Expect(ok).ShouldNot(BeTrue())
 		})
+	})
+
+	Context("Тест 8. Проверка закрытого канала на nil", func() {
+		It("При закрытии канала он должен быть nil", func() {
+			chanTest := make(chan struct{})
+			type channels chan struct{}
+
+			list := map[string]channels{}
+			list["one"] = chanTest
+
+			Expect(list["one"]).ShouldNot(BeNil())
+
+			close(list["one"])
+			list["one"] = nil
+
+			Expect(list["one"]).Should(BeNil())
+		})
+	})
+
+	handlerIP := "59.1.33.45"
+	handlerID := "323"
+
+	newChannel := make(chan MsgChannelProcessorReceivingFiles, 1)
+
+	nlhrf := NewListHandlerReceivingFile()
+	nlhrf.SetHendlerReceivingFile(handlerIP, handlerID, newChannel)
+
+	Context("Тест 9. Создание и добавление канала для взаимодействия с репозиторием ", func() {
+		It("Должен быть создан канал и успешно добавлен в репозиторий", func(done Done) {
+			chanComm := nlhrf.GetHendlerReceivingFile(handlerIP, handlerID)
+
+			go func() {
+				fmt.Printf("resived from channel: %v\n", <-chanComm)
+			}()
+
+			strMsg := []byte("diifiif ief993")
+
+			chanComm <- MsgChannelProcessorReceivingFiles{
+				MessageType:  1,
+				MsgGenerator: "test generator",
+				Message:      &strMsg,
+			}
+
+			Expect(chanComm).ShouldNot(BeNil())
+
+			close(done)
+		}, 3)
+	})
+
+	Context("Тест 10. Удаление канала взаимодействия из репозитория", func() {
+		It("После закрытия и удаления канала должно возвращатся nil", func(done Done) {
+			nlhrf.DelHendlerReceivingFile(handlerIP, handlerID)
+
+			chanComm := nlhrf.GetHendlerReceivingFile(handlerIP, handlerID)
+
+			Expect(chanComm).Should(BeNil())
+
+			close(done)
+		}, 4)
 	})
 
 	/*Context("", func(){
