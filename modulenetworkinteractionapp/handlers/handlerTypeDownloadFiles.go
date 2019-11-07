@@ -191,10 +191,10 @@ func ControllerReceivingRequestedFiles(
 	}
 
 	chanIn := make(chan *configure.MsgChannelReceivingFiles)
-	lhrf := listHandlerReceivingFile{}
+	lhrf := NewListHandlerReceivingFile()
 
 	go func(
-		lhrf listHandlerReceivingFile,
+		lhrf *TypeHandlerReceivingFile,
 		clientNotify configure.MsgBetweenCoreAndNI,
 		chanIn <-chan *configure.MsgChannelReceivingFiles) {
 
@@ -259,10 +259,6 @@ func ControllerReceivingRequestedFiles(
 			switch msg.Command {
 			//начало выполнения задачи (запрос из Ядра)
 			case "give my the files":
-				if len(lhrf[si.IP]) == 0 {
-					lhrf[si.IP] = listTaskReceivingFile{}
-				}
-
 				fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' запуск обработчика задачи по скачиванию файлов")
 
 				//запуск обработчика задачи по скачиванию файлов
@@ -280,27 +276,16 @@ func ControllerReceivingRequestedFiles(
 					continue
 				}
 
-				lhrf[si.IP][msg.TaskID] = handlerRecivingParameters{
-					chanToHandler: channel,
-				}
+				lhrf.SetHendlerReceivingFile(si.IP, msg.TaskID, channel)
 
 			//останов выполнения задачи (запрос из Ядра)
 			case "stop receiving files":
 
 				fmt.Println("func 'ControllerReceivingRequestedFiles', COMMAND: 'stop receiving files'")
 
-				if _, ok := lhrf[si.IP]; !ok {
+				chanToHandler := lhrf.GetHendlerReceivingFile(si.IP, msg.TaskID)
+				if chanToHandler == nil {
 					_ = saveMessageApp.LogMessage("error", errMsg)
-
-					//handlerTaskWarning(msg.TaskID, clientNotify)
-
-					continue
-				}
-				hrp, ok := lhrf[si.IP][msg.TaskID]
-				if !ok {
-					_ = saveMessageApp.LogMessage("error", errMsg)
-
-					//handlerTaskWarning(msg.TaskID, clientNotify)
 
 					continue
 				}
@@ -309,28 +294,20 @@ func ControllerReceivingRequestedFiles(
 
 				fmt.Println("func 'ControllerReceivingRequestedFiles', SEND MSG 'stop receiving files' TO HANDLER (=-BEFORE-=) --->>>>")
 
-				hrp.chanToHandler <- MsgChannelProcessorReceivingFiles{
+				chanToHandler <- MsgChannelProcessorReceivingFiles{
 					MessageType:  1,
 					MsgGenerator: "Core module",
 					Message:      &c,
 				}
 
-				close(hrp.chanToHandler)
-				hrp.chanToHandler = nil
+				lhrf.DelHendlerReceivingFile(si.IP, msg.TaskID)
 
 				fmt.Println("func 'ControllerReceivingRequestedFiles', SEND MSG 'stop receiving files' TO HANDLER (=-AFTER-=) --->>>>")
 
 			//останов выполнения задачи из-за разрыва соединения (запрос из Ядра)
 			case "to stop the task because of a disconnection":
-				if _, ok := lhrf[si.IP]; !ok {
-					_ = saveMessageApp.LogMessage("error", errMsg)
-
-					handlerTaskWarning(msg.TaskID, clientNotify)
-
-					continue
-				}
-				hrp, ok := lhrf[si.IP][msg.TaskID]
-				if !ok {
+				chanToHandler := lhrf.GetHendlerReceivingFile(si.IP, msg.TaskID)
+				if chanToHandler == nil {
 					_ = saveMessageApp.LogMessage("error", errMsg)
 
 					handlerTaskWarning(msg.TaskID, clientNotify)
@@ -340,43 +317,29 @@ func ControllerReceivingRequestedFiles(
 
 				c := []byte("to stop the task because of a disconnection")
 
-				hrp.chanToHandler <- MsgChannelProcessorReceivingFiles{
+				chanToHandler <- MsgChannelProcessorReceivingFiles{
 					MessageType:  1,
 					MsgGenerator: "Core module",
 					Message:      &c,
 				}
 
+				lhrf.DelHendlerReceivingFile(si.IP, msg.TaskID)
+
 			//ответы приходящие от источника в рамках выполнения конкретной задачи
 			case "taken from the source":
 
 				//fmt.Printf("func ' ControllerReceivingRequestedFiles', RESIVED MSG 'taken from the source': '%v'\n", msg)
-
-				if _, ok := lhrf[si.IP]; !ok {
-					_ = saveMessageApp.LogMessage("error", errMsg)
-
-					handlerTaskWarning(msg.TaskID, clientNotify)
-
-					continue
-				}
-				hrp, ok := lhrf[si.IP][msg.TaskID]
-				if !ok {
-					_ = saveMessageApp.LogMessage("error", errMsg)
-
-					handlerTaskWarning(msg.TaskID, clientNotify)
-
-					continue
-				}
-
 				//fmt.Println("func ' ControllerReceivingRequestedFiles', send ---> to handler func 'processorReceivingFiles'")
 
-				if hrp.chanToHandler == nil {
-					fmt.Println("func 'ControllerReceivingRequestedFiles', Command: 'taken from the source', CHANNEL BE CLOSED")
+				chanToHandler := lhrf.GetHendlerReceivingFile(si.IP, msg.TaskID)
+				if chanToHandler == nil {
+					_ = saveMessageApp.LogMessage("error", errMsg)
 
 					continue
 				}
 
 				//ответы приходящие от источника (команды для processorReceivingFiles)
-				hrp.chanToHandler <- MsgChannelProcessorReceivingFiles{
+				chanToHandler <- MsgChannelProcessorReceivingFiles{
 					MessageType:  msg.MsgType,
 					MsgGenerator: "NI module",
 					Message:      msg.Message,

@@ -29,7 +29,7 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	chanCheckTask := smt.CheckTimeUpdateStoringMemoryTask(55)
 
 	//инициализация отслеживания очередности выполнения задач
-	chanMsgInfoQueueTaskStorage := qts.CheckTimeQueueTaskStorage(isl, 4)
+	chanMsgInfoQueueTaskStorage := qts.CheckTimeQueueTaskStorage(isl, 1)
 	/****************************************************************
 
 		4 секунды ожидания перед выполнением задачи это для

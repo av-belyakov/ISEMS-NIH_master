@@ -81,7 +81,10 @@ func NewListFileDescription() *ListFileDescription {
 				crs := channelResSettings{}
 				fd, ok := lfd.list[msg.fileHex]
 				if !ok {
-					crs.err = fmt.Errorf("file descriptor not found")
+
+					fmt.Printf("NewListFileDescription (get) count list = %v\n", len(lfd.list))
+
+					crs.err = fmt.Errorf("file descriptor with ID '%v' not found", msg.fileHex)
 				} else {
 					crs.fd = fd
 				}
@@ -341,6 +344,9 @@ DONE:
 					switch msgRes.Info.Command {
 					//готовность к приему файла (slave -> master)
 					case "ready for the transfer":
+
+						fmt.Println("------ func 'processingDownloadFile' RESEIVING MSG: 'ready for the transfer'")
+
 						//создаем дескриптор файла для последующей записи в него
 						lfd.addFileDescription(msgRes.Info.FileOptions.Hex, path.Join(pathDirStorage, msgRes.Info.FileOptions.Name))
 
@@ -421,7 +427,14 @@ DONE:
 					_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 					fmt.Printf("------ ERROR: %v\n", fmt.Sprint(err))
+					/*
 
+					   !!!! Непонятно !!!
+					   Почему приходит эта ошибка ------ ERROR: file descriptor with ID '5714cb3ecf81013a0ab15160e9d9a17a' not found
+					   Часто возникает после останова и возобновления задачи по скачиванию
+					   файлов
+
+					*/
 					sdf.Status = "error"
 					sdf.ErrMsg = err
 
@@ -514,9 +527,14 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 	//fmt.Printf("func 'writingBinaryFile', AcceptedSizeByte = %v, int64(numWriteByte) = %v, writeByte = %v\n", fi.AcceptedSizeByte, int64(numWriteByte), writeByte)
 	//fmt.Printf("fi.FullSizeByte: %v\n", fi.FullSizeByte)
 
-	writePercent := int(writeByte / (fi.FullSizeByte / 100))
+	wp := writeByte / (fi.FullSizeByte / 100)
+	writePercent := int(wp)
 	numAcceptedChunk := fi.NumAcceptedChunk + 1
 
+	if numAcceptedChunk == 1 || numAcceptedChunk == 2 {
+		fmt.Printf("\t---*** Full file size: '%v', write byte: '%v', sum write byte: '%v', all count chunks: '%v', accepted chunk: '%v' PERCENT: '%v'\n", fi.FullSizeByte, numWriteByte, writeByte, fi.NumChunk, numAcceptedChunk, wp)
+	}
+	//Full file size: '277', write byte: '277', sum write byte: '277', all count chunks: '1', accepted chunk: '1' PERCENT: '138'
 	//обновляем информацию о принимаемом файле
 	pwbf.SMT.UpdateTaskDownloadAllParameters(pwbf.TaskID, configure.DownloadTaskParameters{
 		Status:                              "execute",

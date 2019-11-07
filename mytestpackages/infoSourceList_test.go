@@ -275,17 +275,22 @@ var _ = Describe("Mytestpackages/InfoSourceList", func() {
 		})
 	})
 
-	handlerIP := "59.1.33.45"
-	handlerID := "323"
+	handlerIPOne := "59.1.33.45"
+	handlerIDOne := "323"
 
-	newChannel := make(chan MsgChannelProcessorReceivingFiles, 1)
+	handlerIPTwo := "49.213.4.2"
+	handlerIDTwo := "111"
+
+	newChannelOne := make(chan MsgChannelProcessorReceivingFiles, 1)
+	newChannelTwo := make(chan MsgChannelProcessorReceivingFiles, 1)
 
 	nlhrf := NewListHandlerReceivingFile()
-	nlhrf.SetHendlerReceivingFile(handlerIP, handlerID, newChannel)
+	nlhrf.SetHendlerReceivingFile(handlerIPOne, handlerIDOne, newChannelOne)
+	nlhrf.SetHendlerReceivingFile(handlerIPTwo, handlerIDTwo, newChannelTwo)
 
 	Context("Тест 9. Создание и добавление канала для взаимодействия с репозиторием ", func() {
 		It("Должен быть создан канал и успешно добавлен в репозиторий", func(done Done) {
-			chanComm := nlhrf.GetHendlerReceivingFile(handlerIP, handlerID)
+			chanComm := nlhrf.GetHendlerReceivingFile(handlerIPOne, handlerIDOne)
 
 			go func() {
 				fmt.Printf("resived from channel: %v\n", <-chanComm)
@@ -302,19 +307,29 @@ var _ = Describe("Mytestpackages/InfoSourceList", func() {
 			Expect(chanComm).ShouldNot(BeNil())
 
 			close(done)
-		}, 3)
+		}, 1)
 	})
 
-	Context("Тест 10. Удаление канала взаимодействия из репозитория", func() {
+	Context("Тест 10. Удаление канала взаимодействия из репозитория для источника '"+handlerIDOne+"'", func() {
 		It("После закрытия и удаления канала должно возвращатся nil", func(done Done) {
-			nlhrf.DelHendlerReceivingFile(handlerIP, handlerID)
+			nlhrf.DelHendlerReceivingFile(handlerIPOne, handlerIDOne)
 
-			chanComm := nlhrf.GetHendlerReceivingFile(handlerIP, handlerID)
+			chanComm := nlhrf.GetHendlerReceivingFile(handlerIPOne, handlerIDOne)
 
 			Expect(chanComm).Should(BeNil())
 
 			close(done)
-		}, 4)
+		}, 2)
+	})
+
+	Context("Тест 11. Получить канал для взаимодействия с источником '"+handlerIDTwo+"'", func() {
+		It("Полученный дескриптор канала не должен быть 'nil'", func(done Done) {
+			chanComm := nlhrf.GetHendlerReceivingFile(handlerIPTwo, handlerIDTwo)
+
+			Expect(chanComm).ShouldNot(BeNil())
+
+			close(done)
+		}, 3)
 	})
 
 	/*Context("", func(){

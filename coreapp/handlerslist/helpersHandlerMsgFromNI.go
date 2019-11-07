@@ -181,6 +181,9 @@ func sendInformationFiltrationTask(
 }
 
 func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteType) error {
+
+	fmt.Println("func 'handlerDownloadTaskStatusComplete' --------------------")
+
 	//записываем информацию в БД
 	hdtsct.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 		MsgGenerator: "NI module",
@@ -202,6 +205,8 @@ func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteT
 		MsgJSON:      msgJSONInfo,
 	}
 
+	fmt.Println("func 'handlerDownloadTaskStatusComplete' -------------------- sent JSON to client API")
+
 	//отправляем информационное сообщение клиенту API
 	notifications.SendNotificationToClientAPI(hdtsct.OutCoreChanAPI, hdtsct.NS, hdtsct.ClientTaskID, hdtsct.ClientID)
 
@@ -212,8 +217,12 @@ func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteT
 		return err
 	}
 
+	fmt.Println("func 'handlerDownloadTaskStatusComplete' -------------------- CHANGE 'task status queue task'")
+
 	//устанавливаем статус задачи в StoringMemoryTask как завершенный
 	hdtsct.SMT.CompleteStoringMemoryTask(hdtsct.TaskID)
+
+	fmt.Println("func 'handlerDownloadTaskStatusComplete' -------------------- CHANGE 'storing memory task'")
 
 	return nil
 }
