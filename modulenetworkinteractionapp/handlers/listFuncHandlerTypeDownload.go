@@ -249,7 +249,7 @@ DONE:
 			continue
 		}
 
-		//fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', make ONE request to download file, %v\n", mtd)
+		fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', make ONE request to download file, %v\n", mtd)
 
 		tpdf.channels.cwtRes <- configure.MsgWsTransmission{
 			DestinationHost: tpdf.sourceIP,
@@ -345,7 +345,7 @@ DONE:
 					//готовность к приему файла (slave -> master)
 					case "ready for the transfer":
 
-						fmt.Println("------ func 'processingDownloadFile' RESEIVING MSG: 'ready for the transfer'")
+						fmt.Printf("------ func 'processingDownloadFile' RESEIVING MSG: 'ready for the transfer' MSG:'%v'\n", msgRes)
 
 						//создаем дескриптор файла для последующей записи в него
 						lfd.addFileDescription(msgRes.Info.FileOptions.Hex, path.Join(pathDirStorage, msgRes.Info.FileOptions.Name))
@@ -376,7 +376,7 @@ DONE:
 							break DONE
 						}
 
-						//fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', SEND MSG '%v'\n", msgReq)
+						fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', SECTION:'ready for the transfer' SEND MSG '%v'\n", msgReq)
 
 						tpdf.channels.cwtRes <- configure.MsgWsTransmission{
 							DestinationHost: tpdf.sourceIP,
@@ -404,6 +404,12 @@ DONE:
 					//невозможно остановить передачу файла
 					case "impossible to stop file transfer":
 						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("it is impossible to stop file transfer (source ID: %v, task ID: %v)", tpdf.sourceID, tpdf.taskID))
+
+					default:
+
+						fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', RESEIVED COMMAND ------+++++ %v -----+++\n", msgRes.Info.Command)
+
+						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("received unknown command ('%v')\n", msgRes.Info.Command))
 
 					}
 				} else {
@@ -434,6 +440,7 @@ DONE:
 					   Часто возникает после останова и возобновления задачи по скачиванию
 					   файлов
 
+					   Посмотреть что отправляет slave с ответом 'ready for the transfer'
 					*/
 					sdf.Status = "error"
 					sdf.ErrMsg = err
@@ -506,6 +513,9 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 
 	w, err := pwbf.LFD.getFileDescription(fileHex)
 	if err != nil {
+
+		fmt.Printf("+-+-+-++-+ func 'writingBinaryFile', FILE HEX '%v' NOT FOUND\n", fileHex)
+
 		return false, err
 	}
 

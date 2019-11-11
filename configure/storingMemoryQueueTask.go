@@ -667,6 +667,11 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 		filtrationTask, downloadTask []string
 	}
 
+	et := executionTasks{
+		filtrationTask: make([]string, 0, 5),
+		downloadTask:   make([]string, 0, 1),
+	}
+
 	chanMsgInfoQueueTaskStorage := make(chan MessageInformationQueueTaskStorage)
 
 	ticker := time.NewTicker(time.Duration(sec) * time.Second)
@@ -690,13 +695,7 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 				if !sourceIsExist {
 					continue
 				}
-
 				maxProcessFiltration := int(sourceSettings.Settings.MaxCountProcessFiltration)
-
-				et := executionTasks{
-					filtrationTask: make([]string, 0, maxProcessFiltration),
-					downloadTask:   make([]string, 0, 1),
-				}
 
 				for taskID, taskInfo := range tasks {
 					//если задача помечена как выполненная удаляем ее
@@ -770,9 +769,12 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 						if (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection && taskInfo.CheckingStatusItems.AvailabilityFilesDownload {
 							if err := qts.ChangeTaskStatusQueueTask(sourceID, taskID, "execution"); err == nil {
 								//добавляем в массив выполняющихся задач
-								et.downloadTask = append(et.downloadTask, taskID)
+								listTask := et.downloadTask
+								listTask = append(listTask, taskID)
+								et.downloadTask = listTask
 
-								fmt.Println("function 'CheckTimeQueueTaskStorage' - start download file task")
+								fmt.Printf("______________ function 'CheckTimeQueueTaskStorage', LIST DOWnload task:'%v'\n", et.downloadTask)
+								fmt.Printf("______________ function 'CheckTimeQueueTaskStorage' - start download file task with ID:'%v'\n", taskID)
 
 								//запускаем выполнение задачи
 								chanMsgInfoQueueTaskStorage <- MessageInformationQueueTaskStorage{
