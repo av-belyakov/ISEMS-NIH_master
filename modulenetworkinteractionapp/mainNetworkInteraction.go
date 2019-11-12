@@ -56,7 +56,7 @@ func MainNetworkInteraction(
 
 	//инициализируем каналы для передачи данных между ядром приложения и текущем модулем
 	chanOutCore = make(chan *configure.MsgBetweenCoreAndNI)
-	chanInCore = make(chan *configure.MsgBetweenCoreAndNI, 100)
+	chanInCore = make(chan *configure.MsgBetweenCoreAndNI) //, 100)
 
 	//инициализация каналов управления и состояния источников
 	chansStatSource := map[string]chan [2]string{

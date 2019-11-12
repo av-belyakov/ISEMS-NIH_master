@@ -35,6 +35,7 @@ type listChannels struct {
 	chanInCore  chan<- *configure.MsgBetweenCoreAndNI
 	chanOutCore <-chan MsgChannelProcessorReceivingFiles
 	cwtRes      chan<- configure.MsgWsTransmission
+	chanDone    chan<- struct{}
 }
 
 //ListFileDescription хранит список файловых дескрипторов и канал для доступа к ним
@@ -96,6 +97,8 @@ func NewListFileDescription() *ListFileDescription {
 			case "del":
 				delete(lfd.list, msg.fileHex)
 
+				msg.channelRes <- channelResSettings{}
+
 				close(msg.channelRes)
 			}
 		}
@@ -150,7 +153,7 @@ func processorReceivingFiles(
 	sourceIP, taskID string,
 	smt *configure.StoringMemoryTask,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
-	cwtRes chan<- configure.MsgWsTransmission) (chan MsgChannelProcessorReceivingFiles, error) {
+	cwtRes chan<- configure.MsgWsTransmission) (chan MsgChannelProcessorReceivingFiles, chan struct{}, error) {
 
 	/*
 	   Алгоритм передачи и приема файлов
@@ -170,10 +173,11 @@ func processorReceivingFiles(
 
 		fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', task with ID %v not found\n", taskID)
 
-		return nil, fmt.Errorf("task with ID %v not found", taskID)
+		return nil, nil, fmt.Errorf("task with ID %v not found", taskID)
 	}
 
 	chanOut := make(chan MsgChannelProcessorReceivingFiles)
+	chanDone := make(chan struct{})
 
 	//fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', '%v'\n", ti)
 
@@ -194,7 +198,7 @@ func processorReceivingFiles(
 
 	//проверяем наличие файлов для скачивания
 	if len(ti.TaskParameter.DownloadTask.DownloadingFilesInformation) == 0 {
-		return chanOut, fmt.Errorf("the list of files suitable for downloading from the source is empty")
+		return chanOut, chanDone, fmt.Errorf("the list of files suitable for downloading from the source is empty")
 	}
 
 	go processingDownloadFile(typeProcessingDownloadFile{
@@ -208,10 +212,11 @@ func processorReceivingFiles(
 			chanInCore:  chanInCore,
 			chanOutCore: chanOut,
 			cwtRes:      cwtRes,
+			chanDone:    chanDone,
 		},
 	})
 
-	return chanOut, nil
+	return chanOut, chanDone, nil
 }
 
 func processingDownloadFile(tpdf typeProcessingDownloadFile) {
@@ -445,7 +450,7 @@ DONE:
 					sdf.Status = "error"
 					sdf.ErrMsg = err
 
-					break NEWFILE
+					break DONE
 				}
 
 				//если файл полностью загружен запрашиваем следующий файл
@@ -504,6 +509,7 @@ DONE:
 	fmt.Printf("DOWNLOAD: func 'processorReceivingFiles', TASK COMPLITE MSG:%v\n", msgToCore)
 
 	tpdf.channels.chanInCore <- &msgToCore
+	tpdf.channels.chanDone <- struct{}{}
 }
 
 //writingBinaryFile осуществляет запись бинарного файла
@@ -515,6 +521,7 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 	if err != nil {
 
 		fmt.Printf("+-+-+-++-+ func 'writingBinaryFile', FILE HEX '%v' NOT FOUND\n", fileHex)
+		fmt.Printf("__________ Hex string: '%v' ____________\n", string((*pwbf.Data)[:100]))
 
 		return false, err
 	}
