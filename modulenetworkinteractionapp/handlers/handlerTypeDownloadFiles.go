@@ -24,12 +24,17 @@ type TypeHandlerReceivingFile struct {
 }
 
 type typeChannelCommunication struct {
-	handlerIP            string
-	handlerID            string
-	actionType           string
-	channel              chan handlerRecivingParameters
+	handlerIP              string
+	handlerID              string
+	actionType             string
+	msgForChunnelProcessor MsgChannelProcessorReceivingFiles
+	channelErrMsg          chan error
+	//	channel                chan typeChannelError
 	channelCommunication chan MsgChannelProcessorReceivingFiles
 }
+
+//typeChannelError передает ошибку
+type typeChannelError error
 
 //listHandlerReceivingFile список задач по скачиванию файлов
 // ключ - IP источника
@@ -42,7 +47,6 @@ type listTaskReceivingFile map[string]handlerRecivingParameters
 //handlerRecivingParameters описание параметров
 type handlerRecivingParameters struct {
 	chanToHandler chan MsgChannelProcessorReceivingFiles
-	err           error
 }
 
 //NewListHandlerReceivingFile создание нового репозитория для хранения каналов взаимодействия с обработчиками записи файлов
@@ -63,16 +67,14 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 					chanToHandler: msg.channelCommunication,
 				}
 
-				msg.channel <- handlerRecivingParameters{}
+				msg.channelErrMsg <- nil
 
-			case "get":
+			case "send data":
 				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
 
 					fmt.Println("_=-+_+=-+_+ func 'NewListHandlerReceivingFile', client IP NOT found")
 
-					msg.channel <- handlerRecivingParameters{
-						err: fmt.Errorf("client IP not found"),
-					}
+					msg.channelErrMsg <- fmt.Errorf("client IP not found")
 
 					break
 				}
@@ -81,32 +83,26 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 
 					fmt.Println("_=-+_+=-+_+ func 'NewListHandlerReceivingFile', task ID NOT found")
 
-					msg.channel <- handlerRecivingParameters{
-						err: fmt.Errorf("task ID not found"),
-					}
+					msg.channelErrMsg <- fmt.Errorf("task ID not found")
 
 					break
 				}
 
-				msg.channel <- handlerRecivingParameters{
-					chanToHandler: hrp.chanToHandler,
-				}
+				hrp.chanToHandler <- msg.msgForChunnelProcessor
 
-				//fmt.Println("_=-+_+=-+_+ func 'NewListHandlerReceivingFile', CHANNEL TASK ID FOUND")
+				msg.channelErrMsg <- nil
+
+			//fmt.Println("_=-+_+=-+_+ func 'NewListHandlerReceivingFile', CHANNEL TASK ID FOUND")
 
 			case "del":
 				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
-					msg.channel <- handlerRecivingParameters{
-						err: fmt.Errorf("client IP not found"),
-					}
+					msg.channelErrMsg <- fmt.Errorf("client IP not found")
 
 					break
 				}
 				/*hrp*/ _, ok := thrf.ListHandler[msg.handlerIP][msg.handlerID]
 				if !ok {
-					msg.channel <- handlerRecivingParameters{
-						err: fmt.Errorf("task ID not found"),
-					}
+					msg.channelErrMsg <- fmt.Errorf("task ID not found")
 
 					break
 				}
@@ -118,7 +114,7 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 
 				fmt.Println("_=-+_+=-+_+ func 'NewListHandlerReceivingFile', DELETE CHANNEL ----")
 
-				msg.channel <- handlerRecivingParameters{}
+				msg.channelErrMsg <- nil
 			}
 		}
 	}()
@@ -127,50 +123,49 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 }
 
 //SetHendlerReceivingFile добавляет новый канал взаимодействия
-func (thrf *TypeHandlerReceivingFile) SetHendlerReceivingFile(ip, id string, channel chan MsgChannelProcessorReceivingFiles) {
-	chanRes := make(chan handlerRecivingParameters)
+func (thrf *TypeHandlerReceivingFile) SetHendlerReceivingFile(ip, id string, channel chan MsgChannelProcessorReceivingFiles) error {
+	//	chanRes := make(chan handlerRecivingParameters)
+	chanResErr := make(chan error)
 
 	thrf.ChannelCommunicationReq <- typeChannelCommunication{
 		actionType:           "set",
 		handlerIP:            ip,
 		handlerID:            id,
-		channel:              chanRes,
+		channelErrMsg:        chanResErr,
 		channelCommunication: channel,
 	}
 
-	<-chanRes
-
-	return
+	return <-chanResErr
 }
 
-//GetHendlerReceivingFile возврашает канал для доступа к обработчику файлов
-func (thrf *TypeHandlerReceivingFile) GetHendlerReceivingFile(ip, id string) (chan MsgChannelProcessorReceivingFiles, error) {
-	chanRes := make(chan handlerRecivingParameters)
+//SendChunkReceivingData отправляет через канал яасти принятого файла или информации
+func (thrf *TypeHandlerReceivingFile) SendChunkReceivingData(ip, id string, msgSend MsgChannelProcessorReceivingFiles) error {
+	chanResErr := make(chan error)
 
 	thrf.ChannelCommunicationReq <- typeChannelCommunication{
-		actionType: "get",
-		handlerIP:  ip,
-		handlerID:  id,
-		channel:    chanRes,
+		actionType:             "send data",
+		handlerIP:              ip,
+		handlerID:              id,
+		msgForChunnelProcessor: msgSend,
+		channelErrMsg:          chanResErr,
 	}
 
-	mess := <-chanRes
-
-	return mess.chanToHandler, mess.err
+	return <-chanResErr
 }
 
 //DelHendlerReceivingFile закрывает и удаляет канал
 func (thrf *TypeHandlerReceivingFile) DelHendlerReceivingFile(ip, id string) error {
-	chanRes := make(chan handlerRecivingParameters)
+	//	chanRes := make(chan handlerRecivingParameters)
+	chanResErr := make(chan error)
 
 	thrf.ChannelCommunicationReq <- typeChannelCommunication{
-		actionType: "del",
-		handlerIP:  ip,
-		handlerID:  id,
-		channel:    chanRes,
+		actionType:    "del",
+		handlerIP:     ip,
+		handlerID:     id,
+		channelErrMsg: chanResErr,
 	}
 
-	return (<-chanRes).err
+	return <-chanResErr
 }
 
 type messageFromCore string
@@ -272,7 +267,7 @@ func ControllerReceivingRequestedFiles(
 			ao.HumanDescriptionNotification = fmt.Sprintf("Источник с ID %v не найден", msg.SourceID)
 			clientNotify.AdvancedOptions = ao
 
-			errMsg := fmt.Sprintf("Source with ID %v not found", msg.SourceID)
+			//errMsg := fmt.Sprintf("Source with ID %v not found", msg.SourceID)
 
 			//fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' 222222222")
 
@@ -303,6 +298,8 @@ func ControllerReceivingRequestedFiles(
 
 					fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' принято сообщение от обработчика о его останове")
 
+					//удаляем канал для взаимодействия с обработчиком так как
+					// обработчик к этому времени завершил свою работу
 					if err := lhrf.DelHendlerReceivingFile(si.IP, msg.TaskID); err != nil {
 						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 					}
@@ -312,48 +309,35 @@ func ControllerReceivingRequestedFiles(
 			case "stop receiving files":
 
 				fmt.Println("func 'ControllerReceivingRequestedFiles', COMMAND: 'stop receiving files'")
-
-				chanToHandler, err := lhrf.GetHendlerReceivingFile(si.IP, msg.TaskID)
-				if err != nil {
-					_ = saveMessageApp.LogMessage("error", errMsg)
-
-					break
-				}
-
-				c := []byte("stop receiving files")
-
 				fmt.Println("func 'ControllerReceivingRequestedFiles', SEND MSG 'stop receiving files' TO HANDLER (=-BEFORE-=) --->>>>")
 
-				chanToHandler <- MsgChannelProcessorReceivingFiles{
-					MessageType:  1,
-					MsgGenerator: "Core module",
-					Message:      &c,
+				c := []byte("stop receiving files")
+				if err := lhrf.SendChunkReceivingData(
+					si.IP,
+					msg.TaskID,
+					MsgChannelProcessorReceivingFiles{
+						MessageType:  1,
+						MsgGenerator: "Core module",
+						Message:      &c,
+					}); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 				}
-
-				//lhrf.DelHendlerReceivingFile(si.IP, msg.TaskID)
 
 				fmt.Println("func 'ControllerReceivingRequestedFiles', SEND MSG 'stop receiving files' TO HANDLER (=-AFTER-=) --->>>>")
 
 			//останов выполнения задачи из-за разрыва соединения (запрос из Ядра)
 			case "to stop the task because of a disconnection":
-				chanToHandler, err := lhrf.GetHendlerReceivingFile(si.IP, msg.TaskID)
-				if err != nil {
-					_ = saveMessageApp.LogMessage("error", errMsg)
-
-					handlerTaskWarning(msg.TaskID, clientNotify)
-
-					break
-				}
-
 				c := []byte("to stop the task because of a disconnection")
-
-				chanToHandler <- MsgChannelProcessorReceivingFiles{
-					MessageType:  1,
-					MsgGenerator: "Core module",
-					Message:      &c,
+				if err := lhrf.SendChunkReceivingData(
+					si.IP,
+					msg.TaskID,
+					MsgChannelProcessorReceivingFiles{
+						MessageType:  1,
+						MsgGenerator: "Core module",
+						Message:      &c,
+					}); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 				}
-
-				//lhrf.DelHendlerReceivingFile(si.IP, msg.TaskID)
 
 			//ответы приходящие от источника в рамках выполнения конкретной задачи
 			case "taken from the source":
@@ -361,7 +345,21 @@ func ControllerReceivingRequestedFiles(
 				//fmt.Printf("func ' ControllerReceivingRequestedFiles', RESIVED MSG 'taken from the source': '%v'\n", msg)
 				//fmt.Println("func ' ControllerReceivingRequestedFiles', send ---> to handler func 'processorReceivingFiles'")
 
-				chanToHandler, err := lhrf.GetHendlerReceivingFile(si.IP, msg.TaskID)
+				if err := lhrf.SendChunkReceivingData(
+					si.IP,
+					msg.TaskID,
+					MsgChannelProcessorReceivingFiles{
+						MessageType:  msg.MsgType,
+						MsgGenerator: "NI module",
+						Message:      msg.Message,
+					}); err != nil {
+
+					fmt.Printf("func 'handlerTypeDownloadFiles', SECTION:'taken from the source' ERROR: '%v'\n", err)
+
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				}
+
+				/*chanToHandler, err := lhrf.GetHendlerReceivingFile(si.IP, msg.TaskID)
 				if err != nil {
 
 					fmt.Printf("============= func 'handlerTypeDownloadFiles', MSG 'taken from the source' ERROR: chan eqval 'nil' (%v)\n", string(*msg.Message)[:100])
@@ -376,7 +374,7 @@ func ControllerReceivingRequestedFiles(
 					MessageType:  msg.MsgType,
 					MsgGenerator: "NI module",
 					Message:      msg.Message,
-				}
+				}*/
 
 			}
 		}

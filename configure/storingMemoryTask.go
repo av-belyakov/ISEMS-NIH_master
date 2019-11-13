@@ -52,7 +52,8 @@ type DescriptionTaskParameters struct {
 
 //DownloadTaskParameters параметры задачи по скачиванию файлов
 // ID - уникальный цифровой идентификатор источника
-// Status - статус задачи 'wait'/'refused'/'execute'/'complete'/'stop' ('ожидает' / 'отклонена' / 'выполняется' / 'завершена' / 'остановлена')
+// Status - статус задачи 'wait'/'refused'/'execute'/'complete'/'"task will stop running"'/'stop'
+// ('ожидает' / 'отклонена' / 'выполняется' / 'завершена' / 'находится в стадии останова' / 'остановлена')
 // NumberFilesTotal - всего файлов предназначенных для скачивания
 // NumberFilesDownloaded - кол-во загруженных файлов
 // NumberFilesDownloadedError - кол-во загруженных с ошибкой файлов

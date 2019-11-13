@@ -284,6 +284,25 @@ DONE:
 
 					//остановить скачивание файлов
 					if command == "stop receiving files" {
+
+						//обновляем информацию о задаче (что она находится в стадии останова)
+						ti, ok := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
+						if !ok {
+							_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("task with ID %v not found", tpdf.taskID))
+
+							sdf.Status = "error"
+							sdf.ErrMsg = err
+
+							break DONE
+						}
+						tpdf.smt.UpdateTaskDownloadAllParameters(tpdf.taskID, configure.DownloadTaskParameters{
+							Status:                              "task will stop running",
+							NumberFilesTotal:                    ti.TaskParameter.DownloadTask.NumberFilesTotal,
+							NumberFilesDownloaded:               ti.TaskParameter.DownloadTask.NumberFilesDownloaded,
+							PathDirectoryStorageDownloadedFiles: ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles,
+							FileInformation:                     ti.TaskParameter.DownloadTask.FileInformation,
+						})
+
 						msgReq.Info.Command = "stop receiving files"
 
 						msgJSON, err := json.Marshal(msgReq)
@@ -295,19 +314,19 @@ DONE:
 
 						fmt.Printf("func 'listFuncHandlerTypeDownload', SEND ---> SLAVE MSG:%v\n", msgReq)
 
-						//отправляем команду останов на slave
+						//отправляем команду останов на slave и ждем подтверждения останова
 						tpdf.channels.cwtRes <- configure.MsgWsTransmission{
 							DestinationHost: tpdf.sourceIP,
 							Data:            &msgJSON,
 						}
 
 						//закрываем дескриптор файла и удаляем файл
-						lfd.delFileDescription(fi.Hex)
+						/*lfd.delFileDescription(fi.Hex)
 						_ = os.Remove(path.Join(pathDirStorage, fn))
 
 						sdf.Status = "task stoped client"
 
-						break DONE
+						break DONE*/
 					}
 
 					//разрыв соединения (остановить загрузку файлов)
@@ -351,6 +370,11 @@ DONE:
 					case "ready for the transfer":
 
 						fmt.Printf("------ func 'processingDownloadFile' RESEIVING MSG: 'ready for the transfer' MSG:'%v'\n", msgRes)
+
+						//если задача находится в стадии останова игнорировать ответ slave
+						if ti.TaskParameter.DownloadTask.Status == "task will stop running" {
+							break
+						}
 
 						//создаем дескриптор файла для последующей записи в него
 						lfd.addFileDescription(msgRes.Info.FileOptions.Hex, path.Join(pathDirStorage, msgRes.Info.FileOptions.Name))
@@ -406,7 +430,20 @@ DONE:
 
 						break NEWFILE
 
-					//невозможно остановить передачу файла
+						//сообщение об успешном останове передачи файла (slave -> master)
+					case "file transfer stopped successfully":
+
+						fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', SECTION:'file transfer stopped successfully' SEND MSG '%v'\n", msgReq)
+
+						//закрываем дескриптор файла и удаляем файл
+						lfd.delFileDescription(fi.Hex)
+						_ = os.Remove(path.Join(pathDirStorage, fn))
+
+						sdf.Status = "task stoped client"
+
+						break DONE
+
+					//невозможно остановить передачу файла (slave -> master)
 					case "impossible to stop file transfer":
 						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("it is impossible to stop file transfer (source ID: %v, task ID: %v)", tpdf.sourceID, tpdf.taskID))
 
@@ -453,8 +490,20 @@ DONE:
 					break DONE
 				}
 
-				//если файл полностью загружен запрашиваем следующий файл
-				if fileIsLoaded {
+				//обновляем информацию о задаче (что она находится в стадии останова)
+				ti, ok := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
+				if !ok {
+					_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("task with ID %v not found", tpdf.taskID))
+
+					sdf.Status = "error"
+					sdf.ErrMsg = err
+
+					break DONE
+				}
+
+				//если файл полностью загружен и задача не находится в
+				// стадии выполнения запрашиваем следующий файл
+				if fileIsLoaded && (ti.TaskParameter.DownloadTask.Status != "task will stop running") {
 
 					//fmt.Println("\t File success uploaded, REQUEST NEW FILE UPLOAD")
 
