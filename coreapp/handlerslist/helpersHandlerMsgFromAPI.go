@@ -242,7 +242,7 @@ func handlerFiltrationControlTypeStart(
 	//получаем новый идентификатор задачи
 	taskID := common.GetUniqIDFormatMD5(clientID)
 
-	fmt.Println("function 'handlerFiltrationControlTypeStart' - add task QueueTaskStorage")
+	fmt.Printf("function 'handlerFiltrationControlTypeStart' - add task QueueTaskStorage with ID:'%v'\n", taskID)
 
 	//добавляем новую задачу в очередь задач
 	hsm.QTS.AddQueueTaskStorage(taskID, fcts.MsgOption.ID, configure.CommonTaskInfo{

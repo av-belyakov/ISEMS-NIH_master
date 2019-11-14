@@ -10,6 +10,7 @@ import (
 	"errors"
 	"io"
 	"math"
+	"math/rand"
 	"os"
 	"regexp"
 	"strconv"
@@ -40,9 +41,12 @@ func CheckFileName(fileName, patternName string) error {
 
 //GetUniqIDFormatMD5 генерирует уникальный идентификатор в формате md5
 func GetUniqIDFormatMD5(str string) string {
+	rand.Seed(82)
+	salt := string(rand.Intn(10000))
+
 	currentTime := time.Now().Unix()
 	h := md5.New()
-	io.WriteString(h, str+"_"+strconv.FormatInt(currentTime, 10))
+	io.WriteString(h, str+"_"+strconv.FormatInt(currentTime, 10)+"_"+salt)
 
 	hsum := hex.EncodeToString(h.Sum(nil))
 

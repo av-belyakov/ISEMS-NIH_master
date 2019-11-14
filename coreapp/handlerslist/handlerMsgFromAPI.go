@@ -250,7 +250,7 @@ func HandlerMsgFromAPI(
 				//ищем источник по указанному идентификатору
 				sourceInfo, ok := hsm.ISL.GetSourceSetting(dcts.MsgOption.ID)
 				if !ok {
-					emt.MsgHuman = fmt.Sprintf("Ошибка, источника с ID %v не существует", dcts.MsgOption.ID)
+					emt.MsgHuman = fmt.Sprintf("Ошибка, источника %v не существует", dcts.MsgOption.ID)
 					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v was not found%v", dcts.MsgOption.ID, funcName))
 
 					//сообщение о том что задача была отклонена
@@ -263,7 +263,7 @@ func HandlerMsgFromAPI(
 
 				//проверяем подключение источника
 				if !sourceInfo.ConnectionStatus {
-					emt.MsgHuman = fmt.Sprintf("Ошибка, источник с ID %v не подключен", dcts.MsgOption.ID)
+					emt.MsgHuman = fmt.Sprintf("Ошибка, источник %v не подключен", dcts.MsgOption.ID)
 					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v is not connected%v", dcts.MsgOption.ID, funcName))
 
 					//сообщение о том что задача была отклонена
@@ -288,7 +288,7 @@ func HandlerMsgFromAPI(
 								emt.MsgHuman = "Задача отклонена. Нельзя добавлять задачу с одним и тем же идентификатором множество раз в течении небольшого периода времени"
 							} else {
 								errMsg = fmt.Sprintf("You cannot add a task with ID '%v' to a source with ID %v because it is already running", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
-								emt.MsgHuman = fmt.Sprintf("Невозможно добавить задачу с ID '%v', для источника с ID %v, так как она уже выполняется", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
+								emt.MsgHuman = fmt.Sprintf("Невозможно добавить задачу с ID '%v', для источника %v, так как она уже выполняется", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
 							}
 						}
 					} else if ti.TaskStatus == "wait" {
@@ -322,7 +322,7 @@ func HandlerMsgFromAPI(
 
 				//устанавливаем проверочный статус источника для данной задачи как подключен
 				if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp); err != nil {
-					emt.MsgHuman = fmt.Sprintf("Ошибка, запись для источника с ID %v отсутствует в памяти приложения", dcts.MsgOption.ID)
+					emt.MsgHuman = fmt.Sprintf("Ошибка, запись для источника %v отсутствует в памяти приложения", dcts.MsgOption.ID)
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 					//сообщение о том что задача была отклонена
@@ -349,7 +349,7 @@ func HandlerMsgFromAPI(
 					outCoreChans.OutCoreChanAPI,
 					notifications.NotificationSettingsToClientAPI{
 						MsgType:        "success",
-						MsgDescription: fmt.Sprintf("Задача по скачиванию файлов с источника ID %v, добавлена в очередь", dcts.MsgOption.ID),
+						MsgDescription: fmt.Sprintf("Задача по скачиванию файлов с источника %v, добавлена в очередь", dcts.MsgOption.ID),
 						Sources:        []int{dcts.MsgOption.ID},
 					},
 					msgc.ClientTaskID,
@@ -369,7 +369,7 @@ func HandlerMsgFromAPI(
 				emt.TaskID = dcts.MsgOption.TaskIDApp
 				emt.TaskIDClientAPI = dcts.ClientTaskID
 				emt.Sources = []int{dcts.MsgOption.ID}
-				emt.MsgHuman = fmt.Sprintf("Невозможен останов задачи по скачиванию файлов с источника ID %v, не найдена задача с заданным идентификатором", dcts.MsgOption.ID)
+				emt.MsgHuman = fmt.Sprintf("Невозможен останов задачи по скачиванию файлов с источника %v, не найдена задача с заданным идентификатором", dcts.MsgOption.ID)
 
 				//ищем задачу в очереди задач и в выполняемых задачах
 				if _, err := hsm.QTS.GetQueueTaskStorage(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp); err != nil {
@@ -422,7 +422,7 @@ func HandlerMsgFromAPI(
 						outCoreChans.OutCoreChanAPI,
 						notifications.NotificationSettingsToClientAPI{
 							MsgType:        "success",
-							MsgDescription: fmt.Sprintf("Задача по скачиванию файлов с источника ID %v, удалена из очереди ожидающих задач", dcts.MsgOption.ID),
+							MsgDescription: fmt.Sprintf("Задача по скачиванию файлов с источника %v, удалена из очереди ожидающих задач", dcts.MsgOption.ID),
 							Sources:        []int{dcts.MsgOption.ID},
 						},
 						dcts.ClientTaskID,

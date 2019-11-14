@@ -285,23 +285,12 @@ DONE:
 					//остановить скачивание файлов
 					if command == "stop receiving files" {
 
-						//обновляем информацию о задаче (что она находится в стадии останова)
-						ti, ok := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
-						if !ok {
-							_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("task with ID %v not found", tpdf.taskID))
+						//отмечаем задачу как находящуюся в процессе останова
+						tpdf.smt.IsSlowDownStoringMemoryTask(tpdf.taskID)
 
-							sdf.Status = "error"
-							sdf.ErrMsg = err
+						taskDesc, _ := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
 
-							break DONE
-						}
-						tpdf.smt.UpdateTaskDownloadAllParameters(tpdf.taskID, configure.DownloadTaskParameters{
-							Status:                              "task will stop running",
-							NumberFilesTotal:                    ti.TaskParameter.DownloadTask.NumberFilesTotal,
-							NumberFilesDownloaded:               ti.TaskParameter.DownloadTask.NumberFilesDownloaded,
-							PathDirectoryStorageDownloadedFiles: ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles,
-							FileInformation:                     ti.TaskParameter.DownloadTask.FileInformation,
-						})
+						fmt.Printf("func 'listFuncHandlerTypeDownload', SECTION 'stop receiving files' IsSlowDown ---> New IsSlowDown '%v'\n", taskDesc.IsSlowDown)
 
 						msgReq.Info.Command = "stop receiving files"
 
@@ -366,13 +355,13 @@ DONE:
 					//fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', TASK INFO '%v'\n", ti)
 
 					switch msgRes.Info.Command {
-					//готовность к приему файла (slave -> master)
+					//готовность к передаче файла (slave -> master)
 					case "ready for the transfer":
 
 						fmt.Printf("------ func 'processingDownloadFile' RESEIVING MSG: 'ready for the transfer' MSG:'%v'\n", msgRes)
 
 						//если задача находится в стадии останова игнорировать ответ slave
-						if ti.TaskParameter.DownloadTask.Status == "task will stop running" {
+						if ti.IsSlowDown {
 							break
 						}
 
@@ -503,9 +492,9 @@ DONE:
 
 				//если файл полностью загружен и задача не находится в
 				// стадии выполнения запрашиваем следующий файл
-				if fileIsLoaded && (ti.TaskParameter.DownloadTask.Status != "task will stop running") {
+				if fileIsLoaded && !ti.IsSlowDown {
 
-					//fmt.Println("\t File success uploaded, REQUEST NEW FILE UPLOAD")
+					fmt.Printf("\t\tDOWNLOAD: func 'processorReceivingFiles', File success uploaded, REQUEST NEW FILE UPLOAD, TASK STATUS:'%v'\n", ti.TaskParameter.DownloadTask.Status)
 
 					//отправляем сообщение источнику подтверждающее успешный прием файла
 					msgJSON, err := json.Marshal(configure.MsgTypeDownload{

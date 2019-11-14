@@ -2,6 +2,7 @@ package mytestpackages
 
 import (
 	"fmt"
+	"math/rand"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -332,9 +333,55 @@ var _ = Describe("Mytestpackages/InfoSourceList", func() {
 		}, 3)
 	})
 
-	/*Context("", func(){
-		It("", func(){
+	Context("Тест 12. Проверяем удаление элементов среза", func() {
+		It("Должен быть удален один элемент из середины среза", func() {
+			list := make([]string, 0, 5)
+			/*
+				for i := 0; i < 5; i++ {
+					list = append(list, fmt.Sprintf("task_id_0%v", i))
+				}
 
+				fmt.Printf("NEW LIST:'%v' BEFORE\n", list)
+				Expect(len(list)).Should(Equal(5))
+
+				for k, v := range list {
+					if v == "task_id_02" {
+						list = append(list[:k], list[k+1:]...)
+
+						fmt.Printf("List 1 = %v, List 2 = %v\n", list[:k], list[k+1:])
+					}
+				}
+
+				fmt.Printf("NEW LIST:'%v' AFTER\n", list)
+				Expect(len(list)).Should(Equal(4))
+			*/
+			for i := 0; i < 2; i++ {
+				list = append(list, fmt.Sprint("task_id_0"))
+			}
+
+			fmt.Printf("NEW LIST:'%v' BEFORE\n", list)
+			Expect(len(list)).Should(Equal(2))
+
+			for k, v := range list {
+
+				fmt.Printf("key = %v, value = %v\n", k, v)
+
+				if v == "task_id_0" {
+					list = append(list[:k], list[k+1:]...)
+
+					fmt.Printf("List 1 = %v, List 2 = %v\n", list[:k], list[k+1:])
+
+					break
+				}
+			}
+
+			rand.Seed(82)
+			for i := 0; i < 10; i++ {
+				fmt.Printf("____ Random: '%v'\n", rand.Intn(10000))
+			}
+
+			fmt.Printf("NEW LIST:'%v' AFTER\n", list)
+			Expect(len(list)).Should(Equal(1))
 		})
 	})
 

@@ -153,7 +153,7 @@ func checkParametersDownloadTask(
 
 	//наличие в БД задачи по заданному пользователем ID
 	if len(*taskInfoFromDB) == 0 {
-		emt.MsgHuman = "Не найдено задачи по указанному пользователем ID, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+		emt.MsgHuman = fmt.Sprintf("Получен не верный ID задачи, отмена выгрузки файлов (источник %v)", sourceID)
 		if err := ErrorMessage(emt); err != nil {
 			return err
 		}
@@ -204,7 +204,7 @@ func checkParametersDownloadTask(
 
 	//найденны ли какие либо файлы в результате фильтрации
 	if tidb.DetailedInformationOnFiltering.NumberFilesFoundResultFiltering == 0 {
-		emt.MsgHuman = "В результате выполненной ранее фильтрации не было найдено ни одного файла, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+		emt.MsgHuman = "В результате выполненной ранее фильтрации не было найдено ни одного файла, дальнейшее выполнение задачи по скачиванию файлов не возможна"
 		if err := ErrorMessage(emt); err != nil {
 			return err
 		}
@@ -238,9 +238,9 @@ func checkParametersDownloadTask(
 		}
 
 	} else {
-		confirmedListFiles, err := checkFileNameMatches(tidb.ListFilesResultTaskExecution, tisqt.TaskParameters.DownloadList)
+		clf, err := checkFileNameMatches(tidb.ListFilesResultTaskExecution, tisqt.TaskParameters.DownloadList)
 		if err != nil {
-			emt.MsgHuman = "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+			emt.MsgHuman = fmt.Sprintf("Внутренняя ошибка, дальнейшее выполнение задачи по скачиванию файлов с источника ID %v, не возможна", sourceID)
 			if err := ErrorMessage(emt); err != nil {
 				return err
 			}
@@ -255,8 +255,9 @@ func checkParametersDownloadTask(
 			return err
 		}
 
+		confirmedListFiles = clf
 		if len(confirmedListFiles) == 0 {
-			emt.MsgHuman = "Не найдено ни одного совпадения в базе данных для файлов полученных от пользователя"
+			emt.MsgHuman = fmt.Sprintf("Не найдено ни одного совпадения для скачиваемых с источника ID %v файлов. Возможно файлы были скачены ранее или отсутствуют на источнике", sourceID)
 			if err := ErrorMessage(emt); err != nil {
 				return err
 			}
@@ -279,7 +280,7 @@ func checkParametersDownloadTask(
 				chanToAPI,
 				notifications.NotificationSettingsToClientAPI{
 					MsgType:        "warning",
-					MsgDescription: fmt.Sprintf("Не все файлы выбранные для скачивания прошли верификацию. %v из %v файлов передаваться не будут так как отсутствуют на сервере или были переданы ранее", numFilesInvalid, numUserDownloadList),
+					MsgDescription: fmt.Sprintf("Не все файлы выбранные для скачивания прошли верификацию. %v из %v файлов передаваться не будут, так как отсутствуют на сервере или были переданы ранее", numFilesInvalid, numUserDownloadList),
 				},
 				res.TaskIDClientAPI,
 				res.IDClientAPI)

@@ -698,24 +698,34 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 				maxProcessFiltration := int(sourceSettings.Settings.MaxCountProcessFiltration)
 
 				for taskID, taskInfo := range tasks {
+
+					fmt.Printf("___ ===== *** function 'CheckTimeQueueTaskStorage' LIST TASKS:[taskID:'%v', task type:'%v']\n", taskID, taskInfo.TaskType)
+
 					//если задача помечена как выполненная удаляем ее
 					if taskInfo.TaskStatus == "complete" /*&& (time.Now().Unix() > (taskInfo.TimeUpdate + 30))*/ {
 						_ = qts.delQueueTaskStorage(sourceID, taskID)
 
 						fmt.Printf("*** function 'CheckTimeQueueTaskStorage' - task status is 'COMPLETE', delete task ID %v\n", taskID)
+						fmt.Printf("*** function 'CheckTimeQueueTaskStorage' - Task Type: '%v', List Download: '%v', List Filtration: '%v'\n", taskInfo.TaskType, et.downloadTask, et.filtrationTask)
 
 						//удаляем задачу из списка отслеживания кол-ва выполняемых задач
 						if taskInfo.TaskType == "download control" {
 							et.downloadTask = []string{}
-						} else {
-							for key, tID := range et.filtrationTask {
-								if tID == taskID {
-									et.filtrationTask = append(et.filtrationTask[:key], et.filtrationTask[key:]...)
+						}
 
-									fmt.Printf("function 'CheckTimeQueueTaskStorage' - AFTER DELETE TASK list filtartion task = %v\n", et.filtrationTask)
-								}
+						for key, tID := range et.filtrationTask {
+
+							fmt.Printf("*** function 'CheckTimeQueueTaskStorage', Equal tID(%v) = taskID(%v)\n", tID, taskID)
+
+							if tID == taskID {
+								et.filtrationTask = append(et.filtrationTask[:key], et.filtrationTask[key+1:]...)
+
+								fmt.Printf("___ === +++ function 'CheckTimeQueueTaskStorage' - AFTER DELETE TASK list filtartion task = %v\n", et.filtrationTask)
+
+								break
 							}
 						}
+
 					}
 
 					//удаляем задачу находящуюся в очереди более суток

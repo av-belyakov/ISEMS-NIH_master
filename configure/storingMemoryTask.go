@@ -17,6 +17,7 @@ type StoringMemoryTask struct {
 // ClientTaskID - идентификатор задачи полученный от клиента
 // TaskType - тип выполняемой задачи ("filtration control", "download control")
 // TaskStatus - статус задачи, false выполняется, true завершена
+// IsSlowDown - останавливается ли задача
 // ModuleThatSetTask - модуль от которого поступила задача
 // ModuleResponsibleImplementation - модуль который должен выполнить обработку
 // TimeUpdate - время последнего обновления в формате Unix
@@ -30,6 +31,7 @@ type TaskDescription struct {
 	ClientTaskID                    string
 	TaskType                        string
 	TaskStatus                      bool
+	IsSlowDown                      bool
 	ModuleThatSetTask               string
 	ModuleResponsibleImplementation string
 	TimeUpdate                      int64
@@ -52,8 +54,8 @@ type DescriptionTaskParameters struct {
 
 //DownloadTaskParameters параметры задачи по скачиванию файлов
 // ID - уникальный цифровой идентификатор источника
-// Status - статус задачи 'wait'/'refused'/'execute'/'complete'/'"task will stop running"'/'stop'
-// ('ожидает' / 'отклонена' / 'выполняется' / 'завершена' / 'находится в стадии останова' / 'остановлена')
+// Status - статус задачи 'wait'/'refused'/'execute'/'complete'/'stop'
+// ('ожидает' / 'отклонена' / 'выполняется' / 'завершена' / 'остановлена')
 // NumberFilesTotal - всего файлов предназначенных для скачивания
 // NumberFilesDownloaded - кол-во загруженных файлов
 // NumberFilesDownloadedError - кол-во загруженных с ошибкой файлов
@@ -224,6 +226,17 @@ func NewRepositorySMT() *StoringMemoryTask {
 
 				close(msg.ChannelRes)
 
+			case "is slow down":
+				if _, ok := smt.tasks[msg.TaskID]; ok {
+					smt.tasks[msg.TaskID].IsSlowDown = true
+				}
+
+				msg.ChannelRes <- channelResSettings{
+					TaskID: msg.TaskID,
+				}
+
+				close(msg.ChannelRes)
+
 			case "timer update":
 				if _, ok := smt.tasks[msg.TaskID]; ok {
 					smt.tasks[msg.TaskID].TimeUpdate = time.Now().Unix()
@@ -358,6 +371,19 @@ func (smt *StoringMemoryTask) CompleteStoringMemoryTask(taskID string) {
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "complete",
+		TaskID:     taskID,
+		ChannelRes: chanRes,
+	}
+
+	<-chanRes
+}
+
+//IsSlowDownStoringMemoryTask отмечает задачу как находящуюся в процессе останова
+func (smt *StoringMemoryTask) IsSlowDownStoringMemoryTask(taskID string) {
+	chanRes := make(chan channelResSettings)
+
+	smt.channelReq <- ChanStoringMemoryTask{
+		ActionType: "is slow down",
 		TaskID:     taskID,
 		ChannelRes: chanRes,
 	}
