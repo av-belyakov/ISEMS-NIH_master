@@ -290,13 +290,9 @@ func NewRepositorySMT() *StoringMemoryTask {
 				close(msg.ChannelRes)
 
 			case "increment number files downloaded":
-				before := smt.tasks[msg.TaskID].TaskParameter.DownloadTask.NumberFilesDownloaded
-
 				if ti, ok := smt.tasks[msg.TaskID]; ok {
 					smt.tasks[msg.TaskID].TaskParameter.DownloadTask.NumberFilesDownloaded = ti.TaskParameter.DownloadTask.NumberFilesDownloaded + 1
 				}
-
-				fmt.Printf("-=-=-=-=-=-== 'increment number files downloaded' with: '%v' to '%v'\n", before, smt.tasks[msg.TaskID].TaskParameter.DownloadTask.NumberFilesDownloaded)
 
 				msg.ChannelRes <- channelResSettings{
 					TaskID: msg.TaskID,

@@ -373,6 +373,7 @@ DONE:
 							Status:                              "wait",
 							NumberFilesTotal:                    ti.TaskParameter.DownloadTask.NumberFilesTotal,
 							NumberFilesDownloaded:               ti.TaskParameter.DownloadTask.NumberFilesDownloaded,
+							NumberFilesDownloadedError:          ti.TaskParameter.DownloadTask.NumberFilesDownloadedError,
 							PathDirectoryStorageDownloadedFiles: ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles,
 							FileInformation: configure.DetailedFileInformation{
 								Name:         msgRes.Info.FileOptions.Name,
@@ -452,7 +453,8 @@ DONE:
 
 			/* бинарный тип сообщения */
 			if msg.MessageType == 2 {
-				fileIsLoaded, err := writingBinaryFile(parametersWritingBinaryFile{
+				//fileIsLoaded, fileLoadedError, err
+				writeBinaryFileResult := writingBinaryFile(parametersWritingBinaryFile{
 					SourceID:   tpdf.sourceID,
 					TaskID:     tpdf.taskID,
 					Data:       msg.Message,
@@ -464,22 +466,13 @@ DONE:
 					_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 					fmt.Printf("------ ERROR: %v\n", fmt.Sprint(err))
-					/*
 
-					   !!!! Непонятно !!!
-					   Почему приходит эта ошибка ------ ERROR: file descriptor with ID '5714cb3ecf81013a0ab15160e9d9a17a' not found
-					   Часто возникает после останова и возобновления задачи по скачиванию
-					   файлов
-
-					   Посмотреть что отправляет slave с ответом 'ready for the transfer'
-					*/
 					sdf.Status = "error"
 					sdf.ErrMsg = err
 
 					break DONE
 				}
 
-				//обновляем информацию о задаче (что она находится в стадии останова)
 				ti, ok := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
 				if !ok {
 					_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("task with ID %v not found", tpdf.taskID))
@@ -490,20 +483,26 @@ DONE:
 					break DONE
 				}
 
-				//если файл полностью загружен и задача не находится в
-				// стадии выполнения запрашиваем следующий файл
-				if fileIsLoaded && !ti.IsSlowDown {
-
-					fmt.Printf("\t\tDOWNLOAD: func 'processorReceivingFiles', File success uploaded, REQUEST NEW FILE UPLOAD, TASK STATUS:'%v'\n", ti.TaskParameter.DownloadTask.Status)
-
-					//отправляем сообщение источнику подтверждающее успешный прием файла
-					msgJSON, err := json.Marshal(configure.MsgTypeDownload{
+				if (writeBinaryFileResult.fileIsLoaded || writeBinaryFileResult.fileLoadedError) && !ti.IsSlowDown {
+					msgRes := configure.MsgTypeDownload{
 						MsgType: "download files",
 						Info: configure.DetailInfoMsgDownload{
 							TaskID:  tpdf.taskID,
 							Command: "file successfully accepted",
 						},
-					})
+					}
+
+					//если файл загружен полностью но контрольная сумма не совпадает
+					if writeBinaryFileResult.fileLoadedError {
+
+						fmt.Println("\tDOWNLOAD: func 'processorReceivingFiles', FILE RECEIVED WITH ERROR -----")
+
+						msgRes.Info.Command = "file received with error"
+
+						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("the checksum value for the downloaded file '%v' is incorrect (task ID %v)", ti.TaskParameter.DownloadTask.FileInformation.Name, tpdf.taskID))
+					}
+
+					msgJSON, err := json.Marshal(msgRes)
 					if err != nil {
 						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
@@ -550,8 +549,15 @@ DONE:
 	tpdf.channels.chanDone <- struct{}{}
 }
 
+type typeWriteBinaryFileRes struct {
+	fileIsLoaded, fileLoadedError bool
+	err                           error
+}
+
 //writingBinaryFile осуществляет запись бинарного файла
-func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
+func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes {
+	twbfr := typeWriteBinaryFileRes{}
+
 	//получаем хеш принимаемого файла
 	fileHex := string((*pwbf.Data)[35:67])
 
@@ -561,18 +567,21 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 		fmt.Printf("+-+-+-++-+ func 'writingBinaryFile', FILE HEX '%v' NOT FOUND\n", fileHex)
 		fmt.Printf("__________ Hex string: '%v' ____________\n", string((*pwbf.Data)[:100]))
 
-		return false, err
+		twbfr.err = err
+		return twbfr
 	}
 
 	//запись принятых байт
 	numWriteByte, err := w.Write((*pwbf.Data)[67:])
 	if err != nil {
-		return false, err
+		twbfr.err = err
+		return twbfr
 	}
 
 	ti, ok := pwbf.SMT.GetStoringMemoryTask(pwbf.TaskID)
 	if !ok {
-		return false, fmt.Errorf("task with ID %v not found", pwbf.TaskID)
+		twbfr.err = fmt.Errorf("task with ID %v not found", pwbf.TaskID)
+		return twbfr
 	}
 
 	fi := ti.TaskParameter.DownloadTask.FileInformation
@@ -595,6 +604,7 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 		Status:                              "execute",
 		NumberFilesTotal:                    ti.TaskParameter.DownloadTask.NumberFilesTotal,
 		NumberFilesDownloaded:               ti.TaskParameter.DownloadTask.NumberFilesDownloaded,
+		NumberFilesDownloadedError:          ti.TaskParameter.DownloadTask.NumberFilesDownloadedError,
 		PathDirectoryStorageDownloadedFiles: ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles,
 		FileInformation: configure.DetailedFileInformation{
 			Name:                fi.Name,
@@ -628,43 +638,54 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) (bool, error) {
 		//удаляем дескриптор файла
 		pwbf.LFD.delFileDescription(fi.Hex)
 
+		//увеличиваем количество принятых файлов на 1
+		pwbf.SMT.IncrementNumberFilesDownloaded(pwbf.TaskID)
+
 		filePath := path.Join(ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles, fi.Name)
+
+		newFileInfo := configure.DownloadFilesInformation{
+			TimeDownload: time.Now().Unix(),
+		}
+		newFileInfo.Size = fi.FullSizeByte
+		newFileInfo.Hex = fi.Hex
+
+		msgToCore.Command = "file download complete"
 
 		//проверяем хеш-сумму файла
 		ok := checkDownloadedFile(filePath, fi.Hex, fi.FullSizeByte)
 		if !ok {
 			pwbf.SMT.IncrementNumberFilesDownloadedError(pwbf.TaskID)
 
-			return false, fmt.Errorf("invalid checksum for file %v (task ID %v)", fi.Name, pwbf.TaskID)
-		}
+			//обновляем информацию о файле
+			/*pwbf.SMT.UpdateTaskDownloadFileIsLoaded(pwbf.TaskID, configure.DownloadTaskParameters{
+				DownloadingFilesInformation: map[string]*configure.DownloadFilesInformation{
+					fi.Name: &newFileInfo,
+				},
+			})*/
 
-		msgToCore.Command = "file download complete"
+			pwbf.ChanInCore <- &msgToCore
 
-		newFileInfo := configure.DownloadFilesInformation{
-			IsLoaded:     true,
-			TimeDownload: time.Now().Unix(),
+			twbfr.fileLoadedError = true
+			return twbfr
 		}
-		newFileInfo.Size = fi.FullSizeByte
-		newFileInfo.Hex = fi.Hex
 
 		//отмечаем файл как успешно принятый
+		newFileInfo.IsLoaded = true
 		pwbf.SMT.UpdateTaskDownloadFileIsLoaded(pwbf.TaskID, configure.DownloadTaskParameters{
 			DownloadingFilesInformation: map[string]*configure.DownloadFilesInformation{
 				fi.Name: &newFileInfo,
 			},
 		})
 
-		//увеличиваем количество принятых файлов на 1
-		pwbf.SMT.IncrementNumberFilesDownloaded(pwbf.TaskID)
-
 		//fmt.Printf("func 'writingBinaryFile', file name:%v, success uploaded\n", fi.Name)
 
 		pwbf.ChanInCore <- &msgToCore
 
-		return true, nil
+		twbfr.fileIsLoaded = true
+		return twbfr
 	}
 
-	return false, nil
+	return twbfr
 }
 
 func checkDownloadedFile(pathFile, fileHex string, fileSize int64) bool {

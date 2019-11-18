@@ -24,7 +24,7 @@ func HandlerMsgFromAPI(
 
 	nsErrJSON := notifications.NotificationSettingsToClientAPI{
 		MsgType:        "danger",
-		MsgDescription: "Ошибка, получен некорректный формат JSON сообщения",
+		MsgDescription: "Задача отклонена. Получен некорректный формат JSON сообщения",
 	}
 
 	msgJSON, ok := msg.MsgJSON.([]byte)
@@ -191,7 +191,7 @@ func HandlerMsgFromAPI(
 
 					nsErr := notifications.NotificationSettingsToClientAPI{
 						MsgType:        "danger",
-						MsgDescription: fmt.Sprintf("Ошибка, по переданному идентификатору '%v' ожидающих или выполняемых задач не обнаружено", msgc.ClientTaskID),
+						MsgDescription: fmt.Sprintf("Задача отклонена. По переданному идентификатору '%v' ожидающих или выполняемых задач не обнаружено", msgc.ClientTaskID),
 					}
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErr, msgc.ClientTaskID, msg.IDClientAPI)
 
@@ -250,7 +250,7 @@ func HandlerMsgFromAPI(
 				//ищем источник по указанному идентификатору
 				sourceInfo, ok := hsm.ISL.GetSourceSetting(dcts.MsgOption.ID)
 				if !ok {
-					emt.MsgHuman = fmt.Sprintf("Ошибка, источника %v не существует", dcts.MsgOption.ID)
+					emt.MsgHuman = fmt.Sprintf("Задача отклонена. Источник %v не существует", dcts.MsgOption.ID)
 					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v was not found%v", dcts.MsgOption.ID, funcName))
 
 					//сообщение о том что задача была отклонена
@@ -263,7 +263,7 @@ func HandlerMsgFromAPI(
 
 				//проверяем подключение источника
 				if !sourceInfo.ConnectionStatus {
-					emt.MsgHuman = fmt.Sprintf("Ошибка, источник %v не подключен", dcts.MsgOption.ID)
+					emt.MsgHuman = fmt.Sprintf("Задача отклонена. Источник %v не подключен", dcts.MsgOption.ID)
 					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v is not connected%v", dcts.MsgOption.ID, funcName))
 
 					//сообщение о том что задача была отклонена
