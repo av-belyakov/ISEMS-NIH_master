@@ -22,21 +22,24 @@ func HandlerMsgFromAPI(
 
 	msgc := configure.MsgCommon{}
 
-	nsErrJSON := notifications.NotificationSettingsToClientAPI{
-		MsgType:        "danger",
-		MsgDescription: "Задача отклонена. Получен некорректный формат JSON сообщения",
+	nsErrMsg := notifications.NotificationSettingsToClientAPI{
+		MsgType: "danger",
+		MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+			TaskAction: "задача отклонена",
+			Message:    "получен некорректный формат JSON сообщения",
+		}),
 	}
 
 	msgJSON, ok := msg.MsgJSON.([]byte)
 	if !ok {
-		notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
+		notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
 		_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 		return
 	}
 
 	if err := json.Unmarshal(msgJSON, &msgc); err != nil {
-		notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
+		notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
 		_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 		return
@@ -51,7 +54,7 @@ func HandlerMsgFromAPI(
 				var scmo configure.SourceControlMsgOptions
 
 				if err := json.Unmarshal(msgJSON, &scmo); err != nil {
-					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 					return
@@ -80,13 +83,13 @@ func HandlerMsgFromAPI(
 				return
 			}
 
-			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
 			_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgSection'"+funcName)
 
 			return
 		}
 
-		notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+		notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
 		_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgSection'"+funcName)
 
 		return
@@ -126,7 +129,7 @@ func HandlerMsgFromAPI(
 			if msgc.MsgInstruction == "performing an action" {
 				var scmo configure.SourceControlMsgOptions
 				if err := json.Unmarshal(msgJSON, &scmo); err != nil {
-					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 					return
@@ -155,7 +158,7 @@ func HandlerMsgFromAPI(
 				return
 			}
 
-			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
 			_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgInstruction'"+funcName)
 
 			return
@@ -166,7 +169,7 @@ func HandlerMsgFromAPI(
 			if msgc.MsgInstruction == "to start filtering" {
 				var fcts configure.FiltrationControlTypeStart
 				if err := json.Unmarshal(msgJSON, &fcts); err != nil {
-					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 					return
@@ -190,8 +193,13 @@ func HandlerMsgFromAPI(
 					fmt.Printf("ERROR :::: Ошибка, по переданному идентификатору '%v' ожидающих или выполняемых задач не обнаружено\n", msgc.ClientTaskID)
 
 					nsErr := notifications.NotificationSettingsToClientAPI{
-						MsgType:        "danger",
-						MsgDescription: fmt.Sprintf("Задача отклонена. По переданному идентификатору '%v' ожидающих или выполняемых задач не обнаружено", msgc.ClientTaskID),
+						MsgType: "danger",
+						MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+							SourceID:   sourceID,
+							TaskType:   "фильтрация",
+							TaskAction: "задача отклонена",
+							Message:    fmt.Sprintf("'по переданному идентификатору %v ожидающих или выполняемых задач не обнаружено'", msgc.ClientTaskID),
+						}),
 					}
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErr, msgc.ClientTaskID, msg.IDClientAPI)
 
@@ -216,7 +224,7 @@ func HandlerMsgFromAPI(
 				return
 			}
 
-			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
 			_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgInstruction'"+funcName)
 
 			return
@@ -237,7 +245,7 @@ func HandlerMsgFromAPI(
 				var dcts configure.DownloadControlTypeStart
 
 				if err := json.Unmarshal(msgJSON, &dcts); err != nil {
-					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 					return
@@ -250,7 +258,12 @@ func HandlerMsgFromAPI(
 				//ищем источник по указанному идентификатору
 				sourceInfo, ok := hsm.ISL.GetSourceSetting(dcts.MsgOption.ID)
 				if !ok {
-					emt.MsgHuman = fmt.Sprintf("Задача отклонена. Источник %v не существует", dcts.MsgOption.ID)
+					emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+						SourceID:   dcts.MsgOption.ID,
+						TaskType:   "скачивание файлов",
+						TaskAction: "задача отклонена",
+						Message:    "запись для источника отсутствует в памяти приложения",
+					})
 					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v was not found%v", dcts.MsgOption.ID, funcName))
 
 					//сообщение о том что задача была отклонена
@@ -263,7 +276,12 @@ func HandlerMsgFromAPI(
 
 				//проверяем подключение источника
 				if !sourceInfo.ConnectionStatus {
-					emt.MsgHuman = fmt.Sprintf("Задача отклонена. Источник %v не подключен", dcts.MsgOption.ID)
+					emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+						SourceID:   dcts.MsgOption.ID,
+						TaskType:   "скачивание файлов",
+						TaskAction: "задача отклонена",
+						Message:    "источник не подключен",
+					})
 					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v is not connected%v", dcts.MsgOption.ID, funcName))
 
 					//сообщение о том что задача была отклонена
@@ -285,18 +303,38 @@ func HandlerMsgFromAPI(
 							//проверяем завершена ли задача
 							if smti.TaskStatus {
 								errMsg = fmt.Sprintf("Task with ID '%v' for source ID %v rejected. You cannot add a task with the same ID many times in a short period of time.", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
-								emt.MsgHuman = "Задача отклонена. Нельзя добавлять задачу с одним и тем же идентификатором множество раз в течении небольшого периода времени"
+								emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+									SourceID:   dcts.MsgOption.ID,
+									TaskType:   "скачивание файлов",
+									TaskAction: "задача отклонена",
+									Message:    "нельзя добавлять задачу с одним и тем же идентификатором множество раз в течении небольшого периода времени",
+								})
 							} else {
 								errMsg = fmt.Sprintf("You cannot add a task with ID '%v' to a source with ID %v because it is already running", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
-								emt.MsgHuman = fmt.Sprintf("Невозможно добавить задачу с ID '%v', для источника %v, так как она уже выполняется", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
+								emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+									SourceID:   dcts.MsgOption.ID,
+									TaskType:   "скачивание файлов",
+									TaskAction: "задача отклонена",
+									Message:    "невозможно добавить задачу источнику, задача по скачиванию файлов уже выполняется",
+								})
 							}
 						}
 					} else if ti.TaskStatus == "wait" {
 						errMsg = fmt.Sprintf("Unable to add task with ID '%v' because it is already pending", dcts.MsgOption.TaskIDApp)
-						emt.MsgHuman = fmt.Sprintf("Невозможно добавить задачу с ID '%v' так как она уже ожидает выполнения", dcts.MsgOption.TaskIDApp)
+						emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+							SourceID:   dcts.MsgOption.ID,
+							TaskType:   "скачивание файлов",
+							TaskAction: "задача отклонена",
+							Message:    "невозможно добавить задачу источнику, задача по скачиванию файлов уже выполняется",
+						})
 					} else {
 						errMsg = fmt.Sprintf("Unable to add task with ID '%v'. The task has been completed, but has not yet been removed from the pending task list", dcts.MsgOption.ID)
-						emt.MsgHuman = fmt.Sprintf("Невозможно добавить задачу с ID '%v'. Задача была выполнена, однако из списка задач ожидающих выполнения пока не удалена", dcts.MsgOption.ID)
+						emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+							SourceID:   dcts.MsgOption.ID,
+							TaskType:   "скачивание файлов",
+							TaskAction: "задача отклонена",
+							Message:    "невозможно добавить задачу так как задача была выполнена, однако из списка задач ожидающих выполнения пока не удалена",
+						})
 					}
 
 					if len(errMsg) > 0 {
@@ -322,7 +360,12 @@ func HandlerMsgFromAPI(
 
 				//устанавливаем проверочный статус источника для данной задачи как подключен
 				if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp); err != nil {
-					emt.MsgHuman = fmt.Sprintf("Ошибка, запись для источника %v отсутствует в памяти приложения", dcts.MsgOption.ID)
+					emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+						SourceID:   dcts.MsgOption.ID,
+						TaskType:   "скачивание файлов",
+						TaskAction: "задача отклонена",
+						Message:    "запись для источника отсутствует в памяти приложения",
+					})
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 					//сообщение о том что задача была отклонена
@@ -348,9 +391,13 @@ func HandlerMsgFromAPI(
 				notifications.SendNotificationToClientAPI(
 					outCoreChans.OutCoreChanAPI,
 					notifications.NotificationSettingsToClientAPI{
-						MsgType:        "success",
-						MsgDescription: fmt.Sprintf("Задача по скачиванию файлов с источника %v, добавлена в очередь", dcts.MsgOption.ID),
-						Sources:        []int{dcts.MsgOption.ID},
+						MsgType: "success",
+						MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+							SourceID:   dcts.MsgOption.ID,
+							TaskType:   "скачивание файлов",
+							TaskAction: "добавлена в очередь",
+						}),
+						Sources: []int{dcts.MsgOption.ID},
 					},
 					msgc.ClientTaskID,
 					msg.IDClientAPI)
@@ -360,7 +407,7 @@ func HandlerMsgFromAPI(
 				var dcts configure.DownloadControlTypeStart
 
 				if err := json.Unmarshal(msgJSON, &dcts); err != nil {
-					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, "", msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
 					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
 
 					return
@@ -369,7 +416,12 @@ func HandlerMsgFromAPI(
 				emt.TaskID = dcts.MsgOption.TaskIDApp
 				emt.TaskIDClientAPI = dcts.ClientTaskID
 				emt.Sources = []int{dcts.MsgOption.ID}
-				emt.MsgHuman = fmt.Sprintf("Невозможен останов задачи по скачиванию файлов с источника %v, не найдена задача с заданным идентификатором", dcts.MsgOption.ID)
+				emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   dcts.MsgOption.ID,
+					TaskType:   "скачивание файлов",
+					TaskAction: "задача отклонена",
+					Message:    "невозможен останов задачи, не найдена задача с заданным идентификатором",
+				})
 
 				//ищем задачу в очереди задач и в выполняемых задачах
 				if _, err := hsm.QTS.GetQueueTaskStorage(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp); err != nil {
@@ -421,9 +473,13 @@ func HandlerMsgFromAPI(
 					notifications.SendNotificationToClientAPI(
 						outCoreChans.OutCoreChanAPI,
 						notifications.NotificationSettingsToClientAPI{
-							MsgType:        "success",
-							MsgDescription: fmt.Sprintf("Задача по скачиванию файлов с источника %v, удалена из очереди ожидающих задач", dcts.MsgOption.ID),
-							Sources:        []int{dcts.MsgOption.ID},
+							MsgType: "success",
+							MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+								SourceID:   dcts.MsgOption.ID,
+								TaskType:   "скачивание файлов",
+								TaskAction: "удалена из очереди ожидающих задач",
+							}),
+							Sources: []int{dcts.MsgOption.ID},
 						},
 						dcts.ClientTaskID,
 						msg.IDClientAPI)
@@ -449,7 +505,7 @@ func HandlerMsgFromAPI(
 			return
 
 		default:
-			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrJSON, msgc.ClientTaskID, msg.IDClientAPI)
+			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
 			_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgInstruction'"+funcName)
 
 			return

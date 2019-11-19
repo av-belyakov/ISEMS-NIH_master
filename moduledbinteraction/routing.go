@@ -1,11 +1,5 @@
 package moduledbinteraction
 
-/*
-* Маршрутизация запросов получаемых через канал
-*
-* Версия 0.2, дата релиза 05.06.2019
-* */
-
 import (
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/savemessageapp"

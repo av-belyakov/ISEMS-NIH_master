@@ -1,13 +1,10 @@
 package common
 
-/*
-* Набор вспомагательных функций
-* */
-
 import (
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"math/rand"
@@ -16,6 +13,12 @@ import (
 	"strconv"
 	"time"
 )
+
+//TypePatternUserMessage тип для функции PatternUserMessage
+type TypePatternUserMessage struct {
+	SourceID                      int
+	TaskType, TaskAction, Message string
+}
 
 var regexpPatterns = map[string]string{
 	"IPAddress":                        `^((25[0-5]|2[0-4]\d|[01]?\d\d?)[.]){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$`,
@@ -140,6 +143,31 @@ func GetChunkListFiles(numPart, sizeChunk, countParts int, listFilesFilter map[s
 
 	}
 	return lff
+}
+
+//PatternUserMessage шаблон для сообщения пользователю
+func PatternUserMessage(tpum *TypePatternUserMessage) string {
+	sourceID := strconv.Itoa(tpum.SourceID)
+	if sourceID == "0" {
+		sourceID = "?"
+	}
+
+	taskType := "?"
+	if tpum.TaskType != "" {
+		taskType = tpum.TaskType
+	}
+
+	taskAction := "останов"
+	if tpum.TaskAction != "" {
+		taskAction = tpum.TaskAction
+	}
+
+	var message string
+	if tpum.Message != "" {
+		message = fmt.Sprintf(" Сообщение: '%v'", tpum.Message)
+	}
+
+	return fmt.Sprintf("Источник: '%v'. Тип: '%v'. Действие: '%v'.%v", sourceID, taskType, taskAction, message)
 }
 
 //MothPrintIntAsString выводит месяц в виде числа как строку

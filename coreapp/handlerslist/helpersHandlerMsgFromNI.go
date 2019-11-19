@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/notifications"
 )
@@ -165,13 +166,21 @@ func sendInformationFiltrationTask(
 
 	if (tfmffiats.TaskStatus == "complete") || (tfmffiats.TaskStatus == "stop") {
 		ns := notifications.NotificationSettingsToClientAPI{
-			MsgType:        "success",
-			MsgDescription: fmt.Sprintf("Задача по фильтрации сетевого трафика на источнике %v, успешно завершена", ti.ID),
-			Sources:        []int{ti.ID},
+			MsgType: "success",
+			MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   ti.ID,
+				TaskType:   "фильтрация",
+				TaskAction: "задача успешно выполнена",
+			}),
+			Sources: []int{ti.ID},
 		}
 
 		if tfmffiats.TaskStatus == "stop" {
-			ns.MsgDescription = fmt.Sprintf("задача по фильтрации сетевого трафика на источнике %v, была успешно остановлена", ti.ID)
+			ns.MsgDescription = common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   ti.ID,
+				TaskType:   "фильтрация",
+				TaskAction: "задача успешно остановлена",
+			})
 		}
 
 		notifications.SendNotificationToClientAPI(chanToAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)

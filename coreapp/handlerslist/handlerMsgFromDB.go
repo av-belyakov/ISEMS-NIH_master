@@ -129,9 +129,13 @@ func HandlerMsgFromDB(
 			notifications.SendNotificationToClientAPI(
 				outCoreChans.OutCoreChanAPI,
 				notifications.NotificationSettingsToClientAPI{
-					MsgType:        "success",
-					MsgDescription: fmt.Sprintf("Задача по скачиванию файлов с источника %v, автоматически добавлена в очередь", sourceID),
-					Sources:        []int{sourceID},
+					MsgType: "success",
+					MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+						SourceID:   sourceID,
+						TaskType:   "скачивание файлов",
+						TaskAction: "задача автоматически добавлена в очередь",
+					}),
+					Sources: []int{sourceID},
 				},
 				res.TaskIDClientAPI,
 				res.IDClientAPI)
@@ -168,8 +172,10 @@ func HandlerMsgFromDB(
 			_ = saveMessageApp.LogMessage("error", fmt.Sprint(en.ErrorBody))
 
 			ns := notifications.NotificationSettingsToClientAPI{
-				MsgType:        "danger",
-				MsgDescription: "Ошибка базы данных при обработке запроса",
+				MsgType: "danger",
+				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+					Message: "ошибка базы данных при обработке запроса",
+				}),
 			}
 
 			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, taskInfo.ClientTaskID, res.IDClientAPI)

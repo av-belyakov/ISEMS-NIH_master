@@ -2,8 +2,8 @@
 
     script 'handlerMsgFromAPI'
 27 - MsgDescription: "Задача отклонена. Получен некорректный формат JSON сообщения",
-194 - MsgDescription: fmt.Sprintf("Задача отклонена. По переданному идентификатору '%v' ожидающих или выполняемых задач не обнаружено", msgc.ClientTaskID),
-253 - emt.MsgHuman = fmt.Sprintf("Задача отклонена. Источник %v не существует", dcts.MsgOption.ID)
+194 - MsgDescription: fmt.Sprintf("Задача отклонена. По переданному идентификатору '%v' ожидающих или выполняемых задач не обнаружено (Источник: )", msgc.ClientTaskID),
+253 - emt.MsgHuman = fmt.Sprintf("Задача отклонена. Запись для источника %v отсутствует в памяти приложения", dcts.MsgOption.ID)
 266 - emt.MsgHuman = fmt.Sprintf("Задача отклонена. Источник %v не подключен", dcts.MsgOption.ID)
 288 - emt.MsgHuman = "Задача отклонена. Нельзя добавлять задачу с одним и тем же идентификатором множество раз в течении небольшого периода времени"
 297 - emt.MsgHuman = fmt.Sprintf("Невозможно добавить задачу с ID '%v', для источника %v, так как она уже выполняется", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)

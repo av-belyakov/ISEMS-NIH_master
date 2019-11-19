@@ -2,8 +2,6 @@ package modulenetworkinteractionapp
 
 /*
 * Сервер для взаимодействия с источниками
-*
-* Версия 0.1, дата релиза 21.02.2019
 * */
 
 import (

@@ -2,11 +2,12 @@ package mytestpackages
 
 import (
 	"fmt"
-	"math/rand"
+	"strconv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
 	//. "ISEMS-NIH_master"
 )
@@ -359,29 +360,40 @@ var _ = Describe("Mytestpackages/InfoSourceList", func() {
 				list = append(list, fmt.Sprint("task_id_0"))
 			}
 
-			fmt.Printf("NEW LIST:'%v' BEFORE\n", list)
 			Expect(len(list)).Should(Equal(2))
 
 			for k, v := range list {
-
-				fmt.Printf("key = %v, value = %v\n", k, v)
-
 				if v == "task_id_0" {
 					list = append(list[:k], list[k+1:]...)
-
-					fmt.Printf("List 1 = %v, List 2 = %v\n", list[:k], list[k+1:])
 
 					break
 				}
 			}
 
-			rand.Seed(82)
-			for i := 0; i < 10; i++ {
-				fmt.Printf("____ Random: '%v'\n", rand.Intn(10000))
+			Expect(len(list)).Should(Equal(1))
+		})
+	})
+
+	Context("Тест 13. Тестируем функцию 'PatternUserMessage'", func() {
+		notify := common.PatternUserMessage(&common.TypePatternUserMessage{
+			SourceID: 4,
+			TaskType: "nifidnif",
+			Message:  "cccccooocdod oce o",
+		})
+		It("Должен быть ID источника в виде текста", func() {
+			type testUserType struct {
+				ID  int
+				Meg string
 			}
 
-			fmt.Printf("NEW LIST:'%v' AFTER\n", list)
-			Expect(len(list)).Should(Equal(1))
+			tut := testUserType{
+				ID: 100,
+			}
+
+			fmt.Println(notify)
+
+			Expect(tut.Meg).Should(Equal(""))
+			Expect(strconv.Itoa(tut.ID)).Should(Equal("100"))
 		})
 	})
 

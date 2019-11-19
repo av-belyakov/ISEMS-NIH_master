@@ -2,8 +2,6 @@ package moduledbinteraction
 
 /*
 * Модуль взаимодействия с БД MongoDB
-*
-* Версия 0.11, дата релиза 05.06.2019
 * */
 
 import (

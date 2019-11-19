@@ -149,7 +149,6 @@ func (lfd *ListFileDescription) delFileDescription(fh string) {
 //processorReceivingFiles управляет приемом файлов в рамках одной задачи
 func processorReceivingFiles(
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
-	sourceID int,
 	sourceIP, taskID string,
 	smt *configure.StoringMemoryTask,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
@@ -176,6 +175,8 @@ func processorReceivingFiles(
 		return nil, nil, fmt.Errorf("task with ID %v not found", taskID)
 	}
 
+	sourceID := ti.TaskParameter.DownloadTask.ID
+
 	chanOut := make(chan MsgChannelProcessorReceivingFiles)
 	chanDone := make(chan struct{})
 
@@ -191,8 +192,8 @@ func processorReceivingFiles(
 			Section:                      "download control",
 			TypeActionPerformed:          "task processing",
 			CriticalityMessage:           "info",
-			HumanDescriptionNotification: fmt.Sprintf("Инициализирована задача по скачиванию файлов с источника %v, идет подготовка списка загружаемых файлов", sourceID),
-			Sources:                      []int{ti.TaskParameter.DownloadTask.ID},
+			HumanDescriptionNotification: "идет подготовка списка скачиваемых файлов",
+			Sources:                      []int{sourceID},
 		},
 	}
 

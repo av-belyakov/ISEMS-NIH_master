@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 
+	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/savemessageapp"
 )
@@ -240,9 +241,17 @@ func ControllerReceivingRequestedFiles(
 
 				fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' ERROR 0000")
 
-				humanNotify := fmt.Sprintf("Не возможно отправить запрос на скачивание файлов, источник с ID %v не подключен", msg.SourceID)
+				humanNotify := common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID: msg.SourceID,
+					TaskType: "скачивание файлов",
+					Message:  "не возможно отправить запрос на скачивание файлов, источник не подключен",
+				})
 				if !ok {
-					humanNotify = fmt.Sprintf("Источник с ID %v не найден", msg.SourceID)
+					humanNotify = common.PatternUserMessage(&common.TypePatternUserMessage{
+						SourceID: msg.SourceID,
+						TaskType: "скачивание файлов",
+						Message:  "источник не найден",
+					})
 
 					fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' ERROR 1111")
 
@@ -264,7 +273,11 @@ func ControllerReceivingRequestedFiles(
 
 			//fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' RESIVED SOURCE PARAMETERS: %v\n", si)
 
-			ao.HumanDescriptionNotification = fmt.Sprintf("Источник с ID %v не найден", msg.SourceID)
+			ao.HumanDescriptionNotification = common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID: msg.SourceID,
+				TaskType: "скачивание файлов",
+				Message:  "источник не найден",
+			})
 			clientNotify.AdvancedOptions = ao
 
 			//errMsg := fmt.Sprintf("Source with ID %v not found", msg.SourceID)
@@ -277,13 +290,18 @@ func ControllerReceivingRequestedFiles(
 				fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' запуск обработчика задачи по скачиванию файлов")
 
 				//запуск обработчика задачи по скачиванию файлов
-				channel, chanHandlerStoped, err := processorReceivingFiles(chanInCore, msg.SourceID, si.IP, msg.TaskID, smt, saveMessageApp, cwtRes)
+				channel, chanHandlerStoped, err := processorReceivingFiles(chanInCore, si.IP, msg.TaskID, smt, saveMessageApp, cwtRes)
 				if err != nil {
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 
 					fmt.Printf("func 'handlerTypeDownloadFiles', ERROR (processorReceivingFiles):%v\n", err)
 
-					ao.HumanDescriptionNotification = fmt.Sprintf("Отмена выполнения задачи по скачиванию файлов с источника ID %v, не найдены файлы для скачивания", msg.SourceID)
+					ao.HumanDescriptionNotification = common.PatternUserMessage(&common.TypePatternUserMessage{
+						SourceID:   msg.SourceID,
+						TaskType:   "скачивание файлов",
+						TaskAction: "задача отклонена",
+						Message:    "не найдены файлы для скачивания",
+					})
 					clientNotify.AdvancedOptions = ao
 
 					handlerTaskWarning(msg.TaskID, clientNotify)

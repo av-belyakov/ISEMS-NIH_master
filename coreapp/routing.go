@@ -1,16 +1,15 @@
 package coreapp
 
 /*
-* Ядро приложения
+* 	Ядро приложения
 * Маршрутизация сообщений получаемых через каналы
-*
-* Версия 0.5, дата релиза 13.08.2019
 * */
 
 import (
 	"fmt"
 	"time"
 
+	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/coreapp/handlerslist"
 	"ISEMS-NIH_master/directorypathshaper"
@@ -80,7 +79,11 @@ func Routing(
 				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("no information found on source ID %v", msg.SourceID))
 
 				//отправляем сообщение пользователю
-				emt.MsgHuman = fmt.Sprintf("Не найдена информация по источнику с ID %v", msg.SourceID)
+				emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID: msg.SourceID,
+					Message:  "не найдена информация по источнику",
+				})
+
 				if err := handlerslist.ErrorMessage(emt); err != nil {
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 				}
@@ -135,7 +138,11 @@ func Routing(
 					AdvancedOptions: msg.SourceID,
 				}
 
-				ns.MsgDescription = fmt.Sprintf("Подготовка к выполнению задачи по фильтрации сетевого трафика для источника %v", msg.SourceID)
+				ns.MsgDescription = common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   msg.SourceID,
+					TaskType:   "фильтрация",
+					TaskAction: "подготовка к выполнению задачи",
+				})
 
 				//отправляем информационное сообщение пользователю о начале выполнения задачи
 				notifications.SendNotificationToClientAPI(cc.OutCoreChanAPI, ns, qti.TaskIDClientAPI, qti.IDClientAPI)
@@ -158,7 +165,13 @@ func Routing(
 				pathStorage, err := directorypathshaper.FileStorageDirectiry(&npfp)
 				if err != nil {
 					//отправляем сообщение пользователю
-					emt.MsgHuman = "Невозможно создать директорию для хранения файлов или запись скачиваемых файлов в созданную директорию невозможен"
+					emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+						SourceID:   msg.SourceID,
+						TaskType:   "скачивание файлов",
+						TaskAction: "задача отклонена",
+						Message:    "невозможно создать директорию для хранения файлов или запись скачиваемых файлов в созданную директорию невозможна",
+					})
+
 					if err := handlerslist.ErrorMessage(emt); err != nil {
 						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 					}
@@ -212,7 +225,11 @@ func Routing(
 
 				//fmt.Printf("function 'routing' Core module - добавили задачу по скачиванию (task ID %v) в StoringMemoryTask: '%v'\n", msg.TaskID, nit)
 
-				ns.MsgDescription = fmt.Sprintf("Подготовка к выполнению задачи по скачиванию файлов с источника %v", msg.SourceID)
+				ns.MsgDescription = common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   msg.SourceID,
+					TaskType:   "скачивание файлов",
+					TaskAction: "подготовка к выполнению задачи",
+				})
 
 				//отправляем информационное сообщение пользователю о начале выполнения задачи
 				notifications.SendNotificationToClientAPI(cc.OutCoreChanAPI, ns, qti.TaskIDClientAPI, qti.IDClientAPI)

@@ -1,15 +1,10 @@
 package handlerslist
 
-/*
-* Обработчик запросов поступающих от модуля сетевого взаимодействия
-*
-* Версия 0.3, дата релиза 10.06.2019
-* */
-
 import (
 	"encoding/json"
 	"fmt"
 
+	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/notifications"
 )
@@ -244,7 +239,11 @@ func HandlerMsgFromNI(
 			fmt.Printf("NUM RESIVED FILES:%v\n", hdtsct.ResMsgInfo.MsgOption.NumberFilesDownloaded)
 
 			hdtsct.NS.MsgType = "success"
-			hdtsct.NS.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника %v выполнена успешно", sourceID)
+			hdtsct.NS.MsgDescription = common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   sourceID,
+				TaskType:   "скачивание файлов",
+				TaskAction: "задача выполнена успешно",
+			})
 
 			hdtsct.ResMsgInfo.MsgOption.Status = "complete"
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
@@ -257,7 +256,11 @@ func HandlerMsgFromNI(
 			fmt.Println("____ func 'handlerMsgFromNI', RESIVED command 'file transfer stopped' (при останове задачи пользователем)")
 
 			hdtsct.NS.MsgType = "success"
-			hdtsct.NS.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника %v была успешно остановлена", sourceID)
+			hdtsct.NS.MsgDescription = common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   sourceID,
+				TaskType:   "скачивание файлов",
+				TaskAction: "задача успешно остановлена",
+			})
 
 			hdtsct.ResMsgInfo.MsgOption.Status = "complete"
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
@@ -280,7 +283,13 @@ func HandlerMsgFromNI(
 
 			//отправляем информационное сообщение клиенту API
 			ns.MsgType = "warning"
-			ns.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника %v была аварийно завершена из-за потери сетевого соединения", msg.SourceID)
+			ns.MsgDescription = common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   msg.SourceID,
+				TaskType:   "скачивание файлов",
+				TaskAction: "задача аварийно завершена",
+				Message:    "задача была аварийно завершена из-за потери сетевого соединения",
+			})
+
 			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
 
 			hdtsct.ResMsgInfo.MsgOption.Status = "stop"
@@ -307,7 +316,11 @@ func HandlerMsgFromNI(
 			fmt.Println("____ func 'handlerMsgFromNI', RESIVED command 'task stoped error', (задача остановлена из-за внутренней ошибки приложения)")
 
 			hdtsct.NS.MsgType = "danger"
-			hdtsct.NS.MsgDescription = fmt.Sprintf("Задача по скачиванию файлов с источника %v была остановлена из-за внутренней ошибки приложения", sourceID)
+			hdtsct.NS.MsgDescription = common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID: sourceID,
+				TaskType: "скачивание файлов",
+				Message:  "задача была остановлена из-за внутренней ошибки приложения",
+			})
 
 			hdtsct.ResMsgInfo.MsgOption.Status = "stop"
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
@@ -328,9 +341,11 @@ func HandlerMsgFromNI(
 
 		//стандартное информационное сообщение пользователю
 		ns := notifications.NotificationSettingsToClientAPI{
-			MsgType:        "danger",
-			MsgDescription: "Непредвиденная ошибка, выполнение задачи остановлено. Подробнее о возникшей проблеме в логах администратора приложения.",
-			Sources:        ao.Sources,
+			MsgType: "danger",
+			MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+				Message: "непредвиденная ошибка, подробнее о возникшей проблеме в логах администратора приложения",
+			}),
+			Sources: ao.Sources,
 		}
 
 		notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
@@ -352,10 +367,29 @@ func HandlerMsgFromNI(
 
 			fmt.Printf("\tfunc 'handlerMsgFromNI', Section:'message notification', Command:'send client API', OK MSG:'%v'\n", msg.AdvancedOptions)
 
+			taskActionPattern := map[string]string{
+				"start":     "инициализация выполнения задачи",
+				"stop":      "останов задачи",
+				"load list": "загрузка списка",
+			}
+			taskTypePattern := map[string]string{
+				"source control":     "управление источниками",
+				"filtration control": "фильтрация",
+				"download files":     "скачивание файлов",
+			}
+			var sourceID int
+			if len(ao.Sources) != 0 {
+				sourceID = ao.Sources[0]
+			}
 			ns := notifications.NotificationSettingsToClientAPI{
-				MsgType:        ao.CriticalityMessage,
-				MsgDescription: ao.HumanDescriptionNotification,
-				Sources:        ao.Sources,
+				MsgType: ao.CriticalityMessage,
+				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   sourceID,
+					TaskType:   taskTypePattern[ao.Section],
+					TaskAction: taskActionPattern[ao.TypeActionPerformed],
+					Message:    ao.HumanDescriptionNotification,
+				}),
+				Sources: ao.Sources,
 			}
 
 			if !taskInfoIsExist {

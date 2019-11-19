@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/notifications"
 )
@@ -141,7 +142,12 @@ func checkParametersDownloadTask(
 	//ищем задачу с taskID полученному из БД
 	sourceID, tisqt, err := hsm.QTS.SearchTaskForIDQueueTaskStorage(res.TaskID)
 	if err != nil {
-		emt.MsgHuman = "Не найдено задачи по указанному пользователем ID"
+		emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+			SourceID: sourceID,
+			TaskType: "скачивание файлов",
+			Message:  "задача была аварийно завершена, не найдено задачи по указанному пользователем ID",
+		})
+
 		if err := ErrorMessage(emt); err != nil {
 			return err
 		}
@@ -153,7 +159,13 @@ func checkParametersDownloadTask(
 
 	//наличие в БД задачи по заданному пользователем ID
 	if len(*taskInfoFromDB) == 0 {
-		emt.MsgHuman = fmt.Sprintf("Получен не верный ID задачи, отмена выгрузки файлов (источник %v)", sourceID)
+		emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+			SourceID:   sourceID,
+			TaskType:   "скачивание файлов",
+			TaskAction: "задача отклонена",
+			Message:    "получен не верный ID задачи",
+		})
+
 		if err := ErrorMessage(emt); err != nil {
 			return err
 		}
@@ -170,7 +182,13 @@ func checkParametersDownloadTask(
 
 	//совпадает ли ID источника задачи из БД с ID источника полученного от пользователя
 	if tidb.SourceID != sourceID {
-		emt.MsgHuman = "Идентификатор источника указанный пользователем не совпадает с идентификатором полученным из базы данных, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+		emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+			SourceID:   sourceID,
+			TaskType:   "скачивание файлов",
+			TaskAction: "задача отклонена",
+			Message:    "идентификатор источника указанный пользователем не совпадает с идентификатором полученным из базы данных",
+		})
+
 		if err := ErrorMessage(emt); err != nil {
 			return err
 		}
@@ -187,7 +205,12 @@ func checkParametersDownloadTask(
 
 	//выполнена ли задача по фильтрации (статус задачи "complete")
 	if tidb.DetailedInformationOnFiltering.TaskStatus != "complete" {
-		emt.MsgHuman = fmt.Sprintf("Задача с ID %v не имеет статус 'завершена', дальнейшее выполнение задачи по выгрузке файлов не возможна", res.TaskID)
+		emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+			SourceID: sourceID,
+			TaskType: "скачивание файлов",
+			Message:  fmt.Sprintf("задача с ID %v не имеет статус 'завершена', дальнейшее выполнение задачи не возможно", res.TaskID),
+		})
+
 		if err := ErrorMessage(emt); err != nil {
 			return err
 		}
@@ -204,7 +227,13 @@ func checkParametersDownloadTask(
 
 	//найденны ли какие либо файлы в результате фильтрации
 	if tidb.DetailedInformationOnFiltering.NumberFilesFoundResultFiltering == 0 {
-		emt.MsgHuman = "В результате выполненной ранее фильтрации не было найдено ни одного файла, дальнейшее выполнение задачи по скачиванию файлов не возможна"
+		emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+			SourceID:   sourceID,
+			TaskType:   "скачивание файлов",
+			TaskAction: "задача отклонена",
+			Message:    "в результате выполненной ранее фильтрации не было найдено ни одного файла, дальнейшее выполнение задачи не возможно",
+		})
+
 		if err := ErrorMessage(emt); err != nil {
 			return err
 		}
@@ -240,7 +269,12 @@ func checkParametersDownloadTask(
 	} else {
 		clf, err := checkFileNameMatches(tidb.ListFilesResultTaskExecution, tisqt.TaskParameters.DownloadList)
 		if err != nil {
-			emt.MsgHuman = fmt.Sprintf("Внутренняя ошибка, дальнейшее выполнение задачи по скачиванию файлов с источника ID %v, не возможна", sourceID)
+			emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID: sourceID,
+				TaskType: "скачивание файлов",
+				Message:  "внутренняя ошибка, дальнейшее выполнение задачи не возможно",
+			})
+
 			if err := ErrorMessage(emt); err != nil {
 				return err
 			}
@@ -257,7 +291,13 @@ func checkParametersDownloadTask(
 
 		confirmedListFiles = clf
 		if len(confirmedListFiles) == 0 {
-			emt.MsgHuman = fmt.Sprintf("Не найдено ни одного совпадения для скачиваемых с источника ID %v файлов. Возможно файлы были скачены ранее или отсутствуют на источнике", sourceID)
+			emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   sourceID,
+				TaskType:   "скачивание файлов",
+				TaskAction: "задача отклонена",
+				Message:    "не найдено ни одного совпадения для скачиваемых с источника файлов, возможно все файлы были скачены ранее или отсутствуют на источнике",
+			})
+
 			if err := ErrorMessage(emt); err != nil {
 				return err
 			}
@@ -279,15 +319,24 @@ func checkParametersDownloadTask(
 			notifications.SendNotificationToClientAPI(
 				chanToAPI,
 				notifications.NotificationSettingsToClientAPI{
-					MsgType:        "warning",
-					MsgDescription: fmt.Sprintf("Не все файлы выбранные для скачивания прошли верификацию. %v из %v файлов передаваться не будут, так как отсутствуют на сервере или были переданы ранее", numFilesInvalid, numUserDownloadList),
+					MsgType: "warning",
+					MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+						SourceID:   sourceID,
+						TaskType:   "скачивание файлов",
+						TaskAction: "задача принята",
+						Message:    fmt.Sprintf("не все файлы выбранные для скачивания прошли верификацию. %v из %v файлов передаваться не будут, так как отсутствуют на источнике", numFilesInvalid, numUserDownloadList),
+					}),
 				},
 				res.TaskIDClientAPI,
 				res.IDClientAPI)
 		}
 	}
 
-	emt.MsgHuman = "Внутренняя ошибка, дальнейшее выполнение задачи по выгрузке файлов не возможна"
+	emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+		SourceID: sourceID,
+		TaskType: "скачивание файлов",
+		Message:  "внутренняя ошибка, дальнейшее выполнение задачи не возможно",
+	})
 
 	fmt.Printf("_______ func 'helpersHandlerMsgFromDB', добавляем список подтвержденных и ранее не загружавшихся файлов, LIST: '%v'\n", confirmedListFiles)
 

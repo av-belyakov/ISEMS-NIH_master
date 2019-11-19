@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -336,7 +335,12 @@ func performActionSelectedSources(
 		//если источник найден
 		if s.ActionType == "add" {
 			aie.IsSuccess = false
-			aie.MessageFailure = fmt.Sprintf("невозможно добавить сенсор, сенсор с ID %v уже существует", s.ID)
+			aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   s.ID,
+				TaskType:   "управление источниками",
+				TaskAction: "задача отклонена",
+				Message:    "невозможно добавить источник, источник с таким ID уже существует",
+			})
 
 			listActionIsExecuted = append(listActionIsExecuted, aie)
 
@@ -347,7 +351,12 @@ func performActionSelectedSources(
 			//проверяем имеет ли право клиент делать какие либо изменения с информацией по источнику
 			if (clientName != sourceInfo.ClientName) && (clientName != "root token") {
 				aie.IsSuccess = false
-				aie.MessageFailure = fmt.Sprintf("недостаточно прав для выполнения действий с сенсором ID %v, возможно данный сенсор был добавлен другим клиентом", s.ID)
+				aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   s.ID,
+					TaskType:   "управление источниками",
+					TaskAction: "задача отклонена",
+					Message:    "недостаточно прав для выполнения действий с источником, возможно он был добавлен другим клиентом",
+				})
 
 				listActionIsExecuted = append(listActionIsExecuted, aie)
 
@@ -357,7 +366,12 @@ func performActionSelectedSources(
 			//проверяем ожидает или выполняется на источнике какая либо задача
 			if _, ok := qts.GetAllTaskQueueTaskStorage(s.ID); ok {
 				aie.IsSuccess = false
-				aie.MessageFailure = fmt.Sprintf("невозможно выполнить действия на сенсоре с ID %v, так как в настоящее время на данном сенсоре ожидает выполнения или уже выполняется какая либо задача", s.ID)
+				aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   s.ID,
+					TaskType:   "управление источниками",
+					TaskAction: "задача отклонена",
+					Message:    "невозможно выполнить действия на источнике, так как в настоящее время на данном сенсоре ожидает выполнения или уже выполняется какая либо задача",
+				})
 
 				listActionIsExecuted = append(listActionIsExecuted, aie)
 
@@ -425,7 +439,12 @@ func performActionSelectedSources(
 		if s.ActionType == "reconnect" {
 			if !sourceInfo.ConnectionStatus {
 				aie.IsSuccess = false
-				aie.MessageFailure = fmt.Sprintf("невозможно выполнить переподключение, сенсор с ID %v не подключен", s.ID)
+				aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   s.ID,
+					TaskType:   "управление источниками",
+					TaskAction: "задача отклонена",
+					Message:    "невозможно выполнить переподключение, источник не подключен",
+				})
 
 				listActionIsExecuted = append(listActionIsExecuted, aie)
 
@@ -435,7 +454,12 @@ func performActionSelectedSources(
 			//проверяем не ожидает ли или выполняется скачивание файлов с источника
 			if qts.IsExistTaskDownloadQueueTaskStorage(s.ID) {
 				aie.IsSuccess = false
-				aie.MessageFailure = fmt.Sprintf("невозможно выполнить переподключение, с сенсора с ID %v осуществляется загрузка файлов", s.ID)
+				aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   s.ID,
+					TaskType:   "управление источниками",
+					TaskAction: "задача отклонена",
+					Message:    "невозможно выполнить переподключение, с источника осуществляется скачивание файлов",
+				})
 
 				listActionIsExecuted = append(listActionIsExecuted, aie)
 

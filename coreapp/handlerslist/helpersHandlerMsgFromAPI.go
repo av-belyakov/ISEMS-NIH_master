@@ -17,13 +17,22 @@ import (
 func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParametersFiltration) (string, bool) {
 	//проверяем наличие ID источника
 	if fccpf.ID == 0 {
-		return "отсутствует идентификатор источника", false
+		return common.PatternUserMessage(&common.TypePatternUserMessage{
+			TaskType:   "фильтрация",
+			TaskAction: "задача отклонена",
+			Message:    "отсутствует идентификатор источника",
+		}), false
 	}
 
 	//проверяем временной интервал
 	isZero := ((fccpf.DateTime.Start == 0) || (fccpf.DateTime.End == 0))
 	if isZero || (fccpf.DateTime.Start > fccpf.DateTime.End) {
-		return "задан неверный временной интервал", false
+		return common.PatternUserMessage(&common.TypePatternUserMessage{
+			SourceID:   fccpf.ID,
+			TaskType:   "фильтрация",
+			TaskAction: "задача отклонена",
+			Message:    "задан неверный временной интервал",
+		}), false
 	}
 
 	//проверяем тип протокола
@@ -36,17 +45,22 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 	isProtoANY := strings.EqualFold(fccpf.Protocol, "any")
 
 	if !isProtoTCP && !isProtoUDP && !isProtoANY {
-		return "задан неверный идентификатор транспортного протокола", false
+		return common.PatternUserMessage(&common.TypePatternUserMessage{
+			SourceID:   fccpf.ID,
+			TaskType:   "фильтрация",
+			TaskAction: "задача отклонена",
+			Message:    "задан неверный идентификатор транспортного протокола",
+		}), false
 	}
 
 	isEmpty := true
 
-	circle := func(fp map[string]map[string]*[]string, f func(string, *[]string) error) error {
+	circle := func(sID int, fp map[string]map[string]*[]string, f func(int, string, *[]string) error) error {
 		for pn, pv := range fp {
 			var err error
 
 			for _, v := range pv {
-				if err = f(pn, v); err != nil {
+				if err = f(sID, pn, v); err != nil {
 					return err
 				}
 			}
@@ -59,7 +73,7 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 		return nil
 	}
 
-	checkIPOrPortOrNetwork := func(paramType string, param *[]string) error {
+	checkIPOrPortOrNetwork := func(sourceID int, paramType string, param *[]string) error {
 		checkIP := func(item string) bool {
 			ok, _ := common.CheckStringIP(item)
 
@@ -104,17 +118,32 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 		switch paramType {
 		case "IP":
 			if ok := iteration(param, checkIP); !ok {
-				return errors.New("неверные параметры фильтрации, один или более переданных пользователем IP адресов имеет некорректное значение")
+				return errors.New(common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   sourceID,
+					TaskType:   "фильтрация",
+					TaskAction: "задача отклонена",
+					Message:    "неверные параметры фильтрации, один или более переданных пользователем IP адресов имеет некорректное значение",
+				}))
 			}
 
 		case "Port":
 			if ok := iteration(param, checkPort); !ok {
-				return errors.New("неверные параметры фильтрации, один или более из заданных пользователем портов имеет некорректное значение")
+				return errors.New(common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   sourceID,
+					TaskType:   "фильтрация",
+					TaskAction: "задача отклонена",
+					Message:    "неверные параметры фильтрации, один или более из заданных пользователем портов имеет некорректное значение",
+				}))
 			}
 
 		case "Network":
 			if ok := iteration(param, checkNetwork); !ok {
-				return errors.New("неверные параметры фильтрации, некорректное значение маски подсети заданное пользователем")
+				return errors.New(common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   sourceID,
+					TaskType:   "фильтрация",
+					TaskAction: "задача отклонена",
+					Message:    "неверные параметры фильтрации, некорректное значение маски подсети заданное пользователем",
+				}))
 			}
 
 		}
@@ -141,13 +170,18 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 	}
 
 	//проверка ip адресов, портов и подсетей
-	if err := circle(filterParameters, checkIPOrPortOrNetwork); err != nil {
+	if err := circle(fccpf.ID, filterParameters, checkIPOrPortOrNetwork); err != nil {
 		return fmt.Sprint(err), false
 	}
 
 	//проверяем параметры свойства 'Filters' на пустоту
 	if isEmpty {
-		return "невозможно начать фильтрацию, необходимо указать хотя бы один искомый ip адрес, порт или подсеть", false
+		return common.PatternUserMessage(&common.TypePatternUserMessage{
+			SourceID:   fccpf.ID,
+			TaskType:   "фильтрация",
+			TaskAction: "задача отклонена",
+			Message:    "необходимо указать хотя бы один искомый ip адрес, порт или подсеть",
+		}), false
 	}
 
 	return "", true
@@ -220,8 +254,13 @@ func handlerFiltrationControlTypeStart(
 		notifications.SendNotificationToClientAPI(
 			chanToAPI,
 			notifications.NotificationSettingsToClientAPI{
-				MsgType:        "danger",
-				MsgDescription: fmt.Sprintf("Не возможно отправить запрос на фильтрацию, источник %v не подключен", fcts.MsgOption.ID),
+				MsgType: "danger",
+				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   fcts.MsgOption.ID,
+					TaskType:   "фильтрация",
+					TaskAction: "задача отклонена",
+					Message:    "источник не подключен",
+				}),
 			},
 			fcts.ClientTaskID,
 			clientID)
@@ -286,9 +325,13 @@ func handlerFiltrationControlTypeStart(
 	notifications.SendNotificationToClientAPI(
 		chanToAPI,
 		notifications.NotificationSettingsToClientAPI{
-			MsgType:        "success",
-			MsgDescription: fmt.Sprintf("Задача по фильтрации сетевого трафика на источнике %v, добавлена в очередь", fcts.MsgOption.ID),
-			Sources:        []int{fcts.MsgOption.ID},
+			MsgType: "success",
+			MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   fcts.MsgOption.ID,
+				TaskType:   "фильтрация",
+				TaskAction: "задача добавлена в очередь",
+			}),
+			Sources: []int{fcts.MsgOption.ID},
 		},
 		fcts.ClientTaskID,
 		clientID)

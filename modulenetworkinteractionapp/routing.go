@@ -1,11 +1,5 @@
 package modulenetworkinteractionapp
 
-/*
-* Маршрутизация запросов приходящих через websocket
-*
-* Версия 0.2, дата релиза 30.05.2019
-* */
-
 import (
 	"encoding/json"
 	"fmt"
