@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/savemessageapp"
 )
@@ -88,34 +87,37 @@ func HandlerMsgFromCore(
 				strSourceID := createStringFromSourceList(listInvalidSource)
 
 				clientNotify.AdvancedOptions = configure.MessageNotification{
-					SourceReport:        "NI module",
-					Section:             "source control",
-					TypeActionPerformed: "load list",
-					CriticalityMessage:  "warning",
-					Sources:             listInvalidSource,
-					HumanDescriptionNotification: common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceReport:                 "NI module",
+					Section:                      "source control",
+					TypeActionPerformed:          "load list",
+					CriticalityMessage:           "warning",
+					Sources:                      listInvalidSource,
+					HumanDescriptionNotification: fmt.Sprintf("обновление списка источников выполнено не полностью, параметры источников: %v содержат некорректные значения", strSourceID),
+					/*common.PatternUserMessage(&common.TypePatternUserMessage{
 						TaskType:   "управление источниками",
 						TaskAction: "частичное выполнение задачи",
 						Message:    fmt.Sprintf("обновление списка источников выполнено не полностью, параметры источников: %v содержат некорректные значения", strSourceID),
-					}),
+					}),*/
 				}
 
 				chanInCore <- &clientNotify
 			} else {
-				hdn := common.PatternUserMessage(&common.TypePatternUserMessage{
+				hdn := "обновление настроек источников выполнено успешно"
+				/*common.PatternUserMessage(&common.TypePatternUserMessage{
 					TaskType:   "управление источниками",
 					TaskAction: "задача выполнена успешно",
 					Message:    "обновление настроек источников выполнено успешно",
-				})
+				})*/
 				cm := "success"
 
 				if len(executedSourcesList) > 0 {
 					strSourceID := createStringFromSourceList(executedSourcesList)
-					hdn = common.PatternUserMessage(&common.TypePatternUserMessage{
+					hdn = fmt.Sprintf("на источниках: %v выполняются задачи, в настоящее время изменение их настроек невозможно", strSourceID)
+					/*common.PatternUserMessage(&common.TypePatternUserMessage{
 						TaskType:   "управление источниками",
 						TaskAction: "задача отклонена",
 						Message:    fmt.Sprintf("на источниках: %v выполняются задачи, в настоящее время изменение их настроек невозможно", strSourceID),
-					})
+					})*/
 
 					cm = "info"
 				}
@@ -192,15 +194,16 @@ func HandlerMsgFromCore(
 			//проверяем прислал ли пользователь данные по источникам
 			if len(ado.MsgOptions.SourceList) == 0 {
 				clientNotify.AdvancedOptions = configure.MessageNotification{
-					SourceReport:        "NI module",
-					Section:             "source control",
-					TypeActionPerformed: "load list",
-					CriticalityMessage:  "warning",
-					HumanDescriptionNotification: common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceReport:                 "NI module",
+					Section:                      "source control",
+					TypeActionPerformed:          "load list",
+					CriticalityMessage:           "warning",
+					HumanDescriptionNotification: "получен пустой список источников",
+					/*common.PatternUserMessage(&common.TypePatternUserMessage{
 						TaskType:   "управление источниками",
 						TaskAction: "задача отклонена",
 						Message:    "получен пустой список источников",
-					}),
+					}),*/
 				}
 
 				chanInCore <- &clientNotify
@@ -220,16 +223,17 @@ func HandlerMsgFromCore(
 				strSourceID := createStringFromSourceList(*listInvalidSource)
 
 				clientNotify.AdvancedOptions = configure.MessageNotification{
-					SourceReport:        "NI module",
-					Section:             "source control",
-					TypeActionPerformed: "perform actions on sources",
-					CriticalityMessage:  "warning",
-					Sources:             *listInvalidSource,
-					HumanDescriptionNotification: common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceReport:                 "NI module",
+					Section:                      "source control",
+					TypeActionPerformed:          "perform actions on sources",
+					CriticalityMessage:           "warning",
+					Sources:                      *listInvalidSource,
+					HumanDescriptionNotification: fmt.Sprintf("невозможно выполнить действия над источниками:%v, приняты некорректные значения", strSourceID),
+					/*common.PatternUserMessage(&common.TypePatternUserMessage{
 						TaskType:   "управление источниками",
 						TaskAction: "задача отклонена",
 						Message:    fmt.Sprintf("невозможно выполнить действия над источниками:%v, приняты некорректные значения", strSourceID),
-					}),
+					}),*/
 				}
 
 				chanInCore <- &clientNotify
@@ -301,16 +305,17 @@ func HandlerMsgFromCore(
 		if !ok {
 			//отправляем сообщение пользователю
 			clientNotify.AdvancedOptions = configure.MessageNotification{
-				SourceReport:        "NI module",
-				Section:             "filtration control",
-				TypeActionPerformed: "start",
-				CriticalityMessage:  "warning",
-				HumanDescriptionNotification: common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceReport:                 "NI module",
+				Section:                      "filtration control",
+				TypeActionPerformed:          "start",
+				CriticalityMessage:           "warning",
+				HumanDescriptionNotification: "источник не найден",
+				/*common.PatternUserMessage(&common.TypePatternUserMessage{
 					SourceID:   msg.SourceID,
 					TaskType:   "фильтрация",
 					TaskAction: "задача отклонена",
 					Message:    "источник не найден",
-				}),
+				}),*/
 			}
 
 			chanInCore <- &clientNotify
@@ -330,16 +335,17 @@ func HandlerMsgFromCore(
 
 				//отправляем сообщение пользователю
 				clientNotify.AdvancedOptions = configure.MessageNotification{
-					SourceReport:        "NI module",
-					Section:             "filtration control",
-					TypeActionPerformed: "start",
-					CriticalityMessage:  "warning",
-					HumanDescriptionNotification: common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceReport:                 "NI module",
+					Section:                      "filtration control",
+					TypeActionPerformed:          "start",
+					CriticalityMessage:           "warning",
+					HumanDescriptionNotification: "не возможно отправить запрос для выполнения задачи, источник не подключен",
+					/*common.PatternUserMessage(&common.TypePatternUserMessage{
 						SourceID:   msg.SourceID,
 						TaskType:   "фильтрация",
 						TaskAction: "задача отклонена",
 						Message:    "не возможно отправить запрос для выполнения задачи, источник не подключен",
-					}),
+					}),*/
 				}
 
 				chanInCore <- &clientNotify
@@ -391,16 +397,17 @@ func HandlerMsgFromCore(
 			if !si.ConnectionStatus {
 				//отправляем сообщение пользователю
 				clientNotify.AdvancedOptions = configure.MessageNotification{
-					SourceReport:        "NI module",
-					Section:             "filtration control",
-					TypeActionPerformed: "stop",
-					CriticalityMessage:  "warning",
-					HumanDescriptionNotification: common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceReport:                 "NI module",
+					Section:                      "filtration control",
+					TypeActionPerformed:          "stop",
+					CriticalityMessage:           "warning",
+					HumanDescriptionNotification: "не возможно отправить запрос на останов задачи, источник не подключен",
+					/*common.PatternUserMessage(&common.TypePatternUserMessage{
 						SourceID:   msg.SourceID,
 						TaskType:   "фильтрация",
 						TaskAction: "задача отклонена",
 						Message:    "не возможно отправить запрос на останов задачи, источник не подключен",
-					}),
+					}),*/
 				}
 
 				chanInCore <- &clientNotify

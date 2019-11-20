@@ -249,11 +249,18 @@ func MainAPIApp(appConfig *configure.AppConfig, saveMessageApp *savemessageapp.P
 				if !ok {
 					cl := storingMemoryAPI.GetClientList()
 					for _, cs := range cl {
+						if cs.Connection == nil {
+							continue
+						}
 						if err := cs.SendWsMessage(1, msgjson); err != nil {
 							_ = settingsServerAPI.SaveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
 						}
 					}
 
+					continue
+				}
+
+				if clientSettings.Connection == nil {
 					continue
 				}
 

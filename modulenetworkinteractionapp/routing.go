@@ -39,8 +39,13 @@ func sendNIStopTask(
 	sourceID int,
 	qts *configure.QueueTaskStorage) {
 
+	fmt.Println("================ func 'sendNIStopTask' START")
+
 	tasks, ok := qts.GetAllTaskQueueTaskStorage(sourceID)
 	if !ok {
+
+		fmt.Printf("================ func 'sendNIStopTask' ERROR:'task with source ID %v not found'\n", sourceID)
+
 		return
 	}
 
@@ -54,19 +59,30 @@ func sendNIStopTask(
 		qts.ChangeAvailabilityConnectionOnDisconnection(sourceID, tid)
 
 		if taskInfo.TaskStatus == "execution" {
+
+			fmt.Printf("================ func 'sendNIStopTask' SEND MSG STOP on disconnect  TASK ID '%v'\n", tid)
+
 			chanInCRRF <- &msgStop
 		}
 	}
+
+	fmt.Println("================ func 'sendNIStopTask' STOP")
 }
 
 //checkIfThereTaskForSource проверяет есть ли в очереди задачи для данного источника
 func checkIfThereTaskForSource(sourceID int, qts *configure.QueueTaskStorage) {
+
+	fmt.Println("func 'checkIfThereTaskForSource'_____ STARt________")
+
 	tasks, ok := qts.GetAllTaskQueueTaskStorage(sourceID)
 	if !ok {
 		return
 	}
 
 	for tid := range tasks {
+
+		fmt.Printf("func 'checkIfThereTaskForSource'_____ change availability connection for task ID '%v' ________\n", tid)
+
 		qts.ChangeAvailabilityConnectionOnConnection(sourceID, tid)
 	}
 }

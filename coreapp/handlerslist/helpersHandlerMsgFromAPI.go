@@ -228,6 +228,7 @@ func handlerFiltrationControlTypeStart(
 			notifications.NotificationSettingsToClientAPI{
 				MsgType:        "danger",
 				MsgDescription: msg,
+				Sources:        []int{fcts.MsgOption.ID},
 			},
 			fcts.ClientTaskID,
 			clientID)
@@ -279,8 +280,9 @@ func handlerFiltrationControlTypeStart(
 	fmt.Println("function 'handlerFiltrationControlTypeStart' - check connection status")
 
 	//получаем новый идентификатор задачи
-	taskID := common.GetUniqIDFormatMD5(clientID)
+	taskID := common.GetUniqIDFormatMD5(clientID + "_" + fcts.ClientTaskID)
 
+	fmt.Printf("func 'handlerMsgFromAPI', ADD NEW TASK, ClientTaskID: '%v', APP TASK ID: '%v'\n", fcts.ClientTaskID, taskID)
 	fmt.Printf("function 'handlerFiltrationControlTypeStart' - add task QueueTaskStorage with ID:'%v'\n", taskID)
 
 	//добавляем новую задачу в очередь задач

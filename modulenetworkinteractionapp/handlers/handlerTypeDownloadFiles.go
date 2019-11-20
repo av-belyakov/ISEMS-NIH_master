@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 
-	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/savemessageapp"
 )
@@ -218,9 +217,10 @@ func ControllerReceivingRequestedFiles(
 
 		ao := configure.MessageNotification{
 			SourceReport:        "NI module",
-			Section:             "download control",
-			TypeActionPerformed: "task processing",
-			CriticalityMessage:  "warning",
+			Section:             "download files",
+			TypeActionPerformed: "stop",
+			//			TypeActionPerformed: "task processing",
+			CriticalityMessage: "warning",
 		}
 
 		for msg := range chanIn {
@@ -236,22 +236,43 @@ func ControllerReceivingRequestedFiles(
 
 			//fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' SOURCE INFO: %v, OK %v\n", si, ok)
 
+			//останов выполнения задачи из-за разрыва соединения (запрос из Ядра)
+			if msg.Command == "to stop the task because of a disconnection" {
+				fmt.Println("\tfunc 'ControllerReceivingRequestedFiles', to stop the task because of a disconnection")
+
+				c := []byte("to stop the task because of a disconnection")
+				if err := lhrf.SendChunkReceivingData(
+					si.IP,
+					msg.TaskID,
+					MsgChannelProcessorReceivingFiles{
+						MessageType:  1,
+						MsgGenerator: "Core module",
+						Message:      &c,
+					}); err != nil {
+					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				}
+
+				continue
+			}
+
 			if !ok || !si.ConnectionStatus {
 				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("it is not possible to send a request to download files, the source with ID %v is not connected", msg.SourceID))
 
 				fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' ERROR 0000")
 
-				humanNotify := common.PatternUserMessage(&common.TypePatternUserMessage{
+				humanNotify := "не возможно отправить запрос на скачивание файлов, источник не подключен"
+				/*humanNotify := common.PatternUserMessage(&common.TypePatternUserMessage{
 					SourceID: msg.SourceID,
 					TaskType: "скачивание файлов",
 					Message:  "не возможно отправить запрос на скачивание файлов, источник не подключен",
-				})
+				})*/
 				if !ok {
-					humanNotify = common.PatternUserMessage(&common.TypePatternUserMessage{
+					humanNotify = "источник не найден"
+					/*common.PatternUserMessage(&common.TypePatternUserMessage{
 						SourceID: msg.SourceID,
 						TaskType: "скачивание файлов",
 						Message:  "источник не найден",
-					})
+					})*/
 
 					fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' ERROR 1111")
 
@@ -273,11 +294,12 @@ func ControllerReceivingRequestedFiles(
 
 			//fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' RESIVED SOURCE PARAMETERS: %v\n", si)
 
-			ao.HumanDescriptionNotification = common.PatternUserMessage(&common.TypePatternUserMessage{
+			ao.HumanDescriptionNotification = "источник не найден"
+			/*common.PatternUserMessage(&common.TypePatternUserMessage{
 				SourceID: msg.SourceID,
 				TaskType: "скачивание файлов",
 				Message:  "источник не найден",
-			})
+			})*/
 			clientNotify.AdvancedOptions = ao
 
 			//errMsg := fmt.Sprintf("Source with ID %v not found", msg.SourceID)
@@ -296,12 +318,13 @@ func ControllerReceivingRequestedFiles(
 
 					fmt.Printf("func 'handlerTypeDownloadFiles', ERROR (processorReceivingFiles):%v\n", err)
 
-					ao.HumanDescriptionNotification = common.PatternUserMessage(&common.TypePatternUserMessage{
+					ao.HumanDescriptionNotification = "не найдены файлы для скачивания"
+					/*common.PatternUserMessage(&common.TypePatternUserMessage{
 						SourceID:   msg.SourceID,
 						TaskType:   "скачивание файлов",
 						TaskAction: "задача отклонена",
 						Message:    "не найдены файлы для скачивания",
-					})
+					})*/
 					clientNotify.AdvancedOptions = ao
 
 					handlerTaskWarning(msg.TaskID, clientNotify)
@@ -343,20 +366,6 @@ func ControllerReceivingRequestedFiles(
 
 				fmt.Println("func 'ControllerReceivingRequestedFiles', SEND MSG 'stop receiving files' TO HANDLER (=-AFTER-=) --->>>>")
 
-			//останов выполнения задачи из-за разрыва соединения (запрос из Ядра)
-			case "to stop the task because of a disconnection":
-				c := []byte("to stop the task because of a disconnection")
-				if err := lhrf.SendChunkReceivingData(
-					si.IP,
-					msg.TaskID,
-					MsgChannelProcessorReceivingFiles{
-						MessageType:  1,
-						MsgGenerator: "Core module",
-						Message:      &c,
-					}); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
-				}
-
 			//ответы приходящие от источника в рамках выполнения конкретной задачи
 			case "taken from the source":
 
@@ -376,24 +385,6 @@ func ControllerReceivingRequestedFiles(
 
 					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
 				}
-
-				/*chanToHandler, err := lhrf.GetHendlerReceivingFile(si.IP, msg.TaskID)
-				if err != nil {
-
-					fmt.Printf("============= func 'handlerTypeDownloadFiles', MSG 'taken from the source' ERROR: chan eqval 'nil' (%v)\n", string(*msg.Message)[:100])
-
-					_ = saveMessageApp.LogMessage("error", errMsg)
-
-					break
-				}
-
-				//ответы приходящие от источника (команды для processorReceivingFiles)
-				chanToHandler <- MsgChannelProcessorReceivingFiles{
-					MessageType:  msg.MsgType,
-					MsgGenerator: "NI module",
-					Message:      msg.Message,
-				}*/
-
 			}
 		}
 	}(lhrf, clientNotify, chanIn)

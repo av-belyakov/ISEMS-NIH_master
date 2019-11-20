@@ -242,7 +242,7 @@ func HandlerMsgFromNI(
 			hdtsct.NS.MsgDescription = common.PatternUserMessage(&common.TypePatternUserMessage{
 				SourceID:   sourceID,
 				TaskType:   "скачивание файлов",
-				TaskAction: "задача выполнена успешно",
+				TaskAction: "задача успешно выполнена",
 			})
 
 			hdtsct.ResMsgInfo.MsgOption.Status = "complete"
@@ -287,7 +287,7 @@ func HandlerMsgFromNI(
 				SourceID:   msg.SourceID,
 				TaskType:   "скачивание файлов",
 				TaskAction: "задача аварийно завершена",
-				Message:    "задача была аварийно завершена из-за потери сетевого соединения",
+				Message:    "задача была аварийно завершена из-за потери сетевого соединения с источником",
 			})
 
 			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
@@ -295,8 +295,11 @@ func HandlerMsgFromNI(
 			hdtsct.ResMsgInfo.MsgOption.Status = "stop"
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
 
-			//изменяем статус задачи на 'wait' (storingMemoryQueueTask)
-			_ = hsm.QTS.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "wait")
+			//изменяем статус задачи на 'pause'
+			// теперь задача будет ожидать соединения с источником в течении сутое
+			// если соединения не произойдет то будет удалена или продолжит выполнятся
+			// если соединение будет установлено
+			_ = hsm.QTS.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "pause")
 
 			//отмечаем задачу как завершенную для ее последующего удаления
 			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)

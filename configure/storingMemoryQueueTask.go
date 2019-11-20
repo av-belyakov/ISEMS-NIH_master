@@ -19,7 +19,7 @@ type QueueTaskStorage struct {
 //QueueTaskInformation подробная информация о задаче в очереди
 // IDClientAPI - уникальный идентификатор клиента
 // TaskIDClientAPI - идентификатор задачи полученный от клиента
-// TaskStatus - статус задачи 'wait', 'execution', 'complete'
+// TaskStatus - статус задачи 'wait', 'execution', 'complete', 'pause'
 // TimeUpdate - время последнего обновления задачи (используется для
 //  удаления 'подвисших' задач)
 // TaskType - тип задачи ('filtration control', 'download control')
@@ -232,6 +232,8 @@ func NewRepositoryQTS() *QueueTaskStorage {
 
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskStatus = msg.NewStatus
 				qts.StorageList[msg.SourceID][msg.TaskID].TimeUpdate = time.Now().Unix()
+
+				fmt.Printf("func 'ChangeTaskStatusQueueTask' StoringMemoryQueueTask ----- NEW TASK STATUS:'%v'\n", qts.StorageList[msg.SourceID][msg.TaskID].TaskStatus)
 
 				msg.ChanRes <- msgRes
 
@@ -533,6 +535,8 @@ func (qts *QueueTaskStorage) ChangeTaskStatusQueueTask(sourceID int, taskID, new
 	chanRes := make(chan chanResponse)
 	defer close(chanRes)
 
+	fmt.Println("func 'ChangeTaskStatusQueueTask' StoringMemoryQueueTask ----- START")
+
 	qts.ChannelReq <- chanRequest{
 		Action:    "change task status",
 		SourceID:  sourceID,
@@ -700,6 +704,13 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 				for taskID, taskInfo := range tasks {
 
 					fmt.Printf("___ ===== *** function 'CheckTimeQueueTaskStorage' LIST TASKS:[taskID:'%v', task type:'%v']\n", taskID, taskInfo.TaskType)
+
+					//если соединение с источником было разорвано очищаем
+					// кеш и переводим задачу в режим ожидания
+					if (taskInfo.TaskStatus == "pause") && (taskInfo.TaskType == "download control") {
+						et.downloadTask = []string{}
+						qts.ChangeTaskStatusQueueTask(sourceID, taskID, "wait")
+					}
 
 					//если задача помечена как выполненная удаляем ее
 					if taskInfo.TaskStatus == "complete" /*&& (time.Now().Unix() > (taskInfo.TimeUpdate + 30))*/ {

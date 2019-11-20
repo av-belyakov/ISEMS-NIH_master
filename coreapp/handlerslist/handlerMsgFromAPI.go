@@ -60,7 +60,7 @@ func HandlerMsgFromAPI(
 					return
 				}
 
-				taskID := common.GetUniqIDFormatMD5(msg.IDClientAPI)
+				taskID := common.GetUniqIDFormatMD5(msg.IDClientAPI + "_" + msgc.ClientTaskID)
 
 				//добавляем новую задачу
 				hsm.SMT.AddStoringMemoryTask(taskID, configure.TaskDescription{
@@ -102,7 +102,7 @@ func HandlerMsgFromAPI(
 		case "source control":
 			//получить актуальный список источников
 			if msgc.MsgInstruction == "get an updated list of sources" {
-				taskID := common.GetUniqIDFormatMD5(msg.IDClientAPI)
+				taskID := common.GetUniqIDFormatMD5(msg.IDClientAPI + "_" + msgc.ClientTaskID)
 
 				//добавляем новую задачу
 				hsm.SMT.AddStoringMemoryTask(taskID, configure.TaskDescription{
@@ -135,7 +135,7 @@ func HandlerMsgFromAPI(
 					return
 				}
 
-				taskID := common.GetUniqIDFormatMD5(msg.IDClientAPI)
+				taskID := common.GetUniqIDFormatMD5(msg.IDClientAPI + "_" + msgc.ClientTaskID)
 
 				//добавляем новую задачу
 				hsm.SMT.AddStoringMemoryTask(taskID, configure.TaskDescription{
@@ -192,16 +192,19 @@ func HandlerMsgFromAPI(
 
 					fmt.Printf("ERROR :::: Ошибка, по переданному идентификатору '%v' ожидающих или выполняемых задач не обнаружено\n", msgc.ClientTaskID)
 
-					nsErr := notifications.NotificationSettingsToClientAPI{
-						MsgType: "danger",
-						MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
-							SourceID:   sourceID,
-							TaskType:   "фильтрация",
-							TaskAction: "задача отклонена",
-							Message:    fmt.Sprintf("'по переданному идентификатору %v ожидающих или выполняемых задач не обнаружено'", msgc.ClientTaskID),
-						}),
-					}
-					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErr, msgc.ClientTaskID, msg.IDClientAPI)
+					notifications.SendNotificationToClientAPI(
+						outCoreChans.OutCoreChanAPI,
+						notifications.NotificationSettingsToClientAPI{
+							MsgType: "danger",
+							MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+								SourceID:   sourceID,
+								TaskType:   "фильтрация",
+								TaskAction: "задача отклонена",
+								Message:    fmt.Sprintf("'по переданному идентификатору %v ожидающих или выполняемых задач не обнаружено'", msgc.ClientTaskID),
+							}),
+						},
+						msgc.ClientTaskID,
+						msg.IDClientAPI)
 
 					return
 				}
@@ -209,6 +212,19 @@ func HandlerMsgFromAPI(
 				//проверяем наличие задачи в StoringMemoryTask
 				isExist := hsm.SMT.CheckIsExistMemoryTask(taskID)
 				if !isExist {
+					notifications.SendNotificationToClientAPI(
+						outCoreChans.OutCoreChanAPI,
+						notifications.NotificationSettingsToClientAPI{
+							MsgType: "danger",
+							MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+								SourceID:   sourceID,
+								TaskType:   "фильтрация",
+								TaskAction: "задача отклонена",
+								Message:    fmt.Sprintf("'по переданному идентификатору %v выполняемых задач не обнаружено'", msgc.ClientTaskID),
+							}),
+						},
+						msgc.ClientTaskID,
+						msg.IDClientAPI)
 
 					return
 				}

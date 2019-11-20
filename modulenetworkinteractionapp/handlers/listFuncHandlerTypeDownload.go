@@ -189,8 +189,8 @@ func processorReceivingFiles(
 		Command: "send client API",
 		AdvancedOptions: configure.MessageNotification{
 			SourceReport:                 "NI module",
-			Section:                      "download control",
-			TypeActionPerformed:          "task processing",
+			Section:                      "download files",
+			TypeActionPerformed:          "start",
 			CriticalityMessage:           "info",
 			HumanDescriptionNotification: "идет подготовка списка скачиваемых файлов",
 			Sources:                      []int{sourceID},
@@ -285,7 +285,6 @@ DONE:
 
 					//остановить скачивание файлов
 					if command == "stop receiving files" {
-
 						//отмечаем задачу как находящуюся в процессе останова
 						tpdf.smt.IsSlowDownStoringMemoryTask(tpdf.taskID)
 
@@ -321,6 +320,12 @@ DONE:
 
 					//разрыв соединения (остановить загрузку файлов)
 					if command == "to stop the task because of a disconnection" {
+
+						fmt.Println("\tDOWNLOAD: func 'processorReceivingFiles', from CORE reseived COMMAND:'to stop the task because of a disconnection'")
+
+						//отмечаем задачу как находящуюся в процессе останова
+						tpdf.smt.IsSlowDownStoringMemoryTask(tpdf.taskID)
+
 						//закрываем дескриптор файла и удаляем файл
 						lfd.delFileDescription(fi.Hex)
 						_ = os.Remove(path.Join(pathDirStorage, fn))
@@ -421,7 +426,7 @@ DONE:
 
 						break NEWFILE
 
-						//сообщение об успешном останове передачи файла (slave -> master)
+					//сообщение об успешном останове передачи файла (slave -> master)
 					case "file transfer stopped successfully":
 
 						fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', SECTION:'file transfer stopped successfully' SEND MSG '%v'\n", msgReq)
