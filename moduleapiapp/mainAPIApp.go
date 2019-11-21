@@ -60,11 +60,14 @@ func sendMsgGetSourceList(clientID string) error {
 
 //HandlerRequest обработчик HTTPS запроса к "/"
 func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter, req *http.Request) {
-	//fmt.Println("RESIVED http request '/api'")
+	funcName := "HandlerRequest"
 
 	defer func() {
 		if err := recover(); err != nil {
-			_ = settingsServerAPI.SaveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
+			_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(err),
+				FuncName:    funcName,
+			})
 		}
 	}()
 
@@ -97,7 +100,10 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 		w.WriteHeader(400)
 		w.Write(bodyHTTPResponseError)
 
-		_ = settingsServerAPI.SaveMessageApp.LogMessage("error", fmt.Sprintf("Server API - missing or incorrect identification token (сlient ipaddress %v)", req.RemoteAddr))
+		_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprintf("missing or incorrect identification token (сlient ipaddress %v)", req.RemoteAddr),
+			FuncName:    funcName,
+		})
 	}
 
 	for _, sc := range settingsServerAPI.Tokens {
@@ -117,14 +123,21 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 	w.WriteHeader(400)
 	w.Write(bodyHTTPResponseError)
 
-	_ = settingsServerAPI.SaveMessageApp.LogMessage("error", fmt.Sprintf("Server API - missing or incorrect identification token (сlient ipaddress %v)", req.RemoteAddr))
+	_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		Description: fmt.Sprintf("missing or incorrect identification token (сlient ipaddress %v)", req.RemoteAddr),
+		FuncName:    funcName,
+	})
 }
 
 func (settingsServerAPI *settingsServerAPI) serverWss(w http.ResponseWriter, req *http.Request) {
+	funcName := "serverWss"
 
 	defer func() {
 		if err := recover(); err != nil {
-			_ = settingsServerAPI.SaveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
+			_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(err),
+				FuncName:    funcName,
+			})
 		}
 	}()
 
@@ -134,7 +147,11 @@ func (settingsServerAPI *settingsServerAPI) serverWss(w http.ResponseWriter, req
 	clientID, _, ok := storingMemoryAPI.SearchClientForIP(remoteIP)
 	if !ok {
 		w.WriteHeader(401)
-		_ = settingsServerAPI.SaveMessageApp.LogMessage("error", fmt.Sprintf("Server API - access for the user with ipaddress %v is prohibited", req.RemoteAddr))
+		_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprintf("access for the user with ipaddress %v is prohibited", req.RemoteAddr),
+			FuncName:    funcName,
+		})
+
 		return
 	}
 
@@ -155,7 +172,10 @@ func (settingsServerAPI *settingsServerAPI) serverWss(w http.ResponseWriter, req
 		//удаляем информацию о клиенте
 		storingMemoryAPI.DelClientAPI(clientID)
 
-		_ = settingsServerAPI.SaveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
+		_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprint(err),
+			FuncName:    funcName,
+		})
 
 		log.Println("Client API whis ip", remoteIP, "is disconnect")
 	}
@@ -163,7 +183,10 @@ func (settingsServerAPI *settingsServerAPI) serverWss(w http.ResponseWriter, req
 	//получаем настройки клиента
 	clientSettings, ok := storingMemoryAPI.GetClientSettings(clientID)
 	if !ok {
-		_ = settingsServerAPI.SaveMessageApp.LogMessage("error", fmt.Sprintf("Server API - client setup with ID %v not found", clientID))
+		_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprintf("client setup with ID %v not found", clientID),
+			FuncName:    funcName,
+		})
 
 		return
 	}
@@ -184,7 +207,10 @@ func (settingsServerAPI *settingsServerAPI) serverWss(w http.ResponseWriter, req
 
 				//удаляем информацию о клиенте
 				storingMemoryAPI.DelClientAPI(clientID)
-				_ = settingsServerAPI.SaveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
+				_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
 
 				log.Println("Client API whis ip", remoteIP, "is disconnect")
 
@@ -220,6 +246,7 @@ func MainAPIApp(appConfig *configure.AppConfig, saveMessageApp *savemessageapp.P
 		Tokens:         appConfig.AuthenticationTokenClientsAPI,
 		SaveMessageApp: saveMessageApp,
 	}
+	funcName := "MainAPIApp"
 
 	//сервер WSS для подключения клиентов
 	go func() {
@@ -239,7 +266,10 @@ func MainAPIApp(appConfig *configure.AppConfig, saveMessageApp *savemessageapp.P
 			if msg.MsgGenerator == "Core module" && msg.MsgRecipient == "API module" {
 				msgjson, ok := msg.MsgJSON.([]byte)
 				if !ok {
-					_ = settingsServerAPI.SaveMessageApp.LogMessage("error", "Server API - failed to send json message, error while casting type")
+					_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: "failed to send json message, error while casting type",
+						FuncName:    funcName,
+					})
 
 					continue
 				}
@@ -253,7 +283,10 @@ func MainAPIApp(appConfig *configure.AppConfig, saveMessageApp *savemessageapp.P
 							continue
 						}
 						if err := cs.SendWsMessage(1, msgjson); err != nil {
-							_ = settingsServerAPI.SaveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
+							_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+								Description: fmt.Sprint(err),
+								FuncName:    funcName,
+							})
 						}
 					}
 
@@ -265,7 +298,10 @@ func MainAPIApp(appConfig *configure.AppConfig, saveMessageApp *savemessageapp.P
 				}
 
 				if err := clientSettings.SendWsMessage(1, msgjson); err != nil {
-					_ = settingsServerAPI.SaveMessageApp.LogMessage("error", fmt.Sprintf("Server API - %v", fmt.Sprint(err)))
+					_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
 				}
 			}
 		}

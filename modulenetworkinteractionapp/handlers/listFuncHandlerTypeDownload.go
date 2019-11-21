@@ -223,6 +223,7 @@ func processorReceivingFiles(
 func processingDownloadFile(tpdf typeProcessingDownloadFile) {
 	sdf := statusDownloadFile{Status: "success"}
 	lfd := NewListFileDescription()
+	funcName := "processingDownloadFile"
 
 	//начальный запрос на передачу файла
 	mtd := configure.MsgTypeDownload{
@@ -250,7 +251,10 @@ DONE:
 
 		msgJSON, err := json.Marshal(mtd)
 		if err != nil {
-			_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(err),
+				FuncName:    funcName,
+			})
 
 			continue
 		}
@@ -296,7 +300,10 @@ DONE:
 
 						msgJSON, err := json.Marshal(msgReq)
 						if err != nil {
-							_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
+							_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+								Description: fmt.Sprint(err),
+								FuncName:    funcName,
+							})
 
 							continue
 						}
@@ -338,7 +345,10 @@ DONE:
 				} else if msg.MsgGenerator == "NI module" {
 					var msgRes configure.MsgTypeDownload
 					if err := json.Unmarshal(*msg.Message, &msgRes); err != nil {
-						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
+						_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
 
 						continue
 					}
@@ -350,7 +360,10 @@ DONE:
 					/* получаем информацию о задаче */
 					ti, ok := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
 					if !ok {
-						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("task with ID %v not found", tpdf.taskID))
+						_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprintf("task with ID %v not found", tpdf.taskID),
+							FuncName:    funcName,
+						})
 
 						sdf.Status = "error"
 						sdf.ErrMsg = err
@@ -393,7 +406,10 @@ DONE:
 						msgReq.Info.Command = "ready to receive file"
 						msgJSON, err := json.Marshal(msgReq)
 						if err != nil {
-							_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
+							_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+								Description: fmt.Sprint(err),
+								FuncName:    funcName,
+							})
 
 							sdf.Status = "error"
 							sdf.ErrMsg = err
@@ -441,17 +457,25 @@ DONE:
 
 					//невозможно остановить передачу файла (slave -> master)
 					case "impossible to stop file transfer":
-						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("it is impossible to stop file transfer (source ID: %v, task ID: %v)", tpdf.sourceID, tpdf.taskID))
+						_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprintf("it is impossible to stop file transfer (source ID: %v, task ID: %v)", tpdf.sourceID, tpdf.taskID),
+							FuncName:    funcName,
+						})
 
 					default:
 
 						fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', RESEIVED COMMAND ------+++++ %v -----+++\n", msgRes.Info.Command)
 
-						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("received unknown command ('%v')\n", msgRes.Info.Command))
-
+						_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprintf("received unknown command ('%v')\n", msgRes.Info.Command),
+							FuncName:    funcName,
+						})
 					}
 				} else {
-					_ = tpdf.saveMessageApp.LogMessage("error", "unknown generator events")
+					_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: "unknown generator events",
+						FuncName:    funcName,
+					})
 
 					break NEWFILE
 				}
@@ -469,7 +493,10 @@ DONE:
 					ChanInCore: tpdf.channels.chanInCore,
 				})
 				if err != nil {
-					_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
 
 					fmt.Printf("------ ERROR: %v\n", fmt.Sprint(err))
 
@@ -481,7 +508,10 @@ DONE:
 
 				ti, ok := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
 				if !ok {
-					_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("task with ID %v not found", tpdf.taskID))
+					_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprintf("task with ID %v not found", tpdf.taskID),
+						FuncName:    funcName,
+					})
 
 					sdf.Status = "error"
 					sdf.ErrMsg = err
@@ -505,12 +535,18 @@ DONE:
 
 						msgRes.Info.Command = "file received with error"
 
-						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprintf("the checksum value for the downloaded file '%v' is incorrect (task ID %v)", ti.TaskParameter.DownloadTask.FileInformation.Name, tpdf.taskID))
+						_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprintf("the checksum value for the downloaded file '%v' is incorrect (task ID %v)", ti.TaskParameter.DownloadTask.FileInformation.Name, tpdf.taskID),
+							FuncName:    funcName,
+						})
 					}
 
 					msgJSON, err := json.Marshal(msgRes)
 					if err != nil {
-						_ = tpdf.saveMessageApp.LogMessage("error", fmt.Sprint(err))
+						_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
 
 						break NEWFILE
 					}
@@ -662,13 +698,6 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes 
 		if !ok {
 			pwbf.SMT.IncrementNumberFilesDownloadedError(pwbf.TaskID)
 
-			//обновляем информацию о файле
-			/*pwbf.SMT.UpdateTaskDownloadFileIsLoaded(pwbf.TaskID, configure.DownloadTaskParameters{
-				DownloadingFilesInformation: map[string]*configure.DownloadFilesInformation{
-					fi.Name: &newFileInfo,
-				},
-			})*/
-
 			pwbf.ChanInCore <- &msgToCore
 
 			twbfr.fileLoadedError = true
@@ -682,8 +711,6 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes 
 				fi.Name: &newFileInfo,
 			},
 		})
-
-		//fmt.Printf("func 'writingBinaryFile', file name:%v, success uploaded\n", fi.Name)
 
 		pwbf.ChanInCore <- &msgToCore
 

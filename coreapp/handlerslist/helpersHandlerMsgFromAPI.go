@@ -195,7 +195,7 @@ func handlerFiltrationControlTypeStart(
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) {
 
-	funcName := ", function 'handlerFiltrationControlTypeStart'"
+	funcName := "handlerFiltrationControlTypeStart"
 
 	//сообщение о том что задача была отклонена
 	resMsg := configure.FiltrationControlTypeInfo{
@@ -211,7 +211,10 @@ func handlerFiltrationControlTypeStart(
 
 	msgJSON, err := json.Marshal(resMsg)
 	if err != nil {
-		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprint(err),
+			FuncName:    funcName,
+		})
 
 		return
 	}
@@ -220,7 +223,10 @@ func handlerFiltrationControlTypeStart(
 
 	//проверяем параметры фильтрации
 	if msg, ok := сheckParametersFiltration(&fcts.MsgOption); !ok {
-		_ = saveMessageApp.LogMessage("error", "incorrect parameters for filtering are set"+funcName)
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: "incorrect parameters for filtering are set",
+			FuncName:    funcName,
+		})
 
 		//отправляем информационное сообщение
 		notifications.SendNotificationToClientAPI(
@@ -249,7 +255,10 @@ func handlerFiltrationControlTypeStart(
 	//проверяем состояние подключения источника
 	connectionStatus, err := hsm.ISL.GetSourceConnectionStatus(fcts.MsgOption.ID)
 	if err != nil || !connectionStatus {
-		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprint(err),
+			FuncName:    funcName,
+		})
 
 		//отправляем информационное сообщение
 		notifications.SendNotificationToClientAPI(
@@ -320,7 +329,10 @@ func handlerFiltrationControlTypeStart(
 
 	//устанавливаем проверочный статус источника для данной задачи как подключен
 	if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(fcts.MsgOption.ID, taskID); err != nil {
-		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprint(err),
+			FuncName:    funcName,
+		})
 	}
 
 	//информационное сообщение о том что задача добавлена в очередь

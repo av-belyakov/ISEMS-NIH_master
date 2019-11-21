@@ -35,6 +35,7 @@ func Routing(
 		MsgSection:   "source control",
 		Instruction:  "find_all",
 	}
+	funcName := "Routing"
 
 	/*
 		const logFileName = "memdumpfile"
@@ -63,20 +64,23 @@ func Routing(
 			if err != nil {
 				fmt.Printf("function 'routing' Core module - ERROR %v", err)
 
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
 
 				continue
 			}
-
-			//fmt.Printf("function 'routing' Core module - sent new task type %v\n", qti.TaskType)
-			//fmt.Println(qti)
 
 			emt.TaskIDClientAPI = qti.TaskIDClientAPI
 			emt.IDClientAPI = qti.IDClientAPI
 
 			si, ok := isl.GetSourceSetting(msg.SourceID)
 			if !ok {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("no information found on source ID %v", msg.SourceID))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprintf("no information found on source ID %v", msg.SourceID),
+					FuncName:    funcName,
+				})
 
 				//отправляем сообщение пользователю
 				emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
@@ -85,14 +89,20 @@ func Routing(
 				})
 
 				if err := handlerslist.ErrorMessage(emt); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
 				}
 
 				//изменяем статус задачи в storingMemoryQueueTask
 				// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
 				// функцией 'CheckTimeQueueTaskStorage')
 				if err := qts.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "complete"); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
 				}
 
 				continue
@@ -173,14 +183,20 @@ func Routing(
 					})
 
 					if err := handlerslist.ErrorMessage(emt); err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
 					}
 
 					//изменяем статус задачи в storingMemoryQueueTask
 					// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
 					// функцией 'CheckTimeQueueTaskStorage')
 					if err := qts.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "complete"); err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
 					}
 
 					continue
@@ -220,10 +236,6 @@ func Routing(
 				   может отличатся от аналогичного в таблице БД где он обозначает
 				   общее кол-во файлов которые можно скачать, а не запрошенные пользователем
 				*/
-
-				//nit, _ := smt.GetStoringMemoryTask(msg.TaskID)
-
-				//fmt.Printf("function 'routing' Core module - добавили задачу по скачиванию (task ID %v) в StoringMemoryTask: '%v'\n", msg.TaskID, nit)
 
 				ns.MsgDescription = common.PatternUserMessage(&common.TypePatternUserMessage{
 					SourceID:   msg.SourceID,
@@ -275,7 +287,10 @@ func Routing(
 		case data := <-cc.InCoreChanNI:
 			//go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, saveMessageApp)
 			if err := handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm); err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
 			}
 
 		//сообщение клиенту API о том что задача с указанным ID долго выполняется

@@ -72,7 +72,10 @@ func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWrit
 		w.WriteHeader(400)
 		w.Write(bodyHTTPResponseError)
 
-		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("missing or incorrect identification token (сlient ipaddress %v)", req.RemoteAddr))
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprintf("missing or incorrect identification token (сlient ipaddress %v)", req.RemoteAddr),
+			FuncName:    "HandlerRequest",
+		})
 
 		return
 	}
@@ -89,12 +92,18 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
+	fn := "ServerWss"
+
 	remoteIP := strings.Split(req.RemoteAddr, ":")[0]
 
 	clientID, idIsExist := sws.SourceList.GetSourceIDOnIP(remoteIP)
+	errMsg := fmt.Sprintf("access for the user with ipaddress %v is prohibited", remoteIP)
 	if !idIsExist {
 		w.WriteHeader(401)
-		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("access for the user with ipaddress %v is prohibited", remoteIP))
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: errMsg,
+			FuncName:    fn,
+		})
 
 		return
 	}
@@ -102,7 +111,10 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	//проверяем разрешено ли данному ip соединение с сервером wss
 	if !sws.SourceList.GetAccessIsAllowed(remoteIP) {
 		w.WriteHeader(401)
-		_ = saveMessageApp.LogMessage("error", fmt.Sprintf("access for the user with ipaddress %v is prohibited", remoteIP))
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: errMsg,
+			FuncName:    fn,
+		})
 
 		return
 	}
@@ -126,8 +138,10 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 		if c != nil {
 			c.Close()
 		}
-
-		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprint(err),
+			FuncName:    fn,
+		})
 	}
 	defer connClose(sws.COut, c, sws.SourceList, clientID, remoteIP)
 
@@ -148,7 +162,10 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 
 		msgType, message, err := c.ReadMessage()
 		if err != nil {
-			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(err),
+				FuncName:    fn,
+			})
 
 			break
 		}
@@ -192,7 +209,10 @@ func WssServerNetworkInteraction(
 	http.HandleFunc("/wss", settingsWssServer.ServerWss)
 
 	if err := http.ListenAndServeTLS(appConf.ServerHTTPS.Host+":"+port, appConf.ServerHTTPS.PathCertFile, appConf.ServerHTTPS.PathPrivateKeyFile, nil); err != nil {
-		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprint(err),
+			FuncName:    "WssServerNetworkInteraction",
+		})
 
 		log.Println(err)
 		os.Exit(1)

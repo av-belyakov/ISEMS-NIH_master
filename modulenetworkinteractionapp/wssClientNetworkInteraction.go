@@ -1,7 +1,7 @@
 package modulenetworkinteractionapp
 
 /*
-* Клиент для взаимодействия с источниками
+* 		Клиент для взаимодействия с источниками
 * осуществляет соединение с источниками если те выступают в роли сервера
 * */
 
@@ -35,6 +35,8 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
+	fn := "redirectPolicyFunc"
+
 	go func() {
 		header := http.Header{}
 		header.Add("Content-Type", "text/plain;charset=utf-8")
@@ -51,7 +53,10 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 
 		c, res, err := d.Dial("wss://"+cs.IP+":"+cs.Port+"/wss", header)
 		if err != nil {
-			_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(err),
+				FuncName:    fn,
+			})
 
 			return
 		}
@@ -71,7 +76,10 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 			for {
 				msgType, message, err := c.ReadMessage()
 				if err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    fn,
+					})
 
 					break
 				}
@@ -102,16 +110,24 @@ func WssClientNetworkInteraction(
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
+	fn := "WssClientNetworkInteraction"
+
 	//читаем сертификат CA для того что бы наш клиент доверял сертификату переданному сервером
 	rootCA, err := ioutil.ReadFile(appc.PathRootCA)
 	if err != nil {
-		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprint(err),
+			FuncName:    fn,
+		})
 	}
 
 	//создаем новый пул доверенных центров серификации и добавляем в него корневой сертификат
 	cp := x509.NewCertPool()
 	if ok := cp.AppendCertsFromPEM(rootCA); !ok {
-		_ = saveMessageApp.LogMessage("error", "root certificate was not added to the pool")
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: "root certificate was not added to the pool",
+			FuncName:    fn,
+		})
 	}
 
 	conf := &tls.Config{
@@ -154,7 +170,10 @@ func WssClientNetworkInteraction(
 
 				req, err := http.NewRequest("GET", "https://"+cs.IP+":"+cs.Port+"/", nil)
 				if err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    fn,
+					})
 
 					continue
 				}
@@ -168,7 +187,10 @@ func WssClientNetworkInteraction(
 				if err != nil {
 					strErr := fmt.Sprint(err)
 					if !strings.Contains(strErr, "stop redirect") {
-						_ = saveMessageApp.LogMessage("error", strErr)
+						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: strErr,
+							FuncName:    fn,
+						})
 					}
 
 					continue

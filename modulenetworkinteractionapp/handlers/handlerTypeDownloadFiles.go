@@ -188,6 +188,7 @@ func ControllerReceivingRequestedFiles(
 		Section: "message notification",
 		Command: "send client API",
 	}
+	funcName := "ControllerReceivingRequestedFiles"
 
 	//обработка ошибки
 	handlerTaskWarning := func(taskID string, msg configure.MsgBetweenCoreAndNI) {
@@ -219,8 +220,7 @@ func ControllerReceivingRequestedFiles(
 			SourceReport:        "NI module",
 			Section:             "download files",
 			TypeActionPerformed: "stop",
-			//			TypeActionPerformed: "task processing",
-			CriticalityMessage: "warning",
+			CriticalityMessage:  "warning",
 		}
 
 		for msg := range chanIn {
@@ -249,30 +249,27 @@ func ControllerReceivingRequestedFiles(
 						MsgGenerator: "Core module",
 						Message:      &c,
 					}); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
 				}
 
 				continue
 			}
 
 			if !ok || !si.ConnectionStatus {
-				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("it is not possible to send a request to download files, the source with ID %v is not connected", msg.SourceID))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprintf("it is not possible to send a request to download files, the source with ID %v is not connected", msg.SourceID),
+					FuncName:    funcName,
+				})
 
 				fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' ERROR 0000")
 
 				humanNotify := "не возможно отправить запрос на скачивание файлов, источник не подключен"
-				/*humanNotify := common.PatternUserMessage(&common.TypePatternUserMessage{
-					SourceID: msg.SourceID,
-					TaskType: "скачивание файлов",
-					Message:  "не возможно отправить запрос на скачивание файлов, источник не подключен",
-				})*/
+
 				if !ok {
 					humanNotify = "источник не найден"
-					/*common.PatternUserMessage(&common.TypePatternUserMessage{
-						SourceID: msg.SourceID,
-						TaskType: "скачивание файлов",
-						Message:  "источник не найден",
-					})*/
 
 					fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' ERROR 1111")
 
@@ -280,7 +277,10 @@ func ControllerReceivingRequestedFiles(
 					// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
 					// функцией 'CheckTimeQueueTaskStorage')
 					if err := qts.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "complete"); err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
 					}
 				}
 
@@ -292,19 +292,8 @@ func ControllerReceivingRequestedFiles(
 				continue
 			}
 
-			//fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' RESIVED SOURCE PARAMETERS: %v\n", si)
-
 			ao.HumanDescriptionNotification = "источник не найден"
-			/*common.PatternUserMessage(&common.TypePatternUserMessage{
-				SourceID: msg.SourceID,
-				TaskType: "скачивание файлов",
-				Message:  "источник не найден",
-			})*/
 			clientNotify.AdvancedOptions = ao
-
-			//errMsg := fmt.Sprintf("Source with ID %v not found", msg.SourceID)
-
-			//fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' 222222222")
 
 			switch msg.Command {
 			//начало выполнения задачи (запрос из Ядра)
@@ -314,17 +303,14 @@ func ControllerReceivingRequestedFiles(
 				//запуск обработчика задачи по скачиванию файлов
 				channel, chanHandlerStoped, err := processorReceivingFiles(chanInCore, si.IP, msg.TaskID, smt, saveMessageApp, cwtRes)
 				if err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
 
 					fmt.Printf("func 'handlerTypeDownloadFiles', ERROR (processorReceivingFiles):%v\n", err)
 
 					ao.HumanDescriptionNotification = "не найдены файлы для скачивания"
-					/*common.PatternUserMessage(&common.TypePatternUserMessage{
-						SourceID:   msg.SourceID,
-						TaskType:   "скачивание файлов",
-						TaskAction: "задача отклонена",
-						Message:    "не найдены файлы для скачивания",
-					})*/
 					clientNotify.AdvancedOptions = ao
 
 					handlerTaskWarning(msg.TaskID, clientNotify)
@@ -342,7 +328,10 @@ func ControllerReceivingRequestedFiles(
 					//удаляем канал для взаимодействия с обработчиком так как
 					// обработчик к этому времени завершил свою работу
 					if err := lhrf.DelHendlerReceivingFile(si.IP, msg.TaskID); err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
 					}
 				}()
 
@@ -361,7 +350,10 @@ func ControllerReceivingRequestedFiles(
 						MsgGenerator: "Core module",
 						Message:      &c,
 					}); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
 				}
 
 				fmt.Println("func 'ControllerReceivingRequestedFiles', SEND MSG 'stop receiving files' TO HANDLER (=-AFTER-=) --->>>>")
@@ -383,7 +375,10 @@ func ControllerReceivingRequestedFiles(
 
 					fmt.Printf("func 'handlerTypeDownloadFiles', SECTION:'taken from the source' ERROR: '%v'\n", err)
 
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
 				}
 			}
 		}

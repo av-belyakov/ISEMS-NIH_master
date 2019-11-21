@@ -178,5 +178,4 @@ func CreateFileReadme(pathStorage string, npfp *NecessaryParametersFiltrationPro
 	}
 
 	return nil
-
 }

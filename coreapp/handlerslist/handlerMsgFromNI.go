@@ -15,7 +15,7 @@ func HandlerMsgFromNI(
 	msg *configure.MsgBetweenCoreAndNI,
 	hsm HandlersStoringMemory) error {
 
-	funcName := ", function 'HandlerMsgFromNI'"
+	funcName := "HandlerMsgFromNI"
 
 	var err error
 	taskInfo, taskInfoIsExist := hsm.SMT.GetStoringMemoryTask(msg.TaskID)

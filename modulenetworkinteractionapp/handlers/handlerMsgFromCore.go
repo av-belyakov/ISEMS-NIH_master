@@ -37,7 +37,10 @@ func HandlerMsgFromCore(
 		if msg.Command == "create list" {
 			sl, ok := msg.AdvancedOptions.([]configure.InformationAboutSource)
 			if !ok {
-				_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: "type conversion error",
+					FuncName:    funcName,
+				})
 
 				return
 			}
@@ -48,7 +51,10 @@ func HandlerMsgFromCore(
 		if msg.Command == "load list" {
 			ado, ok := msg.AdvancedOptions.(configure.SourceControlMsgTypeFromAPI)
 			if !ok {
-				_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: "type conversion error",
+					FuncName:    funcName,
+				})
 
 				//снять отслеживание выполнения задачи
 				chanInCore <- &configure.MsgBetweenCoreAndNI{
@@ -146,7 +152,10 @@ func HandlerMsgFromCore(
 
 			sltsdb, err := getSourceListToStoreDB(ts, &ado.SourceList, msg.ClientName, mcpf)
 			if err != nil {
-				_ = saveMessageApp.LogMessage("error", "NI module - "+fmt.Sprint(err))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
 
 				//снять отслеживание выполнения задачи
 				chanInCore <- &configure.MsgBetweenCoreAndNI{
@@ -179,7 +188,10 @@ func HandlerMsgFromCore(
 		if msg.Command == "perform actions on sources" {
 			ado, ok := msg.AdvancedOptions.(configure.SourceControlMsgOptions)
 			if !ok {
-				_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: "type conversion error",
+					FuncName:    funcName,
+				})
 
 				//снять отслеживание выполнения задачи
 				chanInCore <- &configure.MsgBetweenCoreAndNI{
@@ -373,7 +385,10 @@ func HandlerMsgFromCore(
 
 			msgJSON, ok := msg.AdvancedOptions.([]byte)
 			if !ok {
-				_ = saveMessageApp.LogMessage("error", "NI module - type conversion error"+funcName)
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: "type conversion error",
+					FuncName:    funcName,
+				})
 
 				return
 			}
@@ -425,7 +440,10 @@ func HandlerMsgFromCore(
 
 			msgJSON, err := json.Marshal(reqTypeStop)
 			if err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
 
 				return
 			}
@@ -463,6 +481,5 @@ func HandlerMsgFromCore(
 				Command:  "stop receiving files",
 			}
 		}
-
 	}
 }

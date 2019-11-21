@@ -40,15 +40,4 @@ func RouteRequest(
 
 		}
 	}
-
-	/* ОБРАБОТКА ЗАПРОСОВ К БД ПОЛУЧАЕМЫХ от CoreRoute */
-
-	//типы запросов
-	//	- sources_list (sources_list collection)
-	//  - change_status_source (sources_list collection)
-	//  - source_telemetry (source_telemetry collection)
-	//  - filtration (filtartion collection)
-	//  - download (download collection)
-	//  - error_notification (error_notification collection)
-	//  - information_search (all collections)
 }

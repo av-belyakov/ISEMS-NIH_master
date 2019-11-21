@@ -18,7 +18,7 @@ func HandlerMsgFromAPI(
 	hsm HandlersStoringMemory,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 
-	funcName := ", function 'HeaderMsgFromAPI'"
+	funcName := "HeaderMsgFromAPI"
 
 	msgc := configure.MsgCommon{}
 
@@ -33,20 +33,29 @@ func HandlerMsgFromAPI(
 	msgJSON, ok := msg.MsgJSON.([]byte)
 	if !ok {
 		notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
-		_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: "bad cast type JSON messages",
+			FuncName:    funcName,
+		})
 
 		return
 	}
 
 	if err := json.Unmarshal(msgJSON, &msgc); err != nil {
 		notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
-		_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: "bad cast type JSON messages",
+			FuncName:    funcName,
+		})
 
 		return
 	}
 
 	//логируем запросы клиентов
-	_ = saveMessageApp.LogMessage("requests", fmt.Sprintf("client name: '%v' (%v), request: type = %v, section = %v, instruction = %v, client task ID = %v", msg.ClientName, msg.ClientIP, msgc.MsgType, msgc.MsgSection, msgc.MsgInstruction, msgc.ClientTaskID))
+	_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		TypeMessage: "requests",
+		Description: fmt.Sprintf("client name: '%v' (%v), request: type = %v, section = %v, instruction = %v, client task ID = %v", msg.ClientName, msg.ClientIP, msgc.MsgType, msgc.MsgSection, msgc.MsgInstruction, msgc.ClientTaskID),
+	})
 
 	if msgc.MsgType == "information" {
 		if msgc.MsgSection == "source control" {
@@ -55,7 +64,10 @@ func HandlerMsgFromAPI(
 
 				if err := json.Unmarshal(msgJSON, &scmo); err != nil {
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
-					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: "bad cast type JSON messages",
+						FuncName:    funcName,
+					})
 
 					return
 				}
@@ -84,13 +96,19 @@ func HandlerMsgFromAPI(
 			}
 
 			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
-			_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgSection'"+funcName)
+			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: "in the json message is not found the right option for 'MsgSection'",
+				FuncName:    funcName,
+			})
 
 			return
 		}
 
 		notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
-		_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgSection'"+funcName)
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: "in the json message is not found the right option for 'MsgSection'",
+			FuncName:    funcName,
+		})
 
 		return
 	}
@@ -130,7 +148,10 @@ func HandlerMsgFromAPI(
 				var scmo configure.SourceControlMsgOptions
 				if err := json.Unmarshal(msgJSON, &scmo); err != nil {
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
-					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: "bad cast type JSON messages",
+						FuncName:    funcName,
+					})
 
 					return
 				}
@@ -159,7 +180,10 @@ func HandlerMsgFromAPI(
 			}
 
 			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
-			_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgInstruction'"+funcName)
+			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: "in the json message is not found the right option for 'MsgInstruction'",
+				FuncName:    funcName,
+			})
 
 			return
 
@@ -170,7 +194,10 @@ func HandlerMsgFromAPI(
 				var fcts configure.FiltrationControlTypeStart
 				if err := json.Unmarshal(msgJSON, &fcts); err != nil {
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
-					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: "bad cast type JSON messages",
+						FuncName:    funcName,
+					})
 
 					return
 				}
@@ -188,7 +215,10 @@ func HandlerMsgFromAPI(
 
 				sourceID, taskID, err := hsm.QTS.SearchTaskForClientIDQueueTaskStorage(msgc.ClientTaskID)
 				if err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
 
 					fmt.Printf("ERROR :::: Ошибка, по переданному идентификатору '%v' ожидающих или выполняемых задач не обнаружено\n", msgc.ClientTaskID)
 
@@ -241,7 +271,10 @@ func HandlerMsgFromAPI(
 			}
 
 			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
-			_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgInstruction'"+funcName)
+			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: "in the json message is not found the right option for 'MsgInstruction'",
+				FuncName:    funcName,
+			})
 
 			return
 
@@ -262,7 +295,10 @@ func HandlerMsgFromAPI(
 
 				if err := json.Unmarshal(msgJSON, &dcts); err != nil {
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
-					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: "bad cast type JSON messages",
+						FuncName:    funcName,
+					})
 
 					return
 				}
@@ -280,11 +316,17 @@ func HandlerMsgFromAPI(
 						TaskAction: "задача отклонена",
 						Message:    "запись для источника отсутствует в памяти приложения",
 					})
-					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v was not found%v", dcts.MsgOption.ID, funcName))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprintf("source ID %v was not found%v", dcts.MsgOption.ID, funcName),
+						FuncName:    funcName,
+					})
 
 					//сообщение о том что задача была отклонена
 					if err := ErrorMessage(emt); err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
 					}
 
 					return
@@ -298,11 +340,17 @@ func HandlerMsgFromAPI(
 						TaskAction: "задача отклонена",
 						Message:    "источник не подключен",
 					})
-					_ = saveMessageApp.LogMessage("error", fmt.Sprintf("source ID %v is not connected%v", dcts.MsgOption.ID, funcName))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprintf("source ID %v is not connected%v", dcts.MsgOption.ID, funcName),
+						FuncName:    funcName,
+					})
 
 					//сообщение о том что задача была отклонена
 					if err := ErrorMessage(emt); err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
 					}
 
 					return
@@ -354,11 +402,17 @@ func HandlerMsgFromAPI(
 					}
 
 					if len(errMsg) > 0 {
-						_ = saveMessageApp.LogMessage("error", errMsg)
+						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: errMsg,
+							FuncName:    funcName,
+						})
 
 						//сообщение о том что задача была отклонена
 						if err := ErrorMessage(emt); err != nil {
-							_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+							_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+								Description: fmt.Sprint(err),
+								FuncName:    funcName,
+							})
 						}
 
 						return
@@ -382,11 +436,17 @@ func HandlerMsgFromAPI(
 						TaskAction: "задача отклонена",
 						Message:    "запись для источника отсутствует в памяти приложения",
 					})
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
 
 					//сообщение о том что задача была отклонена
 					if err := ErrorMessage(emt); err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
 					}
 
 					return
@@ -424,7 +484,10 @@ func HandlerMsgFromAPI(
 
 				if err := json.Unmarshal(msgJSON, &dcts); err != nil {
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
-					_ = saveMessageApp.LogMessage("error", "bad cast type JSON messages"+funcName)
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: "bad cast type JSON messages",
+						FuncName:    funcName,
+					})
 
 					return
 				}
@@ -442,7 +505,10 @@ func HandlerMsgFromAPI(
 				//ищем задачу в очереди задач и в выполняемых задачах
 				if _, err := hsm.QTS.GetQueueTaskStorage(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp); err != nil {
 					if err := ErrorMessage(emt); err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
 					}
 
 					return
@@ -458,7 +524,10 @@ func HandlerMsgFromAPI(
 
 						fmt.Printf("func 'handlerMsgFromAPI', ERROR: %v (hsm.QTS.ChangeTaskStatusQueueTask)\n", err)
 
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
 					}
 
 					//сообщение об успешном снятии задачи из очереди ожидания
@@ -476,7 +545,10 @@ func HandlerMsgFromAPI(
 
 					msgJSON, err := json.Marshal(resMsg)
 					if err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
 					}
 
 					emt.ChanToAPI <- &configure.MsgBetweenCoreAndAPI{
@@ -522,7 +594,10 @@ func HandlerMsgFromAPI(
 
 		default:
 			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
-			_ = saveMessageApp.LogMessage("error", "in the json message is not found the right option for 'MsgInstruction'"+funcName)
+			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: "in the json message is not found the right option for 'MsgInstruction'",
+				FuncName:    funcName,
+			})
 
 			return
 		}

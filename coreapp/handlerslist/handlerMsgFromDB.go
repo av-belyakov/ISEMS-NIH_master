@@ -19,7 +19,7 @@ func HandlerMsgFromDB(
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	chanDropNI <-chan string) {
 
-	funcName := ", function 'HandlerMsgFromDB'"
+	funcName := "HandlerMsgFromDB"
 
 	switch res.MsgRecipient {
 	case "Core module":
@@ -27,7 +27,10 @@ func HandlerMsgFromDB(
 		case "error notification":
 			//если сообщение об ошибке только для ядра приложения
 			if en, ok := res.AdvancedOptions.(configure.ErrorNotification); ok {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(en.ErrorBody))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(en.ErrorBody),
+					FuncName:    funcName,
+				})
 
 				return
 			}
@@ -39,7 +42,10 @@ func HandlerMsgFromDB(
 
 				//проверяем ряд параметров в задаче для изменения проверочного статуса задачи в QueueStoringMemoryTask
 				if err := checkParametersDownloadTask(res, hsm, outCoreChans.OutCoreChanAPI); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
 				}
 			}
 		}
@@ -47,7 +53,10 @@ func HandlerMsgFromDB(
 	case "API module":
 		taskInfo, taskIsExist := hsm.SMT.GetStoringMemoryTask(res.TaskID)
 		if !taskIsExist {
-			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found%v", res.TaskID, funcName))
+			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprintf("task with %v not found%v", res.TaskID, funcName),
+				FuncName:    funcName,
+			})
 
 			return
 		}
@@ -55,7 +64,10 @@ func HandlerMsgFromDB(
 		switch res.MsgSection {
 		case "source list":
 			if err := getCurrentSourceListForAPI(outCoreChans.OutCoreChanAPI, res, taskInfo.ClientID, taskInfo.ClientTaskID); err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
 
 				return
 			}
@@ -89,7 +101,10 @@ func HandlerMsgFromDB(
 				if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID, "complete"); err != nil {
 					fmt.Printf("function 'handlerMsgFromDB', ERROR = %v\n", err)
 
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
 				}
 
 				return
@@ -110,7 +125,10 @@ func HandlerMsgFromDB(
 			//получаем параметры фильтрации
 			qti, err := hsm.QTS.GetQueueTaskStorage(sourceID, res.TaskID)
 			if err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
 
 				return
 			}
@@ -142,17 +160,26 @@ func HandlerMsgFromDB(
 
 			//добавляем подтвержденный список файлов для скачивания
 			if err := hsm.QTS.AddConfirmedListFiles(sourceID, res.TaskID, listDownloadFiles); err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
 			}
 
 			//устанавливаем проверочный статус источника для данной задачи как подключен
 			if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(sourceID, res.TaskID); err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
 			}
 
 			//изменяем статус наличия файлов для скачивания
 			if err := hsm.QTS.ChangeAvailabilityFilesDownload(sourceID, res.TaskID); err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
 			}
 
 		case "download control":
@@ -164,12 +191,18 @@ func HandlerMsgFromDB(
 		case "error notification":
 			en, ok := res.AdvancedOptions.(configure.ErrorNotification)
 			if !ok {
-				_ = saveMessageApp.LogMessage("error", "type conversion error section type 'error notification'"+funcName)
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: "type conversion error section type 'error notification'",
+					FuncName:    funcName,
+				})
 
 				return
 			}
 
-			_ = saveMessageApp.LogMessage("error", fmt.Sprint(en.ErrorBody))
+			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(en.ErrorBody),
+				FuncName:    funcName,
+			})
 
 			ns := notifications.NotificationSettingsToClientAPI{
 				MsgType: "danger",
@@ -183,7 +216,10 @@ func HandlerMsgFromDB(
 		case "message notification":
 			mn, ok := res.AdvancedOptions.(configure.MessageNotification)
 			if !ok {
-				_ = saveMessageApp.LogMessage("error", "type conversion error section type 'message notification'"+funcName)
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: "type conversion error section type 'message notification'",
+					FuncName:    funcName,
+				})
 
 				return
 			}
@@ -211,7 +247,10 @@ func HandlerMsgFromDB(
 		case "filtration control":
 			tfmfi, ok := res.AdvancedOptions.(configure.TypeFiltrationMsgFoundIndex)
 			if !ok {
-				_ = saveMessageApp.LogMessage("error", "type conversion error section type 'message notification'"+funcName)
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: "type conversion error section type 'message notification'",
+					FuncName:    funcName,
+				})
 
 				return
 			}
@@ -237,14 +276,16 @@ func HandlerMsgFromDB(
 			if !tfmfi.IndexIsFound {
 				msgJSON, err := json.Marshal(mtfc)
 				if err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
 
 					return
 				}
 
 				//если индексы не найдены
 				msg.AdvancedOptions = msgJSON
-
 				outCoreChans.OutCoreChanNI <- &msg
 
 				return
@@ -274,19 +315,24 @@ func HandlerMsgFromDB(
 			//отправляем первое сообщение (фактически нулевое, так как оно не содержит списка файлов)
 			msgJSON, err := json.Marshal(mtfc)
 			if err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
 
 				return
 			}
 
 			msg.AdvancedOptions = msgJSON
-
 			outCoreChans.OutCoreChanNI <- &msg
 
 			//информация о задаче по заданному ID
 			t, ok := hsm.SMT.GetStoringMemoryTask(res.TaskID)
 			if !ok {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("task with %v not found%v", res.TaskID, funcName))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprintf("task with %v not found%v", res.TaskID, funcName),
+					FuncName:    funcName,
+				})
 
 				return
 			}
@@ -307,7 +353,10 @@ func HandlerMsgFromDB(
 
 					msgJSON, err := json.Marshal(mtfc)
 					if err != nil {
-						_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
 
 						return
 					}
@@ -323,6 +372,9 @@ func HandlerMsgFromDB(
 
 		}
 	default:
-		_ = saveMessageApp.LogMessage("error", "the module receiver is not defined, request processing is impossible"+funcName)
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: "the module receiver is not defined, request processing is impossible",
+			FuncName:    funcName,
+		})
 	}
 }

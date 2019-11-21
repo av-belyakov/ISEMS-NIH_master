@@ -135,7 +135,10 @@ func init() {
 	//соединяемся с БД
 	mongoConnect, err := connectToDB(ctx, &appConfig)
 	if err != nil {
-		_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprint(err),
+			FuncName:    "main",
+		})
 
 		fmt.Println("Database connection error", err)
 		os.Exit(1)
@@ -145,7 +148,10 @@ func init() {
 
 	//получаем номер версии приложения
 	if err = getVersionApp(&appConfig); err != nil {
-		_ = saveMessageApp.LogMessage("error", "it is impossible to obtain the version number of the application")
+		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: "it is impossible to obtain the version number of the application",
+			FuncName:    "main",
+		})
 	}
 
 	//проверяем задан ли максимальный, общий размер файлов, которые скачиваются в автоматическом режиме
@@ -160,6 +166,17 @@ func init() {
 }
 
 func main() {
+	defer func() {
+		if err := recover(); err != nil {
+			saveMessageApp := savemessageapp.New()
+			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				TypeMessage: "error",
+				Description: fmt.Sprintf("STOP 'main' function, Error:'%v'", err),
+				FuncName:    "main",
+			})
+		}
+	}()
+
 	log.Printf("START application ISEMS-NIH_master version %q\n", appConfig.VersionApp)
 
 	saveMessageApp := savemessageapp.New()

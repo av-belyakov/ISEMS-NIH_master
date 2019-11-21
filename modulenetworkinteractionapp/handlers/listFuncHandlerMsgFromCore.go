@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -364,18 +365,23 @@ func performActionSelectedSources(
 			}
 
 			//проверяем ожидает или выполняется на источнике какая либо задача
-			if _, ok := qts.GetAllTaskQueueTaskStorage(s.ID); ok {
-				aie.IsSuccess = false
-				aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-					SourceID:   s.ID,
-					TaskType:   "управление источниками",
-					TaskAction: "задача отклонена",
-					Message:    "невозможно выполнить действия на источнике, так как в настоящее время на данном сенсоре ожидает выполнения или уже выполняется какая либо задача",
-				})
+			if listSourceTask, ok := qts.GetAllTaskQueueTaskStorage(s.ID); ok {
 
-				listActionIsExecuted = append(listActionIsExecuted, aie)
+				fmt.Printf("func 'listFuncHandlerMsgFromCore', ===== ALL TASKS source ID '%v' (%v)\n", s.ID, listSourceTask)
 
-				continue
+				if len(listSourceTask) > 0 {
+					aie.IsSuccess = false
+					aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
+						SourceID:   s.ID,
+						TaskType:   "управление источниками",
+						TaskAction: "задача отклонена",
+						Message:    "невозможно выполнить действия на источнике, так как в настоящее время на данном сенсоре ожидает выполнения или уже выполняется какая либо задача",
+					})
+
+					listActionIsExecuted = append(listActionIsExecuted, aie)
+
+					continue
+				}
 			}
 		}
 

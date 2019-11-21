@@ -108,6 +108,8 @@ func RouteCoreRequest(
 	chanColl map[string]chan [2]string,
 	chanOutCore <-chan *configure.MsgBetweenCoreAndNI) {
 
+	fn := "RouteCoreRequest"
+
 	for {
 		select {
 		/*
@@ -119,11 +121,18 @@ func RouteCoreRequest(
 
 			fmt.Printf("******| func 'RouteCoreRequest', module - wssServer, action:'%v'\n", action)
 
-			_ = saveMessageApp.LogMessage("info", fmt.Sprintf("SERVER: source with IP %v has success %v", sourceIP, action))
+			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				TypeMessage: "info",
+				Description: fmt.Sprintf("SERVER: source with IP %v has success %v", sourceIP, action),
+				FuncName:    fn,
+			})
 
 			sourceID, ok := isl.GetSourceIDOnIP(sourceIP)
 			if !ok {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("it is impossible to find the ID of the source ip address of %v", sourceIP))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprintf("it is impossible to find the ID of the source ip address of %v", sourceIP),
+					FuncName:    fn,
+				})
 
 				break
 			}
@@ -147,7 +156,10 @@ func RouteCoreRequest(
 			if action == "connect" {
 				err := sendPing(sourceIP, sourceID, isl, cwt)
 				if err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    fn,
+					})
 
 					continue
 				}
@@ -155,7 +167,11 @@ func RouteCoreRequest(
 				//проверяем есть ли в очереди задачи для данного источника
 				checkIfThereTaskForSource(sourceID, qts)
 
-				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("SERVER: send msg type PING source %v", sourceID))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					TypeMessage: "info",
+					Description: fmt.Sprintf("SERVER: send msg type PING source %v", sourceID),
+					FuncName:    fn,
+				})
 			}
 
 		//модуль wssClient
@@ -164,11 +180,18 @@ func RouteCoreRequest(
 
 			fmt.Printf("******| func 'RouteCoreRequest', module - wssClient, action:'%v'\n", action)
 
-			_ = saveMessageApp.LogMessage("info", fmt.Sprintf("CLIENT: source with IP %v has success %v", sourceIP, action))
+			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				TypeMessage: "info",
+				Description: fmt.Sprintf("CLIENT: source with IP %v has success %v", sourceIP, action),
+				FuncName:    fn,
+			})
 
 			sourceID, ok := isl.GetSourceIDOnIP(sourceIP)
 			if !ok {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("it is impossible to find the ID of the source ip address of %v", sourceIP))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprintf("it is impossible to find the ID of the source ip address of %v", sourceIP),
+					FuncName:    fn,
+				})
 
 				break
 			}
@@ -192,7 +215,10 @@ func RouteCoreRequest(
 			if action == "connect" {
 				err := sendPing(sourceIP, sourceID, isl, cwt)
 				if err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    fn,
+					})
 
 					continue
 				}
@@ -200,7 +226,11 @@ func RouteCoreRequest(
 				//проверяем есть ли в очереди задачи для данного источника
 				checkIfThereTaskForSource(sourceID, qts)
 
-				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("CLIENT: send msg type PING source %v", sourceID))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					TypeMessage: "info",
+					Description: fmt.Sprintf("CLIENT: send msg type PING source %v", sourceID),
+					FuncName:    fn,
+				})
 			}
 
 		//обработка сообщения от ядра
@@ -226,6 +256,7 @@ func RouteWssConnectionResponse(
 	}
 
 	var messageType MessageType
+	fn := "RouteWssConnectionResponse"
 
 	for msg := range cwtReq {
 		sourceIP := msg.DestinationHost
@@ -233,19 +264,29 @@ func RouteWssConnectionResponse(
 
 		sourceID, ok := isl.GetSourceIDOnIP(sourceIP)
 		if !ok {
-			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("not found the ID of the source ip address %v", sourceIP))
+			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprintf("not found the ID of the source ip address %v", sourceIP),
+				FuncName:    fn,
+			})
 		}
 
 		if msg.MsgType == 1 {
 			/* обработка текстовых данных */
 
 			if err := json.Unmarshal(*message, &messageType); err != nil {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    fn,
+				})
 			}
 
 			switch messageType.Type {
 			case "pong":
-				_ = saveMessageApp.LogMessage("info", fmt.Sprintf("resived message type 'PONG' from IP %v", sourceIP))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					TypeMessage: "info",
+					Description: fmt.Sprintf("resived message type 'PONG' from IP %v", sourceIP),
+					FuncName:    fn,
+				})
 
 			case "telemetry":
 				chanInCore <- &configure.MsgBetweenCoreAndNI{
@@ -267,13 +308,19 @@ func RouteWssConnectionResponse(
 						CwtReq:     cwtReq,
 					},
 				}); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    fn,
+					})
 				}
 
 			case "download files":
 				var mtd configure.MsgTypeDownload
 				if err := json.Unmarshal(*message, &mtd); err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    fn,
+					})
 
 					return
 				}
@@ -291,7 +338,10 @@ func RouteWssConnectionResponse(
 				var notify configure.MsgTypeNotification
 				err := json.Unmarshal(*message, &notify)
 				if err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    fn,
+					})
 
 					return
 				}
@@ -317,7 +367,10 @@ func RouteWssConnectionResponse(
 				var errMsg configure.MsgTypeError
 				err := json.Unmarshal(*message, &errMsg)
 				if err != nil {
-					_ = saveMessageApp.LogMessage("error", fmt.Sprint(err))
+					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    fn,
+					})
 
 					return
 				}
@@ -362,11 +415,17 @@ func RouteWssConnectionResponse(
 				*/
 
 			} else {
-				_ = saveMessageApp.LogMessage("error", fmt.Sprintf("unknown format of data received from source with ID %v (ip %v)", sourceID, sourceIP))
+				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprintf("unknown format of data received from source with ID %v (ip %v)", sourceID, sourceIP),
+					FuncName:    fn,
+				})
 			}
 
 		} else {
-			_ = saveMessageApp.LogMessage("error", fmt.Sprintf("unknown data type received from source with ID %v (ip %v)", sourceID, sourceIP))
+			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprintf("unknown data type received from source with ID %v (ip %v)", sourceID, sourceIP),
+				FuncName:    fn,
+			})
 		}
 	}
 }
