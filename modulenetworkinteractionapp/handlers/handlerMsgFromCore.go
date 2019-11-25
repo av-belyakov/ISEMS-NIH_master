@@ -19,18 +19,15 @@ func HandlerMsgFromCore(
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
 	chanInCRRF chan<- *configure.MsgChannelReceivingFiles) {
 
-	funcName := ", function 'HandlerMsgFromCore'"
-
 	//максимальное количество одновременно запущеных процессов фильтрации
 	var mcpf int8 = 3
 
+	funcName := ", function 'HandlerMsgFromCore'"
 	clientNotify := configure.MsgBetweenCoreAndNI{
 		TaskID:  msg.TaskID,
 		Section: "message notification",
 		Command: "send client API",
 	}
-
-	fmt.Printf("*** func 'handlerMsgFromCore'... SECTION:%v, COMMAND:%v\n", msg.Section, msg.Command)
 
 	switch msg.Section {
 	case "source control":
@@ -98,32 +95,17 @@ func HandlerMsgFromCore(
 					TypeActionPerformed:          "load list",
 					CriticalityMessage:           "warning",
 					Sources:                      listInvalidSource,
-					HumanDescriptionNotification: fmt.Sprintf("обновление списка источников выполнено не полностью, параметры источников: %v содержат некорректные значения", strSourceID),
-					/*common.PatternUserMessage(&common.TypePatternUserMessage{
-						TaskType:   "управление источниками",
-						TaskAction: "частичное выполнение задачи",
-						Message:    fmt.Sprintf("обновление списка источников выполнено не полностью, параметры источников: %v содержат некорректные значения", strSourceID),
-					}),*/
+					HumanDescriptionNotification: fmt.Sprintf("обновление списка источников выполнено не полностью, параметры источников: %v, содержат некорректные значения", strSourceID),
 				}
 
 				chanInCore <- &clientNotify
 			} else {
 				hdn := "обновление настроек источников выполнено успешно"
-				/*common.PatternUserMessage(&common.TypePatternUserMessage{
-					TaskType:   "управление источниками",
-					TaskAction: "задача выполнена успешно",
-					Message:    "обновление настроек источников выполнено успешно",
-				})*/
 				cm := "success"
 
 				if len(executedSourcesList) > 0 {
 					strSourceID := createStringFromSourceList(executedSourcesList)
 					hdn = fmt.Sprintf("на источниках: %v выполняются задачи, в настоящее время изменение их настроек невозможно", strSourceID)
-					/*common.PatternUserMessage(&common.TypePatternUserMessage{
-						TaskType:   "управление источниками",
-						TaskAction: "задача отклонена",
-						Message:    fmt.Sprintf("на источниках: %v выполняются задачи, в настоящее время изменение их настроек невозможно", strSourceID),
-					})*/
 
 					cm = "info"
 				}
@@ -211,11 +193,6 @@ func HandlerMsgFromCore(
 					TypeActionPerformed:          "load list",
 					CriticalityMessage:           "warning",
 					HumanDescriptionNotification: "получен пустой список источников",
-					/*common.PatternUserMessage(&common.TypePatternUserMessage{
-						TaskType:   "управление источниками",
-						TaskAction: "задача отклонена",
-						Message:    "получен пустой список источников",
-					}),*/
 				}
 
 				chanInCore <- &clientNotify
@@ -241,11 +218,6 @@ func HandlerMsgFromCore(
 					CriticalityMessage:           "warning",
 					Sources:                      *listInvalidSource,
 					HumanDescriptionNotification: fmt.Sprintf("невозможно выполнить действия над источниками:%v, приняты некорректные значения", strSourceID),
-					/*common.PatternUserMessage(&common.TypePatternUserMessage{
-						TaskType:   "управление источниками",
-						TaskAction: "задача отклонена",
-						Message:    fmt.Sprintf("невозможно выполнить действия над источниками:%v, приняты некорректные значения", strSourceID),
-					}),*/
 				}
 
 				chanInCore <- &clientNotify
@@ -322,12 +294,6 @@ func HandlerMsgFromCore(
 				TypeActionPerformed:          "start",
 				CriticalityMessage:           "warning",
 				HumanDescriptionNotification: "источник не найден",
-				/*common.PatternUserMessage(&common.TypePatternUserMessage{
-					SourceID:   msg.SourceID,
-					TaskType:   "фильтрация",
-					TaskAction: "задача отклонена",
-					Message:    "источник не найден",
-				}),*/
 			}
 
 			chanInCore <- &clientNotify
@@ -336,9 +302,6 @@ func HandlerMsgFromCore(
 		}
 
 		if msg.Command == "start" {
-
-			fmt.Println("function 'HandlerMsgFromCore', section - 'filtration control', command - 'START'")
-
 			if !si.ConnectionStatus {
 				if ti, ok := smt.GetStoringMemoryTask(msg.TaskID); ok {
 					//останавливаем передачу списка файлов (найденных в результате поиска по индексам)
@@ -352,12 +315,6 @@ func HandlerMsgFromCore(
 					TypeActionPerformed:          "start",
 					CriticalityMessage:           "warning",
 					HumanDescriptionNotification: "не возможно отправить запрос для выполнения задачи, источник не подключен",
-					/*common.PatternUserMessage(&common.TypePatternUserMessage{
-						SourceID:   msg.SourceID,
-						TaskType:   "фильтрация",
-						TaskAction: "задача отклонена",
-						Message:    "не возможно отправить запрос для выполнения задачи, источник не подключен",
-					}),*/
 				}
 
 				chanInCore <- &clientNotify
@@ -393,21 +350,14 @@ func HandlerMsgFromCore(
 				return
 			}
 
-			fmt.Println("function 'HandlerMsgFromCore', section - 'filtration control', send task 'START' to source")
-
 			//передаем задачу источнику
 			cwt <- configure.MsgWsTransmission{
 				DestinationHost: si.IP,
 				Data:            &msgJSON,
 			}
-
-			fmt.Println("\tЗадача по фильтрации сет. трафика ушла на источник...")
 		}
 
 		if msg.Command == "stop" {
-
-			fmt.Println("function 'HandlerMsgFromCore', section - 'filtration control', command - 'STOP'")
-
 			//проверяем наличие подключения для заданного источника
 			if !si.ConnectionStatus {
 				//отправляем сообщение пользователю
@@ -417,12 +367,6 @@ func HandlerMsgFromCore(
 					TypeActionPerformed:          "stop",
 					CriticalityMessage:           "warning",
 					HumanDescriptionNotification: "не возможно отправить запрос на останов задачи, источник не подключен",
-					/*common.PatternUserMessage(&common.TypePatternUserMessage{
-						SourceID:   msg.SourceID,
-						TaskType:   "фильтрация",
-						TaskAction: "задача отклонена",
-						Message:    "не возможно отправить запрос на останов задачи, источник не подключен",
-					}),*/
 				}
 
 				chanInCore <- &clientNotify
@@ -448,8 +392,6 @@ func HandlerMsgFromCore(
 				return
 			}
 
-			fmt.Println("function 'HandlerMsgFromCore', section - 'filtration control', send task 'STOP' to source")
-
 			//отправляем источнику сообщение типа 'confirm complete' для того что бы подтвердить останов задачи
 			cwt <- configure.MsgWsTransmission{
 				DestinationHost: si.IP,
@@ -459,22 +401,14 @@ func HandlerMsgFromCore(
 
 	case "download control":
 		if msg.Command == "start" {
-
-			fmt.Println("function 'HandlerMsgFromCore', section - 'download control', send task 'START' to source (отправляем запрос на скачивание файлов источнику) BEFORE")
-
 			chanInCRRF <- &configure.MsgChannelReceivingFiles{
 				SourceID: msg.SourceID,
 				TaskID:   msg.TaskID,
 				Command:  "give my the files",
 			}
-
-			fmt.Println("function 'HandlerMsgFromCore', section - 'download control', send task 'START' to source (отправляем запрос на скачивание файлов источнику) AFTER")
 		}
 
 		if msg.Command == "stop" {
-
-			fmt.Println("function 'HandlerMsgFromCore', section - 'download control', send task 'STOP' to source")
-
 			chanInCRRF <- &configure.MsgChannelReceivingFiles{
 				SourceID: msg.SourceID,
 				TaskID:   msg.TaskID,

@@ -419,11 +419,6 @@ func (isl *InformationSourcesList) AddLinkWebsocketConnect(ip string, lwsc *webs
 //DelLinkWebsocketConnection удаляет дескриптор соединения при отключении источника
 func (isl *InformationSourcesList) DelLinkWebsocketConnection(ip string) {
 	delete(isl.sourcesListConnection, ip)
-	/*if _, ok := ism.SourcesListConnection[host]; ok {
-		ism.SourcesListConnection[host] = WssConnection{
-			Link: nil,
-		}
-	}*/
 }
 
 //GetLinkWebsocketConnect возвращает линк соединения по websocket

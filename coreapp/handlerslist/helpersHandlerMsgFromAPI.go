@@ -219,8 +219,6 @@ func handlerFiltrationControlTypeStart(
 		return
 	}
 
-	fmt.Println("function 'handlerFiltrationControlTypeStart' - decode JSON")
-
 	//проверяем параметры фильтрации
 	if msg, ok := сheckParametersFiltration(&fcts.MsgOption); !ok {
 		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
@@ -249,8 +247,6 @@ func handlerFiltrationControlTypeStart(
 
 		return
 	}
-
-	fmt.Println("function 'handlerFiltrationControlTypeStart' - check parameters filtration")
 
 	//проверяем состояние подключения источника
 	connectionStatus, err := hsm.ISL.GetSourceConnectionStatus(fcts.MsgOption.ID)
@@ -286,13 +282,8 @@ func handlerFiltrationControlTypeStart(
 		return
 	}
 
-	fmt.Println("function 'handlerFiltrationControlTypeStart' - check connection status")
-
 	//получаем новый идентификатор задачи
 	taskID := common.GetUniqIDFormatMD5(clientID + "_" + fcts.ClientTaskID)
-
-	fmt.Printf("func 'handlerMsgFromAPI', ADD NEW TASK, ClientTaskID: '%v', APP TASK ID: '%v'\n", fcts.ClientTaskID, taskID)
-	fmt.Printf("function 'handlerFiltrationControlTypeStart' - add task QueueTaskStorage with ID:'%v'\n", taskID)
 
 	//добавляем новую задачу в очередь задач
 	hsm.QTS.AddQueueTaskStorage(taskID, fcts.MsgOption.ID, configure.CommonTaskInfo{

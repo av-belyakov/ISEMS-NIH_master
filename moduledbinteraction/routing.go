@@ -3,6 +3,7 @@ package moduledbinteraction
 import (
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/savemessageapp"
+	"fmt"
 )
 
 //RouteRequest маршрутизатор запросов
@@ -27,6 +28,7 @@ func RouteRequest(
 			go wrapperFunc.WrapperFuncSourceControl(msg, saveMessageApp)
 
 		case "source telemetry":
+			fmt.Printf("func 'RouteRequest', Section:'%v', (заглушка)\n", msg.MsgSection)
 
 		case "filtration control":
 			go wrapperFunc.WrapperFuncFiltration(msg, smt, qts, saveMessageApp)
@@ -35,8 +37,10 @@ func RouteRequest(
 			go wrapperFunc.WrapperFuncDownload(msg, smt, qts, saveMessageApp)
 
 		case "error notification":
+			fmt.Printf("func 'RouteRequest', Section:'%v', (заглушка)\n", msg.MsgSection)
 
 		case "information search":
+			fmt.Printf("func 'RouteRequest', Section:'%v', (заглушка)\n", msg.MsgSection)
 
 		}
 	}

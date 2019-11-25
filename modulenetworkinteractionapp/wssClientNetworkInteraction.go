@@ -35,7 +35,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
-	fn := "redirectPolicyFunc"
+	funcName := "redirectPolicyFunc"
 
 	go func() {
 		header := http.Header{}
@@ -55,7 +55,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 		if err != nil {
 			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				Description: fmt.Sprint(err),
-				FuncName:    fn,
+				FuncName:    funcName,
 			})
 
 			return
@@ -78,7 +78,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 				if err != nil {
 					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
-						FuncName:    fn,
+						FuncName:    funcName,
 					})
 
 					break
@@ -110,14 +110,14 @@ func WssClientNetworkInteraction(
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
-	fn := "WssClientNetworkInteraction"
+	funcName := "WssClientNetworkInteraction"
 
 	//читаем сертификат CA для того что бы наш клиент доверял сертификату переданному сервером
 	rootCA, err := ioutil.ReadFile(appc.PathRootCA)
 	if err != nil {
 		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: fmt.Sprint(err),
-			FuncName:    fn,
+			FuncName:    funcName,
 		})
 	}
 
@@ -126,7 +126,7 @@ func WssClientNetworkInteraction(
 	if ok := cp.AppendCertsFromPEM(rootCA); !ok {
 		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: "root certificate was not added to the pool",
-			FuncName:    fn,
+			FuncName:    funcName,
 		})
 	}
 
@@ -172,7 +172,7 @@ func WssClientNetworkInteraction(
 				if err != nil {
 					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
-						FuncName:    fn,
+						FuncName:    funcName,
 					})
 
 					continue
@@ -189,7 +189,7 @@ func WssClientNetworkInteraction(
 					if !strings.Contains(strErr, "stop redirect") {
 						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: strErr,
-							FuncName:    fn,
+							FuncName:    funcName,
 						})
 					}
 

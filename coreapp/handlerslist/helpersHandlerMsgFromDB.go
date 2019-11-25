@@ -70,8 +70,6 @@ func sendMsgCompleteTaskFiltration(
 	taskInfo *configure.TaskDescription,
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) error {
 
-	fmt.Println("START function 'sendMsgCompleteTaskFiltration'")
-
 	ti := taskInfo.TaskParameter.FiltrationTask
 	resMsg := configure.FiltrationControlTypeInfo{
 		MsgOption: configure.FiltrationControlMsgTypeInfo{
@@ -99,16 +97,12 @@ func sendMsgCompleteTaskFiltration(
 		return err
 	}
 
-	fmt.Println("function 'sendMsgCompleteTaskFiltration'")
-
 	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
 		MsgGenerator: "Core module",
 		MsgRecipient: "API module",
 		IDClientAPI:  taskInfo.ClientID,
 		MsgJSON:      msgJSON,
 	}
-
-	fmt.Println("STOP function 'sendMsgCompleteTaskFiltration'")
 
 	return nil
 }
@@ -337,8 +331,6 @@ func checkParametersDownloadTask(
 		TaskType: "скачивание файлов",
 		Message:  "внутренняя ошибка, дальнейшее выполнение задачи не возможно",
 	})
-
-	fmt.Printf("_______ func 'helpersHandlerMsgFromDB', добавляем список подтвержденных и ранее не загружавшихся файлов, LIST: '%v'\n", confirmedListFiles)
 
 	//добавляем список подтвержденных и ранее не загружавшихся файлов
 	if err := hsm.QTS.AddConfirmedListFiles(sourceID, res.TaskID, confirmedListFiles); err != nil {

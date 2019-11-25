@@ -1,9 +1,10 @@
 package handlerrequestdb
 
 import (
-	"ISEMS-NIH_master/configure"
 	"fmt"
 	"time"
+
+	"ISEMS-NIH_master/configure"
 
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/mongo/options"
@@ -28,10 +29,8 @@ func FindingInformationAboutTask(
 	//восстанавливаем задачу по ее ID
 	taskInfo, err := getInfoTaskForID(qp, req.TaskID)
 	if err != nil {
-
-		fmt.Printf("func 'FindingInformationAboutTask', ERROR: %v\n", err)
-
 		msgRes.MsgSection = "error notification"
+
 		msgRes.AdvancedOptions = configure.ErrorNotification{
 			SourceReport:          "DB module",
 			HumanDescriptionError: "error reading information on the task in the database",
@@ -83,8 +82,6 @@ func UpdateInformationAboutTask(
 		return err
 	}
 
-	//fmt.Printf("*-*-*- FUNC 'UpdateInformationAboutTask', NumberFilesDownloaded = %v\n", ti.TaskParameter.DownloadTask.NumberFilesDownloaded)
-
 	var arrayFiles []interface{}
 	if ti.TaskParameter.DownloadTask.Status == "complete" {
 		for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
@@ -118,6 +115,7 @@ func UpdateInformationAboutTask(
 				}}},
 			},
 		}); err != nil {
+
 		return err
 	}
 

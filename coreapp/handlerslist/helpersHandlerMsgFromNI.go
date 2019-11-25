@@ -140,17 +140,16 @@ func sendInformationFiltrationTask(
 	resMsg.MsgInstruction = "task processing"
 	resMsg.ClientTaskID = taskInfo.ClientTaskID
 
+	nffi := make(map[string]*configure.InputFilesInformation, len(tfmffiats.ListFoundFile))
 	if tfmffiats.TaskStatus == "execute" {
-		nffi := make(map[string]*configure.InputFilesInformation, len(tfmffiats.ListFoundFile))
 		for n, v := range tfmffiats.ListFoundFile {
 			nffi[n] = &configure.InputFilesInformation{
 				Size: v.Size,
 				Hex:  v.Hex,
 			}
 		}
-
-		resMsg.MsgOption.FoundFilesInformation = nffi
 	}
+	resMsg.MsgOption.FoundFilesInformation = nffi
 
 	msgJSON, err := json.Marshal(resMsg)
 	if err != nil {
@@ -190,9 +189,6 @@ func sendInformationFiltrationTask(
 }
 
 func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteType) error {
-
-	fmt.Println("func 'handlerDownloadTaskStatusComplete' --------------------")
-
 	//записываем информацию в БД
 	hdtsct.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 		MsgGenerator: "NI module",
@@ -214,8 +210,6 @@ func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteT
 		MsgJSON:      msgJSONInfo,
 	}
 
-	fmt.Println("func 'handlerDownloadTaskStatusComplete' -------------------- sent JSON to client API")
-
 	//отправляем информационное сообщение клиенту API
 	notifications.SendNotificationToClientAPI(hdtsct.OutCoreChanAPI, hdtsct.NS, hdtsct.ClientTaskID, hdtsct.ClientID)
 
@@ -226,12 +220,8 @@ func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteT
 		return err
 	}
 
-	fmt.Println("func 'handlerDownloadTaskStatusComplete' -------------------- CHANGE 'task status queue task'")
-
 	//устанавливаем статус задачи в StoringMemoryTask как завершенный
 	hdtsct.SMT.CompleteStoringMemoryTask(hdtsct.TaskID)
-
-	fmt.Println("func 'handlerDownloadTaskStatusComplete' -------------------- CHANGE 'storing memory task'")
 
 	return nil
 }

@@ -2,8 +2,6 @@ package handlerrequestdb
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/mongo"
@@ -68,7 +66,7 @@ func (qp *QueryParameters) DeleteManyData(list []interface{}) error {
 //UpdateOne обновляет параметры в элементе
 func (qp *QueryParameters) UpdateOne(searchElem, update interface{}) error {
 
-	fmt.Printf("\t===== REQUEST TO DB 'UPDATE ONE' current time: %v ======\n", time.Now())
+	//fmt.Printf("\t===== REQUEST TO DB 'UPDATE ONE' current time: %v ======\n", time.Now())
 
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
 	if _, err := collection.UpdateOne(context.TODO(), searchElem, update); err != nil {
@@ -81,7 +79,7 @@ func (qp *QueryParameters) UpdateOne(searchElem, update interface{}) error {
 //UpdateMany обновляет множественные параметры в элементе
 func (qp *QueryParameters) UpdateMany(searchElem, update []interface{}) error {
 
-	fmt.Println("\t===== REQUEST TO DB 'UPDATE MANY' ======")
+	//fmt.Println("\t===== REQUEST TO DB 'UPDATE MANY' ======")
 
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
 	if _, err := collection.UpdateMany(context.TODO(), searchElem, update); err != nil {

@@ -2,7 +2,6 @@ package processresponse
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"ISEMS-NIH_master/configure"
 )
@@ -72,8 +71,6 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 		},
 	}
 
-	fmt.Printf("\tfunction 'ProcessingReceivedMsgTypeFiltering', принята информация о задаче с ID '%v', статус задачи - %v\n", resMsg.Info.TaskID, resMsg.Info.TaskStatus)
-
 	if resMsg.Info.TaskStatus == "execute" {
 		//отправляем в ядро, а от туда в БД и клиенту API
 		pprmtf.Chans.ChanInCore <- msg
@@ -94,9 +91,6 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 	//если тип сообщения "stop" или "complete"
 	// отправка информации только после получения всех частей
 	if resMsg.Info.NumberMessagesParts[0] == resMsg.Info.NumberMessagesParts[1] {
-
-		fmt.Printf("function 'ProcessingReceivedMsgTypeFiltering', полученно сообщение %v\n", resMsg.Info.TaskStatus)
-
 		//отправляем в ядро, а от туда в БД и клиенту API
 		pprmtf.Chans.ChanInCore <- msg
 
@@ -110,8 +104,6 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 		if err != nil {
 			return err
 		}
-
-		fmt.Println("\tfunction 'ProcessingReceivedMsgTypeFiltering', send source message 'confirm complete'")
 
 		//отправляем источнику сообщение типа 'confirm complete' для того что бы подтвердить останов задачи
 		pprmtf.Chans.CwtRes <- configure.MsgWsTransmission{

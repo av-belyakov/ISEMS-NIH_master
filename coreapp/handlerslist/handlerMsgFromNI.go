@@ -28,8 +28,6 @@ func HandlerMsgFromNI(
 		switch msg.Command {
 		case "keep list sources in database":
 			//в БД
-			fmt.Println(":INSERT (Core module)")
-
 			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 				MsgGenerator:    "NI module",
 				MsgRecipient:    "DB module",
@@ -41,8 +39,6 @@ func HandlerMsgFromNI(
 
 		case "delete sources in database":
 			//в БД
-			fmt.Println(":DELETE (Core module)")
-
 			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 				MsgGenerator:    "NI module",
 				MsgRecipient:    "DB module",
@@ -54,8 +50,6 @@ func HandlerMsgFromNI(
 
 		case "update sources in database":
 			//в БД
-			fmt.Println(":UPDATE (Core module)")
-
 			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 				MsgGenerator:    "NI module",
 				MsgRecipient:    "DB module",
@@ -127,9 +121,9 @@ func HandlerMsgFromNI(
 		//клиенту API
 		ao, ok := msg.AdvancedOptions.(configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus)
 		if ok && taskInfoIsExist {
-			/* упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
-			при чем если статус 'execute', то отправляем еще и содержимое поля 'FoundFilesInformation',
-			а если статус фильтрации 'stop' или 'complete' то данное поле не заполняем */
+			//упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
+			// при чем если статус 'execute', то отправляем еще и содержимое поля 'FoundFilesInformation',
+			// а если статус фильтрации 'stop' или 'complete' то данное поле не заполняем
 			err = sendInformationFiltrationTask(outCoreChans.OutCoreChanAPI, taskInfo, &ao, msg.SourceID, msg.TaskID)
 
 			if (ao.TaskStatus == "complete") || (ao.TaskStatus == "stop") {
@@ -141,8 +135,6 @@ func HandlerMsgFromNI(
 		}
 
 	case "download control":
-		//fmt.Println("func 'HandlerMsgFromNI', section DOWNLOAD CONTROL")
-
 		if !taskInfoIsExist {
 			return fmt.Errorf("there is no task with the specified ID %v", msg.TaskID)
 		}
@@ -208,11 +200,9 @@ func HandlerMsgFromNI(
 
 		//при завершении скачивания файла
 		case "file download complete":
-			/*
-				записываем информацию в БД
-				Модуль БД сам определяет когда стоит добавить запись в БД
-				а когда (основываясь на таймере) добавление записи в БД не происходит
-			*/
+			//записываем информацию в БД
+			// Модуль БД сам определяет когда стоит добавить запись в БД
+			// а когда (основываясь на таймере) добавление записи в БД не происходит
 			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 				MsgGenerator: "NI module",
 				MsgRecipient: "DB module",
@@ -220,8 +210,6 @@ func HandlerMsgFromNI(
 				Instruction:  "update",
 				TaskID:       msg.TaskID,
 			}
-
-			fmt.Printf("____ func 'handlerMsgFromNI', RESIVED command ', UPLOADED FILE:%v, Byte: %v, Percent: %v\n", taskInfo.TaskParameter.DownloadTask.FileInformation.Name, taskInfo.TaskParameter.DownloadTask.FileInformation.AcceptedSizeByte, taskInfo.TaskParameter.DownloadTask.FileInformation.AcceptedSizePercent)
 
 			//отправляем информацию клиенту API
 			msgJSONInfo, err := json.Marshal(resMsgInfo)
@@ -234,10 +222,6 @@ func HandlerMsgFromNI(
 
 		//при завершении задачи по скачиванию файлов
 		case "task completed":
-
-			fmt.Println("____ func 'handlerMsgFromNI', RESIVED command 'task completed'")
-			fmt.Printf("NUM RESIVED FILES:%v\n", hdtsct.ResMsgInfo.MsgOption.NumberFilesDownloaded)
-
 			hdtsct.NS.MsgType = "success"
 			hdtsct.NS.MsgDescription = common.PatternUserMessage(&common.TypePatternUserMessage{
 				SourceID:   sourceID,
@@ -252,9 +236,6 @@ func HandlerMsgFromNI(
 
 		//останов задачи пользователем
 		case "file transfer stopped":
-
-			fmt.Println("____ func 'handlerMsgFromNI', RESIVED command 'file transfer stopped' (при останове задачи пользователем)")
-
 			hdtsct.NS.MsgType = "success"
 			hdtsct.NS.MsgDescription = common.PatternUserMessage(&common.TypePatternUserMessage{
 				SourceID:   sourceID,
@@ -269,9 +250,6 @@ func HandlerMsgFromNI(
 
 		//останов задачи в связи с разрывом соединения с источником
 		case "task stoped disconnect":
-
-			fmt.Println("____ func 'handlerMsgFromNI', RESIVED command 'task stoped disconnect' (останов задачи в связи с разрывом соединения с источником)")
-
 			//записываем информацию в БД
 			hdtsct.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 				MsgGenerator: "NI module",
@@ -315,9 +293,6 @@ func HandlerMsgFromNI(
 
 		//задача остановлена из-за внутренней ошибки приложения
 		case "task stoped error":
-
-			fmt.Println("____ func 'handlerMsgFromNI', RESIVED command 'task stoped error', (задача остановлена из-за внутренней ошибки приложения)")
-
 			hdtsct.NS.MsgType = "danger"
 			hdtsct.NS.MsgDescription = common.PatternUserMessage(&common.TypePatternUserMessage{
 				SourceID: sourceID,
@@ -360,15 +335,10 @@ func HandlerMsgFromNI(
 
 	case "message notification":
 		if msg.Command == "send client API" {
-
-			fmt.Printf("\tfunc 'handlerMsgFromNI', Section:'message notification', Command:'send client API', MSG:'%v'\n", msg.AdvancedOptions)
-
 			ao, ok := msg.AdvancedOptions.(configure.MessageNotification)
 			if !ok {
 				return fmt.Errorf("type conversion error%v", funcName)
 			}
-
-			fmt.Printf("\tfunc 'handlerMsgFromNI', Section:'message notification', Command:'send client API', OK MSG:'%v'\n", msg.AdvancedOptions)
 
 			taskActionPattern := map[string]string{
 				"start":     "инициализация выполнения задачи",
@@ -398,9 +368,6 @@ func HandlerMsgFromNI(
 			if !taskInfoIsExist {
 				_, qti, err := hsm.QTS.SearchTaskForIDQueueTaskStorage(msg.TaskID)
 				if err != nil {
-
-					fmt.Printf("func 'handlerMsgForNI', ERROR: '%v'\n", err)
-
 					return err
 				}
 
@@ -409,16 +376,11 @@ func HandlerMsgFromNI(
 				return fmt.Errorf("task with %v not found", msg.TaskID)
 			}
 
-			fmt.Println("\tfunc 'handlerMsgFromNI', Section:'message notification', Command:'send client API', SEND ---->")
-
 			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
 		}
 
 	case "monitoring task performance":
 		if msg.Command == "complete task" {
-
-			fmt.Printf("------ SECTOR: 'monitoring task performance', Command: 'complete task', %v\n", msg)
-
 			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
 
 			if !taskInfoIsExist {

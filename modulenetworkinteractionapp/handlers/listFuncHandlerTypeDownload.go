@@ -82,9 +82,6 @@ func NewListFileDescription() *ListFileDescription {
 				crs := channelResSettings{}
 				fd, ok := lfd.list[msg.fileHex]
 				if !ok {
-
-					fmt.Printf("NewListFileDescription (get) count list = %v\n", len(lfd.list))
-
 					crs.err = fmt.Errorf("file descriptor with ID '%v' not found", msg.fileHex)
 				} else {
 					crs.fd = fd
@@ -165,13 +162,8 @@ func processorReceivingFiles(
 	   6. Запрос нового файла 'give me the file' (master -> slave) цикл повторяется
 	*/
 
-	fmt.Println("\tDOWNLOAD: func 'processorReceivingFiles', START...")
-
 	ti, ok := smt.GetStoringMemoryTask(taskID)
 	if !ok {
-
-		fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', task with ID %v not found\n", taskID)
-
 		return nil, nil, fmt.Errorf("task with ID %v not found", taskID)
 	}
 
@@ -179,8 +171,6 @@ func processorReceivingFiles(
 
 	chanOut := make(chan MsgChannelProcessorReceivingFiles)
 	chanDone := make(chan struct{})
-
-	//fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', '%v'\n", ti)
 
 	//отправляем информационное сообщение пользователю
 	chanInCore <- &configure.MsgBetweenCoreAndNI{
@@ -236,8 +226,6 @@ func processingDownloadFile(tpdf typeProcessingDownloadFile) {
 
 	pathDirStorage := tpdf.taskInfo.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles
 
-	fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', готовим начальный запрос '%v', путь до списка файлов на источнике: '%v'\n", mtd, tpdf.taskInfo.TaskParameter.FiltrationTask.PathStorageSource)
-
 DONE:
 	//читаем список файлов
 	for fn, fi := range tpdf.taskInfo.TaskParameter.DownloadTask.DownloadingFilesInformation {
@@ -259,8 +247,6 @@ DONE:
 			continue
 		}
 
-		fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', make ONE request to download file, %v\n", mtd)
-
 		tpdf.channels.cwtRes <- configure.MsgWsTransmission{
 			DestinationHost: tpdf.sourceIP,
 			Data:            &msgJSON,
@@ -270,8 +256,6 @@ DONE:
 		for msg := range tpdf.channels.chanOutCore {
 			//обновляем значение таймера (что бы задача не была удалена по таймауту)
 			tpdf.smt.TimerUpdateStoringMemoryTask(tpdf.taskID)
-
-			//fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', RESIVED MSG, %v\n", msg)
 
 			/* текстовый тип сообщения */
 			if msg.MessageType == 1 {
@@ -285,16 +269,10 @@ DONE:
 				if msg.MsgGenerator == "Core module" {
 					command := string(*msg.Message)
 
-					fmt.Printf("func 'listFuncHandlerTypeDownload', RESIVED COMMAND: '%v'\n", command)
-
 					//остановить скачивание файлов
 					if command == "stop receiving files" {
 						//отмечаем задачу как находящуюся в процессе останова
 						tpdf.smt.IsSlowDownStoringMemoryTask(tpdf.taskID)
-
-						taskDesc, _ := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
-
-						fmt.Printf("func 'listFuncHandlerTypeDownload', SECTION 'stop receiving files' IsSlowDown ---> New IsSlowDown '%v'\n", taskDesc.IsSlowDown)
 
 						msgReq.Info.Command = "stop receiving files"
 
@@ -308,28 +286,15 @@ DONE:
 							continue
 						}
 
-						fmt.Printf("func 'listFuncHandlerTypeDownload', SEND ---> SLAVE MSG:%v\n", msgReq)
-
 						//отправляем команду останов на slave и ждем подтверждения останова
 						tpdf.channels.cwtRes <- configure.MsgWsTransmission{
 							DestinationHost: tpdf.sourceIP,
 							Data:            &msgJSON,
 						}
-
-						//закрываем дескриптор файла и удаляем файл
-						/*lfd.delFileDescription(fi.Hex)
-						_ = os.Remove(path.Join(pathDirStorage, fn))
-
-						sdf.Status = "task stoped client"
-
-						break DONE*/
 					}
 
 					//разрыв соединения (остановить загрузку файлов)
 					if command == "to stop the task because of a disconnection" {
-
-						fmt.Println("\tDOWNLOAD: func 'processorReceivingFiles', from CORE reseived COMMAND:'to stop the task because of a disconnection'")
-
 						//отмечаем задачу как находящуюся в процессе останова
 						tpdf.smt.IsSlowDownStoringMemoryTask(tpdf.taskID)
 
@@ -353,10 +318,6 @@ DONE:
 						continue
 					}
 
-					//fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', GENERATOR = 'NI module' RESIVED msg '%v'\n", msgRes)
-
-					//fmt.Println("\tDOWNLOAD: func 'processorReceivingFiles', получаем информацию о задаче")
-
 					/* получаем информацию о задаче */
 					ti, ok := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
 					if !ok {
@@ -371,14 +332,9 @@ DONE:
 						break DONE
 					}
 
-					//fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', TASK INFO '%v'\n", ti)
-
 					switch msgRes.Info.Command {
 					//готовность к передаче файла (slave -> master)
 					case "ready for the transfer":
-
-						fmt.Printf("------ func 'processingDownloadFile' RESEIVING MSG: 'ready for the transfer' MSG:'%v'\n", msgRes)
-
 						//если задача находится в стадии останова игнорировать ответ slave
 						if ti.IsSlowDown {
 							break
@@ -417,8 +373,6 @@ DONE:
 							break DONE
 						}
 
-						fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', SECTION:'ready for the transfer' SEND MSG '%v'\n", msgReq)
-
 						tpdf.channels.cwtRes <- configure.MsgWsTransmission{
 							DestinationHost: tpdf.sourceIP,
 							Data:            &msgJSON,
@@ -444,9 +398,6 @@ DONE:
 
 					//сообщение об успешном останове передачи файла (slave -> master)
 					case "file transfer stopped successfully":
-
-						fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', SECTION:'file transfer stopped successfully' SEND MSG '%v'\n", msgReq)
-
 						//закрываем дескриптор файла и удаляем файл
 						lfd.delFileDescription(fi.Hex)
 						_ = os.Remove(path.Join(pathDirStorage, fn))
@@ -463,9 +414,6 @@ DONE:
 						})
 
 					default:
-
-						fmt.Printf("\tDOWNLOAD: func 'processorReceivingFiles', RESEIVED COMMAND ------+++++ %v -----+++\n", msgRes.Info.Command)
-
 						_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprintf("received unknown command ('%v')\n", msgRes.Info.Command),
 							FuncName:    funcName,
@@ -498,8 +446,6 @@ DONE:
 						FuncName:    funcName,
 					})
 
-					fmt.Printf("------ ERROR: %v\n", fmt.Sprint(err))
-
 					sdf.Status = "error"
 					sdf.ErrMsg = err
 
@@ -530,9 +476,6 @@ DONE:
 
 					//если файл загружен полностью но контрольная сумма не совпадает
 					if writeBinaryFileResult.fileLoadedError {
-
-						fmt.Println("\tDOWNLOAD: func 'processorReceivingFiles', FILE RECEIVED WITH ERROR -----")
-
 						msgRes.Info.Command = "file received with error"
 
 						_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
@@ -585,8 +528,6 @@ DONE:
 
 	}
 
-	fmt.Printf("DOWNLOAD: func 'processorReceivingFiles', TASK COMPLITE MSG:%v\n", msgToCore)
-
 	tpdf.channels.chanInCore <- &msgToCore
 	tpdf.channels.chanDone <- struct{}{}
 }
@@ -605,11 +546,8 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes 
 
 	w, err := pwbf.LFD.getFileDescription(fileHex)
 	if err != nil {
-
-		fmt.Printf("+-+-+-++-+ func 'writingBinaryFile', FILE HEX '%v' NOT FOUND\n", fileHex)
-		fmt.Printf("__________ Hex string: '%v' ____________\n", string((*pwbf.Data)[:100]))
-
 		twbfr.err = err
+
 		return twbfr
 	}
 
@@ -617,6 +555,7 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes 
 	numWriteByte, err := w.Write((*pwbf.Data)[67:])
 	if err != nil {
 		twbfr.err = err
+
 		return twbfr
 	}
 
@@ -630,16 +569,13 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes 
 
 	writeByte := fi.AcceptedSizeByte + int64(numWriteByte)
 
-	//fmt.Printf("func 'writingBinaryFile', AcceptedSizeByte = %v, int64(numWriteByte) = %v, writeByte = %v\n", fi.AcceptedSizeByte, int64(numWriteByte), writeByte)
-	//fmt.Printf("fi.FullSizeByte: %v\n", fi.FullSizeByte)
-
 	wp := writeByte / (fi.FullSizeByte / 100)
 	writePercent := int(wp)
 	numAcceptedChunk := fi.NumAcceptedChunk + 1
 
-	if numAcceptedChunk == 1 || numAcceptedChunk == 2 {
+	/*if numAcceptedChunk == 1 || numAcceptedChunk == 2 {
 		fmt.Printf("\t---*** Full file size: '%v', write byte: '%v', sum write byte: '%v', all count chunks: '%v', accepted chunk: '%v' PERCENT: '%v'\n", fi.FullSizeByte, numWriteByte, writeByte, fi.NumChunk, numAcceptedChunk, wp)
-	}
+	}*/
 	//Full file size: '277', write byte: '277', sum write byte: '277', all count chunks: '1', accepted chunk: '1' PERCENT: '138'
 	//обновляем информацию о принимаемом файле
 	pwbf.SMT.UpdateTaskDownloadAllParameters(pwbf.TaskID, configure.DownloadTaskParameters{
@@ -701,6 +637,7 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes 
 			pwbf.ChanInCore <- &msgToCore
 
 			twbfr.fileLoadedError = true
+
 			return twbfr
 		}
 

@@ -210,17 +210,12 @@ func HandlerMsgFromAPI(
 			//команда на останов фильтрации
 			if msgc.MsgInstruction == "to cancel filtering" {
 				//ищем ожидающую в очереди задачу по ее ID
-
-				fmt.Printf("func 'handlerMsgFromAPI' - ищем ожидающую в очереди задачу по ее ID: %v\n", msgc.ClientTaskID)
-
 				sourceID, taskID, err := hsm.QTS.SearchTaskForClientIDQueueTaskStorage(msgc.ClientTaskID)
 				if err != nil {
 					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
 					})
-
-					fmt.Printf("ERROR :::: Ошибка, по переданному идентификатору '%v' ожидающих или выполняемых задач не обнаружено\n", msgc.ClientTaskID)
 
 					notifications.SendNotificationToClientAPI(
 						outCoreChans.OutCoreChanAPI,
@@ -280,8 +275,6 @@ func HandlerMsgFromAPI(
 
 		// УПРАВЛЕНИЕ ВЫГРУЗКОЙ ФАЙЛОВ
 		case "download control":
-			fmt.Println("func 'HandlerMsgFromAPI' MsgType: 'command', MsgSection: 'download control'")
-
 			emt := ErrorMessageType{
 				IDClientAPI: msg.IDClientAPI,
 				Section:     "download control",
@@ -515,15 +508,9 @@ func HandlerMsgFromAPI(
 				}
 
 				if _, ok := hsm.SMT.GetStoringMemoryTask(dcts.MsgOption.TaskIDApp); !ok {
-
-					fmt.Println("func 'handlerMsgFromAPI', StoringMemoryTask task is not found!!!")
-
 					//если задача есть в очереди но еще не выполнялась ставим
 					// ей статус 'complete'
 					if err := hsm.QTS.ChangeTaskStatusQueueTask(dcts.MsgOption.ID, dcts.MsgOption.TaskIDApp, "complete"); err != nil {
-
-						fmt.Printf("func 'handlerMsgFromAPI', ERROR: %v (hsm.QTS.ChangeTaskStatusQueueTask)\n", err)
-
 						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprint(err),
 							FuncName:    funcName,

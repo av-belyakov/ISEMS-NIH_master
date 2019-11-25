@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mongodb/mongo-go-driver/bson"
-
 	"ISEMS-NIH_master/configure"
+
+	"github.com/mongodb/mongo-go-driver/bson"
 )
 
 //CreateNewFiltrationTask запись информации о новой фильтрации
@@ -17,8 +17,6 @@ func CreateNewFiltrationTask(
 	req *configure.MsgBetweenCoreAndDB,
 	qp QueryParameters,
 	qts *configure.QueueTaskStorage) {
-
-	fmt.Println("function 'CreateNewFiltrationTask' START insert data in DB")
 
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
@@ -166,8 +164,6 @@ func UpdateParametersFiltrationTask(
 	//получаем всю информацию по выполняемой задаче
 	taskInfo, ok := smt.GetStoringMemoryTask(req.TaskID)
 	if !ok {
-		fmt.Println("\tвосстанавливаем задачу по ее ID")
-
 		//восстанавливаем задачу по ее ID
 		taskInfoFromDB, err := getInfoTaskForID(qp, req.TaskID)
 		if err != nil {
@@ -225,8 +221,6 @@ func UpdateParametersFiltrationTask(
 				}}}
 
 			err = qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, commonValueUpdate)
-
-			fmt.Println("function 'UpdateParametersFiltrationTask', status filtration 'stop' or 'complete' 11111")
 
 			chanIn <- &infoMsg
 		}
@@ -299,9 +293,6 @@ func UpdateParametersFiltrationTask(
 
 	//если статус задачи "stop" или "complete" через ядро останавливаем задачу и оповещаем пользователя
 	if ti.Status == "stop" || ti.Status == "complete" {
-
-		fmt.Println("function 'UpdateParametersFiltrationTask', status filtration 'stop' or 'complete' 22222")
-
 		chanIn <- &infoMsg
 	}
 

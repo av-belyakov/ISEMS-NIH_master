@@ -29,8 +29,7 @@ type typeChannelCommunication struct {
 	actionType             string
 	msgForChunnelProcessor MsgChannelProcessorReceivingFiles
 	channelErrMsg          chan error
-	//	channel                chan typeChannelError
-	channelCommunication chan MsgChannelProcessorReceivingFiles
+	channelCommunication   chan MsgChannelProcessorReceivingFiles
 }
 
 //typeChannelError передает ошибку
@@ -71,28 +70,19 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 
 			case "send data":
 				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
-
-					fmt.Println("_=-+_+=-+_+ func 'NewListHandlerReceivingFile', client IP NOT found")
-
 					msg.channelErrMsg <- fmt.Errorf("client IP not found")
 
 					break
 				}
 				hrp, ok := thrf.ListHandler[msg.handlerIP][msg.handlerID]
 				if !ok {
-
-					fmt.Println("_=-+_+=-+_+ func 'NewListHandlerReceivingFile', task ID NOT found")
-
 					msg.channelErrMsg <- fmt.Errorf("task ID not found")
 
 					break
 				}
 
 				hrp.chanToHandler <- msg.msgForChunnelProcessor
-
 				msg.channelErrMsg <- nil
-
-			//fmt.Println("_=-+_+=-+_+ func 'NewListHandlerReceivingFile', CHANNEL TASK ID FOUND")
 
 			case "del":
 				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
@@ -100,19 +90,14 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 
 					break
 				}
-				/*hrp*/ _, ok := thrf.ListHandler[msg.handlerIP][msg.handlerID]
+				_, ok := thrf.ListHandler[msg.handlerIP][msg.handlerID]
 				if !ok {
 					msg.channelErrMsg <- fmt.Errorf("task ID not found")
 
 					break
 				}
 
-				//close(hrp.chanToHandler)
-
 				delete(thrf.ListHandler[msg.handlerIP], msg.handlerID)
-				//				thrf.ListHandler[msg.handlerIP][msg.handlerID] = handlerRecivingParameters{}
-
-				fmt.Println("_=-+_+=-+_+ func 'NewListHandlerReceivingFile', DELETE CHANNEL ----")
 
 				msg.channelErrMsg <- nil
 			}
@@ -124,7 +109,6 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 
 //SetHendlerReceivingFile добавляет новый канал взаимодействия
 func (thrf *TypeHandlerReceivingFile) SetHendlerReceivingFile(ip, id string, channel chan MsgChannelProcessorReceivingFiles) error {
-	//	chanRes := make(chan handlerRecivingParameters)
 	chanResErr := make(chan error)
 
 	thrf.ChannelCommunicationReq <- typeChannelCommunication{
@@ -155,7 +139,6 @@ func (thrf *TypeHandlerReceivingFile) SendChunkReceivingData(ip, id string, msgS
 
 //DelHendlerReceivingFile закрывает и удаляет канал
 func (thrf *TypeHandlerReceivingFile) DelHendlerReceivingFile(ip, id string) error {
-	//	chanRes := make(chan handlerRecivingParameters)
 	chanResErr := make(chan error)
 
 	thrf.ChannelCommunicationReq <- typeChannelCommunication{
@@ -196,8 +179,6 @@ func ControllerReceivingRequestedFiles(
 
 		smt.UpdateTaskDownloadAllParameters(taskID, configure.DownloadTaskParameters{Status: "refused"})
 
-		fmt.Println("func 'handlerTaskWarning', снимаем отслеживание выполнения задачи")
-
 		//снимаем отслеживание выполнения задачи
 		chanInCore <- &configure.MsgBetweenCoreAndNI{
 			TaskID:  taskID,
@@ -214,8 +195,6 @@ func ControllerReceivingRequestedFiles(
 		clientNotify configure.MsgBetweenCoreAndNI,
 		chanIn <-chan *configure.MsgChannelReceivingFiles) {
 
-		defer fmt.Println("====== ATTEMPTED!!! go func in 'ControllerReceivingRequestedFiles' BE STOPED =============")
-
 		ao := configure.MessageNotification{
 			SourceReport:        "NI module",
 			Section:             "download files",
@@ -227,19 +206,11 @@ func ControllerReceivingRequestedFiles(
 			clientNotify.TaskID = msg.TaskID
 			ao.Sources = []int{msg.SourceID}
 
-			if msg.Command != "taken from the source" {
-				fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' resived new msg DOWNLOAD TASK for task ID %v, MSG %v\n", msg.TaskID, msg)
-			}
-
 			//получаем IP адрес и параметры источника
 			si, ok := isl.GetSourceSetting(msg.SourceID)
 
-			//fmt.Printf("\tfunc 'ControllerReceivingRequestedFiles' SOURCE INFO: %v, OK %v\n", si, ok)
-
 			//останов выполнения задачи из-за разрыва соединения (запрос из Ядра)
 			if msg.Command == "to stop the task because of a disconnection" {
-				fmt.Println("\tfunc 'ControllerReceivingRequestedFiles', to stop the task because of a disconnection")
-
 				c := []byte("to stop the task because of a disconnection")
 				if err := lhrf.SendChunkReceivingData(
 					si.IP,
@@ -264,14 +235,10 @@ func ControllerReceivingRequestedFiles(
 					FuncName:    funcName,
 				})
 
-				fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' ERROR 0000")
-
 				humanNotify := "не возможно отправить запрос на скачивание файлов, источник не подключен"
 
 				if !ok {
 					humanNotify = "источник не найден"
-
-					fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' ERROR 1111")
 
 					//изменяем статус задачи в storingMemoryQueueTask
 					// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
@@ -298,8 +265,6 @@ func ControllerReceivingRequestedFiles(
 			switch msg.Command {
 			//начало выполнения задачи (запрос из Ядра)
 			case "give my the files":
-				fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' запуск обработчика задачи по скачиванию файлов")
-
 				//запуск обработчика задачи по скачиванию файлов
 				channel, chanHandlerStoped, err := processorReceivingFiles(chanInCore, si.IP, msg.TaskID, smt, saveMessageApp, cwtRes)
 				if err != nil {
@@ -307,8 +272,6 @@ func ControllerReceivingRequestedFiles(
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
 					})
-
-					fmt.Printf("func 'handlerTypeDownloadFiles', ERROR (processorReceivingFiles):%v\n", err)
 
 					ao.HumanDescriptionNotification = "не найдены файлы для скачивания"
 					clientNotify.AdvancedOptions = ao
@@ -323,8 +286,6 @@ func ControllerReceivingRequestedFiles(
 				go func() {
 					<-chanHandlerStoped
 
-					fmt.Println("\tfunc 'ControllerReceivingRequestedFiles' принято сообщение от обработчика о его останове")
-
 					//удаляем канал для взаимодействия с обработчиком так как
 					// обработчик к этому времени завершил свою работу
 					if err := lhrf.DelHendlerReceivingFile(si.IP, msg.TaskID); err != nil {
@@ -337,10 +298,6 @@ func ControllerReceivingRequestedFiles(
 
 			//останов выполнения задачи (запрос из Ядра)
 			case "stop receiving files":
-
-				fmt.Println("func 'ControllerReceivingRequestedFiles', COMMAND: 'stop receiving files'")
-				fmt.Println("func 'ControllerReceivingRequestedFiles', SEND MSG 'stop receiving files' TO HANDLER (=-BEFORE-=) --->>>>")
-
 				c := []byte("stop receiving files")
 				if err := lhrf.SendChunkReceivingData(
 					si.IP,
@@ -356,14 +313,8 @@ func ControllerReceivingRequestedFiles(
 					})
 				}
 
-				fmt.Println("func 'ControllerReceivingRequestedFiles', SEND MSG 'stop receiving files' TO HANDLER (=-AFTER-=) --->>>>")
-
 			//ответы приходящие от источника в рамках выполнения конкретной задачи
 			case "taken from the source":
-
-				//fmt.Printf("func ' ControllerReceivingRequestedFiles', RESIVED MSG 'taken from the source': '%v'\n", msg)
-				//fmt.Println("func ' ControllerReceivingRequestedFiles', send ---> to handler func 'processorReceivingFiles'")
-
 				if err := lhrf.SendChunkReceivingData(
 					si.IP,
 					msg.TaskID,
@@ -372,8 +323,6 @@ func ControllerReceivingRequestedFiles(
 						MsgGenerator: "NI module",
 						Message:      msg.Message,
 					}); err != nil {
-
-					fmt.Printf("func 'handlerTypeDownloadFiles', SECTION:'taken from the source' ERROR: '%v'\n", err)
 
 					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),

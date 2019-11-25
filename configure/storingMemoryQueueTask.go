@@ -233,8 +233,6 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskStatus = msg.NewStatus
 				qts.StorageList[msg.SourceID][msg.TaskID].TimeUpdate = time.Now().Unix()
 
-				fmt.Printf("func 'ChangeTaskStatusQueueTask' StoringMemoryQueueTask ----- NEW TASK STATUS:'%v'\n", qts.StorageList[msg.SourceID][msg.TaskID].TaskStatus)
-
 				msg.ChanRes <- msgRes
 
 			case "change availability connection on connection":
@@ -398,8 +396,6 @@ func (qts *QueueTaskStorage) SearchTaskForClientIDQueueTaskStorage(clientTaskID 
 
 	sourceList := qts.GetAllSourcesQueueTaskStorage()
 
-	fmt.Printf("++++++++++++ func 'SearchTaskForClientIDQueueTaskStorage', source list = %v\n", sourceList)
-
 	if len(sourceList) == 0 {
 		return sourceID, taskID, errMsg
 	}
@@ -534,8 +530,6 @@ func (qts *QueueTaskStorage) AddPathDirectoryFilteredFiles(sourceID int, taskID,
 func (qts *QueueTaskStorage) ChangeTaskStatusQueueTask(sourceID int, taskID, newStatus string) error {
 	chanRes := make(chan chanResponse)
 	defer close(chanRes)
-
-	fmt.Println("func 'ChangeTaskStatusQueueTask' StoringMemoryQueueTask ----- START")
 
 	qts.ChannelReq <- chanRequest{
 		Action:    "change task status",
@@ -678,10 +672,113 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 
 	chanMsgInfoQueueTaskStorage := make(chan MessageInformationQueueTaskStorage)
 
-	ticker := time.NewTicker(time.Duration(sec) * time.Second)
+	handlerTaskInfo := func(maxProcessFiltration, sourceID int, taskID string, taskInfo *QueueTaskInformation) {
+		//если соединение с источником было разорвано очищаем кеш
+		// и переводим задачу в режим ожидания
+		if (taskInfo.TaskStatus == "pause") && (taskInfo.TaskType == "download control") {
+			et.downloadTask = []string{}
+			qts.ChangeTaskStatusQueueTask(sourceID, taskID, "wait")
+		}
+
+		//если задача помечена как выполненная удаляем ее
+		if taskInfo.TaskStatus == "complete" {
+			/*&& (time.Now().Unix() > (taskInfo.TimeUpdate + 30))*/
+			_ = qts.delQueueTaskStorage(sourceID, taskID)
+
+			//удаляем задачу из списка отслеживания кол-ва выполняемых задач
+			if taskInfo.TaskType == "download control" {
+				et.downloadTask = []string{}
+			}
+
+			for key, tID := range et.filtrationTask {
+				if tID == taskID {
+					et.filtrationTask = append(et.filtrationTask[:key], et.filtrationTask[key+1:]...)
+
+					break
+				}
+			}
+
+		}
+
+		//удаляем задачу находящуюся в очереди более суток
+		if (taskInfo.TaskStatus == "wait") && (time.Now().Unix() > (taskInfo.TimeUpdate + 86400)) {
+			_ = qts.delQueueTaskStorage(sourceID, taskID)
+		}
+
+		/*
+		   Для фильтрации файлов
+		*/
+		if taskInfo.TaskType == "filtration control" {
+			if len(et.filtrationTask) == maxProcessFiltration {
+				return
+			}
+
+			//если задача не выполнялась и источник подключен
+			if (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection {
+				if err := qts.ChangeTaskStatusQueueTask(sourceID, taskID, "execution"); err == nil {
+					//добавляем в массив выполняющихся задач
+					et.filtrationTask = append(et.filtrationTask, taskID)
+
+					//запускаем выполнение задачи
+					chanMsgInfoQueueTaskStorage <- MessageInformationQueueTaskStorage{
+						SourceID: sourceID,
+						TaskID:   taskID,
+					}
+				}
+			}
+		}
+
+		/*
+		   Для скачивания файлов
+		*/
+		if taskInfo.TaskType == "download control" {
+			//выполняется ли задача
+			if len(et.downloadTask) > 0 {
+				return
+			}
+
+			//если задача не выполнялась, источник подключен и есть файлы для скачивания
+			if (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection && taskInfo.CheckingStatusItems.AvailabilityFilesDownload {
+				if err := qts.ChangeTaskStatusQueueTask(sourceID, taskID, "execution"); err == nil {
+					//добавляем в массив выполняющихся задач
+					listTask := et.downloadTask
+					listTask = append(listTask, taskID)
+					et.downloadTask = listTask
+
+					//запускаем выполнение задачи
+					chanMsgInfoQueueTaskStorage <- MessageInformationQueueTaskStorage{
+						SourceID: sourceID,
+						TaskID:   taskID,
+					}
+				}
+			}
+		}
+
+	}
 
 	//поиск и контроль количества задач на выполнение
-	searchForTasksPerform := func() {
+	searchForTasksPerform := func(storageList map[int]map[string]*QueueTaskInformation) {
+		for sourceID, tasks := range storageList {
+			if len(tasks) == 0 {
+				continue
+			}
+
+			//получаем максимальное количество одновременно запущенных задач по фильтрации
+			sourceSettings, sourceIsExist := isl.GetSourceSetting(sourceID)
+			if !sourceIsExist {
+				continue
+			}
+
+			maxProcessFiltration := int(sourceSettings.Settings.MaxCountProcessFiltration)
+
+			for taskID, taskInfo := range tasks {
+				handlerTaskInfo(maxProcessFiltration, sourceID, taskID, taskInfo)
+			}
+		}
+	}
+
+	go func() {
+		ticker := time.NewTicker(time.Duration(sec) * time.Second)
 		for range ticker.C {
 			//весь список источников
 			storageList := qts.GetAllSourcesQueueTaskStorage()
@@ -689,129 +786,10 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 				continue
 			}
 
-			for sourceID, tasks := range storageList {
-				if len(tasks) == 0 {
-					continue
-				}
-
-				//получаем максимальное количество одновременно запущенных задач по фильтрации
-				sourceSettings, sourceIsExist := isl.GetSourceSetting(sourceID)
-				if !sourceIsExist {
-					continue
-				}
-				maxProcessFiltration := int(sourceSettings.Settings.MaxCountProcessFiltration)
-
-				for taskID, taskInfo := range tasks {
-
-					fmt.Printf("___ ===== *** function 'CheckTimeQueueTaskStorage' LIST TASKS:[taskID:'%v', task type:'%v']\n", taskID, taskInfo.TaskType)
-
-					//если соединение с источником было разорвано очищаем
-					// кеш и переводим задачу в режим ожидания
-					if (taskInfo.TaskStatus == "pause") && (taskInfo.TaskType == "download control") {
-						et.downloadTask = []string{}
-						qts.ChangeTaskStatusQueueTask(sourceID, taskID, "wait")
-					}
-
-					//если задача помечена как выполненная удаляем ее
-					if taskInfo.TaskStatus == "complete" /*&& (time.Now().Unix() > (taskInfo.TimeUpdate + 30))*/ {
-						_ = qts.delQueueTaskStorage(sourceID, taskID)
-
-						fmt.Printf("*** function 'CheckTimeQueueTaskStorage' - task status is 'COMPLETE', delete task ID %v\n", taskID)
-						fmt.Printf("*** function 'CheckTimeQueueTaskStorage' - Task Type: '%v', List Download: '%v', List Filtration: '%v'\n", taskInfo.TaskType, et.downloadTask, et.filtrationTask)
-
-						//удаляем задачу из списка отслеживания кол-ва выполняемых задач
-						if taskInfo.TaskType == "download control" {
-							et.downloadTask = []string{}
-						}
-
-						for key, tID := range et.filtrationTask {
-
-							fmt.Printf("*** function 'CheckTimeQueueTaskStorage', Equal tID(%v) = taskID(%v)\n", tID, taskID)
-
-							if tID == taskID {
-								et.filtrationTask = append(et.filtrationTask[:key], et.filtrationTask[key+1:]...)
-
-								fmt.Printf("___ === +++ function 'CheckTimeQueueTaskStorage' - AFTER DELETE TASK list filtartion task = %v\n", et.filtrationTask)
-
-								break
-							}
-						}
-
-					}
-
-					//удаляем задачу находящуюся в очереди более суток
-					if (taskInfo.TaskStatus == "wait") && (time.Now().Unix() > (taskInfo.TimeUpdate + 86400)) {
-
-						fmt.Printf(" function 'CheckTimeQueueTaskStorage' *-*-*-*-*--- удаляем задачу находящуюся в очереди более суток с ID %v\n", taskID)
-
-						_ = qts.delQueueTaskStorage(sourceID, taskID)
-					}
-
-					/*
-					   Для фильтрации файлов
-					*/
-					if taskInfo.TaskType == "filtration control" {
-						if len(et.filtrationTask) == maxProcessFiltration {
-
-							fmt.Println("************** function 'CheckTimeQueueTaskStorage' MAX LIMIT PROCESS FILTRATION!!! ************")
-
-							continue
-						}
-
-						//если задача не выполнялась и источник подключен
-						if (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection {
-							if err := qts.ChangeTaskStatusQueueTask(sourceID, taskID, "execution"); err == nil {
-								//добавляем в массив выполняющихся задач
-								et.filtrationTask = append(et.filtrationTask, taskID)
-
-								fmt.Printf("function 'CheckTimeQueueTaskStorage' - start filtration task %v\n", taskID)
-
-								//запускаем выполнение задачи
-								chanMsgInfoQueueTaskStorage <- MessageInformationQueueTaskStorage{
-									SourceID: sourceID,
-									TaskID:   taskID,
-								}
-							}
-						}
-					}
-
-					/*
-					   Для скачивания файлов
-					*/
-					if taskInfo.TaskType == "download control" {
-						//выполняется ли задача
-						if len(et.downloadTask) > 0 {
-							fmt.Println("function 'CheckTimeQueueTaskStorage' - задача по скачиванию уже выполняется, пропускаем задачу")
-
-							continue
-						}
-
-						//если задача не выполнялась, источник подключен и есть файлы для скачивания
-						if (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection && taskInfo.CheckingStatusItems.AvailabilityFilesDownload {
-							if err := qts.ChangeTaskStatusQueueTask(sourceID, taskID, "execution"); err == nil {
-								//добавляем в массив выполняющихся задач
-								listTask := et.downloadTask
-								listTask = append(listTask, taskID)
-								et.downloadTask = listTask
-
-								fmt.Printf("______________ function 'CheckTimeQueueTaskStorage', LIST DOWnload task:'%v'\n", et.downloadTask)
-								fmt.Printf("______________ function 'CheckTimeQueueTaskStorage' - start download file task with ID:'%v'\n", taskID)
-
-								//запускаем выполнение задачи
-								chanMsgInfoQueueTaskStorage <- MessageInformationQueueTaskStorage{
-									SourceID: sourceID,
-									TaskID:   taskID,
-								}
-							}
-						}
-					}
-				}
-			}
+			//поиск и контроль количества задач на выполнения
+			searchForTasksPerform(storageList)
 		}
-	}
-
-	//поиск и контроль количества задач на выполнения
-	go searchForTasksPerform()
+	}()
 
 	return chanMsgInfoQueueTaskStorage
 }

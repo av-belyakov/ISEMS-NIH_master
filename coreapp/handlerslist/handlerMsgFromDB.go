@@ -1,10 +1,10 @@
 package handlerslist
 
 import (
-	"ISEMS-NIH_master/common"
 	"encoding/json"
 	"fmt"
 
+	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/notifications"
 	"ISEMS-NIH_master/savemessageapp"
@@ -82,25 +82,13 @@ func HandlerMsgFromDB(
 			//пока заглушка
 
 		case "filtration control":
-
-			fmt.Println("function 'handlerMsgFromDB' SECTION - 'filtration source'")
-
 			isNotComplete := taskInfo.TaskParameter.FiltrationTask.Status != "complete"
 			moreThanMax := taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering > mtsfda
 			taskTypeNotFiltr := taskInfo.TaskType != "filtration control"
 
-			fmt.Printf("function 'handlerMsgFromDB' INSTRACTION - %v\n", res.Instruction)
-			fmt.Printf("function 'handlerMsgFromDB' STATUS = %v\n", taskInfo.TaskParameter.FiltrationTask.Status)
-			fmt.Printf("function 'handlerMsgFromDB' STATUS:%v, SIZE:%v, TASK TYPE:%v\n", taskInfo.TaskParameter.FiltrationTask.Status, taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering, taskInfo.TaskType)
-			fmt.Printf("function 'handlerMsgFromDB' resipient - API module, section - 'filtration control', isNotComplete - %v, SizeFilesFoundResultFiltering (%v) > mtsfda (%v), taskTypeNotFiltr - %v\n", isNotComplete, taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering, mtsfda, taskTypeNotFiltr)
-
 			if taskTypeNotFiltr || isNotComplete || moreThanMax {
-				fmt.Println("function 'handlerMsgFromDB', отмечаем задачу как завершенную в списке очередей")
-
 				//отмечаем задачу как завершенную в списке очередей
 				if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID, "complete"); err != nil {
-					fmt.Printf("function 'handlerMsgFromDB', ERROR = %v\n", err)
-
 					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
@@ -271,8 +259,6 @@ func HandlerMsgFromDB(
 				},
 			}
 
-			fmt.Println("function 'HandlerMsgFromDB', section 'filtartion control', recipient - 'NI module' (INDEX NOT FOUNT)")
-
 			if !tfmfi.IndexIsFound {
 				msgJSON, err := json.Marshal(mtfc)
 				if err != nil {
@@ -291,13 +277,11 @@ func HandlerMsgFromDB(
 				return
 			}
 
-			fmt.Println("function 'HandlerMsgFromDB', section 'filtartion control', recipient - 'NI module' (INDEX FOUND)")
-
 			//размер части сообщения
 			const maxChunk = 100
 			var numIndexFiles int
-
 			var tmpList map[string]int
+
 			for k, v := range tfmfi.IndexData {
 				nf := len(v)
 				numIndexFiles += nf

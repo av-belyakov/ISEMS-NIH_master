@@ -600,16 +600,8 @@ func (smt *StoringMemoryTask) CheckTimeUpdateStoringMemoryTask(sec int) chan Msg
 
 			timeNow := time.Now().Unix()
 
-			//fmt.Println("task count =", len(smt.tasks))
-
 			for id, t := range smt.tasks {
-
-				//fmt.Printf("Next Tick %v\n task status:%v, time task:%v < time now:%v (%v)\n", time.Now(), t.TaskStatus, (t.TimeUpdate + 60), timeNow, ((t.TimeUpdate + 60) < timeNow))
-
 				if t.TaskStatus && ((t.TimeUpdate + 60) < timeNow) {
-
-					fmt.Printf("//////// func 'CheckTimeUpdateStoringMemoryTask' ****** delete task ID - %v\n", id)
-
 					//если задача выполнена и прошло какое то время удаляем ее
 					smt.delStoringMemoryTask(id)
 

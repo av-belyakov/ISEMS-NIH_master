@@ -33,7 +33,7 @@ func connClose(
 	//удаляем дескриптор соединения
 	isl.DelLinkWebsocketConnection(ip)
 
-	fmt.Printf("SOURCE with %v, DISCONNECT\n", ip)
+	fmt.Printf("SOURCE with ___ %v ___, DISCONNECT\n", ip)
 
 	//отправляем сообщение о разрыве соединения
 	COut <- [2]string{ip, "disconnect"}

@@ -28,13 +28,6 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 
 	//инициализация отслеживания очередности выполнения задач
 	chanMsgInfoQueueTaskStorage := qts.CheckTimeQueueTaskStorage(isl, 1)
-	/****************************************************************
-
-		4 секунды ожидания перед выполнением задачи это для
-		тестов, познее уменьшить до 1 секунды!!!!
-
-
-	****************************************************************/
 
 	//инициализация модуля для взаимодействия с БД
 	chanOutCoreDB, chanInCoreDB := moduledbinteraction.MainDBInteraction(appConf.ConnectionDB.NameDB, linkConnection, smt, qts, saveMessageApp)
@@ -55,5 +48,14 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	}
 
 	//запуск подпрограммы для маршрутизации запросов внутри приложения
-	Routing(appConf, &chanColl, smt, qts, isl, saveMessageApp, chanCheckTask, chanMsgInfoQueueTaskStorage)
+	Routing(TypeRoutingCore{
+		AppConf:                     appConf,
+		ChanColl:                    &chanColl,
+		SMT:                         smt,
+		QTS:                         qts,
+		ISL:                         isl,
+		SaveMessageApp:              saveMessageApp,
+		ChanCheckTask:               chanCheckTask,
+		ChanMsgInfoQueueTaskStorage: chanMsgInfoQueueTaskStorage,
+	})
 }

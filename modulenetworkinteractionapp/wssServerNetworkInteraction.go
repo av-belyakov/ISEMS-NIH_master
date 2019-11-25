@@ -92,7 +92,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	//инициализируем функцию конструктор для записи лог-файлов
 	saveMessageApp := savemessageapp.New()
 
-	fn := "ServerWss"
+	funcName := "ServerWss"
 
 	remoteIP := strings.Split(req.RemoteAddr, ":")[0]
 
@@ -102,7 +102,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 		w.WriteHeader(401)
 		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: errMsg,
-			FuncName:    fn,
+			FuncName:    funcName,
 		})
 
 		return
@@ -113,7 +113,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 		w.WriteHeader(401)
 		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: errMsg,
-			FuncName:    fn,
+			FuncName:    funcName,
 		})
 
 		return
@@ -140,7 +140,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 		}
 		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: fmt.Sprint(err),
-			FuncName:    fn,
+			FuncName:    funcName,
 		})
 	}
 	defer connClose(sws.COut, c, sws.SourceList, clientID, remoteIP)
@@ -164,7 +164,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 		if err != nil {
 			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				Description: fmt.Sprint(err),
-				FuncName:    fn,
+				FuncName:    funcName,
 			})
 
 			break
