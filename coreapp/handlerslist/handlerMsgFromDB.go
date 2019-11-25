@@ -84,9 +84,10 @@ func HandlerMsgFromDB(
 		case "filtration control":
 			isNotComplete := taskInfo.TaskParameter.FiltrationTask.Status != "complete"
 			moreThanMax := taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering > mtsfda
+			sizeFilesFoundIsZero := taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering == 0
 			taskTypeNotFiltr := taskInfo.TaskType != "filtration control"
 
-			if taskTypeNotFiltr || isNotComplete || moreThanMax {
+			if taskTypeNotFiltr || isNotComplete || moreThanMax || sizeFilesFoundIsZero {
 				//отмечаем задачу как завершенную в списке очередей
 				if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID, "complete"); err != nil {
 					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{

@@ -676,6 +676,9 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 		//если соединение с источником было разорвано очищаем кеш
 		// и переводим задачу в режим ожидания
 		if (taskInfo.TaskStatus == "pause") && (taskInfo.TaskType == "download control") {
+
+			fmt.Println("func 'storingMemoryQueueTask', если соединение с источником было разорвано очищаем кеш и переводим задачу в режим ожидания")
+
 			et.downloadTask = []string{}
 			qts.ChangeTaskStatusQueueTask(sourceID, taskID, "wait")
 		}
@@ -684,6 +687,8 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 		if taskInfo.TaskStatus == "complete" {
 			/*&& (time.Now().Unix() > (taskInfo.TimeUpdate + 30))*/
 			_ = qts.delQueueTaskStorage(sourceID, taskID)
+
+			fmt.Println("func 'storingMemoryQueueTask', если задача помечена как выполненная удаляем ее")
 
 			//удаляем задачу из списка отслеживания кол-ва выполняемых задач
 			if taskInfo.TaskType == "download control" {
@@ -734,6 +739,9 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 		if taskInfo.TaskType == "download control" {
 			//выполняется ли задача
 			if len(et.downloadTask) > 0 {
+
+				fmt.Println("func 'storingMemoryQueueTask', задача по скачиванию файлов уже выполняется")
+
 				return
 			}
 
@@ -744,6 +752,8 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 					listTask := et.downloadTask
 					listTask = append(listTask, taskID)
 					et.downloadTask = listTask
+
+					fmt.Println("func 'storingMemoryQueueTask', добавляем задачу в массив выполняющихся задач")
 
 					//запускаем выполнение задачи
 					chanMsgInfoQueueTaskStorage <- MessageInformationQueueTaskStorage{
