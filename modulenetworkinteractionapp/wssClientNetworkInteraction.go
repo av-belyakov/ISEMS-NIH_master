@@ -53,7 +53,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 
 		c, res, err := d.Dial("wss://"+cs.IP+":"+cs.Port+"/wss", header)
 		if err != nil {
-			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				Description: fmt.Sprint(err),
 				FuncName:    funcName,
 			})
@@ -76,7 +76,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 			for {
 				msgType, message, err := c.ReadMessage()
 				if err != nil {
-					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
 					})
@@ -115,7 +115,7 @@ func WssClientNetworkInteraction(
 	//читаем сертификат CA для того что бы наш клиент доверял сертификату переданному сервером
 	rootCA, err := ioutil.ReadFile(appc.PathRootCA)
 	if err != nil {
-		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: fmt.Sprint(err),
 			FuncName:    funcName,
 		})
@@ -124,7 +124,7 @@ func WssClientNetworkInteraction(
 	//создаем новый пул доверенных центров серификации и добавляем в него корневой сертификат
 	cp := x509.NewCertPool()
 	if ok := cp.AppendCertsFromPEM(rootCA); !ok {
-		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: "root certificate was not added to the pool",
 			FuncName:    funcName,
 		})
@@ -170,7 +170,7 @@ func WssClientNetworkInteraction(
 
 				req, err := http.NewRequest("GET", "https://"+cs.IP+":"+cs.Port+"/", nil)
 				if err != nil {
-					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
 					})
@@ -187,7 +187,7 @@ func WssClientNetworkInteraction(
 				if err != nil {
 					strErr := fmt.Sprint(err)
 					if !strings.Contains(strErr, "stop redirect") {
-						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: strErr,
 							FuncName:    funcName,
 						})

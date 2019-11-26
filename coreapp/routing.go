@@ -65,7 +65,7 @@ func Routing(trc TypeRoutingCore) {
 
 			qti, err := trc.QTS.GetQueueTaskStorage(msg.SourceID, msg.TaskID)
 			if err != nil {
-				_ = trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
 					FuncName:    funcName,
 				})
@@ -78,7 +78,7 @@ func Routing(trc TypeRoutingCore) {
 
 			si, ok := trc.ISL.GetSourceSetting(msg.SourceID)
 			if !ok {
-				_ = trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprintf("no information found on source ID %v", msg.SourceID),
 					FuncName:    funcName,
 				})
@@ -90,7 +90,7 @@ func Routing(trc TypeRoutingCore) {
 				})
 
 				if err := handlerslist.ErrorMessage(emt); err != nil {
-					_ = trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
 					})
@@ -100,7 +100,7 @@ func Routing(trc TypeRoutingCore) {
 				// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
 				// функцией 'CheckTimeQueueTaskStorage')
 				if err := trc.QTS.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "complete"); err != nil {
-					_ = trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
 					})
@@ -182,7 +182,7 @@ func Routing(trc TypeRoutingCore) {
 					})
 
 					if err := handlerslist.ErrorMessage(emt); err != nil {
-						_ = trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprint(err),
 							FuncName:    funcName,
 						})
@@ -192,7 +192,7 @@ func Routing(trc TypeRoutingCore) {
 					// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
 					// функцией 'CheckTimeQueueTaskStorage')
 					if err := trc.QTS.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "complete"); err != nil {
-						_ = trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprint(err),
 							FuncName:    funcName,
 						})
@@ -282,7 +282,7 @@ func Routing(trc TypeRoutingCore) {
 		case data := <-trc.ChanColl.InCoreChanNI:
 			//go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, saveMessageApp)
 			if err := handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm); err != nil {
-				_ = trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
 					FuncName:    funcName,
 				})

@@ -135,7 +135,7 @@ func init() {
 	//соединяемся с БД
 	mongoConnect, err := connectToDB(ctx, &appConfig)
 	if err != nil {
-		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: fmt.Sprint(err),
 			FuncName:    "main",
 		})
@@ -148,7 +148,7 @@ func init() {
 
 	//получаем номер версии приложения
 	if err = getVersionApp(&appConfig); err != nil {
-		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: "it is impossible to obtain the version number of the application",
 			FuncName:    "main",
 		})
@@ -169,7 +169,7 @@ func main() {
 	defer func() {
 		if err := recover(); err != nil {
 			saveMessageApp := savemessageapp.New()
-			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				TypeMessage: "error",
 				Description: fmt.Sprintf("STOP 'main' function, Error:'%v'", err),
 				FuncName:    "main",

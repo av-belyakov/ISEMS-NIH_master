@@ -81,7 +81,7 @@ func MainNetworkInteraction(
 			sourceIP, data := msg.DestinationHost, msg.Data
 			if conn, ok := isl.GetLinkWebsocketConnect(sourceIP); ok {
 				if err := conn.SendWsMessage(1, *data); err != nil {
-					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    "mainNetworkInteraction",
 					})

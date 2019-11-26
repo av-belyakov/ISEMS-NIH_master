@@ -211,7 +211,7 @@ func handlerFiltrationControlTypeStart(
 
 	msgJSON, err := json.Marshal(resMsg)
 	if err != nil {
-		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: fmt.Sprint(err),
 			FuncName:    funcName,
 		})
@@ -221,7 +221,7 @@ func handlerFiltrationControlTypeStart(
 
 	//проверяем параметры фильтрации
 	if msg, ok := сheckParametersFiltration(&fcts.MsgOption); !ok {
-		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: "incorrect parameters for filtering are set",
 			FuncName:    funcName,
 		})
@@ -251,8 +251,8 @@ func handlerFiltrationControlTypeStart(
 	//проверяем состояние подключения источника
 	connectionStatus, err := hsm.ISL.GetSourceConnectionStatus(fcts.MsgOption.ID)
 	if err != nil || !connectionStatus {
-		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-			Description: fmt.Sprint(err),
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprintf("source with ID %v not connected", fcts.MsgOption.ID),
 			FuncName:    funcName,
 		})
 
@@ -320,7 +320,7 @@ func handlerFiltrationControlTypeStart(
 
 	//устанавливаем проверочный статус источника для данной задачи как подключен
 	if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(fcts.MsgOption.ID, taskID); err != nil {
-		_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: fmt.Sprint(err),
 			FuncName:    funcName,
 		})

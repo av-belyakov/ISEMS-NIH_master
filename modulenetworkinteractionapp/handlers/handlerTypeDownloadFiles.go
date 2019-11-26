@@ -220,7 +220,7 @@ func ControllerReceivingRequestedFiles(
 						MsgGenerator: "Core module",
 						Message:      &c,
 					}); err != nil {
-					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
 					})
@@ -230,7 +230,7 @@ func ControllerReceivingRequestedFiles(
 			}
 
 			if !ok || !si.ConnectionStatus {
-				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprintf("it is not possible to send a request to download files, the source with ID %v is not connected", msg.SourceID),
 					FuncName:    funcName,
 				})
@@ -244,7 +244,7 @@ func ControllerReceivingRequestedFiles(
 					// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
 					// функцией 'CheckTimeQueueTaskStorage')
 					if err := qts.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "complete"); err != nil {
-						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprint(err),
 							FuncName:    funcName,
 						})
@@ -268,7 +268,7 @@ func ControllerReceivingRequestedFiles(
 				//запуск обработчика задачи по скачиванию файлов
 				channel, chanHandlerStoped, err := processorReceivingFiles(chanInCore, si.IP, msg.TaskID, smt, saveMessageApp, cwtRes)
 				if err != nil {
-					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
 					})
@@ -289,7 +289,7 @@ func ControllerReceivingRequestedFiles(
 					//удаляем канал для взаимодействия с обработчиком так как
 					// обработчик к этому времени завершил свою работу
 					if err := lhrf.DelHendlerReceivingFile(si.IP, msg.TaskID); err != nil {
-						_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprint(err),
 							FuncName:    funcName,
 						})
@@ -307,7 +307,7 @@ func ControllerReceivingRequestedFiles(
 						MsgGenerator: "Core module",
 						Message:      &c,
 					}); err != nil {
-					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
 					})
@@ -324,7 +324,7 @@ func ControllerReceivingRequestedFiles(
 						Message:      msg.Message,
 					}); err != nil {
 
-					_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
 					})

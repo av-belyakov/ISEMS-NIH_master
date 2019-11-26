@@ -34,7 +34,7 @@ func HandlerMsgFromCore(
 		if msg.Command == "create list" {
 			sl, ok := msg.AdvancedOptions.([]configure.InformationAboutSource)
 			if !ok {
-				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: "type conversion error",
 					FuncName:    funcName,
 				})
@@ -48,7 +48,7 @@ func HandlerMsgFromCore(
 		if msg.Command == "load list" {
 			ado, ok := msg.AdvancedOptions.(configure.SourceControlMsgTypeFromAPI)
 			if !ok {
-				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: "type conversion error",
 					FuncName:    funcName,
 				})
@@ -134,7 +134,7 @@ func HandlerMsgFromCore(
 
 			sltsdb, err := getSourceListToStoreDB(ts, &ado.SourceList, msg.ClientName, mcpf)
 			if err != nil {
-				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
 					FuncName:    funcName,
 				})
@@ -170,7 +170,7 @@ func HandlerMsgFromCore(
 		if msg.Command == "perform actions on sources" {
 			ado, ok := msg.AdvancedOptions.(configure.SourceControlMsgOptions)
 			if !ok {
-				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: "type conversion error",
 					FuncName:    funcName,
 				})
@@ -342,7 +342,7 @@ func HandlerMsgFromCore(
 
 			msgJSON, ok := msg.AdvancedOptions.([]byte)
 			if !ok {
-				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: "type conversion error",
 					FuncName:    funcName,
 				})
@@ -384,7 +384,7 @@ func HandlerMsgFromCore(
 
 			msgJSON, err := json.Marshal(reqTypeStop)
 			if err != nil {
-				_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
 					FuncName:    funcName,
 				})

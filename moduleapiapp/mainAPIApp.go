@@ -6,7 +6,6 @@ package moduleapiapp
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -37,11 +36,9 @@ var storingMemoryAPI *configure.StoringMemoryAPI
 
 //запрос на получение списка источников
 func sendMsgGetSourceList(clientID string) error {
-	errMsg := "unable to send message no customer information available"
-
-	clientSettings, ok := storingMemoryAPI.GetClientSettings(clientID)
-	if !ok {
-		return errors.New(errMsg)
+	clientSettings, err := storingMemoryAPI.GetClientSettings(clientID)
+	if err != nil {
+		return err
 	}
 
 	msgjson, err := json.Marshal(configure.MsgCommon{
@@ -64,7 +61,7 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 
 	defer func() {
 		if err := recover(); err != nil {
-			_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				Description: fmt.Sprint(err),
 				FuncName:    funcName,
 			})
@@ -100,7 +97,7 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 		w.WriteHeader(400)
 		w.Write(bodyHTTPResponseError)
 
-		_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: fmt.Sprintf("missing or incorrect identification token (сlient ipaddress %v)", req.RemoteAddr),
 			FuncName:    funcName,
 		})
@@ -108,9 +105,12 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 
 	for _, sc := range settingsServerAPI.Tokens {
 		if stringToken == sc.Token {
-			remoteAddr := strings.Split(req.RemoteAddr, ":")[0]
+			remoteIPAndPort := strings.Split(req.RemoteAddr, ":")
+			remoteAddr := remoteIPAndPort[0]
+			remotePort := remoteIPAndPort[1]
+
 			//добавляем нового пользователя которому разрешен доступ
-			_ = storingMemoryAPI.AddNewClient(remoteAddr, sc.Name)
+			_ = storingMemoryAPI.AddNewClient(remoteAddr, remotePort, sc.Name, stringToken)
 
 			http.Redirect(w, req, "https://"+settingsServerAPI.IP+":"+settingsServerAPI.Port+"/api_wss", 301)
 
@@ -123,7 +123,7 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 	w.WriteHeader(400)
 	w.Write(bodyHTTPResponseError)
 
-	_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+	settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 		Description: fmt.Sprintf("missing or incorrect identification token (сlient ipaddress %v)", req.RemoteAddr),
 		FuncName:    funcName,
 	})
@@ -134,20 +134,25 @@ func (settingsServerAPI *settingsServerAPI) serverWss(w http.ResponseWriter, req
 
 	defer func() {
 		if err := recover(); err != nil {
-			_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				Description: fmt.Sprint(err),
 				FuncName:    funcName,
 			})
 		}
 	}()
 
-	remoteIP := strings.Split(req.RemoteAddr, ":")[0]
+	remoteIPAndPort := strings.Split(req.RemoteAddr, ":")
+	remoteIP := remoteIPAndPort[0]
+	remotePort := remoteIPAndPort[1]
 
 	//проверяем прошел ли клиент аутентификацию
-	clientID, _, ok := storingMemoryAPI.SearchClientForIP(remoteIP)
+	clientID, _, ok := storingMemoryAPI.SearchClientForIP(remoteIP, req.Header["Token"][0])
 	if !ok {
+
+		fmt.Println("Client is Unauthorized")
+
 		w.WriteHeader(401)
-		_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: fmt.Sprintf("access for the user with ipaddress %v is prohibited", req.RemoteAddr),
 			FuncName:    funcName,
 		})
@@ -172,18 +177,18 @@ func (settingsServerAPI *settingsServerAPI) serverWss(w http.ResponseWriter, req
 		//удаляем информацию о клиенте
 		storingMemoryAPI.DelClientAPI(clientID)
 
-		_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: fmt.Sprint(err),
 			FuncName:    funcName,
 		})
 
-		log.Println("Client API whis ip", remoteIP, "is disconnect")
+		log.Printf("Client API (ID %v) whis IP %v is disconnect!\n", clientID, remoteIP)
 	}
 
 	//получаем настройки клиента
-	clientSettings, ok := storingMemoryAPI.GetClientSettings(clientID)
-	if !ok {
-		_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+	clientSettings, err := storingMemoryAPI.GetClientSettings(clientID)
+	if err != nil {
+		settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: fmt.Sprintf("client setup with ID %v not found", clientID),
 			FuncName:    funcName,
 		})
@@ -193,7 +198,7 @@ func (settingsServerAPI *settingsServerAPI) serverWss(w http.ResponseWriter, req
 
 	storingMemoryAPI.SaveWssClientConnection(clientID, c)
 
-	log.Println("Client API whis ip", remoteIP, "is connect")
+	log.Printf("Client API (ID %v) whis IP %v:%v is connect", clientID, remoteIP, remotePort)
 
 	//при подключении клиента отправляем запрос на получение списка источников
 	sendMsgGetSourceList(clientID)
@@ -207,12 +212,13 @@ func (settingsServerAPI *settingsServerAPI) serverWss(w http.ResponseWriter, req
 
 				//удаляем информацию о клиенте
 				storingMemoryAPI.DelClientAPI(clientID)
-				_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+
+				settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
 					FuncName:    funcName,
 				})
 
-				log.Println("Client API whis ip", remoteIP, "is disconnect")
+				log.Printf("Client API (ID %v) whis IP %v is disconnect", clientID, remoteIP)
 
 				break
 			}
@@ -266,7 +272,7 @@ func MainAPIApp(appConfig *configure.AppConfig, saveMessageApp *savemessageapp.P
 			if msg.MsgGenerator == "Core module" && msg.MsgRecipient == "API module" {
 				msgjson, ok := msg.MsgJSON.([]byte)
 				if !ok {
-					_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: "failed to send json message, error while casting type",
 						FuncName:    funcName,
 					})
@@ -274,16 +280,16 @@ func MainAPIApp(appConfig *configure.AppConfig, saveMessageApp *savemessageapp.P
 					continue
 				}
 
-				clientSettings, ok := storingMemoryAPI.GetClientSettings(msg.IDClientAPI)
+				clientSettings, err := storingMemoryAPI.GetClientSettings(msg.IDClientAPI)
 				//если клиент с таким ID не найден, отправляем широковещательное сообщение
-				if !ok {
+				if err != nil {
 					cl := storingMemoryAPI.GetClientList()
 					for _, cs := range cl {
 						if cs.Connection == nil {
 							continue
 						}
 						if err := cs.SendWsMessage(1, msgjson); err != nil {
-							_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 								Description: fmt.Sprint(err),
 								FuncName:    funcName,
 							})
@@ -298,7 +304,7 @@ func MainAPIApp(appConfig *configure.AppConfig, saveMessageApp *savemessageapp.P
 				}
 
 				if err := clientSettings.SendWsMessage(1, msgjson); err != nil {
-					_ = settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
 					})

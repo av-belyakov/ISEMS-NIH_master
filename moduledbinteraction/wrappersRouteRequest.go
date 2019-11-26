@@ -66,7 +66,7 @@ func (wr *WrappersRouteRequest) WrapperFuncFiltration(
 
 	case "update":
 		if err := handlerrequestdb.UpdateParametersFiltrationTask(wr.ChanIn, msg, qp, smt); err != nil {
-			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				Description: fmt.Sprint(err),
 				FuncName:    "WrapperFuncFiltration",
 			})
@@ -94,7 +94,7 @@ func (wr *WrappersRouteRequest) WrapperFuncDownload(
 
 	case "update":
 		if err := handlerrequestdb.UpdateInformationAboutTask(msg, qp, smt); err != nil {
-			_ = saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				Description: fmt.Sprint(err),
 				FuncName:    "WrapperFuncDownload",
 			})

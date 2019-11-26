@@ -239,7 +239,7 @@ DONE:
 
 		msgJSON, err := json.Marshal(mtd)
 		if err != nil {
-			_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				Description: fmt.Sprint(err),
 				FuncName:    funcName,
 			})
@@ -278,7 +278,7 @@ DONE:
 
 						msgJSON, err := json.Marshal(msgReq)
 						if err != nil {
-							_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 								Description: fmt.Sprint(err),
 								FuncName:    funcName,
 							})
@@ -310,7 +310,7 @@ DONE:
 				} else if msg.MsgGenerator == "NI module" {
 					var msgRes configure.MsgTypeDownload
 					if err := json.Unmarshal(*msg.Message, &msgRes); err != nil {
-						_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprint(err),
 							FuncName:    funcName,
 						})
@@ -321,7 +321,7 @@ DONE:
 					/* получаем информацию о задаче */
 					ti, ok := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
 					if !ok {
-						_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprintf("task with ID %v not found", tpdf.taskID),
 							FuncName:    funcName,
 						})
@@ -362,7 +362,7 @@ DONE:
 						msgReq.Info.Command = "ready to receive file"
 						msgJSON, err := json.Marshal(msgReq)
 						if err != nil {
-							_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 								Description: fmt.Sprint(err),
 								FuncName:    funcName,
 							})
@@ -408,19 +408,19 @@ DONE:
 
 					//невозможно остановить передачу файла (slave -> master)
 					case "impossible to stop file transfer":
-						_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprintf("it is impossible to stop file transfer (source ID: %v, task ID: %v)", tpdf.sourceID, tpdf.taskID),
 							FuncName:    funcName,
 						})
 
 					default:
-						_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprintf("received unknown command ('%v')\n", msgRes.Info.Command),
 							FuncName:    funcName,
 						})
 					}
 				} else {
-					_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: "unknown generator events",
 						FuncName:    funcName,
 					})
@@ -441,7 +441,7 @@ DONE:
 					ChanInCore: tpdf.channels.chanInCore,
 				})
 				if err != nil {
-					_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
 					})
@@ -454,7 +454,7 @@ DONE:
 
 				ti, ok := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
 				if !ok {
-					_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprintf("task with ID %v not found", tpdf.taskID),
 						FuncName:    funcName,
 					})
@@ -478,7 +478,7 @@ DONE:
 					if writeBinaryFileResult.fileLoadedError {
 						msgRes.Info.Command = "file received with error"
 
-						_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprintf("the checksum value for the downloaded file '%v' is incorrect (task ID %v)", ti.TaskParameter.DownloadTask.FileInformation.Name, tpdf.taskID),
 							FuncName:    funcName,
 						})
@@ -486,7 +486,7 @@ DONE:
 
 					msgJSON, err := json.Marshal(msgRes)
 					if err != nil {
-						_ = tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprint(err),
 							FuncName:    funcName,
 						})

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"compress/gzip"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -138,7 +137,8 @@ func compressLogFile(filePath string, fileName string, fileSize int64) error {
 }
 
 //LogMessage сохраняет в лог файлах сообщения об ошибках или информационные сообщения
-func (pdllf *PathDirLocationLogFiles) LogMessage(tlm TypeLogMessage) (err error) {
+func (pdllf *PathDirLocationLogFiles) LogMessage(tlm TypeLogMessage) {
+	var err error
 	const logDirName = "isems-nih_master_logs"
 	const logFileSize = 5000000
 
@@ -149,49 +149,51 @@ func (pdllf *PathDirLocationLogFiles) LogMessage(tlm TypeLogMessage) (err error)
 	}
 
 	if tlm.TypeMessage == "" && tlm.Description == "" {
-		return errors.New("fields 'TypeMessage' or 'Description' empty variable")
+		return
 	}
 
-	typeMessage := tlm.TypeMessage
-	if typeMessage == "" {
-		typeMessage = "error"
-	}
+	go func() {
+		typeMessage := tlm.TypeMessage
+		if typeMessage == "" {
+			typeMessage = "error"
+		}
 
-	funcName := ""
-	if tlm.FuncName != "" {
-		funcName = fmt.Sprintf(" (function '%s')", tlm.FuncName)
-	}
+		funcName := ""
+		if tlm.FuncName != "" {
+			funcName = fmt.Sprintf(" (function '%s')", tlm.FuncName)
+		}
 
-	if err = createLogsDirectory(pdllf.pathLogFiles, logDirName); err != nil {
-		return err
-	}
+		if err = createLogsDirectory(pdllf.pathLogFiles, logDirName); err != nil {
+			log.Printf("func 'LogMessage' ERROR: '%v'\n", err)
 
-	_ = compressLogFile(path.Join(pdllf.pathLogFiles, logDirName), fileNameTypeMessage[typeMessage], logFileSize)
+			return
+		}
 
-	var fileOut *os.File
-	fileOut, err = os.OpenFile(path.Join(pdllf.pathLogFiles, logDirName, fileNameTypeMessage[typeMessage]), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		log.Println(err)
+		_ = compressLogFile(path.Join(pdllf.pathLogFiles, logDirName), fileNameTypeMessage[typeMessage], logFileSize)
 
-		return err
-	}
-	defer fileOut.Close()
+		var fileOut *os.File
+		fileOut, err = os.OpenFile(path.Join(pdllf.pathLogFiles, logDirName, fileNameTypeMessage[typeMessage]), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			log.Printf("func 'LogMessage' ERROR: '%v'\n", err)
 
-	timeNowString := time.Now().String()
-	tns := strings.Split(timeNowString, " ")
+			return
+		}
+		defer fileOut.Close()
 
-	writer := bufio.NewWriter(fileOut)
-	defer func() {
-		if err == nil {
-			err = writer.Flush()
+		timeNowString := time.Now().String()
+		tns := strings.Split(timeNowString, " ")
+
+		writer := bufio.NewWriter(fileOut)
+		defer func() {
+			if err == nil {
+				err = writer.Flush()
+			}
+		}()
+
+		strMsg := fmt.Sprintf("%s %s [%s %s] - %s%s\n", tns[0], tns[1], tns[2], tns[3], tlm.Description, funcName)
+
+		if _, err = writer.WriteString(strMsg); err != nil {
+			log.Printf("func 'LogMessage' ERROR: '%v'\n", err)
 		}
 	}()
-
-	strMsg := fmt.Sprintf("%s %s [%s %s] - %s%s\n", tns[0], tns[1], tns[2], tns[3], tlm.Description, funcName)
-
-	if _, err = writer.WriteString(strMsg); err != nil {
-		return err
-	}
-
-	return err
 }
