@@ -569,14 +569,33 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes 
 
 	writeByte := fi.AcceptedSizeByte + int64(numWriteByte)
 
-	wp := writeByte / (fi.FullSizeByte / 100)
+	wp := float64(writeByte) / (float64(fi.FullSizeByte) / 100)
 	writePercent := int(wp)
 	numAcceptedChunk := fi.NumAcceptedChunk + 1
 
-	/*if numAcceptedChunk == 1 || numAcceptedChunk == 2 {
-		fmt.Printf("\t---*** Full file size: '%v', write byte: '%v', sum write byte: '%v', all count chunks: '%v', accepted chunk: '%v' PERCENT: '%v'\n", fi.FullSizeByte, numWriteByte, writeByte, fi.NumChunk, numAcceptedChunk, wp)
+	/*	if numAcceptedChunk == 1 || numAcceptedChunk == 2 {
+		fmt.Printf("\t---*** Full file size: '%v', write byte: '%v', sum write byte: '%v', all count chunks: '%v', accepted chunk: '%v' PERCENT: '%v'\n", fi.FullSizeByte, numWriteByte, writeByte, fi.NumChunk, numAcceptedChunk, writePercent)
 	}*/
 	//Full file size: '277', write byte: '277', sum write byte: '277', all count chunks: '1', accepted chunk: '1' PERCENT: '138'
+
+	msgToCore := configure.MsgBetweenCoreAndNI{
+		TaskID:   pwbf.TaskID,
+		Section:  "download control",
+		Command:  "file download process",
+		SourceID: pwbf.SourceID,
+		AdvancedOptions: configure.MoreFileInformation{
+			Hex:                 fi.Hex,
+			AcceptedSizeByte:    writeByte,
+			AcceptedSizePercent: writePercent,
+		},
+	}
+
+	//отправляем сообщение Ядру приложения, только если
+	// процент увеличился на 1
+	if (writePercent > fi.AcceptedSizePercent) && (writePercent != 100) {
+		pwbf.ChanInCore <- &msgToCore
+	}
+
 	//обновляем информацию о принимаемом файле
 	pwbf.SMT.UpdateTaskDownloadAllParameters(pwbf.TaskID, configure.DownloadTaskParameters{
 		Status:                              "execute",
@@ -594,19 +613,6 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes 
 			NumAcceptedChunk:    numAcceptedChunk,
 		},
 	})
-
-	msgToCore := configure.MsgBetweenCoreAndNI{
-		TaskID:   pwbf.TaskID,
-		Section:  "download control",
-		Command:  "file download process",
-		SourceID: pwbf.SourceID,
-	}
-
-	//отправляем сообщение Ядру приложения, только если
-	// процент увеличился на 1
-	if (writePercent > fi.AcceptedSizePercent) && (writePercent != 100) {
-		pwbf.ChanInCore <- &msgToCore
-	}
 
 	//если все кусочки были переданы (то есть файл считается полностью загруженым)
 	if fi.NumChunk == numAcceptedChunk {

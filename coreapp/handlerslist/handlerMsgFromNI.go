@@ -189,6 +189,13 @@ func HandlerMsgFromNI(
 		switch msg.Command {
 		//завершение записи части файла кратной 1%
 		case "file download process":
+			if fi, ok := msg.AdvancedOptions.(configure.MoreFileInformation); ok {
+				if fi.Hex == resMsgInfo.MsgOption.DetailedFileInformation.Hex {
+					resMsgInfo.MsgOption.DetailedFileInformation.AcceptedSizeByte = fi.AcceptedSizeByte
+					resMsgInfo.MsgOption.DetailedFileInformation.AcceptedSizePercent = fi.AcceptedSizePercent
+				}
+			}
+
 			//отправляем информацию клиенту API
 			msgJSONInfo, err := json.Marshal(resMsgInfo)
 			if err != nil {
