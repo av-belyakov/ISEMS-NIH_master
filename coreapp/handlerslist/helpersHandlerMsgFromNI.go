@@ -189,6 +189,11 @@ func sendInformationFiltrationTask(
 }
 
 func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteType) error {
+	//обновление статуса задачи
+	if err := setStatusCompleteDownloadTask(hdtsct.TaskID, hdtsct.SMT); err != nil {
+		return err
+	}
+
 	//записываем информацию в БД
 	hdtsct.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 		MsgGenerator: "NI module",
@@ -222,6 +227,19 @@ func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteT
 
 	//устанавливаем статус задачи в StoringMemoryTask как завершенный
 	hdtsct.SMT.CompleteStoringMemoryTask(hdtsct.TaskID)
+
+	return nil
+}
+
+func setStatusCompleteDownloadTask(taskID string, smt *configure.StoringMemoryTask) error {
+	ti, ok := smt.GetStoringMemoryTask(taskID)
+	if !ok {
+		return fmt.Errorf("task with ID %v not found", taskID)
+	}
+
+	ti.TaskParameter.DownloadTask.Status = "complete"
+	//обновление статуса задачи
+	smt.UpdateTaskDownloadAllParameters(taskID, ti.TaskParameter.DownloadTask)
 
 	return nil
 }

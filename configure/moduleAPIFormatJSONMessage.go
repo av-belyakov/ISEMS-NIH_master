@@ -310,3 +310,55 @@ type MoreFileInformation struct {
 	AcceptedSizeByte    int64  `json:"asb"`
 	AcceptedSizePercent int    `json:"asp"`
 }
+
+/*--- ПОИСК ИНФОРМАЦИИ О ВЫПОЛНЯЕМЫХ ИЛИ ВЫПОЛНЕННЫХ ЗАДАЧАХ ---*/
+
+//SearchInformationAboutTasksRequest общее описание запроса на поиск информации по задачам
+type SearchInformationAboutTasksRequest struct {
+	MsgCommon
+	MsgOption SearchInformationAboutTasksRequestOption `json:"o"`
+}
+
+//SearchInformationAboutTasksRequestOption дополнительные опции для поиска информации по задаче
+// ID - уникальный цифровой идентификатор источника
+// FilesDownloadedOptions - опции выгрузки файлов
+// InformationAboutFiltering - поиск по информации о результатах фильтрации
+// InstalledFilteringOption - установленные опции фильтрации
+type SearchInformationAboutTasksRequestOption struct {
+	ID                        int                              `json:"id"`
+	FilesDownloaded           FilesDownloadedOptions           `json:"fd"`
+	InformationAboutFiltering InformationAboutFilteringOptions `json:"iaf"`
+	InstalledFilteringOption  SearchFilteringOptions           `json:"ifo"`
+}
+
+//FilesDownloadedOptions опции выгрузки файлов
+// FilesIsDownloaded - выполнялась ли выгрузка файлов
+// AllFilesIsDownloaded - были ли выгружены все файлы
+type FilesDownloadedOptions struct {
+	FilesIsDownloaded    bool `json:"fid"`
+	AllFilesIsDownloaded bool `json:"afid"`
+}
+
+//InformationAboutFilteringOptions опции для поиска по информации о результатах фильтрации
+// FilesIsFound - были ли найдены файлы
+// CountAllFilesMin - минимальное общее количество всех найденных файлов
+// CountAllFilesMax - максимальное общее количество всех найденных файлов
+// SizeAllFilesMin - общий минимальный размер всех найденных файлов
+// SizeAllFilesMax - общий максимальный размер всех найденных файлов
+type InformationAboutFilteringOptions struct {
+	FilesIsFound     bool  `json:"fif"`
+	CountAllFilesMin int   `json:"cafmin"`
+	CountAllFilesMax int   `json:"cafmax"`
+	SizeAllFilesMin  int64 `json:"safmin"`
+	SizeAllFilesMax  int64 `json:"safmax"`
+}
+
+//SearchFilteringOptions искомые опции фильтрации
+// DateTime - временной диапазон по которому осуществлялась фильтрация
+// Protocol - тип транспортного протокола
+// NetworkFilters - сетевые фильтры
+type SearchFilteringOptions struct {
+	DateTime       DateTimeParameters                        `json:"dt"`
+	Protocol       string                                    `json:"p"`
+	NetworkFilters FiltrationControlParametersNetworkFilters `json:"nf"`
+}

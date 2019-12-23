@@ -239,7 +239,9 @@ func HandlerMsgFromNI(
 			hdtsct.ResMsgInfo.MsgOption.Status = "complete"
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
 
-			err = handlerDownloadTaskStatusComplete(hdtsct)
+			if err := handlerDownloadTaskStatusComplete(hdtsct); err != nil {
+				return err
+			}
 
 		//останов задачи пользователем
 		case "file transfer stopped":
@@ -253,10 +255,17 @@ func HandlerMsgFromNI(
 			hdtsct.ResMsgInfo.MsgOption.Status = "complete"
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
 
-			err = handlerDownloadTaskStatusComplete(hdtsct)
+			if err := handlerDownloadTaskStatusComplete(hdtsct); err != nil {
+				return err
+			}
 
 		//останов задачи в связи с разрывом соединения с источником
 		case "task stoped disconnect":
+			//обновление статуса задачи
+			if err := setStatusCompleteDownloadTask(hdtsct.TaskID, hdtsct.SMT); err != nil {
+				return err
+			}
+
 			//записываем информацию в БД
 			hdtsct.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 				MsgGenerator: "NI module",

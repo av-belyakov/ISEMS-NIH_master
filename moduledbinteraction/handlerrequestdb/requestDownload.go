@@ -51,12 +51,12 @@ func UpdateInformationAboutTask(
 	qp QueryParameters,
 	smt *configure.StoringMemoryTask) error {
 
+	const timeUpdate = 30
+
 	ti, ok := smt.GetStoringMemoryTask(req.TaskID)
 	if !ok {
 		return fmt.Errorf("task with ID '%v' not found (DB module)", req.TaskID)
 	}
-
-	const timeUpdate = 30
 
 	taskStatus := ti.TaskParameter.DownloadTask.Status
 
