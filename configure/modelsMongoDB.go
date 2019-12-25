@@ -29,17 +29,40 @@ type InfoServiceSettings struct {
 // TaskID - уникальный идентификатор задачи полученный от приложения
 // ClientID - уникальный идентификатор клиента
 // ClientTaskID - уникальный идентификатор задачи полученный от клиента
+// GeneralInformationAboutTask - общая информация о задаче
 // SourceID - идентификатор источника на котором выполняется задача
 // FilteringOption - параметры фильтрации полученные от клиента
 type InformationAboutTask struct {
-	TaskID                           string                         `json:"task_id" bson:"task_id"`
-	ClientID                         string                         `json:"client_id" bson:"client_id"`
-	ClientTaskID                     string                         `json:"client_task_id" bson:"client_task_id"`
-	SourceID                         int                            `json:"source_id" bson:"source_id"`
-	FilteringOption                  FilteringOption                `json:"filtering_option" bson:"filtering_option"`
-	DetailedInformationOnFiltering   DetailedInformationFiltering   `jsom:"detailed_information_on_filtering" bson:"detailed_information_on_filtering"`
-	DetailedInformationOnDownloading DetailedInformationDownloading `jsom:"detailed_information_on_downloading" bson:"detailed_information_on_downloading"`
-	ListFilesResultTaskExecution     []*FilesInformation            `json:"list_files_result_task_execution" bson:"list_files_result_task_execution"`
+	TaskID                           string                                 `json:"task_id" bson:"task_id"`
+	ClientID                         string                                 `json:"client_id" bson:"client_id"`
+	ClientTaskID                     string                                 `json:"client_task_id" bson:"client_task_id"`
+	GeneralInformationAboutTask      DescriptionGeneralInformationAboutTask `json:"general_information_about_task" bson:"general_information_about_task"`
+	SourceID                         int                                    `json:"source_id" bson:"source_id"`
+	FilteringOption                  FilteringOption                        `json:"filtering_option" bson:"filtering_option"`
+	DetailedInformationOnFiltering   DetailedInformationFiltering           `json:"detailed_information_on_filtering" bson:"detailed_information_on_filtering"`
+	DetailedInformationOnDownloading DetailedInformationDownloading         `json:"detailed_information_on_downloading" bson:"detailed_information_on_downloading"`
+	ListFilesResultTaskExecution     []*FilesInformation                    `json:"list_files_result_task_execution" bson:"list_files_result_task_execution"`
+}
+
+//DescriptionGeneralInformationAboutTask описание общей информации о задаче
+// TaskProcessed - была ли обработана задача (фильтрация файлов выполнена, какие либо файлы были загружены,
+// клиент API пометил задачу как отработанную)
+// DateTimeProcessed - дата и время завершения задачи
+// ClientID - идентификатор клиента API
+// DetailDescription - детальное описание
+type DescriptionGeneralInformationAboutTask struct {
+	TaskProcessed     bool                                         `json:"task_processed" bson:"task_processed"`
+	DateTimeProcessed int64                                        `json:"date_time_processed" bson:"date_time_processed"`
+	ClientID          string                                       `json:"client_id" bson:"client_id"`
+	DetailDescription DetailDescriptionGeneralInformationAboutTask `json:"detail_description_general_information_about_task" bson:"detail_description_general_information_about_task"`
+}
+
+//DetailDescriptionGeneralInformationAboutTask необязательное детальное описание получаемое от клиента
+// UserNameProcessed - имя пользователя который закрыл задачу (внутри клиента API)
+// DescriptionProcessingResults - описание задачи или причины закрытия
+type DetailDescriptionGeneralInformationAboutTask struct {
+	UserNameProcessed            string `json:"user_name_processed" bson:"user_name_processed"`
+	DescriptionProcessingResults string `json:"description_processing_results" bson:"description_processing_results"`
 }
 
 //FilteringOption опции фильтрации

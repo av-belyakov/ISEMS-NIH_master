@@ -320,11 +320,13 @@ type SearchInformationAboutTasksRequest struct {
 }
 
 //SearchInformationAboutTasksRequestOption дополнительные опции для поиска информации по задаче
+// TaskProcessed - была ли задача отмечена клиентом API как завершенная
 // ID - уникальный цифровой идентификатор источника
-// FilesDownloadedOptions - опции выгрузки файлов
+// FilesDownloaded - опции выгрузки файлов
 // InformationAboutFiltering - поиск по информации о результатах фильтрации
 // InstalledFilteringOption - установленные опции фильтрации
 type SearchInformationAboutTasksRequestOption struct {
+	TaskProcessed             bool                             `json:"tp"`
 	ID                        int                              `json:"id"`
 	FilesDownloaded           FilesDownloadedOptions           `json:"fd"`
 	InformationAboutFiltering InformationAboutFilteringOptions `json:"iaf"`
