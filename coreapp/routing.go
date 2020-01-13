@@ -274,7 +274,7 @@ func Routing(trc TypeRoutingCore) {
 		case data := <-trc.ChanColl.InCoreChanAPI:
 			go handlerslist.HandlerMsgFromAPI(OutCoreChans, data, hsm, trc.SaveMessageApp)
 
-			//CHANNEL FROM DATABASE
+		//CHANNEL FROM DATABASE
 		case data := <-trc.ChanColl.InCoreChanDB:
 			go handlerslist.HandlerMsgFromDB(OutCoreChans, data, hsm, trc.AppConf.MaximumTotalSizeFilesDownloadedAutomatically, trc.SaveMessageApp, trc.ChanColl.ChanDropNI)
 

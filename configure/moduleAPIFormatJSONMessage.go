@@ -313,6 +313,8 @@ type MoreFileInformation struct {
 
 /*--- ПОИСК ИНФОРМАЦИИ О ВЫПОЛНЯЕМЫХ ИЛИ ВЫПОЛНЕННЫХ ЗАДАЧАХ ---*/
 
+// ПОИСК ИНФОРМАЦИИ ПО ЗАДАННЫМ ПАРАМЕТРАМ
+
 //SearchInformationAboutTasksRequest общее описание запроса на поиск информации по задачам
 type SearchInformationAboutTasksRequest struct {
 	MsgCommon
@@ -322,12 +324,14 @@ type SearchInformationAboutTasksRequest struct {
 //SearchInformationAboutTasksRequestOption дополнительные опции для поиска информации по задаче
 // TaskProcessed - была ли задача отмечена клиентом API как завершенная
 // ID - уникальный цифровой идентификатор источника
+// NumberTasksReturnedPart - количество задач в возвращаемой части (не обязательный параметр)
 // FilesDownloaded - опции выгрузки файлов
 // InformationAboutFiltering - поиск по информации о результатах фильтрации
 // InstalledFilteringOption - установленные опции фильтрации
 type SearchInformationAboutTasksRequestOption struct {
 	TaskProcessed             bool                             `json:"tp"`
 	ID                        int                              `json:"id"`
+	NumberTasksReturnedPart   int                              `json:"ntrp"`
 	FilesDownloaded           FilesDownloadedOptions           `json:"fd"`
 	InformationAboutFiltering InformationAboutFilteringOptions `json:"iaf"`
 	InstalledFilteringOption  SearchFilteringOptions           `json:"ifo"`
@@ -364,3 +368,73 @@ type SearchFilteringOptions struct {
 	Protocol       string                                    `json:"p"`
 	NetworkFilters FiltrationControlParametersNetworkFilters `json:"nf"`
 }
+
+// ПОЛУЧИТЬ ВЫБРАННУЮ ЧАСТЬ КРАТКОЙ ИНФОРМАЦИИ ИЗ СПИСКА НАЙДЕННЫХ ЗАДАЧ
+
+// ПОЛУЧИТЬ ПОЛНУЮ ИНФОРМАЦИЮ ПО ЗАДАЧЕ
+
+// ОТВЕТ ПРИ ПОИСКЕ ИНФОРМАЦИИ О ЗАДАЧАХ
+
+//SearchInformationResponseCommanInfo общее описание ответа при поиске информации о задачах
+type SearchInformationResponseCommanInfo struct {
+	MsgCommon
+	MsgOption SearchInformationResponseOptionCommanInfo `json:"o"`
+}
+
+//SearchInformationResponseOptionCommanInfo общее описание ответа при поиске информации о задачах
+// TaskIDApp - уникальный цифровой идентификатор задачи присвоенный приложением
+// Status - статус выполняемой задачи
+// TotalNumberTasksFound - общее количество найденных задач
+// PaginationOptions - параметры разбиения страницы
+// ShortListFoundTasks - краткий список найденных задач
+type SearchInformationResponseOptionCommanInfo struct {
+	TaskIDApp             string                 `json:"tidapp"`
+	Status                string                 `json:"s"`
+	TotalNumberTasksFound int                    `json:"tntf"`
+	PaginationOptions     PaginationOption       `json:"p"`
+	ShortListFoundTasks   []BriefTaskInformation `json:"slft"`
+}
+
+//PaginationOption параметры разбиения страницы
+// ChunkSize - размер сегмента (кол-во задач в сегменте)
+// ChunkNumber - общее количество сегментов
+// ChunkCurrentNumber - номер текущего фрагмента
+type PaginationOption struct {
+	ChunkSize          int `json:"cs"`
+	ChunkNumber        int `json:"cn"`
+	ChunkCurrentNumber int `json:"ccn"`
+}
+
+//BriefTaskInformation краткая информация о найденной задаче
+// TaskID - ID задачи присвоенный приложением
+// ClientTaskID - ID задачи переданный клиентом API
+// SourceID - ID источника
+// ParametersFiltrationOptions - параметры фильтрации
+// FilteringTaskStatus - статус задачи по фильтрации
+// FileDownloadTaskStatus - статус задачи по скачиванию файлов
+// NumberFilesFoundAsResultFiltering - кол-во файлов найденных в результате фильтрации
+// TotalSizeFilesFoundAsResultFiltering - общий размер файлов найденных в результате фильтрации
+type BriefTaskInformation struct {
+	TaskID                               string                      `json:"tid"`
+	ClientTaskID                         string                      `json:"ctid"`
+	SourceID                             string                      `json:"sid"`
+	ParametersFiltration                 ParametersFiltrationOptions `json:"pf"`
+	FilteringTaskStatus                  string                      `json:"fts"`
+	FileDownloadTaskStatus               string                      `json:"fdts"`
+	NumberFilesFoundAsResultFiltering    int                         `json:"nffarf"`
+	TotalSizeFilesFoundAsResultFiltering int64                       `json:"tsffarf"`
+}
+
+//ParametersFiltrationOptions параметры фильтрации
+// DateTime - временной диапазон для фильтрации
+// Protocol - сетевой протокол
+// Filters - фильтры для фильтрации
+type ParametersFiltrationOptions struct {
+	DateTime DateTimeParameters                        `json:"dt"`
+	Protocol string                                    `json:"p"`
+	Filters  FiltrationControlParametersNetworkFilters `json:"f"`
+}
+
+// ОТВЕТ ПРИ ЗАПРОСЕ СЛЕДУЮЩЕЙ ЧАСТИ НАЙДЕННЫХ ЗАДАЧ
+
+// ОТВЕТ НА ЗАПРОС ПОЛНОЙ ИНФОРМАЦИИ О ЗАДАЧЕ

@@ -13,6 +13,217 @@ import (
 	"ISEMS-NIH_master/savemessageapp"
 )
 
+//handlerFiltrationControlTypeStart обработчик запроса на фильтрацию
+func handlerFiltrationControlTypeStart(
+	fcts *configure.FiltrationControlTypeStart,
+	hsm HandlersStoringMemory,
+	clientID string,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
+	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) {
+
+	funcName := "handlerFiltrationControlTypeStart"
+
+	//сообщение о том что задача была отклонена
+	resMsg := configure.FiltrationControlTypeInfo{
+		MsgOption: configure.FiltrationControlMsgTypeInfo{
+			ID:     fcts.MsgOption.ID,
+			Status: "refused",
+		},
+	}
+	resMsg.MsgType = "information"
+	resMsg.MsgSection = "filtration control"
+	resMsg.MsgInstruction = "task processing"
+	resMsg.ClientTaskID = fcts.ClientTaskID
+
+	msgJSON, err := json.Marshal(resMsg)
+	if err != nil {
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprint(err),
+			FuncName:    funcName,
+		})
+
+		return
+	}
+
+	//проверяем параметры фильтрации
+	if msg, ok := сheckParametersFiltration(&fcts.MsgOption); !ok {
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: "incorrect parameters for filtering are set",
+			FuncName:    funcName,
+		})
+
+		//отправляем информационное сообщение
+		notifications.SendNotificationToClientAPI(
+			chanToAPI,
+			notifications.NotificationSettingsToClientAPI{
+				MsgType:        "danger",
+				MsgDescription: msg,
+				Sources:        []int{fcts.MsgOption.ID},
+			},
+			fcts.ClientTaskID,
+			clientID)
+
+		//отправляем сообщение что задача была отклонена
+		chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+			MsgGenerator: "Core module",
+			MsgRecipient: "API module",
+			IDClientAPI:  clientID,
+			MsgJSON:      msgJSON,
+		}
+
+		return
+	}
+
+	//проверяем состояние подключения источника
+	connectionStatus, err := hsm.ISL.GetSourceConnectionStatus(fcts.MsgOption.ID)
+	if err != nil || !connectionStatus {
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprintf("source with ID %v not connected", fcts.MsgOption.ID),
+			FuncName:    funcName,
+		})
+
+		//отправляем информационное сообщение
+		notifications.SendNotificationToClientAPI(
+			chanToAPI,
+			notifications.NotificationSettingsToClientAPI{
+				MsgType: "danger",
+				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   fcts.MsgOption.ID,
+					TaskType:   "фильтрация",
+					TaskAction: "задача отклонена",
+					Message:    "источник не подключен",
+				}),
+			},
+			fcts.ClientTaskID,
+			clientID)
+
+		//отправляем сообщение что задача была отклонена
+		chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+			MsgGenerator: "Core module",
+			MsgRecipient: "API module",
+			IDClientAPI:  clientID,
+			MsgJSON:      msgJSON,
+		}
+
+		return
+	}
+
+	//получаем новый идентификатор задачи
+	taskID := common.GetUniqIDFormatMD5(clientID + "_" + fcts.ClientTaskID)
+
+	//добавляем новую задачу в очередь задач
+	hsm.QTS.AddQueueTaskStorage(taskID, fcts.MsgOption.ID, configure.CommonTaskInfo{
+		IDClientAPI:     clientID,
+		TaskIDClientAPI: fcts.ClientTaskID,
+		TaskType:        "filtration control",
+	}, &configure.DescriptionParametersReceivedFromUser{
+		FilterationParameters: configure.FilteringOption{
+			DateTime: configure.TimeInterval{
+				Start: fcts.MsgOption.DateTime.Start,
+				End:   fcts.MsgOption.DateTime.End,
+			},
+			Protocol: fcts.MsgOption.Protocol,
+			Filters: configure.FilteringExpressions{
+				IP: configure.FilteringNetworkParameters{
+					Any: fcts.MsgOption.Filters.IP.Any,
+					Src: fcts.MsgOption.Filters.IP.Src,
+					Dst: fcts.MsgOption.Filters.IP.Dst,
+				},
+				Port: configure.FilteringNetworkParameters{
+					Any: fcts.MsgOption.Filters.Port.Any,
+					Src: fcts.MsgOption.Filters.Port.Src,
+					Dst: fcts.MsgOption.Filters.Port.Dst,
+				},
+				Network: configure.FilteringNetworkParameters{
+					Any: fcts.MsgOption.Filters.Network.Any,
+					Src: fcts.MsgOption.Filters.Network.Src,
+					Dst: fcts.MsgOption.Filters.Network.Dst,
+				},
+			},
+		},
+		DownloadList: []string{},
+	})
+
+	//устанавливаем проверочный статус источника для данной задачи как подключен
+	if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(fcts.MsgOption.ID, taskID); err != nil {
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprint(err),
+			FuncName:    funcName,
+		})
+	}
+
+	//информационное сообщение о том что задача добавлена в очередь
+	notifications.SendNotificationToClientAPI(
+		chanToAPI,
+		notifications.NotificationSettingsToClientAPI{
+			MsgType: "success",
+			MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   fcts.MsgOption.ID,
+				TaskType:   "фильтрация",
+				TaskAction: "задача добавлена в очередь",
+			}),
+			Sources: []int{fcts.MsgOption.ID},
+		},
+		fcts.ClientTaskID,
+		clientID)
+}
+
+//handlerInformationSearchControlTypeSearchCommanInformation обработчик запроса по поиску общей информации о задачах
+func handlerInformationSearchControlTypeSearchCommanInformation(
+	siatr *configure.SearchInformationAboutTasksRequest,
+	hsm HandlersStoringMemory,
+	clientID string,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
+	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) {
+
+	funcName := "handlerInformationSearchControlTypeSearchCommanInformation"
+
+	//сообщение о том что задача была отклонена
+	resMsg := configure.SearchInformationResponseCommanInfo{MsgOption: configure.SearchInformationResponseOptionCommanInfo{Status: "refused"}}
+	resMsg.MsgType = "information"
+	resMsg.MsgSection = "information search control"
+	resMsg.MsgInstruction = "task processing"
+	resMsg.ClientTaskID = siatr.ClientTaskID
+
+	msgJSON, err := json.Marshal(resMsg)
+	if err != nil {
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprint(err),
+			FuncName:    funcName,
+		})
+
+		return
+	}
+
+	//проверяем параметры необходимые для поиска общей информации по задачам
+	if msg, ok := checkParametersSearchCommonInformation(&siatr.MsgOption); !ok {
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: "incorrect search parameters are set",
+			FuncName:    funcName,
+		})
+
+		//отправляем информационное сообщение
+		notifications.SendNotificationToClientAPI(
+			chanToAPI,
+			notifications.NotificationSettingsToClientAPI{
+				MsgType:        "danger",
+				MsgDescription: msg,
+			},
+			siatr.ClientTaskID,
+			clientID)
+
+		//отправляем сообщение что задача была отклонена
+		chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+			MsgGenerator: "Core module",
+			MsgRecipient: "API module",
+			IDClientAPI:  clientID,
+			MsgJSON:      msgJSON,
+		}
+
+		return
+	}
+}
+
 //checkParametersFiltration проверяет параметры фильтрации
 func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParametersFiltration) (string, bool) {
 	//проверяем наличие ID источника
@@ -187,157 +398,8 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 	return "", true
 }
 
-//handlerFiltrationControlTypeStart обработчик запроса на фильтрацию
-func handlerFiltrationControlTypeStart(
-	fcts *configure.FiltrationControlTypeStart,
-	hsm HandlersStoringMemory,
-	clientID string,
-	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
-	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) {
+//checkParametersSearchCommonInformation проверяет параметры запроса для поиска общей информации
+func checkParametersSearchCommonInformation(siatro *configure.SearchInformationAboutTasksRequestOption) (string, bool) {
 
-	funcName := "handlerFiltrationControlTypeStart"
-
-	//сообщение о том что задача была отклонена
-	resMsg := configure.FiltrationControlTypeInfo{
-		MsgOption: configure.FiltrationControlMsgTypeInfo{
-			ID:     fcts.MsgOption.ID,
-			Status: "refused",
-		},
-	}
-	resMsg.MsgType = "information"
-	resMsg.MsgSection = "filtration control"
-	resMsg.MsgInstruction = "task processing"
-	resMsg.ClientTaskID = fcts.ClientTaskID
-
-	msgJSON, err := json.Marshal(resMsg)
-	if err != nil {
-		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-			Description: fmt.Sprint(err),
-			FuncName:    funcName,
-		})
-
-		return
-	}
-
-	//проверяем параметры фильтрации
-	if msg, ok := сheckParametersFiltration(&fcts.MsgOption); !ok {
-		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-			Description: "incorrect parameters for filtering are set",
-			FuncName:    funcName,
-		})
-
-		//отправляем информационное сообщение
-		notifications.SendNotificationToClientAPI(
-			chanToAPI,
-			notifications.NotificationSettingsToClientAPI{
-				MsgType:        "danger",
-				MsgDescription: msg,
-				Sources:        []int{fcts.MsgOption.ID},
-			},
-			fcts.ClientTaskID,
-			clientID)
-
-		//отправляем сообщение что задача была отклонена
-		chanToAPI <- &configure.MsgBetweenCoreAndAPI{
-			MsgGenerator: "Core module",
-			MsgRecipient: "API module",
-			IDClientAPI:  clientID,
-			MsgJSON:      msgJSON,
-		}
-
-		return
-	}
-
-	//проверяем состояние подключения источника
-	connectionStatus, err := hsm.ISL.GetSourceConnectionStatus(fcts.MsgOption.ID)
-	if err != nil || !connectionStatus {
-		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-			Description: fmt.Sprintf("source with ID %v not connected", fcts.MsgOption.ID),
-			FuncName:    funcName,
-		})
-
-		//отправляем информационное сообщение
-		notifications.SendNotificationToClientAPI(
-			chanToAPI,
-			notifications.NotificationSettingsToClientAPI{
-				MsgType: "danger",
-				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
-					SourceID:   fcts.MsgOption.ID,
-					TaskType:   "фильтрация",
-					TaskAction: "задача отклонена",
-					Message:    "источник не подключен",
-				}),
-			},
-			fcts.ClientTaskID,
-			clientID)
-
-		//отправляем сообщение что задача была отклонена
-		chanToAPI <- &configure.MsgBetweenCoreAndAPI{
-			MsgGenerator: "Core module",
-			MsgRecipient: "API module",
-			IDClientAPI:  clientID,
-			MsgJSON:      msgJSON,
-		}
-
-		return
-	}
-
-	//получаем новый идентификатор задачи
-	taskID := common.GetUniqIDFormatMD5(clientID + "_" + fcts.ClientTaskID)
-
-	//добавляем новую задачу в очередь задач
-	hsm.QTS.AddQueueTaskStorage(taskID, fcts.MsgOption.ID, configure.CommonTaskInfo{
-		IDClientAPI:     clientID,
-		TaskIDClientAPI: fcts.ClientTaskID,
-		TaskType:        "filtration control",
-	}, &configure.DescriptionParametersReceivedFromUser{
-		FilterationParameters: configure.FilteringOption{
-			DateTime: configure.TimeInterval{
-				Start: fcts.MsgOption.DateTime.Start,
-				End:   fcts.MsgOption.DateTime.End,
-			},
-			Protocol: fcts.MsgOption.Protocol,
-			Filters: configure.FilteringExpressions{
-				IP: configure.FilteringNetworkParameters{
-					Any: fcts.MsgOption.Filters.IP.Any,
-					Src: fcts.MsgOption.Filters.IP.Src,
-					Dst: fcts.MsgOption.Filters.IP.Dst,
-				},
-				Port: configure.FilteringNetworkParameters{
-					Any: fcts.MsgOption.Filters.Port.Any,
-					Src: fcts.MsgOption.Filters.Port.Src,
-					Dst: fcts.MsgOption.Filters.Port.Dst,
-				},
-				Network: configure.FilteringNetworkParameters{
-					Any: fcts.MsgOption.Filters.Network.Any,
-					Src: fcts.MsgOption.Filters.Network.Src,
-					Dst: fcts.MsgOption.Filters.Network.Dst,
-				},
-			},
-		},
-		DownloadList: []string{},
-	})
-
-	//устанавливаем проверочный статус источника для данной задачи как подключен
-	if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(fcts.MsgOption.ID, taskID); err != nil {
-		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-			Description: fmt.Sprint(err),
-			FuncName:    funcName,
-		})
-	}
-
-	//информационное сообщение о том что задача добавлена в очередь
-	notifications.SendNotificationToClientAPI(
-		chanToAPI,
-		notifications.NotificationSettingsToClientAPI{
-			MsgType: "success",
-			MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
-				SourceID:   fcts.MsgOption.ID,
-				TaskType:   "фильтрация",
-				TaskAction: "задача добавлена в очередь",
-			}),
-			Sources: []int{fcts.MsgOption.ID},
-		},
-		fcts.ClientTaskID,
-		clientID)
+	return "", true
 }
