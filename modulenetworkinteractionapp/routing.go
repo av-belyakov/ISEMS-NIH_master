@@ -262,6 +262,13 @@ func RouteWssConnectionResponse(
 
 			switch messageType.Type {
 			case "pong":
+				chanInCore <- &configure.MsgBetweenCoreAndNI{
+					Section:         "source control",
+					Command:         "received version app",
+					SourceID:        sourceID,
+					AdvancedOptions: message,
+				}
+
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					TypeMessage: "info",
 					Description: fmt.Sprintf("resived message type 'PONG' from IP %v", sourceIP),

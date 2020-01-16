@@ -8,11 +8,12 @@ import (
 
 //SendMsgPing отправить сообщение типа Ping
 func SendMsgPing(ss *configure.SourceSetting) ([]byte, error) {
-	msgPing := configure.MsgTypePingPong{
+	msgPing := configure.MsgTypePing{
 		MsgType: "ping",
-		Info: configure.DetailInfoMsgPingPong{
+		Info: configure.DetailInfoMsgPing{
 			EnableTelemetry: ss.Settings.EnableTelemetry,
 			StorageFolders:  ss.Settings.StorageFolders,
+			TypeAreaNetwork: ss.Settings.TypeAreaNetwork,
 		},
 	}
 

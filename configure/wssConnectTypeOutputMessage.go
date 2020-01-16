@@ -4,16 +4,20 @@ package configure
 * Описание типов JSON сообщений отправляемых источникам
 * */
 
-//DetailInfoMsgPingPong подробная информация
-type DetailInfoMsgPingPong struct {
-	EnableTelemetry bool     `json:"enableTelemetry"`
-	StorageFolders  []string `json:"storageFolders"`
+//MsgTypePing сообщение типа ping
+type MsgTypePing struct {
+	MsgType string            `json:"messageType"`
+	Info    DetailInfoMsgPing `json:"info"`
 }
 
-//MsgTypePingPong сообщение типа ping
-type MsgTypePingPong struct {
-	MsgType string                `json:"messageType"`
-	Info    DetailInfoMsgPingPong `json:"info"`
+//DetailInfoMsgPing подробная информация
+// EnableTelemetry - включить телеметрию
+// StorageFolders - директории для хранения файлов
+// TypeAreaNetwork - тип протокола канального уровня (ip/pppoe)
+type DetailInfoMsgPing struct {
+	EnableTelemetry bool     `json:"enableTelemetry"`
+	StorageFolders  []string `json:"storageFolders"`
+	TypeAreaNetwork string   `json:"typeAreaNetwork"`
 }
 
 /* ПАРАМЕТРЫ ФИЛЬТРАЦИИ */

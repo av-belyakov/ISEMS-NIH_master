@@ -4,6 +4,20 @@ package configure
 * Описание типов JSON сообщений принимаемых от источников
 * */
 
+//MsgTypePong сообщение типа pong
+type MsgTypePong struct {
+	MsgType string            `json:"messageType"`
+	Info    DetailInfoMsgPong `json:"info"`
+}
+
+//DetailInfoMsgPong подробная информация
+// AppVersion - версия приложения
+// AppReleaseDate - дата релиза версии приложения
+type DetailInfoMsgPong struct {
+	AppVersion     string `json:"av"`
+	AppReleaseDate string `json:"ard"`
+}
+
 //SourceTelemetry полная системная информация подготовленная к отправке
 type SourceTelemetry struct {
 	MessageType string               `json:"messageType"`

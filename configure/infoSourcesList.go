@@ -26,7 +26,7 @@ type sourcesListSetting map[int]SourceSetting
 // ConnectionStatus - статус соединения с источником
 // IP - ip адрес источника
 // ShortName - краткое название источника
-// DateLastConnected - время последнего соединения (в формате unix)
+// DateLastConnected - время последнего соединения (в формате unix timestamp)
 // Token - токен для авторизации
 // ClientName - имя клиента API (нужно для того чтобы контролировать управление определенным источником)
 // AccessIsAllowed - разрешен ли доступ, по умолчанию false (при проверке токена ставится true если он верен)

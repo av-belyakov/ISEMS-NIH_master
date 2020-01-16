@@ -39,6 +39,9 @@ type MsgNotification struct {
 }
 
 //NotificationParameters детальное описание сообщения
+// Type - тип сообщения (success, warning, info, danger)
+// Description - описание сообщения
+// Sources - список источников к которому данное сообщение применимо
 type NotificationParameters struct {
 	Type        string `json:"t"`
 	Description string `json:"d"`
@@ -65,7 +68,7 @@ type SourceControlCurrentListSources struct {
 }
 
 //SourceControlConfirmActionSource список источников с выполненными над ними
-//действиями и статусом успешности действия
+// действиями и статусом успешности действия
 type SourceControlConfirmActionSource struct {
 	MsgCommon
 	MsgOptions SourceControlMsgTypeToAPI `json:"o"`
@@ -101,6 +104,11 @@ type MsgTaskInfo struct {
 }
 
 //ActionTypeListSources описание действий над источниками
+// ID - уникальный идентификатор источника
+// Status - статус подключения источника
+// ActionType - тип выполняемого действия
+// IsSuccess - успешность действия
+// MessageFailure - описание причины неудачи
 type ActionTypeListSources struct {
 	ID             int    `json:"id"`
 	Status         string `json:"s"`
@@ -110,11 +118,11 @@ type ActionTypeListSources struct {
 }
 
 //SourceListToAPI описание параметров источника API->
-//  - ID уникальный числовой идентификатор источника
-//  - Status: 'connect'/'disconnect'
-//  - ActionType: 'add'/'delete'/'update'/'reconnect'/'none'
-//  - IsSuccess: true/false
-//  - MessageFailure: <сообщение об ошибке> //пустое если isSuccess = true
+//  ID - уникальный числовой идентификатор источника
+//  Status - статус соединения ('connect'/'disconnect')
+//  ActionType - тип выполняемого действия ('add'/'delete'/'update'/'reconnect'/'none')
+//  IsSuccess - успешность действия (true/false)
+//  MessageFailure - описание причины неудачи (пустое если isSuccess = true)
 type SourceListToAPI struct {
 	ID             int    `json:"id"`
 	Status         string `json:"status"`
@@ -124,6 +132,10 @@ type SourceListToAPI struct {
 }
 
 //ShortListSources краткие настройки источника
+// ID - уникальный числовой идентификатор источника
+// IP - ip адрес источника
+// ShortName - краткое название источника
+// Description - описание источника
 type ShortListSources struct {
 	ID          int    `json:"id"`
 	IP          string `json:"ip"`
@@ -132,14 +144,12 @@ type ShortListSources struct {
 }
 
 //DetailedListSources весь список источников ->API
-//  - ID: уникальный числовой идентификатор источника
-//  - ActionType: типа действия над источником
-// ('add'/'update'/'delete'/'reconnect'/'status request',
-// добавить, обновить, удалить, переподключить, запрос состояния)
-//  - ShortName: краткое название источника
-//  - Description: полное название источника
-//  - Argument: параметры источника, для actionType
-// 'delete'/'reconnect'/'status request' это ПОЛЕ ПУСТОЕ
+// ID - уникальный числовой идентификатор источника
+// ActionType - типа действия над источником ('add'/'update'/'delete'/'reconnect'/'status request',
+//  добавить, обновить, удалить, переподключить, запрос состояния)
+// ShortName - краткое название источника
+// Description - полное название источника
+// Argument - параметры источника, для actionType 'delete'/'reconnect'/'status request' это ПОЛЕ ПУСТОЕ
 type DetailedListSources struct {
 	ID         int             `json:"id"`
 	ActionType string          `json:"at"`
@@ -147,9 +157,11 @@ type DetailedListSources struct {
 }
 
 //SourceArguments параметры источников
-//  - IP: ip адрес источника
-//  - Token: уникальный идентификатор источника
-//  - Settings: настройки источника
+// IP - ip адрес источника
+// Token - уникальный идентификатор источника
+// Settings - настройки источника
+// Description - описание источника
+// Settings - настройки источника
 type SourceArguments struct {
 	IP          string         `json:"ip"`
 	Token       string         `json:"t"`
@@ -159,11 +171,17 @@ type SourceArguments struct {
 }
 
 //SourceSettings настройки источника
+// AsServer - запуск источника как сервер или как клиент (server/client)
+// Port - сетевой порт
+// EnableTelemetry - включить передачу телеметрии
+// MaxCountProcessFiltration - максимальное количество одновременно запущенных процессов фильтрации (число 1-10),
+// StorageFolders - список директорий с файлами по которым выполняется фильтрация
+// TypeAreaNetwork - тип протокола канального уровня (ip/pppoe)
 type SourceSettings struct {
 	AsServer                  bool     `json:"as"`
 	Port                      int      `json:"p"`
 	EnableTelemetry           bool     `json:"et"`
-	MaxCountProcessFiltration int8     `json:"mcpf"` //<число 1-10>,
+	MaxCountProcessFiltration int8     `json:"mcpf"`
 	StorageFolders            []string `json:"sf"`
 	TypeAreaNetwork           string   `json:"tan"`
 }
@@ -180,6 +198,24 @@ type Telemetry struct {
 type TelemetryOptions struct {
 	SourceID    int                  `json:"id"`
 	Information TelemetryInformation `json:"i"`
+}
+
+/*--- ИНФОРМАЦИЯ О ВЕРСИИ УСТАНОВЛЕННОГО НА ИСТОЧНИКЕ ПРОГРАММНОГО ОБЕСПЕЧЕНИЯ И ДАТЕ ЕГО РЕЛИЗА ---*/
+
+//SourceVersionApp информация о версии приложения на источнике
+type SourceVersionApp struct {
+	MsgCommon
+	MsgOptions SourceVersionAppOptions `json:"o"`
+}
+
+//SourceVersionAppOptions дополнительные опции
+// SourceID - уникальный идентификатор источника
+// AppVersion - версия установленного на источнике приложения
+// AppReleaseDate - дата релиза установленного на источнике приложения
+type SourceVersionAppOptions struct {
+	SourceID       int    `json:"id"`
+	AppVersion     string `json:"av"`
+	AppReleaseDate string `json:"ard"`
 }
 
 /*--- УПРАВЛЕНИЕ ФИЛЬТРАЦИЕЙ ---*/

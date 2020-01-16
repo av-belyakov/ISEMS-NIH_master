@@ -105,6 +105,43 @@ func HandlerMsgFromNI(
 				MsgRecipient: "API module",
 				MsgJSON:      jsonOut,
 			}
+
+		case "received version app":
+			//клиенту API
+			jsonIn, ok := msg.AdvancedOptions.(*[]byte)
+			if !ok {
+				return fmt.Errorf("type conversion error%v", funcName)
+			}
+
+			var mtp configure.MsgTypePong
+			err := json.Unmarshal(*jsonIn, &mtp)
+			if err != nil {
+				return err
+			}
+
+			msg := configure.SourceVersionApp{
+				MsgOptions: configure.SourceVersionAppOptions{
+					SourceID:       msg.SourceID,
+					AppVersion:     mtp.Info.AppVersion,
+					AppReleaseDate: mtp.Info.AppReleaseDate,
+				},
+			}
+
+			msg.MsgType = "information"
+			msg.MsgSection = "source control"
+			msg.MsgInstruction = "send version app"
+
+			jsonOut, err := json.Marshal(msg)
+			if err != nil {
+				return err
+			}
+
+			outCoreChans.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
+				MsgGenerator: "Core module",
+				MsgRecipient: "API module",
+				MsgJSON:      jsonOut,
+			}
+
 		}
 
 	case "filtration control":
