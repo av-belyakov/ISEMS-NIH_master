@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
@@ -196,7 +195,7 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 	}
 
 	//проверяем параметры необходимые для поиска общей информации по задачам
-	if msg, ok := checkParametersSearchCommonInformation(&siatr.MsgOption); !ok {
+	if msg, ok := CheckParametersSearchCommonInformation(&siatr.MsgOption); !ok {
 		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: "incorrect search parameters are set",
 			FuncName:    funcName,
@@ -222,6 +221,12 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 
 		return
 	}
+
+	/*
+		!!!
+			добавляем задачу в очередь (или не использовать очередь а сразу отправлять в БД)
+		!!!
+	*/
 }
 
 //checkParametersFiltration проверяет параметры фильтрации
@@ -246,120 +251,9 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 		}), false
 	}
 
-	//проверяем тип протокола
-	if strings.EqualFold(fccpf.Protocol, "") {
+	//проверяем тип сетевого протокола
+	if isCorrectProtocol := checkCorrectProtocol(fccpf.Protocol); !isCorrectProtocol {
 		fccpf.Protocol = "any"
-	}
-
-	isProtoTCP := strings.EqualFold(fccpf.Protocol, "tcp")
-	isProtoUDP := strings.EqualFold(fccpf.Protocol, "udp")
-	isProtoANY := strings.EqualFold(fccpf.Protocol, "any")
-
-	if !isProtoTCP && !isProtoUDP && !isProtoANY {
-		return common.PatternUserMessage(&common.TypePatternUserMessage{
-			SourceID:   fccpf.ID,
-			TaskType:   "фильтрация",
-			TaskAction: "задача отклонена",
-			Message:    "задан неверный идентификатор транспортного протокола",
-		}), false
-	}
-
-	isEmpty := true
-
-	circle := func(sID int, fp map[string]map[string]*[]string, f func(int, string, *[]string) error) error {
-		for pn, pv := range fp {
-			var err error
-
-			for _, v := range pv {
-				if err = f(sID, pn, v); err != nil {
-					return err
-				}
-			}
-
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}
-
-	checkIPOrPortOrNetwork := func(sourceID int, paramType string, param *[]string) error {
-		checkIP := func(item string) bool {
-			ok, _ := common.CheckStringIP(item)
-
-			return ok
-		}
-
-		checkPort := func(item string) bool {
-			p, err := strconv.Atoi(item)
-			if err != nil {
-				return false
-			}
-
-			if p == 0 || p > 65536 {
-				return false
-			}
-
-			return true
-		}
-
-		checkNetwork := func(item string) bool {
-			ok, _ := common.CheckStringNetwork(item)
-
-			return ok
-		}
-
-		iteration := func(param *[]string, f func(string) bool) bool {
-			if len(*param) == 0 {
-				return true
-			}
-
-			isEmpty = false
-
-			for _, v := range *param {
-				if ok := f(v); !ok {
-					return false
-				}
-			}
-
-			return true
-		}
-
-		switch paramType {
-		case "IP":
-			if ok := iteration(param, checkIP); !ok {
-				return errors.New(common.PatternUserMessage(&common.TypePatternUserMessage{
-					SourceID:   sourceID,
-					TaskType:   "фильтрация",
-					TaskAction: "задача отклонена",
-					Message:    "неверные параметры фильтрации, один или более переданных пользователем IP адресов имеет некорректное значение",
-				}))
-			}
-
-		case "Port":
-			if ok := iteration(param, checkPort); !ok {
-				return errors.New(common.PatternUserMessage(&common.TypePatternUserMessage{
-					SourceID:   sourceID,
-					TaskType:   "фильтрация",
-					TaskAction: "задача отклонена",
-					Message:    "неверные параметры фильтрации, один или более из заданных пользователем портов имеет некорректное значение",
-				}))
-			}
-
-		case "Network":
-			if ok := iteration(param, checkNetwork); !ok {
-				return errors.New(common.PatternUserMessage(&common.TypePatternUserMessage{
-					SourceID:   sourceID,
-					TaskType:   "фильтрация",
-					TaskAction: "задача отклонена",
-					Message:    "неверные параметры фильтрации, некорректное значение маски подсети заданное пользователем",
-				}))
-			}
-
-		}
-
-		return nil
 	}
 
 	filterParameters := map[string]map[string]*[]string{
@@ -380,13 +274,7 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 		},
 	}
 
-	//проверка ip адресов, портов и подсетей
-	if err := circle(fccpf.ID, filterParameters, checkIPOrPortOrNetwork); err != nil {
-		return fmt.Sprint(err), false
-	}
-
-	//проверяем параметры свойства 'Filters' на пустоту
-	if isEmpty {
+	if !checkNetworkParametersIsNotEmpty(filterParameters) {
 		return common.PatternUserMessage(&common.TypePatternUserMessage{
 			SourceID:   fccpf.ID,
 			TaskType:   "фильтрация",
@@ -395,11 +283,243 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 		}), false
 	}
 
+	//проверяем параметры сетевых фильтров
+	if err := LoopHandler(LoopHandlerParameters{
+		OptionsCheckFilterParameters{
+			SourceID: fccpf.ID,
+			TaskType: "фильтрация",
+		},
+		filterParameters,
+		CheckIPPortNetwork,
+	}); err != nil {
+		return fmt.Sprint(err), false
+	}
+
 	return "", true
 }
 
-//checkParametersSearchCommonInformation проверяет параметры запроса для поиска общей информации
-func checkParametersSearchCommonInformation(siatro *configure.SearchInformationAboutTasksRequestOption) (string, bool) {
+//CheckParametersSearchCommonInformation проверяет параметры запроса для поиска общей информации
+func CheckParametersSearchCommonInformation(siatro *configure.SearchInformationAboutTasksRequestOption) (string, bool) {
+
+	fmt.Println("func 'checkParametersSearchCommonInformation', START...")
+
+	checkDateTimeFiltering := func(dtp configure.DateTimeParameters) (string, bool) {
+		if dtp.Start == 0 && dtp.End != 0 {
+			return common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   siatro.ID,
+				TaskType:   "поиск информации",
+				TaskAction: "задача отклонена",
+				Message:    "не задано начальное время для поиска информации",
+			}), false
+		}
+		if dtp.Start != 0 && dtp.End == 0 {
+			return common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   siatro.ID,
+				TaskType:   "поиск информации",
+				TaskAction: "задача отклонена",
+				Message:    "не задано конечное время для поиска информации",
+			}), false
+		}
+		if dtp.Start > dtp.End {
+			return common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   siatro.ID,
+				TaskType:   "поиск информации",
+				TaskAction: "задача отклонена",
+				Message:    "начальное время для поиска информации не должно быть больше конечного времени",
+			}), false
+		}
+
+		return "", true
+	}
+
+	//проверяем максимальное кол-во задач в возвращаемой части
+	if (siatro.NumberTasksReturnedPart == 0) || (siatro.NumberTasksReturnedPart > 101) {
+		siatro.NumberTasksReturnedPart = 35
+	}
+
+	//проверяем временной интервал
+	if msgInfo, ok := checkDateTimeFiltering(siatro.InstalledFilteringOption.DateTime); !ok {
+		return msgInfo, false
+	}
+
+	//проверяем тип сетевого протокола
+	if isCorrectProtocol := checkCorrectProtocol(siatro.InstalledFilteringOption.Protocol); !isCorrectProtocol {
+		siatro.InstalledFilteringOption.Protocol = "any"
+	}
+
+	filterParameters := map[string]map[string]*[]string{
+		"IP": map[string]*[]string{
+			"Any": &siatro.InstalledFilteringOption.NetworkFilters.IP.Any,
+			"Src": &siatro.InstalledFilteringOption.NetworkFilters.IP.Src,
+			"Dst": &siatro.InstalledFilteringOption.NetworkFilters.IP.Dst,
+		},
+		"Port": map[string]*[]string{
+			"Any": &siatro.InstalledFilteringOption.NetworkFilters.Port.Any,
+			"Src": &siatro.InstalledFilteringOption.NetworkFilters.Port.Src,
+			"Dst": &siatro.InstalledFilteringOption.NetworkFilters.Port.Dst,
+		},
+		"Network": map[string]*[]string{
+			"Any": &siatro.InstalledFilteringOption.NetworkFilters.Network.Any,
+			"Src": &siatro.InstalledFilteringOption.NetworkFilters.Network.Src,
+			"Dst": &siatro.InstalledFilteringOption.NetworkFilters.Network.Dst,
+		},
+	}
+
+	//проверяем параметры сетевых фильтров
+	if err := LoopHandler(LoopHandlerParameters{
+		OptionsCheckFilterParameters{
+			SourceID: siatro.ID,
+			TaskType: "поиск информации",
+		},
+		filterParameters,
+		CheckIPPortNetwork,
+	}); err != nil {
+		return fmt.Sprint(err), false
+	}
 
 	return "", true
+}
+
+//OptionsCheckFilterParameters общие опции
+type OptionsCheckFilterParameters struct {
+	SourceID int
+	TaskType string
+}
+
+//LoopHandlerParameters параметра обработчика цикла
+type LoopHandlerParameters struct {
+	OptionsCheckFilterParameters
+	FilterParameters map[string]map[string]*[]string
+	Function         func(CheckIPPortNetworkParameters) error
+}
+
+//CheckIPPortNetworkParameters параметры для функции поиска по сетевым фильтрам
+type CheckIPPortNetworkParameters struct {
+	OptionsCheckFilterParameters
+	paramType string
+	paramList *[]string
+}
+
+//LoopHandler обработчик циклов
+func LoopHandler(lhp LoopHandlerParameters) error {
+	for paramType, paramValue := range lhp.FilterParameters {
+		for _, paramList := range paramValue {
+			if err := lhp.Function(CheckIPPortNetworkParameters{
+				OptionsCheckFilterParameters{
+					SourceID: lhp.SourceID,
+					TaskType: lhp.TaskType,
+				},
+				paramType,
+				paramList,
+			}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+//CheckIPPortNetwork функция проверки сетевых фильтров
+func CheckIPPortNetwork(checkParameters CheckIPPortNetworkParameters) error {
+	checkIP := func(item string) bool {
+		ok, _ := common.CheckStringIP(item)
+
+		return ok
+	}
+
+	checkPort := func(item string) bool {
+		p, err := strconv.Atoi(item)
+		if err != nil {
+			return false
+		}
+
+		if p == 0 || p > 65536 {
+			return false
+		}
+
+		return true
+	}
+
+	checkNetwork := func(item string) bool {
+		ok, _ := common.CheckStringNetwork(item)
+
+		return ok
+	}
+
+	iteration := func(param *[]string, f func(string) bool) bool {
+		if len(*param) == 0 {
+			return true
+		}
+
+		for _, v := range *param {
+			if ok := f(v); !ok {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	switch checkParameters.paramType {
+	case "IP":
+		if ok := iteration(checkParameters.paramList, checkIP); !ok {
+			return errors.New(common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   checkParameters.SourceID,
+				TaskType:   checkParameters.TaskType,
+				TaskAction: "задача отклонена",
+				Message:    "неверные параметры фильтрации, один или более переданных пользователем IP адресов имеет некорректное значение",
+			}))
+		}
+
+	case "Port":
+		if ok := iteration(checkParameters.paramList, checkPort); !ok {
+			return errors.New(common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   checkParameters.SourceID,
+				TaskType:   checkParameters.TaskType,
+				TaskAction: "задача отклонена",
+				Message:    "неверные параметры фильтрации, один или более из заданных пользователем портов имеет некорректное значение",
+			}))
+		}
+
+	case "Network":
+		if ok := iteration(checkParameters.paramList, checkNetwork); !ok {
+			return errors.New(common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   checkParameters.SourceID,
+				TaskType:   checkParameters.TaskType,
+				TaskAction: "задача отклонена",
+				Message:    "неверные параметры фильтрации, получен неверный сетевой диапазон",
+			}))
+		}
+
+	}
+
+	return nil
+}
+
+func checkCorrectProtocol(proto string) bool {
+	var isCorrectProtocol bool
+	listProto := []string{"any", "tcp", "udp"}
+
+	for _, p := range listProto {
+		if proto == p {
+			isCorrectProtocol = true
+
+			break
+		}
+	}
+
+	return isCorrectProtocol
+}
+
+func checkNetworkParametersIsNotEmpty(np map[string]map[string]*[]string) bool {
+	for _, v := range np {
+		for _, item := range v {
+			if len(*item) != 0 {
+				return true
+			}
+		}
+	}
+
+	return false
 }
