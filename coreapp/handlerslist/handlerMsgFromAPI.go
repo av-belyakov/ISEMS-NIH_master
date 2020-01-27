@@ -592,7 +592,7 @@ func HandlerMsgFromAPI(
 					return
 				}
 
-				go handlerInformationSearchControlTypeSearchCommanInformation(&siatr, hsm, msg.IDClientAPI, saveMessageApp, outCoreChans.OutCoreChanAPI)
+				go handlerInformationSearchControlTypeSearchCommanInformation(&siatr, hsm, msg.IDClientAPI, saveMessageApp, outCoreChans.OutCoreChanAPI, outCoreChans.OutCoreChanDB)
 
 				return
 			}

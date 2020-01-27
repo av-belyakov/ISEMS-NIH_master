@@ -1,8 +1,6 @@
 package mytestpackages
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -42,10 +40,10 @@ var _ = Describe("CheckSearchParameters", func() {
 				ID: 1002,
 			}
 
-			msg, ok := handlerslist.CheckParametersSearchCommonInformation(searchOptions)
+			_, ok := handlerslist.CheckParametersSearchCommonInformation(searchOptions)
 
-			fmt.Printf("RESEIVED MESSAGE: %q\n", msg)
-			fmt.Println(searchOptions)
+			//fmt.Printf("RESEIVED MESSAGE: %q\n", msg)
+			//fmt.Println(searchOptions)
 
 			Expect(ok).Should(BeTrue())
 		})
@@ -80,10 +78,10 @@ var _ = Describe("CheckSearchParameters", func() {
 				},
 			}
 
-			msg, ok := handlerslist.CheckParametersSearchCommonInformation(searchOptions)
+			_, ok := handlerslist.CheckParametersSearchCommonInformation(searchOptions)
 
-			fmt.Printf("RESEIVED MESSAGE: %q\n", msg)
-			fmt.Println(searchOptions)
+			//fmt.Printf("RESEIVED MESSAGE: %q\n", msg)
+			//fmt.Println(searchOptions)
 
 			Expect(ok).Should(BeFalse())
 		})

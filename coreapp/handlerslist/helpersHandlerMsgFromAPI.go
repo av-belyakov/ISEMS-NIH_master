@@ -173,7 +173,8 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 	hsm HandlersStoringMemory,
 	clientID string,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
-	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) {
+	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
+	chanToDB chan<- *configure.MsgBetweenCoreAndDB) {
 
 	funcName := "handlerInformationSearchControlTypeSearchCommanInformation"
 
@@ -224,9 +225,31 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 
 	/*
 		!!!
-			добавляем задачу в очередь (или не использовать очередь а сразу отправлять в БД)
+			Отправляем задачу сразу, ни каких очередей (только в БД)
+			Сделать кэширование для пагинатора и сам кэш для разгрузки БД
+			Возможно придется использовать два отбражения, для кэша как токовог,
+			так и отображение для пагинатора, однако и там и там нужно использовать
+			ссылку на одно и тоже отображение с информацией о найденных задачах
 		!!!
 	*/
+
+	/*
+	   Для учета задачи по поиску надо либо добавить информацию в
+	   storingMemoryTask (создав при этом отдельное описание типа для операции поиска)
+	   или что лучше продумать и создать отдельный тип учета задач по поиску информации
+	   в котором будет предусмотренно кэширование и хранение информации для пагинатора
+	*/
+
+	/*chanToDB <- &configure.MsgBetweenCoreAndDB{
+		MsgGenerator:    "Core module",
+		MsgRecipient:    "DB module",
+		MsgSection:      "information search control",
+		Instruction:     "search common information",
+		IDClientAPI:     clientID,
+		TaskID:          msg.TaskID,
+		TaskIDClientAPI: qti.TaskIDClientAPI,
+		AdvancedOptions: msg.SourceID,
+	}*/
 }
 
 //checkParametersFiltration проверяет параметры фильтрации
