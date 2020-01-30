@@ -50,8 +50,7 @@ var _ = Describe("CheckSearchParameters", func() {
 
 		It("При проверке типа должно возвращаться False", func() {
 			searchOptions := &configure.SearchInformationAboutTasksRequestOption{
-				ID:                      1002,
-				NumberTasksReturnedPart: 20,
+				ID: 1002,
 				InstalledFilteringOption: configure.SearchFilteringOptions{
 					DateTime: configure.DateTimeParameters{
 						Start: 16643312331,

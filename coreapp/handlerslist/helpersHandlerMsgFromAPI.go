@@ -355,11 +355,6 @@ func CheckParametersSearchCommonInformation(siatro *configure.SearchInformationA
 		return "", true
 	}
 
-	//проверяем максимальное кол-во задач в возвращаемой части
-	if (siatro.NumberTasksReturnedPart == 0) || (siatro.NumberTasksReturnedPart > 101) {
-		siatro.NumberTasksReturnedPart = 35
-	}
-
 	//проверяем временной интервал
 	if msgInfo, ok := checkDateTimeFiltering(siatro.InstalledFilteringOption.DateTime); !ok {
 		return msgInfo, false

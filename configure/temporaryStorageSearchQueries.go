@@ -20,16 +20,19 @@ type TemporaryStorageSearchQueries struct {
 
 //SearchTaskDescription описание задачи по поиску информации в БД
 // addedDataTask - дата добавления задачи
-// relevanceStatus - статус актуальности инофрмации
+// relevanceStatus - статус актуальности информации
+// transmitionToClientStatus - передается ли найденная информация клиенту API (актуально когда
+// найденной информации много и она передается клиенту API частями)
 // transmissionStatus - статус передачи информации (передается ли информация в настоящий момент)
 // searchParameters - описание параметров поискового запроса
 // listFindInformation - список найденной информации
 type SearchTaskDescription struct {
-	addedDataTask       int64
-	relevanceStatus     bool
-	transmissionStatus  bool
-	searchParameters    SearchParameters
-	listFindInformation ListFindInformation
+	addedDataTask             int64
+	relevanceStatus           bool
+	transmissionStatus        bool
+	transmitionToClientStatus bool
+	searchParameters          SearchParameters
+	listFindInformation       ListFindInformation
 }
 
 //SearchParameters параметры поиска
@@ -40,6 +43,7 @@ type ListFindInformation []*BriefTaskInformation
 
 //SearchChannelRequest параметры канала запроса
 // actionType - тип действия
+// clientID - идентификатор клиента
 // searchTaskID - уникальный идентификатор задачи
 // searchParameters - параметры поиска
 // listFindInformation - список найденной информации
@@ -47,32 +51,28 @@ type ListFindInformation []*BriefTaskInformation
 type SearchChannelRequest struct {
 	actionType          string
 	searchTaskID        string
-	searchParameters    SearchParameters
+	searchParameters    *SearchParameters
 	listFindInformation ListFindInformation
 	channelRes          chan SearchChannelResponse
 }
 
 //SearchChannelResponse параметры канала ответа
-// listFindInformation - список найденной информации
+// errMsg - содержит ошибку
+// taskID - уникальный идентификатор задачи
+// findInformation - найденная по заданному ID информации
 type SearchChannelResponse struct {
-	listFindInformation ListFindInformation
+	errMsg          error
+	findInformation *SearchTaskDescription
+}
+
+//TemporaryStorageSearcher интерфейс TemporaryStorageSearcher
+type TemporaryStorageSearcher interface {
+	CreateNewSearchTask(string, *SearchParameters) (string, *SearchTaskDescription)
+	GetInformationAboutSearchTask(string) (*SearchTaskDescription, error)
 }
 
 //CreateTmpStorageID генерирует идентификатор задачи поиска в БД по заданным параметрам
 func CreateTmpStorageID(clientID string, sp *SearchParameters) string {
-	/*
-		type SearchInformationAboutTasksRequestOption struct {
-			TaskProcessed             bool                             `json:"tp"`
-			ID                        int                              `json:"id"`
-			NumberTasksReturnedPart   int                              `json:"ntrp"`
-			FilesDownloaded           FilesDownloadedOptions           `json:"fd"`
-			InformationAboutFiltering InformationAboutFilteringOptions `json:"iaf"`
-			InstalledFilteringOption  SearchFilteringOptions           `json:"ifo"`
-		}
-
-		!!! ПРОТЕСТИРОВАТЬ ЭТУ ФУНКЦИЮ !!!
-	*/
-
 	boolStr := func(b bool) string {
 		if b {
 			return "true"
@@ -86,7 +86,6 @@ func CreateTmpStorageID(clientID string, sp *SearchParameters) string {
 	s := []string{
 		boolStr(sp.TaskProcessed),
 		strconv.Itoa(sp.ID),
-		strconv.Itoa(sp.NumberTasksReturnedPart),
 		boolStr(sp.FilesDownloaded.AllFilesIsDownloaded),
 		boolStr(sp.FilesDownloaded.FilesIsDownloaded),
 		boolStr(sp.InformationAboutFiltering.FilesIsFound),
@@ -108,12 +107,8 @@ func CreateTmpStorageID(clientID string, sp *SearchParameters) string {
 	s = append(s, nf.Network.Dst...)
 	s = append(s, nf.Network.Src...)
 
-	stringParameters := strings.Join(s, "_")
-
-	fmt.Println(stringParameters)
-
 	h := sha1.New()
-	io.WriteString(h, stringParameters)
+	io.WriteString(h, strings.Join(s, "_"))
 
 	return hex.EncodeToString(h.Sum(nil))
 }
@@ -128,8 +123,33 @@ func NewRepositoryTSSQ() *TemporaryStorageSearchQueries {
 		for msg := range tssq.channelReq {
 			switch msg.actionType {
 			case "create new search task":
+				info, err := tssq.temporaryStorageSearchInfo(msg.searchTaskID)
+
+				if err != nil {
+					//добавляем информацию
+					tssq.tasks[msg.searchTaskID] = &SearchTaskDescription{
+						searchParameters: *msg.searchParameters,
+					}
+
+					msg.channelRes <- SearchChannelResponse{}
+				} else {
+					msg.channelRes <- SearchChannelResponse{
+						errMsg:          err,
+						findInformation: info,
+					}
+				}
+
+				close(msg.channelRes)
 
 			case "get information about search task":
+				info, err := tssq.temporaryStorageSearchInfo(msg.searchTaskID)
+
+				msg.channelRes <- SearchChannelResponse{
+					errMsg:          err,
+					findInformation: info,
+				}
+
+				close(msg.channelRes)
 
 			case "add information found search result":
 
@@ -146,20 +166,41 @@ func NewRepositoryTSSQ() *TemporaryStorageSearchQueries {
 	return &tssq
 }
 
-//CreateNewSearchTask создание новой временной записи о пиосковой задаче
-func (tssq *TemporaryStorageSearchQueries) CreateNewSearchTask(clientID string, sp *SearchParameters) (string, error) {
-	fmt.Println("func 'CreateNewTemporaryStorage', START...")
+//CreateNewSearchTask создание новой временной записи о поисковой задаче
+func (tssq *TemporaryStorageSearchQueries) CreateNewSearchTask(clientID string, sp *SearchParameters) (string, *SearchTaskDescription) {
+	//fmt.Println("func 'CreateNewTemporaryStorage', START...")
 
-	taskID := ""
+	taskID := CreateTmpStorageID(clientID, sp)
 
-	return taskID, nil
+	chanRes := make(chan SearchChannelResponse)
+
+	tssq.channelReq <- SearchChannelRequest{
+		actionType:       "create new search task",
+		searchTaskID:     taskID,
+		searchParameters: sp,
+		channelRes:       chanRes,
+	}
+
+	info := <-chanRes
+
+	return taskID, info.findInformation
 }
 
-//GetInformationAboutSearchTask вывод информации из кэша
-func (tssq *TemporaryStorageSearchQueries) GetInformationAboutSearchTask(taskID string) error {
-	fmt.Println("func 'GetInformationAboutSearchTask', START...")
+//GetInformationAboutSearchTask вывод всей найденной информации из кэша
+func (tssq *TemporaryStorageSearchQueries) GetInformationAboutSearchTask(taskID string) (*SearchTaskDescription, error) {
+	//fmt.Println("func 'GetInformationAboutSearchTask', START...")
 
-	return nil
+	chanRes := make(chan SearchChannelResponse)
+
+	tssq.channelReq <- SearchChannelRequest{
+		actionType:   "get information about search task",
+		searchTaskID: taskID,
+		channelRes:   chanRes,
+	}
+
+	info := <-chanRes
+
+	return info.findInformation, info.errMsg
 }
 
 //AddInformationFoundSearchResult добавление результата поиска в БД к информации о задаче
@@ -179,6 +220,31 @@ func (tssq *TemporaryStorageSearchQueries) ChangeStatusTransmissionTask(taskID s
 //ChangingStatusInformationRelevance изменение статуса актуальности задачи
 func (tssq *TemporaryStorageSearchQueries) ChangingStatusInformationRelevance() {
 	fmt.Println("func 'ChangingStatusInformationRelevance', START...")
+}
+
+//ChangingStatusTransmitionToClientStatus изменение статуса задачи при передачи найденной информации клиенту API
+func (tssq *TemporaryStorageSearchQueries) ChangingStatusTransmitionToClientStatus(taskID string, transmitionStatus bool) error {
+	fmt.Println("func 'ChangingStatusTransmitionToClientStatus', START...")
+
+	//ошибка если информация не найдена
+	return nil
+}
+
+func (tssq *TemporaryStorageSearchQueries) temporaryStorageSearchInfo(taskID string) (*SearchTaskDescription, error) {
+	/*
+		fmt.Println("func 'temporaryStorageSearchInfo' ---- START ----")
+		fmt.Println(tssq.tasks)
+		info, ok := tssq.tasks[taskID]
+		fmt.Println(taskID)
+		fmt.Println(info)
+		fmt.Println("func 'temporaryStorageSearchInfo' ---- END ----")
+	*/
+	info, ok := tssq.tasks[taskID]
+	if !ok {
+		return nil, fmt.Errorf("task with ID %q not found", taskID)
+	}
+
+	return info, nil
 }
 
 func (tssq *TemporaryStorageSearchQueries) delInformationAboutSearchTask(taskID string) {
