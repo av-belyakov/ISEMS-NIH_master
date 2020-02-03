@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -12,27 +13,31 @@ import (
 
 //TemporaryStorageSearchQueries временное хранилище задач поиска информации в БД
 // tasks - список задач поиска
+// tickerSec - интервал обработки информации в кэше
+// maxCacheSize - максимальный размер кэша
+// timeExpiration - время устаревания кэша
 // channelReq - канал для передачи информации о запросе внутри хранилища
 type TemporaryStorageSearchQueries struct {
-	tasks      map[string]*SearchTaskDescription
-	channelReq chan SearchChannelRequest
+	tasks          map[string]*SearchTaskDescription
+	tickerSec      int
+	maxCacheSize   int
+	timeExpiration int
+	channelReq     chan SearchChannelRequest
 }
 
 //SearchTaskDescription описание задачи по поиску информации в БД
-// addedDataTask - дата добавления задачи
-// relevanceStatus - статус актуальности информации
-// transmitionToClientStatus - передается ли найденная информация клиенту API (актуально когда
-// найденной информации много и она передается клиенту API частями)
-// transmissionStatus - статус передачи информации (передается ли информация в настоящий момент)
+// updateTimeInformation - время обновления информации
+// notRelevance - статус актуальности информации (false - актуальна)
+// transmissionStatus - передается ли найденная информация клиенту API (актуально когда
+// найденной информации много и она передается клиенту API частями) true - передается
 // searchParameters - описание параметров поискового запроса
 // listFindInformation - список найденной информации
 type SearchTaskDescription struct {
-	addedDataTask             int64
-	relevanceStatus           bool
-	transmissionStatus        bool
-	transmitionToClientStatus bool
-	searchParameters          SearchParameters
-	listFindInformation       ListFindInformation
+	updateTimeInformation int64
+	notRelevance          bool
+	transmissionStatus    bool
+	searchParameters      SearchParameters
+	listFindInformation   ListFindInformation
 }
 
 //SearchParameters параметры поиска
@@ -43,17 +48,14 @@ type ListFindInformation []*BriefTaskInformation
 
 //SearchChannelRequest параметры канала запроса
 // actionType - тип действия
-// clientID - идентификатор клиента
 // searchTaskID - уникальный идентификатор задачи
-// searchParameters - параметры поиска
-// listFindInformation - список найденной информации
+// information - информация
 // channelRes - описание канала ответа
 type SearchChannelRequest struct {
-	actionType          string
-	searchTaskID        string
-	searchParameters    *SearchParameters
-	listFindInformation ListFindInformation
-	channelRes          chan SearchChannelResponse
+	actionType   string
+	searchTaskID string
+	information  interface{}
+	channelRes   chan SearchChannelResponse
 }
 
 //SearchChannelResponse параметры канала ответа
@@ -113,30 +115,88 @@ func CreateTmpStorageID(clientID string, sp *SearchParameters) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+//TypeRepositoryTSSQ описание типа для NewRepositoryTSSQ
+// TickerSec - интервал обработки информации в кэше
+// TimeExpiration - через какое количество секунд кэша будет считаться устаревшим
+// MaxCacheSize - максимальный размер кэша
+type TypeRepositoryTSSQ struct {
+	TickerSec      int
+	TimeExpiration int
+	MaxCacheSize   int
+}
+
 //NewRepositoryTSSQ создание нового репозитория для хранения информации о задачах поиска
-func NewRepositoryTSSQ() *TemporaryStorageSearchQueries {
-	tssq := TemporaryStorageSearchQueries{}
-	tssq.tasks = map[string]*SearchTaskDescription{}
-	tssq.channelReq = make(chan SearchChannelRequest)
+func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
+	if tr.MaxCacheSize <= 10 || tr.MaxCacheSize > 100 {
+		tr.MaxCacheSize = 100
+	}
+
+	if tr.TickerSec <= 1 || tr.TickerSec > 10 {
+		tr.TickerSec = 5
+	}
+
+	if tr.TimeExpiration > 360 {
+		tr.TimeExpiration = 360
+	}
+
+	tssq := TemporaryStorageSearchQueries{
+		tickerSec:      tr.TickerSec,
+		maxCacheSize:   tr.MaxCacheSize,
+		timeExpiration: tr.TimeExpiration,
+		tasks:          map[string]*SearchTaskDescription{},
+		channelReq:     make(chan SearchChannelRequest),
+	}
 
 	go func() {
 		for msg := range tssq.channelReq {
 			switch msg.actionType {
 			case "create new search task":
-				info, err := tssq.temporaryStorageSearchInfo(msg.searchTaskID)
+				searchParameters, ok := msg.information.(SearchParameters)
+				if !ok {
+					msg.channelRes <- SearchChannelResponse{
+						errMsg: fmt.Errorf("ActionType: %q, ERROR: type conversion error", msg.actionType),
+					}
 
+					close(msg.channelRes)
+
+					break
+				}
+
+				//проверяем количество записей в кэше
+				if len(tssq.tasks) > tssq.maxCacheSize {
+					tssq.deleteOldestRecord()
+				}
+
+				info, err := tssq.temporaryStorageSearchInfo(msg.searchTaskID)
 				if err != nil {
 					//добавляем информацию
 					tssq.tasks[msg.searchTaskID] = &SearchTaskDescription{
-						searchParameters: *msg.searchParameters,
+						searchParameters: searchParameters,
+					}
+
+					close(msg.channelRes)
+
+					break
+				}
+
+				//проверяем задачу на актуальность
+				if info.notRelevance {
+					tssq.delInformationAboutSearchTask(msg.searchTaskID)
+
+					tssq.tasks[msg.searchTaskID] = &SearchTaskDescription{
+						searchParameters: searchParameters,
 					}
 
 					msg.channelRes <- SearchChannelResponse{}
-				} else {
-					msg.channelRes <- SearchChannelResponse{
-						errMsg:          err,
-						findInformation: info,
-					}
+
+					close(msg.channelRes)
+
+					break
+				}
+
+				msg.channelRes <- SearchChannelResponse{
+					errMsg:          err,
+					findInformation: info,
 				}
 
 				close(msg.channelRes)
@@ -152,16 +212,33 @@ func NewRepositoryTSSQ() *TemporaryStorageSearchQueries {
 				close(msg.channelRes)
 
 			case "add information found search result":
+				//добавляем не только найденную в БД информацию по задаче но и текущее время обновления
 
 			case "del information about search task":
 
 			case "change status transmission task":
+				status, ok := msg.information.(bool)
+				if !ok {
+					msg.channelRes <- SearchChannelResponse{
+						errMsg: fmt.Errorf("ActionType: %q, ERROR: type conversion error", msg.actionType),
+					}
+				} else {
+					msg.channelRes <- SearchChannelResponse{
+						errMsg: tssq.changeStatusTransmissionTask(msg.searchTaskID, status),
+					}
+				}
 
-			case "changing status information relevance":
+				close(msg.channelRes)
 
+			case "change status information relevance":
+				tssq.changingStatusInformationRelevance()
+
+				close(msg.channelRes)
 			}
 		}
 	}()
+
+	go checkTimeDeleteTemporaryStorageSearchQueries(&tssq)
 
 	return &tssq
 }
@@ -175,10 +252,10 @@ func (tssq *TemporaryStorageSearchQueries) CreateNewSearchTask(clientID string, 
 	chanRes := make(chan SearchChannelResponse)
 
 	tssq.channelReq <- SearchChannelRequest{
-		actionType:       "create new search task",
-		searchTaskID:     taskID,
-		searchParameters: sp,
-		channelRes:       chanRes,
+		actionType:   "create new search task",
+		searchTaskID: taskID,
+		information:  sp,
+		channelRes:   chanRes,
 	}
 
 	info := <-chanRes
@@ -207,6 +284,8 @@ func (tssq *TemporaryStorageSearchQueries) GetInformationAboutSearchTask(taskID 
 func (tssq *TemporaryStorageSearchQueries) AddInformationFoundSearchResult() error {
 	fmt.Println("func 'AddInformationFoundSearchResult', START...")
 
+	//при добавлении информации найденной в БД добавить время
+
 	return nil
 }
 
@@ -214,20 +293,30 @@ func (tssq *TemporaryStorageSearchQueries) AddInformationFoundSearchResult() err
 func (tssq *TemporaryStorageSearchQueries) ChangeStatusTransmissionTask(taskID string, transmissionStatus bool) error {
 	fmt.Println("func 'ChangeStatusTransmissionTask', START...")
 
-	return nil
+	chanRes := make(chan SearchChannelResponse)
+
+	tssq.channelReq <- SearchChannelRequest{
+		actionType:   "change status transmission task",
+		searchTaskID: taskID,
+		information:  transmissionStatus,
+		channelRes:   chanRes,
+	}
+
+	return (<-chanRes).errMsg
 }
 
 //ChangingStatusInformationRelevance изменение статуса актуальности задачи
 func (tssq *TemporaryStorageSearchQueries) ChangingStatusInformationRelevance() {
 	fmt.Println("func 'ChangingStatusInformationRelevance', START...")
-}
 
-//ChangingStatusTransmitionToClientStatus изменение статуса задачи при передачи найденной информации клиенту API
-func (tssq *TemporaryStorageSearchQueries) ChangingStatusTransmitionToClientStatus(taskID string, transmitionStatus bool) error {
-	fmt.Println("func 'ChangingStatusTransmitionToClientStatus', START...")
+	chanRes := make(chan SearchChannelResponse)
 
-	//ошибка если информация не найдена
-	return nil
+	tssq.channelReq <- SearchChannelRequest{
+		actionType: "change status information relevance",
+		channelRes: chanRes,
+	}
+
+	<-chanRes
 }
 
 func (tssq *TemporaryStorageSearchQueries) temporaryStorageSearchInfo(taskID string) (*SearchTaskDescription, error) {
@@ -247,20 +336,91 @@ func (tssq *TemporaryStorageSearchQueries) temporaryStorageSearchInfo(taskID str
 	return info, nil
 }
 
+func (tssq *TemporaryStorageSearchQueries) changeStatusTransmissionTask(taskID string, transmissionStatus bool) error {
+	if _, ok := tssq.tasks[taskID]; !ok {
+		return fmt.Errorf("task with ID %q not found", taskID)
+	}
+
+	tssq.tasks[taskID].transmissionStatus = transmissionStatus
+
+	return nil
+}
+
+//changingStatusInformationRelevance изменение статуса актуальности всех задач у которых updateTimeInformation != 0
+func (tssq *TemporaryStorageSearchQueries) changingStatusInformationRelevance() {
+	//все задачи по которым ранее был поиск становятся не актуальными и подлежат удалению
+	for id, info := range tssq.tasks {
+		if info.updateTimeInformation == 0 {
+			continue
+		}
+
+		tssq.tasks[id].notRelevance = true
+	}
+}
+
+//delInformationAboutSearchTask удалить информацию о задаче
 func (tssq *TemporaryStorageSearchQueries) delInformationAboutSearchTask(taskID string) {
 	fmt.Println("func 'delInformationAboutSearchTask', START...")
 }
 
-//CheckTimeDeleteTemporaryStorageSearchQueries очистка информации о задаче по истечении определенного времени или неактуальности данных
-func (tssq *TemporaryStorageSearchQueries) CheckTimeDeleteTemporaryStorageSearchQueries(sec int) chan string {
+type listTask []listTaskInfo
+
+type listTaskInfo struct {
+	time         int64
+	id           string
+	transmission bool
+}
+
+func (lt listTask) Len() int {
+	return len(lt)
+}
+
+func (lt listTask) Swap(i, j int) {
+	lt[i], lt[j] = lt[j], lt[i]
+}
+
+func (lt listTask) Less(i, j int) bool {
+	return lt[i].time < lt[j].time
+}
+
+//DeleteOldestRecord удалить самую старую запись
+func (tssq *TemporaryStorageSearchQueries) deleteOldestRecord() {
+	fmt.Println("func 'deleteOldestRecord', START...")
+
+	ls := make(listTask, 0, len(tssq.tasks))
+
+	for key, value := range tssq.tasks {
+		ls = append(ls, listTaskInfo{
+			id:           key,
+			time:         value.updateTimeInformation,
+			transmission: value.transmissionStatus,
+		})
+	}
+
+	sort.Sort(ls)
+
+	//удаляем самую старую запись (если информация по задаче не передается)
+	for _, info := range ls {
+		if info.transmission {
+			continue
+		}
+
+		//		fmt.Printf("DELETE the oldest record: %q\n", info.id)
+
+		tssq.delInformationAboutSearchTask(info.id)
+	}
+}
+
+//checkTimeDeleteTemporaryStorageSearchQueries очистка информации о задаче по истечении определенного времени или неактуальности данных
+func checkTimeDeleteTemporaryStorageSearchQueries(tssq *TemporaryStorageSearchQueries) chan string {
 
 	fmt.Println("func 'CheckTimeDeleteTemporaryStorageSearchQueries', START...")
 
-	ticker := time.NewTicker(time.Duration(sec) * time.Second)
-
 	testChan := make(chan string)
 
-	go func() {
+	go func(tssq *TemporaryStorageSearchQueries, testChan chan<- string) {
+		ticker := time.NewTicker(time.Duration(tssq.tickerSec) * time.Second)
+
 		for range ticker.C {
 			if len(tssq.tasks) == 0 {
 				continue
@@ -269,8 +429,8 @@ func (tssq *TemporaryStorageSearchQueries) CheckTimeDeleteTemporaryStorageSearch
 			timeNow := time.Now().Unix()
 
 			for id, t := range tssq.tasks {
-				//если задача не актуальна и информация о задаче не передается
-				if t.relevanceStatus && !t.transmissionStatus {
+				//если задача не актуальна, информация о задаче не передается
+				if t.notRelevance && !t.transmissionStatus {
 
 					fmt.Println("func 'CheckTimeDeleteTemporaryStorageSearchQueries', удалить так как задача не актуальна")
 
@@ -279,8 +439,13 @@ func (tssq *TemporaryStorageSearchQueries) CheckTimeDeleteTemporaryStorageSearch
 					testChan <- "func 'CheckTimeDeleteTemporaryStorageSearchQueries', DELETE. удалить так как задача не актуальна"
 				}
 
+				//если время устаревания кэша выставлено в 0, информация о кэше считается безсрочной по времени
+				if tssq.timeExpiration == 0 {
+					continue
+				}
+
 				//если задача устарела по времени и информация о ней не передается
-				if ((t.addedDataTask + 5) < timeNow) && !t.transmissionStatus {
+				if ((t.updateTimeInformation + int64(tssq.timeExpiration)) < timeNow) && !t.transmissionStatus {
 
 					fmt.Println("func 'CheckTimeDeleteTemporaryStorageSearchQueries', удалить так как задача просрочена")
 
@@ -290,7 +455,7 @@ func (tssq *TemporaryStorageSearchQueries) CheckTimeDeleteTemporaryStorageSearch
 				}
 			}
 		}
-	}()
+	}(tssq, testChan)
 
 	return testChan
 }
