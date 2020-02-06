@@ -24,6 +24,7 @@ type TypeRoutingCore struct {
 	SMT                         *configure.StoringMemoryTask
 	QTS                         *configure.QueueTaskStorage
 	ISL                         *configure.InformationSourcesList
+	TSSQ                        *configure.TemporaryStorageSearchQueries
 	SaveMessageApp              *savemessageapp.PathDirLocationLogFiles
 	ChanCheckTask               <-chan configure.MsgChanStoringMemoryTask
 	ChanMsgInfoQueueTaskStorage <-chan configure.MessageInformationQueueTaskStorage
@@ -256,9 +257,10 @@ func Routing(trc TypeRoutingCore) {
 	}()
 
 	hsm := handlerslist.HandlersStoringMemory{
-		SMT: trc.SMT,
-		QTS: trc.QTS,
-		ISL: trc.ISL,
+		SMT:  trc.SMT,
+		QTS:  trc.QTS,
+		ISL:  trc.ISL,
+		TSSQ: trc.TSSQ,
 	}
 
 	OutCoreChans := handlerslist.HandlerOutChans{

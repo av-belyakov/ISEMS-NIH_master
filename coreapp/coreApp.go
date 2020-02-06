@@ -23,6 +23,16 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	//инициализация репозитория для хранения информации по источникам
 	isl := configure.NewRepositoryISL()
 
+	//инициализация репозитория для кэширования информации по поиску задач в БД
+	// TickerSec - интервал проверки информации
+	// TimeExpiration - время устаревания кэша в сек.
+	// MaxCacheSize - кол-во записей в кэше
+	tssq := configure.NewRepositoryTSSQ(configure.TypeRepositoryTSSQ{
+		TickerSec:      3,
+		TimeExpiration: 180,
+		MaxCacheSize:   300,
+	})
+
 	//инициализация отслеживания выполнения задач
 	chanCheckTask := smt.CheckTimeUpdateStoringMemoryTask(55)
 
@@ -30,7 +40,7 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	chanMsgInfoQueueTaskStorage := qts.CheckTimeQueueTaskStorage(isl, 1)
 
 	//инициализация модуля для взаимодействия с БД
-	chanOutCoreDB, chanInCoreDB := moduledbinteraction.MainDBInteraction(appConf.ConnectionDB.NameDB, linkConnection, smt, qts, saveMessageApp)
+	chanOutCoreDB, chanInCoreDB := moduledbinteraction.MainDBInteraction(appConf.ConnectionDB.NameDB, linkConnection, smt, qts, tssq, saveMessageApp)
 
 	//инициализация модуля для взаимодействия с API (обработчик внешних запросов)
 	chanOutCoreAPI, chanInCoreAPI := moduleapiapp.MainAPIApp(appConf, saveMessageApp)
@@ -54,6 +64,7 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 		SMT:                         smt,
 		QTS:                         qts,
 		ISL:                         isl,
+		TSSQ:                        tssq,
 		SaveMessageApp:              saveMessageApp,
 		ChanCheckTask:               chanCheckTask,
 		ChanMsgInfoQueueTaskStorage: chanMsgInfoQueueTaskStorage,

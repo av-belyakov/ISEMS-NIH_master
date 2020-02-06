@@ -422,11 +422,11 @@ type SearchInformationResponseCommanInfo struct {
 // PaginationOptions - параметры разбиения страницы
 // ShortListFoundTasks - краткий список найденных задач
 type SearchInformationResponseOptionCommanInfo struct {
-	TaskIDApp             string                 `json:"tidapp"`
-	Status                string                 `json:"s"`
-	TotalNumberTasksFound int                    `json:"tntf"`
-	PaginationOptions     PaginationOption       `json:"p"`
-	ShortListFoundTasks   []BriefTaskInformation `json:"slft"`
+	TaskIDApp             string                  `json:"tidapp"`
+	Status                string                  `json:"s"`
+	TotalNumberTasksFound int                     `json:"tntf"`
+	PaginationOptions     PaginationOption        `json:"p"`
+	ShortListFoundTasks   []*BriefTaskInformation `json:"slft"`
 }
 
 //PaginationOption параметры разбиения страницы
@@ -448,15 +448,17 @@ type PaginationOption struct {
 // FileDownloadTaskStatus - статус задачи по скачиванию файлов
 // NumberFilesFoundAsResultFiltering - кол-во файлов найденных в результате фильтрации
 // TotalSizeFilesFoundAsResultFiltering - общий размер файлов найденных в результате фильтрации
+// NumberFilesDownloaded - кол-во принятых файлов
 type BriefTaskInformation struct {
 	TaskID                               string                      `json:"tid"`
 	ClientTaskID                         string                      `json:"ctid"`
-	SourceID                             string                      `json:"sid"`
+	SourceID                             int                         `json:"sid"`
 	ParametersFiltration                 ParametersFiltrationOptions `json:"pf"`
 	FilteringTaskStatus                  string                      `json:"fts"`
 	FileDownloadTaskStatus               string                      `json:"fdts"`
 	NumberFilesFoundAsResultFiltering    int                         `json:"nffarf"`
 	TotalSizeFilesFoundAsResultFiltering int64                       `json:"tsffarf"`
+	NumberFilesDownloaded                int                         `json:"nfd"`
 }
 
 //ParametersFiltrationOptions параметры фильтрации

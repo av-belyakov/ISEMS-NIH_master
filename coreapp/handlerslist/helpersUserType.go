@@ -6,9 +6,10 @@ import (
 
 //HandlersStoringMemory вспомогательные хранилища
 type HandlersStoringMemory struct {
-	SMT *configure.StoringMemoryTask
-	QTS *configure.QueueTaskStorage
-	ISL *configure.InformationSourcesList
+	SMT  *configure.StoringMemoryTask
+	QTS  *configure.QueueTaskStorage
+	ISL  *configure.InformationSourcesList
+	TSSQ *configure.TemporaryStorageSearchQueries
 }
 
 //HandlerOutChans каналы вывода из ядра информации

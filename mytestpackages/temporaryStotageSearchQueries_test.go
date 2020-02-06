@@ -62,7 +62,7 @@ var _ = Describe("Mytestpackages/TemporaryStotageSearchQueries", func() {
 		TimeExpiration: 4,
 		MaxCacheSize:   10,
 	})
-	oneTaskID, _ := tssq.CreateNewSearchTask(clientID, &sp)
+	oneTaskID, _, _ := tssq.CreateNewSearchTask(clientID, &sp)
 	//oneTaskID := configure.CreateTmpStorageID(clientID, &sp)
 
 	fmt.Printf("TASK ID MAJOR: %q\n", oneTaskID)
@@ -80,8 +80,8 @@ var _ = Describe("Mytestpackages/TemporaryStotageSearchQueries", func() {
 		It("Идентификаторы сгенерированые на основе одних и техже параметров должны быть равны", func() {
 			twoTaskID := configure.CreateTmpStorageID(clientID, &sp)
 
-			fmt.Printf("______ oneTaskID: %q\n", oneTaskID)
-			fmt.Printf("______ twoTaskID: %q\n", twoTaskID)
+			//fmt.Printf("______ oneTaskID: %q\n", oneTaskID)
+			//fmt.Printf("______ twoTaskID: %q\n", twoTaskID)
 
 			Expect(oneTaskID).Should(Equal(twoTaskID))
 		})
@@ -89,18 +89,9 @@ var _ = Describe("Mytestpackages/TemporaryStotageSearchQueries", func() {
 
 	Context("Тест №3. Добавление информации о новой задаче по поиску в БД, если она уже есть", func() {
 		It("Так как уже задача с ID уже существует (clientID и параметры поиска одинаковы) возвращается вся информация о задаче", func() {
-			tmpStorageID, info := tssq.CreateNewSearchTask(clientID, &sp)
+			tmpStorageID, info, err := tssq.CreateNewSearchTask(clientID, &sp)
 
-			/*
-					Внимание!!!
-				Переделал функцию CreateNewSearchTask, надо тестировать ее.
-				И добавил некоторые методы. Их тоже надо тестировать.
-				Так же нужно написать методы delete и add ibformation
-			*/
-
-			fmt.Printf("temporary storage ID: %q shold equal major task ID %q\n", tmpStorageID, oneTaskID)
-			fmt.Println(info)
-
+			Expect(err).ShouldNot(HaveOccurred())
 			Expect(tmpStorageID).Should(Equal(oneTaskID))
 			Expect(info).ShouldNot(BeNil())
 		})
@@ -108,10 +99,9 @@ var _ = Describe("Mytestpackages/TemporaryStotageSearchQueries", func() {
 
 	Context("Тест №4. Добавление информации о новой задаче по поиску в БД, если ее еще нет в хранилище", func() {
 		It("Должен вернуться новый ID задачи и nil вместо информации о задаче", func() {
-			tmpStorageID, info := tssq.CreateNewSearchTask("vn9h83h33f4f84g8", &configure.SearchParameters{ID: 1021})
+			tmpStorageID, info, err := tssq.CreateNewSearchTask("vn9h83h33f4f84g8", &configure.SearchParameters{ID: 1021})
 
-			fmt.Printf("NEW task iD %q\n", tmpStorageID)
-
+			Expect(err).ShouldNot(HaveOccurred())
 			Expect(tmpStorageID).ShouldNot(Equal(oneTaskID))
 			Expect(info).Should(BeNil())
 		})
@@ -121,8 +111,6 @@ var _ = Describe("Mytestpackages/TemporaryStotageSearchQueries", func() {
 		It("Функция GetInformationAboutSearchTask должна вернуть ошибку при поиске информации по ID задачи", func() {
 			info, err := tssq.GetInformationAboutSearchTask("e9ve990")
 
-			fmt.Println(info)
-
 			Expect(info).Should(BeNil())
 			Expect(err).Should(HaveOccurred())
 		})
@@ -130,10 +118,8 @@ var _ = Describe("Mytestpackages/TemporaryStotageSearchQueries", func() {
 		It("Функция GetInformationAboutSearchTask должна вернуть информацию по существующему ID задачи", func() {
 			info, err := tssq.GetInformationAboutSearchTask(oneTaskID)
 
-			fmt.Println(info)
-
-			Expect(info).ShouldNot(BeNil())
 			Expect(err).ShouldNot(HaveOccurred())
+			Expect(info).ShouldNot(BeNil())
 		})
 	})
 
@@ -167,6 +153,85 @@ var _ = Describe("Mytestpackages/TemporaryStotageSearchQueries", func() {
 			Expect(oldestRecord).Should(Equal("cncwh8hw8hd8ef83"))
 		})
 	})
+
+	Context("Тест №7. Проверяем статус задачи который меняется при передачи информации клиенту API", func() {
+		It("Изменяем статус задачи на 'информация передается клиенту'. Результат должен быть TRUE.", func() {
+			err := tssq.ChangeStatusTransmissionTask(oneTaskID, true)
+
+			Expect(err).ShouldNot(HaveOccurred())
+
+			taskInfo, err := tssq.GetInformationAboutSearchTask(oneTaskID)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect((*taskInfo).TransmissionStatus).Should(BeTrue())
+		})
+		It("Изменяем статус задачи на 'информация передается клиенту'. Результат должен быть FALSE.", func() {
+			err := tssq.ChangeStatusTransmissionTask(oneTaskID, false)
+
+			Expect(err).ShouldNot(HaveOccurred())
+
+			taskInfo, err := tssq.GetInformationAboutSearchTask(oneTaskID)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(taskInfo.TransmissionStatus).Should(BeFalse())
+		})
+	})
+
+	Context("Тест №8.1. Проверяем актуальность информации о задаче (не было ли изменения в БД)", func() {
+		It("Информация о задаче должна быть актуальна, так как по данной задачи ЕЩЕ идет поиск. Параметр должен быть FALSE", func() {
+			tssq.ChangingStatusInformationRelevance()
+			taskInfo, err := tssq.GetInformationAboutSearchTask(oneTaskID)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(taskInfo.NotRelevance).Should(BeFalse())
+		})
+	})
+
+	Context("Тест 9. Проверяем добавление найденной информации и изменяем задачу на неактуальную так как с момента поиска в БД произошли изменение", func() {
+		It("Должен быть добавлен список информации полученный из БД и должен быть успешно изменен параметор NotRelevance на TRUE", func() {
+			err := tssq.AddInformationFoundSearchResult(oneTaskID, []*configure.BriefTaskInformation{
+				&configure.BriefTaskInformation{
+					TaskID:              "ficn939f994994hf94h9gh",
+					ClientTaskID:        "nc9939h3f9h39h9fh949",
+					SourceID:            1000,
+					FilteringTaskStatus: "execute",
+				},
+				&configure.BriefTaskInformation{
+					TaskID:              "cmeomof39fhn9h44h9h94",
+					ClientTaskID:        "nc9939h3f9h39h9fh949",
+					SourceID:            1001,
+					FilteringTaskStatus: "execute",
+				},
+				&configure.BriefTaskInformation{
+					TaskID:              "cm9f39fh9h9h49h94hg9h4g",
+					ClientTaskID:        "nc9939h3f9h39h9fh949",
+					SourceID:            1000,
+					FilteringTaskStatus: "complete",
+				},
+			})
+
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+	})
+
+	Context("Тест №8.2. Проверяем актуальность информации о задаче (не было ли изменения в БД)", func() {
+		It("Информация о задаче должна быть не актуальна, то есть проверяемый параметр должен быть TRUE", func() {
+			tssq.ChangingStatusInformationRelevance()
+			taskInfo, err := tssq.GetInformationAboutSearchTask(oneTaskID)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(taskInfo.NotRelevance).Should(BeTrue())
+			Expect(len(taskInfo.ListFoundInformation.List)).Should(Equal(3))
+		})
+	})
+
+	/*
+				Context("", func(){
+		It("", func(){
+
+		})
+			})
+	*/
 
 	/*
 

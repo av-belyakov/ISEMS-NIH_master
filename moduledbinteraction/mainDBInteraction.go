@@ -15,13 +15,14 @@ func MainDBInteraction(
 	linkConnection *configure.MongoDBConnect,
 	smt *configure.StoringMemoryTask,
 	qts *configure.QueueTaskStorage,
+	tssq *configure.TemporaryStorageSearchQueries,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles) (chanOut, chanIn chan *configure.MsgBetweenCoreAndDB) {
 
 	//инициализируем каналы для обмена данными между БД м ядром приложения
 	chanOut = make(chan *configure.MsgBetweenCoreAndDB) //->БД
 	chanIn = make(chan *configure.MsgBetweenCoreAndDB)  //<-БД
 
-	go RouteRequest(chanIn, nameDB, linkConnection, smt, qts, saveMessageApp, chanOut)
+	go RouteRequest(chanIn, nameDB, linkConnection, smt, qts, tssq, saveMessageApp, chanOut)
 
 	return chanOut, chanIn
 }

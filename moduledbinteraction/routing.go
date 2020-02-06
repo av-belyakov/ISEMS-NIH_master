@@ -13,6 +13,7 @@ func RouteRequest(
 	linkConnection *configure.MongoDBConnect,
 	smt *configure.StoringMemoryTask,
 	qts *configure.QueueTaskStorage,
+	tssq *configure.TemporaryStorageSearchQueries,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	chanOut <-chan *configure.MsgBetweenCoreAndDB) {
 
@@ -41,7 +42,7 @@ func RouteRequest(
 
 		case "information search":
 			fmt.Printf("func 'RouteRequest', Section:'%v', (заглушка)\n", msg.MsgSection)
-
+			//tssq
 		}
 	}
 }
