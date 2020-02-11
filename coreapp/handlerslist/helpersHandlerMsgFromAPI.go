@@ -206,8 +206,12 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 		notifications.SendNotificationToClientAPI(
 			chanToAPI,
 			notifications.NotificationSettingsToClientAPI{
-				MsgType:        "danger",
-				MsgDescription: msg,
+				MsgType: "danger",
+				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+					TaskType:   "поиск",
+					TaskAction: "задача отклонена",
+					Message:    msg,
+				}),
 			},
 			siatr.ClientTaskID,
 			clientID)
@@ -224,27 +228,57 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 	}
 
 	//добавляем информацию о задаче в кеширующий модуль
-	//taskID, _, err := hsm.TSSQ.CreateNewSearchTask(clientID, *configure.SearchParameters{})
+	taskID, _, err := hsm.TSSQ.CreateNewSearchTask(clientID, &configure.SearchParameters{
+		ID:                        siatr.MsgOption.ID,
+		TaskProcessed:             siatr.MsgOption.TaskProcessed,
+		FilesDownloaded:           siatr.MsgOption.FilesDownloaded,
+		InformationAboutFiltering: siatr.MsgOption.InformationAboutFiltering,
+		InstalledFilteringOption:  siatr.MsgOption.InstalledFilteringOption,
+	})
+	if err != nil {
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprint(err),
+			FuncName:    funcName,
+		})
 
-	/*
-		Доделать
-		hsm.TSSQ.CreateNewSearchTask(clientID, *configure.SearchParameters{})
+		//отправляем информационное сообщение
+		notifications.SendNotificationToClientAPI(
+			chanToAPI,
+			notifications.NotificationSettingsToClientAPI{
+				MsgType: "danger",
+				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+					TaskType:   "поиск",
+					TaskAction: "задача отклонена",
+					Message:    "невозможно выполнить поиск, внутренняя ошибка приложения",
+				}),
+			},
+			siatr.ClientTaskID,
+			clientID)
 
-		и тогда можно отправлять задачу по поиску информации
-				в модуль рвботы с БД
+		//отправляем сообщение что задача была отклонена
+		chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+			MsgGenerator: "Core module",
+			MsgRecipient: "API module",
+			IDClientAPI:  clientID,
+			MsgJSON:      msgJSON,
+		}
 
-	*/
+		return
+	}
 
-	/*chanToDB <- &configure.MsgBetweenCoreAndDB{
+	i, err := hsm.TSSQ.GetInformationAboutSearchTask(taskID)
+	fmt.Println(err)
+	fmt.Println(i)
+
+	chanToDB <- &configure.MsgBetweenCoreAndDB{
 		MsgGenerator:    "Core module",
 		MsgRecipient:    "DB module",
 		MsgSection:      "information search control",
 		Instruction:     "search common information",
 		IDClientAPI:     clientID,
-		TaskID:          msg.TaskID,
-		TaskIDClientAPI: qti.TaskIDClientAPI,
-		AdvancedOptions: msg.SourceID,
-	}*/
+		TaskID:          taskID,
+		TaskIDClientAPI: siatr.ClientTaskID,
+	}
 }
 
 //checkParametersFiltration проверяет параметры фильтрации

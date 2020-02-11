@@ -1,7 +1,6 @@
 package mytestpackages
 
 import (
-	"fmt"
 	"sort"
 
 	. "github.com/onsi/ginkgo"
@@ -65,7 +64,7 @@ var _ = Describe("Mytestpackages/TemporaryStotageSearchQueries", func() {
 	oneTaskID, _, _ := tssq.CreateNewSearchTask(clientID, &sp)
 	//oneTaskID := configure.CreateTmpStorageID(clientID, &sp)
 
-	fmt.Printf("TASK ID MAJOR: %q\n", oneTaskID)
+	//fmt.Printf("TASK ID MAJOR: %q\n", oneTaskID)
 
 	Context("Тест №1. Создание временного хранилища задач по поиску", func() {
 		It("Должна быть успешно создана новое хранилище задач для хранения результатов поиска", func() {
@@ -120,6 +119,7 @@ var _ = Describe("Mytestpackages/TemporaryStotageSearchQueries", func() {
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(info).ShouldNot(BeNil())
+			Expect(info.SearchParameters.ID).Should(Equal(1010))
 		})
 	})
 
@@ -148,7 +148,7 @@ var _ = Describe("Mytestpackages/TemporaryStotageSearchQueries", func() {
 
 			oldestRecord := getOldestRecord(data)
 
-			fmt.Printf("The oldest record: %q\n", oldestRecord)
+			//fmt.Printf("The oldest record: %q\n", oldestRecord)
 
 			Expect(oldestRecord).Should(Equal("cncwh8hw8hd8ef83"))
 		})

@@ -72,7 +72,6 @@ func (wr *WrappersRouteRequest) WrapperFuncFiltration(
 			})
 		}
 	}
-
 }
 
 //WrapperFuncDownload обработка запросов по скачиванию файлов
@@ -99,5 +98,29 @@ func (wr *WrappersRouteRequest) WrapperFuncDownload(
 				FuncName:    "WrapperFuncDownload",
 			})
 		}
+	}
+}
+
+//WrapperFuncSearch обработка запросов поиска
+func (wr *WrappersRouteRequest) WrapperFuncSearch(
+	msg *configure.MsgBetweenCoreAndDB,
+	tssq *configure.TemporaryStorageSearchQueries,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
+
+	qp := handlerrequestdb.QueryParameters{
+		NameDB:         wr.NameDB,
+		CollectionName: "task_list",
+		ConnectDB:      wr.ConnectDB,
+	}
+
+	switch msg.Instruction {
+	case "search common information":
+		fmt.Println("func 'WrapperFuncSearch', Instruction: 'search common information'")
+
+		handlerrequestdb.SearchShortInformationAboutTasks(wr.ChanIn, msg, tssq, qp)
+
+	case "search full information":
+		fmt.Println("func 'WrapperFuncSearch', Instruction: 'search full information'")
+
 	}
 }

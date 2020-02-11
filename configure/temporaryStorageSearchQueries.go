@@ -174,8 +174,6 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 					tssq.tasks[msg.searchTaskID] = &SearchTaskDescription{
 						SearchParameters: searchParameters,
 					}
-
-					tssq.tasks[msg.searchTaskID] = &SearchTaskDescription{}
 				} else {
 					//проверяем задачу на актуальность
 					if info.NotRelevance {
@@ -191,6 +189,8 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 						findInformation: info,
 					}
 				}
+
+				//fmt.Printf("func 'NewRepositoryTSSQ', TASKS %v\n", tssq.tasks)
 
 				close(msg.channelRes)
 
@@ -354,6 +354,9 @@ func (tssq *TemporaryStorageSearchQueries) temporaryStorageSearchInfo(taskID str
 		return nil, fmt.Errorf("task with ID %q not found", taskID)
 	}
 
+	//	fmt.Printf("func 'temporaryStorageSearchInfo', taskID:%q INFO: %v\n", taskID, info)
+	//	fmt.Println(tssq.tasks)
+
 	return info, nil
 }
 
@@ -445,7 +448,7 @@ func (tssq *TemporaryStorageSearchQueries) deleteOldestRecord() {
 //checkTimeDeleteTemporaryStorageSearchQueries очистка информации о задаче по истечении определенного времени или неактуальности данных
 func checkTimeDeleteTemporaryStorageSearchQueries(tssq *TemporaryStorageSearchQueries) chan string {
 
-	fmt.Println("func 'CheckTimeDeleteTemporaryStorageSearchQueries', START...")
+	//fmt.Println("func 'CheckTimeDeleteTemporaryStorageSearchQueries', START...")
 
 	testChan := make(chan string)
 
@@ -461,7 +464,7 @@ func checkTimeDeleteTemporaryStorageSearchQueries(tssq *TemporaryStorageSearchQu
 
 			for id, t := range tssq.tasks {
 
-				fmt.Printf("func 'CheckTimeDeleteTemporaryStorageSearchQueries', CHECK TASK ID: %q\n", id)
+				//fmt.Printf("func 'CheckTimeDeleteTemporaryStorageSearchQueries', CHECK TASK ID: %q\n", id)
 
 				//если задача не актуальна, информация о задаче не передается
 				if t.NotRelevance && !t.TransmissionStatus {
@@ -475,6 +478,11 @@ func checkTimeDeleteTemporaryStorageSearchQueries(tssq *TemporaryStorageSearchQu
 
 				//если время устаревания кэша выставлено в 0, информация о кэше считается безсрочной по времени
 				if tssq.timeExpiration == 0 {
+					continue
+				}
+
+				//если параметр t.UpdateTimeInformation равен 0, значит поиск в БД по данной задаче ещё не выполнялся
+				if t.UpdateTimeInformation == 0 {
 					continue
 				}
 

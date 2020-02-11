@@ -40,9 +40,10 @@ func RouteRequest(
 		case "error notification":
 			fmt.Printf("func 'RouteRequest', Section:'%v', (заглушка)\n", msg.MsgSection)
 
-		case "information search":
-			fmt.Printf("func 'RouteRequest', Section:'%v', (заглушка)\n", msg.MsgSection)
-			//tssq
+		case "information search control":
+			fmt.Printf("func 'RouteRequest', Section:'%v'\n", msg.MsgSection)
+
+			go wrapperFunc.WrapperFuncSearch(msg, tssq, saveMessageApp)
 		}
 	}
 }
