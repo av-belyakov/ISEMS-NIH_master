@@ -331,7 +331,6 @@ var _ = Describe("Mytestpackages/ReadPipeWriteFile", func() {
 
 				taskSettings := configure.DetailInfoMsgDownload{
 					TaskID:         "510dbd658a519a450ae57c9969888777",
-					TaskStatus:     "give me the file",
 					PathDirStorage: fp,
 					FileOptions: configure.DownloadFileOptions{
 						Name: fn,
