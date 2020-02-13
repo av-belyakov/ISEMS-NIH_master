@@ -70,13 +70,52 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 		"filesIsDownloaded": bson.E{Key: "detailed_information_on_downloading.number_files_downloaded", Value: bson.D{{Key: "$gt", Value: 0}}},
 		"allFilesIsDownloaded": bson.E{Key: "$expr", Value: bson.D{
 			{Key: "$eq", Value: bson.A{"$detailed_information_on_downloading.number_files_total", "$detailed_information_on_downloading.number_files_downloaded"}}}},
+		"sizeAllFiles": bson.E{Key: "detailed_information_on_filtering.size_files_found_result_filtering", Value: bson.D{
+			{Key: "$gte", Value: sp.InformationAboutFiltering.SizeAllFilesMin},
+			{Key: "$lte", Value: sp.InformationAboutFiltering.SizeAllFilesMax},
+		}},
+		"countAllFiles": bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: bson.D{
+			{Key: "$gte", Value: sp.InformationAboutFiltering.CountAllFilesMin},
+			{Key: "$lte", Value: sp.InformationAboutFiltering.CountAllFilesMax},
+		}},
+		"dateTimeParameters": bson.E{Key: "$and", Value: bson.A{
+			bson.D{{Key: "filtering_option.date_time_interval.start", Value: bson.D{
+				{Key: "$gte", Value: sp.InstalledFilteringOption.DateTime.Start}}}},
+			bson.D{{Key: "filtering_option.date_time_interval.end", Value: bson.D{
+				{Key: "$lte", Value: sp.InstalledFilteringOption.DateTime.End}}}},
+		}},
+		"transportProtocol":      bson.E{Key: "filtering_option.protocol", Value: sp.InstalledFilteringOption.Protocol},
+		"statusFilteringTask":    bson.E{Key: "detailed_information_on_filtering.task_status", Value: sp.StatusFilteringTask},
+		"statusFileDownloadTask": bson.E{Key: "detailed_information_on_downloading.task_status", Value: sp.StatusFileDownloadTask},
 	}
 
-	var querySourceID bson.E
-	var queryFilesIsFound bson.E
-	var queryTaskProcessed bson.E
-	var queryFilesIsDownloaded bson.E
-	var queryAllFilesIsDownloaded bson.E
+	var (
+		querySourceID               bson.E
+		queryFilesIsFound           bson.E
+		querySizeAllFiles           bson.E
+		queryCountAllFiles          bson.E
+		queryTaskProcessed          bson.E
+		queryFilesIsDownloaded      bson.E
+		queryTransportProtocol      bson.E
+		querydateTimeParameters     bson.E
+		queryStatusFilteringTask    bson.E
+		queryAllFilesIsDownloaded   bson.E
+		queryStatusFileDownloadTask bson.E
+	)
+
+	/*
+		var querySourceID bson.E
+		var queryFilesIsFound bson.E
+		var querySizeAllFiles bson.E
+		var queryCountAllFiles bson.E
+		var queryTaskProcessed bson.E
+		var queryFilesIsDownloaded bson.E
+		var queryTransportProtocol bson.E
+		var querydateTimeParameters bson.E
+		var queryStatusFilteringTask bson.E
+		var queryStatusFileDownloadTask bson.E
+		var queryAllFilesIsDownloaded bson.E
+	*/
 
 	//поиск по ID источника
 	if sp.ID > 0 {
@@ -105,36 +144,49 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 		queryFilesIsFound = queryTemplate["filesIsFound"]
 	}
 
+	//диапазон количества найденных файлов
+	cafmin := sp.InformationAboutFiltering.CountAllFilesMin
+	cafmax := sp.InformationAboutFiltering.CountAllFilesMax
+	if (cafmax > 0) && (cafmax > cafmin) {
+		queryCountAllFiles = queryTemplate["countAllFiles"]
+	}
+
+	//диапазон общего размера всех найденных файлов
+	safmin := sp.InformationAboutFiltering.SizeAllFilesMin
+	safmax := sp.InformationAboutFiltering.SizeAllFilesMax
+	if (safmax > 0) && (safmax > safmin) {
+		querySizeAllFiles = queryTemplate["sizeAllFiles"]
+	}
+
+	//временной диапазон фильтруемых данных
+	dts := sp.InstalledFilteringOption.DateTime.Start
+	dte := sp.InstalledFilteringOption.DateTime.End
+	if (dts > 0) && (dte > 0) && (dts < dte) {
+		querydateTimeParameters = queryTemplate["dateTimeParameters"]
+	}
+
+	//транспортный протокол
+	if sp.InstalledFilteringOption.Protocol == "tcp" || sp.InstalledFilteringOption.Protocol == "udp" {
+		queryTransportProtocol = queryTemplate["transportProtocol"]
+	}
+
+	//статус задачи по фильтрации
+	if (len(sp.StatusFilteringTask) > 0) && (sp.StatusFilteringTask != "any") {
+		queryStatusFilteringTask = queryTemplate["statusFilteringTask"]
+	}
+
+	//статус задачи по скачиванию файлов
+	if (len(sp.StatusFileDownloadTask) > 0) && (sp.StatusFileDownloadTask != "any") {
+		queryStatusFileDownloadTask = queryTemplate["statusFileDownloadTask"]
+	}
+
 	/*
-	   Продолжить с параметров:
-	   					CountAllFilesMin: 0,
-	   					CountAllFilesMax: 0,
-	   					SizeAllFilesMin:  0,
-	   					SizeAllFilesMax:  0,
+
+			Следующие NetworkFilters Если не any тогда добавляем запрос (проверка на невалидное значение
+		выполненна ранее)
 
 	*/
-
-	/*	queryAllFilesIsDownloaded = bson.E{Key: "$expr", Value: bson.D{
-			{Key: "$eq", Value: bson.A{"$detailed_information_on_downloading.number_files_total", "$detailed_information_on_downloading.number_files_downloaded"}}}}
-
-
-		queryFilesIsDownloaded = bson.E{Key: "detailed_information_on_downloading.number_files_total", Value: bson.D{{Key: "$gt", Value: 0}}}
-		queryAllFilesIsDownloaded = bson.E{Key: "$expr", Value: bson.D{
-			{Key: "$eq", Value: bson.A{"$detailed_information_on_downloading.number_files_total", "$detailed_information_on_downloading.number_files_downloaded"}}}}
-
-		/*queryAllFilesIsDownloaded = bson.E{Key: "$or", Value: bson.A{bson.E{Key: "detailed_information_on_downloading.number_files_total", Value: bson.D{{Key: "$gt", Value: 0}}},
-			bson.E{Key: "$expr", Value: bson.D{
-				{Key: "$eq", Value: bson.A{"$detailed_information_on_downloading.number_files_total", "$detailed_information_on_downloading.number_files_downloaded"}}}}}}
-
-		/*	bson.E{Key: "$expr", Value: bson.D{
-			{Key: "$eq", Value: bson.A{"$detailed_information_on_downloading.number_files_total", "$detailed_information_on_downloading.number_files_downloaded"}}}}
-
-			queryAllFilesIsDownloaded = bson.E{
-			Key: "detailed_information_on_downloading.number_files_total", Value: bson.D{{Key: "$gt", Value: 0}},
-			Key: "$expr", Value: bson.D{
-				{Key: "$eq", Value: bson.A{"$detailed_information_on_downloading.number_files_total", "$detailed_information_on_downloading.number_files_downloaded"}}}}
-	*/
-	//	fmt.Printf("querySourceID: %v, %v\n", querySourceID, queryFilesIsDownloaded)
+	//fmt.Printf("queryStatusFileDownloadTask: %v, queryStatusFilteringTask: %v\n", queryStatusFileDownloadTask, queryStatusFilteringTask)
 
 	lbti := []*configure.BriefTaskInformation{}
 
@@ -143,7 +195,13 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 		queryTaskProcessed,
 		queryFilesIsDownloaded,
 		queryAllFilesIsDownloaded,
-		queryFilesIsFound})
+		queryFilesIsFound,
+		queryCountAllFiles,
+		querySizeAllFiles,
+		querydateTimeParameters,
+		queryTransportProtocol,
+		queryStatusFilteringTask,
+		queryStatusFileDownloadTask})
 	if err != nil {
 		return lbti, err
 	}
@@ -169,16 +227,18 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 		configure.SearchParameters{
 				TaskProcessed: false, //обрабатывалась ли задача
 				ID:            1010,
+				StatusFilteringTask, // статус задачи по фильтрации
+				StatusFileDownloadTask, // статус задачи по скачиванию файлов
 				FilesDownloaded: configure.FilesDownloadedOptions{
 					FilesIsDownloaded:    false, //выполнялась ли выгрузка файлов
 					AllFilesIsDownloaded: false, //все ли файлы были выгружены
 				},
 				InformationAboutFiltering: configure.InformationAboutFilteringOptions{
 					FilesIsFound:     false, //были ли найдены в результате фильтрации какие либо файлы
-					CountAllFilesMin: 0,
-					CountAllFilesMax: 0,
-					SizeAllFilesMin:  0,
-					SizeAllFilesMax:  0,
+					CountAllFilesMin: 0, //минимальное общее количество всех найденных в результате фильтрации файлов
+					CountAllFilesMax: 0, //максимальное общее количество всех найденных в результате фильтрации файлов
+					SizeAllFilesMin:  0, //минимальный общий размер всех найденных  в результате фильтрации файлов
+					SizeAllFilesMax:  0, //минимальный общий размер всех найденных  в результате фильтрации файлов
 				},
 				InstalledFilteringOption: configure.SearchFilteringOptions{
 					DateTime: configure.DateTimeParameters{
@@ -353,6 +413,168 @@ var _ = Describe("InteractionDBSearch", func() {
 
 		It("Должно быть '9' совпадений", func() {
 			Expect(len(listTask)).Should(Equal(9))
+		})
+	})
+
+	Context("Тест 8. Тестируем функцию 'getShortInformation'. Поиск по общему размеру найденных файлов, где размер больше чем параметр 'SizeAllFilesMin' и меньше чем 'SizeAllFilesMax'.", func() {
+		spt6 := configure.SearchParameters{}
+		spt6.InformationAboutFiltering.SizeAllFilesMin = 3330
+		spt6.InformationAboutFiltering.SizeAllFilesMax = 13900040
+
+		listTask, err := getShortInformation(qp, &spt6)
+
+		It("Не должно быть ошибки", func() {
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+
+		It("Должно быть '9' совпадений", func() {
+			Expect(len(listTask)).Should(Equal(9))
+		})
+
+		It("Должно быть '0' совпадений так как в указанных приделах данных нет", func() {
+			spt61 := configure.SearchParameters{}
+			spt61.InformationAboutFiltering.SizeAllFilesMin = 23900040
+			spt61.InformationAboutFiltering.SizeAllFilesMax = 23900100
+			listTask, _ := getShortInformation(qp, &spt61)
+
+			Expect(len(listTask)).Should(Equal(0))
+		})
+
+		It("Должно быть '14' совпадений, тоесть ВСЕ. Так как параметры не верны min > max и следовательно не учитиваются", func() {
+			spt62 := configure.SearchParameters{}
+			spt62.InformationAboutFiltering.SizeAllFilesMin = 23900040
+			spt62.InformationAboutFiltering.SizeAllFilesMax = 100
+			listTask, _ := getShortInformation(qp, &spt62)
+
+			Expect(len(listTask)).Should(Equal(14))
+		})
+	})
+
+	Context("Тест 9. Тестируем функцию 'getShortInformation'. Поиск по количеству найденных файлов, где кол-во больше чем параметр 'CountAllFilesMin' и меньше чем 'CountAllFilesMax'.", func() {
+		spt7 := configure.SearchParameters{}
+		spt7.InformationAboutFiltering.CountAllFilesMin = 5
+		spt7.InformationAboutFiltering.CountAllFilesMax = 10
+
+		listTask, err := getShortInformation(qp, &spt7)
+
+		It("Не должно быть ошибки", func() {
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+
+		It("Должно быть '9' совпадений", func() {
+			Expect(len(listTask)).Should(Equal(9))
+		})
+	})
+
+	Context("Тест 10. Тестируем функцию 'getShortInformation'. Поиск по временному диапазону", func() {
+		It("Должно быть '12' совпадений, так как временной интервал удовлетворяет заданным параметрам", func() {
+			spt81 := configure.SearchParameters{}
+			spt81.InstalledFilteringOption.DateTime.Start = 1560729600
+			spt81.InstalledFilteringOption.DateTime.End = 1560898800
+
+			listTask, err := getShortInformation(qp, &spt81)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(listTask)).Should(Equal(12))
+		})
+
+		It("Должно быть '2' совпадений, так как временной интервал удовлетворяет заданным параметрам", func() {
+			spt82 := configure.SearchParameters{}
+			spt82.InstalledFilteringOption.DateTime.Start = 1576713599 //1576713600
+			spt82.InstalledFilteringOption.DateTime.End = 1576886401   //1576886400
+
+			listTask, err := getShortInformation(qp, &spt82)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(listTask)).Should(Equal(2))
+		})
+
+		It("Должно быть '0' совпадений, так как временной интервал НЕ удовлетворяет заданным параметрам", func() {
+			spt83 := configure.SearchParameters{}
+			spt83.InstalledFilteringOption.DateTime.Start = 16713600
+			spt83.InstalledFilteringOption.DateTime.End = 176886400
+
+			listTask, err := getShortInformation(qp, &spt83)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(listTask)).Should(Equal(0))
+		})
+
+		It("Должно быть '14' совпадений, так как временной интервал выходит за рамки допустимых параметрам", func() {
+			spt84 := configure.SearchParameters{}
+			spt84.InstalledFilteringOption.DateTime.Start = 1576886400
+			spt84.InstalledFilteringOption.DateTime.End = 1576713600
+
+			listTask, err := getShortInformation(qp, &spt84)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(listTask)).Should(Equal(14))
+		})
+	})
+
+	Context("Тест 11. Тестируем функцию 'getShortInformation'. Поиск по протоколу транспортного уровня.", func() {
+		It("Должно быть '14' совпадений", func() {
+			spt91 := configure.SearchParameters{}
+			spt91.InstalledFilteringOption.Protocol = "tcp"
+
+			listTask, err := getShortInformation(qp, &spt91)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(listTask)).Should(Equal(14))
+		})
+
+		It("Должно быть '0' совпадений", func() {
+			spt91 := configure.SearchParameters{}
+			spt91.InstalledFilteringOption.Protocol = "udp"
+
+			listTask, err := getShortInformation(qp, &spt91)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(listTask)).Should(Equal(0))
+		})
+	})
+
+	Context("Тест 12. Тестируем функцию 'getShortInformation'. Поиск по статусу задачи фильтрации.", func() {
+		It("Должно быть '10' совпадений", func() {
+			spt101 := configure.SearchParameters{}
+			spt101.StatusFilteringTask = "complete"
+
+			listTask, err := getShortInformation(qp, &spt101)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(listTask)).Should(Equal(10))
+		})
+
+		It("Должно быть '1' совпадений", func() {
+			spt102 := configure.SearchParameters{}
+			spt102.StatusFilteringTask = "refused"
+
+			listTask, err := getShortInformation(qp, &spt102)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(listTask)).Should(Equal(1))
+		})
+	})
+
+	Context("Тест 13. Тестируем функцию 'getShortInformation'. Поиск по статусу задачи по скачиванию файлов.", func() {
+		It("Должно быть '6' совпадений", func() {
+			spt111 := configure.SearchParameters{}
+			spt111.StatusFileDownloadTask = "not executed"
+
+			listTask, err := getShortInformation(qp, &spt111)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(listTask)).Should(Equal(6))
+		})
+
+		It("Должно быть '2' совпадений", func() {
+			spt112 := configure.SearchParameters{}
+			spt112.StatusFileDownloadTask = "execute"
+
+			listTask, err := getShortInformation(qp, &spt112)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(listTask)).Should(Equal(2))
 		})
 	})
 

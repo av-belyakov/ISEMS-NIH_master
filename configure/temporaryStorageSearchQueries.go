@@ -90,6 +90,8 @@ func CreateTmpStorageID(clientID string, sp *SearchParameters) string {
 	s := []string{
 		boolStr(sp.TaskProcessed),
 		strconv.Itoa(sp.ID),
+		sp.StatusFilteringTask,
+		sp.StatusFileDownloadTask,
 		boolStr(sp.FilesDownloaded.AllFilesIsDownloaded),
 		boolStr(sp.FilesDownloaded.FilesIsDownloaded),
 		boolStr(sp.InformationAboutFiltering.FilesIsFound),

@@ -394,6 +394,16 @@ func CheckParametersSearchCommonInformation(siatro *configure.SearchInformationA
 		siatro.InstalledFilteringOption.Protocol = "any"
 	}
 
+	//проверяем статус задачи по фильтрации
+	if isCorrectStatus := checkCorrectStatusTask(siatro.StatusFilteringTask); !isCorrectStatus {
+		siatro.StatusFilteringTask = "any"
+	}
+
+	//проверяем статус задачи по скачиванию файлов
+	if isCorrectStatus := checkCorrectStatusTask(siatro.StatusFileDownloadTask); !isCorrectStatus {
+		siatro.StatusFileDownloadTask = "any"
+	}
+
 	filterParameters := map[string]map[string]*[]string{
 		"IP": map[string]*[]string{
 			"Any": &siatro.InstalledFilteringOption.NetworkFilters.IP.Any,
@@ -542,6 +552,21 @@ func CheckIPPortNetwork(checkParameters CheckIPPortNetworkParameters) error {
 	}
 
 	return nil
+}
+
+func checkCorrectStatusTask(status string) bool {
+	var isCorrectStatus bool
+	listStatusName := []string{"wait", "refused", "execute", "not executed", "complete", "stop"}
+
+	for _, s := range listStatusName {
+		if status == s {
+			isCorrectStatus = true
+
+			break
+		}
+	}
+
+	return isCorrectStatus
 }
 
 func checkCorrectProtocol(proto string) bool {
