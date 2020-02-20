@@ -584,6 +584,13 @@ func getShortInformationTest(qp QueryParameters, sp *configure.SearchParameters)
 		//		queryNetworkParametersIPNetPort = queryTemplate["networkParametersNetwork"]
 	}
 
+	//есть только порт нет network и ip
+	if isContainsValuePort && !isContainsValueIP && !isContainsValueNetwork {
+		queryNetworkParametersIPNetPort, _ = getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "port")
+
+		//		queryNetworkParametersIPNetPort = queryTemplate["networkParametersPort"]
+	}
+
 	//нет port и есть network или ip
 	if !isContainsValuePort && (isContainsValueIP && isContainsValueNetwork) {
 		_, bdIP := getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "ip")
@@ -597,13 +604,6 @@ func getShortInformationTest(qp QueryParameters, sp *configure.SearchParameters)
 			//queryTemplate["networkParametersIP"],
 			//queryTemplate["networkParametersNetwork"],
 		}}
-	}
-
-	//есть только порт нет network и ip
-	if isContainsValuePort && !isContainsValueIP && !isContainsValueNetwork {
-		queryNetworkParametersIPNetPort, _ = getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "port")
-
-		//		queryNetworkParametersIPNetPort = queryTemplate["networkParametersPort"]
 	}
 
 	//есть все или port и какой то из network или ip
@@ -760,11 +760,11 @@ var _ = Describe("InteractionDBSearch", func() {
 	})
 
 	Context("Тест 2. Тестируем функцию 'getShortInformation'. Запрос к БД для получения всех задач (когда в запросе ничего не задано)", func() {
-		It("При выполнения запроса должно быть получено 14 задач", func() {
+		It("При выполнения запроса должно быть получено 29 задач", func() {
 			listTask, err := getShortInformation(qp, &sp)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(14))
+			Expect(len(listTask)).Should(Equal(29))
 		})
 	})
 
@@ -793,8 +793,8 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
-		It("Должно быть '14' совпадений", func() {
-			Expect(len(listTask)).Should(Equal(14))
+		It("Должно быть '29' совпадений", func() {
+			Expect(len(listTask)).Should(Equal(29))
 		})
 	})
 
@@ -867,13 +867,13 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Должно быть '14' совпадений, тоесть ВСЕ. Так как параметры не верны min > max и следовательно не учитиваются", func() {
+		It("Должно быть '29' совпадений, тоесть ВСЕ. Так как параметры не верны min > max и следовательно не учитиваются", func() {
 			spt62 := configure.SearchParameters{}
 			spt62.InformationAboutFiltering.SizeAllFilesMin = 23900040
 			spt62.InformationAboutFiltering.SizeAllFilesMax = 100
 			listTask, _ := getShortInformation(qp, &spt62)
 
-			Expect(len(listTask)).Should(Equal(14))
+			Expect(len(listTask)).Should(Equal(29))
 		})
 	})
 
@@ -894,7 +894,7 @@ var _ = Describe("InteractionDBSearch", func() {
 	})
 
 	Context("Тест 10. Тестируем функцию 'getShortInformation'. Поиск по временному диапазону", func() {
-		It("Должно быть '12' совпадений, так как временной интервал удовлетворяет заданным параметрам", func() {
+		It("Должно быть '27' совпадений, так как временной интервал удовлетворяет заданным параметрам", func() {
 			spt81 := configure.SearchParameters{}
 			spt81.InstalledFilteringOption.DateTime.Start = 1560729600
 			spt81.InstalledFilteringOption.DateTime.End = 1560898800
@@ -902,7 +902,7 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt81)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(12))
+			Expect(len(listTask)).Should(Equal(27))
 		})
 
 		It("Должно быть '2' совпадений, так как временной интервал удовлетворяет заданным параметрам", func() {
@@ -927,7 +927,7 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Должно быть '14' совпадений, так как временной интервал выходит за рамки допустимых параметрам", func() {
+		It("Должно быть '29' совпадений, то есть время не учитывается так как НАЧАЛЬНОЕ время БОЛЬШЕ конечного", func() {
 			spt84 := configure.SearchParameters{}
 			spt84.InstalledFilteringOption.DateTime.Start = 1576886400
 			spt84.InstalledFilteringOption.DateTime.End = 1576713600
@@ -935,19 +935,19 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt84)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(14))
+			Expect(len(listTask)).Should(Equal(29))
 		})
 	})
 
 	Context("Тест 11. Тестируем функцию 'getShortInformation'. Поиск по протоколу транспортного уровня.", func() {
-		It("Должно быть '14' совпадений", func() {
+		It("Должно быть '29' совпадений", func() {
 			spt91 := configure.SearchParameters{}
 			spt91.InstalledFilteringOption.Protocol = "tcp"
 
 			listTask, err := getShortInformation(qp, &spt91)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(14))
+			Expect(len(listTask)).Should(Equal(29))
 		})
 
 		It("Должно быть '0' совпадений", func() {
@@ -962,14 +962,14 @@ var _ = Describe("InteractionDBSearch", func() {
 	})
 
 	Context("Тест 12. Тестируем функцию 'getShortInformation'. Поиск по статусу задачи фильтрации.", func() {
-		It("Должно быть '10' совпадений", func() {
+		It("Должно быть '25' совпадений", func() {
 			spt101 := configure.SearchParameters{}
 			spt101.StatusFilteringTask = "complete"
 
 			listTask, err := getShortInformation(qp, &spt101)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(10))
+			Expect(len(listTask)).Should(Equal(25))
 		})
 
 		It("Должно быть '1' совпадений", func() {
@@ -984,14 +984,14 @@ var _ = Describe("InteractionDBSearch", func() {
 	})
 
 	Context("Тест 13. Тестируем функцию 'getShortInformation'. Поиск по статусу задачи по скачиванию файлов.", func() {
-		It("Должно быть '6' совпадений", func() {
+		It("Должно быть '21' совпадений", func() {
 			spt111 := configure.SearchParameters{}
 			spt111.StatusFileDownloadTask = "not executed"
 
 			listTask, err := getShortInformation(qp, &spt111)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(6))
+			Expect(len(listTask)).Should(Equal(21))
 		})
 
 		It("Должно быть '2' совпадений", func() {
@@ -1131,8 +1131,8 @@ var _ = Describe("InteractionDBSearch", func() {
 
 	Context("Тест 16. Проверяем поиск информации по сетевым параметрам (IP, Port, Network)", func() {
 		It("Поиск только по ip адресам ANY и SRC и network ANY, при чем network не существует (Тестовая функция), должно быть получено '12' значений", func() {
-			spt := configure.SearchParameters{}
-			spt.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
+			spt1 := configure.SearchParameters{}
+			spt1.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
 					Any: []string{"45.78.9.10", "87.240.131.213"},
 					Src: []string{"192.168.13.67"},
@@ -1150,15 +1150,15 @@ var _ = Describe("InteractionDBSearch", func() {
 				},
 			}
 
-			listTask, err := getShortInformationTest(qp, &spt)
+			listTask, err := getShortInformationTest(qp, &spt1)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(len(listTask)).Should(Equal(12))
 		})
 
 		It("Поиск только по network ANY (Тестовая функция), должно быть получено '2' значений", func() {
-			spt := configure.SearchParameters{}
-			spt.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
+			spt2 := configure.SearchParameters{}
+			spt2.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
 					Any: []string{},
 					Src: []string{},
@@ -1176,7 +1176,7 @@ var _ = Describe("InteractionDBSearch", func() {
 				},
 			}
 
-			listTask, err := getShortInformationTest(qp, &spt)
+			listTask, err := getShortInformationTest(qp, &spt2)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(len(listTask)).Should(Equal(2))
@@ -1220,8 +1220,8 @@ var _ = Describe("InteractionDBSearch", func() {
 		})*/
 
 		It("Поиск только по ip адресам SRC и DST (соответственно между src и dst должно быть 'И'), должно быть получено '2' значений (Тестовая функция)", func() {
-			spt := configure.SearchParameters{}
-			spt.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
+			spt3 := configure.SearchParameters{}
+			spt3.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
 					Any: []string{},
 					Src: []string{"63.23.100.2", "89.2.66.6"},
@@ -1239,15 +1239,15 @@ var _ = Describe("InteractionDBSearch", func() {
 				},
 			}
 
-			listTask, err := getShortInformationTest(qp, &spt)
+			listTask, err := getShortInformationTest(qp, &spt3)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(len(listTask)).Should(Equal(2))
 		})
 
 		It("Поиск только по ip адресам ANY и port ANY, должно быть получено '3' значений (Тестовая функция)", func() {
-			spt := configure.SearchParameters{}
-			spt.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
+			spt4 := configure.SearchParameters{}
+			spt4.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
 					Any: []string{"18.36.6.4", "63.23.100.2", "89.2.66.6"},
 					Src: []string{},
@@ -1265,17 +1265,15 @@ var _ = Describe("InteractionDBSearch", func() {
 				},
 			}
 
-			listTask, err := getShortInformationTest(qp, &spt)
+			listTask, err := getShortInformationTest(qp, &spt4)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(len(listTask)).Should(Equal(3))
 		})
 
-		/* Проверить данные для тестов отсюда и ниже а потом выполнить тесты */
-
 		It("Поиск только по ip адресам SRC и DST и port ANY, должно быть получено '1' значений (Тестовая функция)", func() {
-			spt := configure.SearchParameters{}
-			spt.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
+			spt5 := configure.SearchParameters{}
+			spt5.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
 					Any: []string{},
 					Src: []string{"56.12.3.3", "78.100.2.33"},
@@ -1293,15 +1291,15 @@ var _ = Describe("InteractionDBSearch", func() {
 				},
 			}
 
-			listTask, err := getShortInformationTest(qp, &spt)
+			listTask, err := getShortInformationTest(qp, &spt5)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(len(listTask)).Should(Equal(1))
 		})
 
-		It("Поиск только по ip адресам SRC и DST и port DST, должно быть получено '2' значений (Тестовая функция)", func() {
-			spt := configure.SearchParameters{}
-			spt.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
+		It("Поиск только по ip адресам SRC и DST и port DST, должно быть получено '7' значений (Тестовая функция)", func() {
+			spt6 := configure.SearchParameters{}
+			spt6.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
 					Any: []string{},
 					Src: []string{"56.12.3.3", "122.33.2.43"},
@@ -1319,15 +1317,15 @@ var _ = Describe("InteractionDBSearch", func() {
 				},
 			}
 
-			listTask, err := getShortInformationTest(qp, &spt)
+			listTask, err := getShortInformationTest(qp, &spt6)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(2))
+			Expect(len(listTask)).Should(Equal(7))
 		})
 
-		It("Поиск только по port DST, должно быть получено '2' значений (Тестовая функция)", func() {
-			spt := configure.SearchParameters{}
-			spt.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
+		It("Поиск только по port DST, должно быть получено '7' значений (Тестовая функция)", func() {
+			spt7 := configure.SearchParameters{}
+			spt7.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
 					Any: []string{},
 					Src: []string{},
@@ -1345,15 +1343,15 @@ var _ = Describe("InteractionDBSearch", func() {
 				},
 			}
 
-			listTask, err := getShortInformationTest(qp, &spt)
+			listTask, err := getShortInformationTest(qp, &spt7)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(2))
+			Expect(len(listTask)).Should(Equal(7))
 		})
 
-		It("Поиск только по ip адресам ANY и port DST, должно быть получено '3' значений (Тестовая функция)", func() {
-			spt := configure.SearchParameters{}
-			spt.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
+		It("Поиск только по ip адресам ANY и port DST, должно быть получено '4' значений (Тестовая функция)", func() {
+			spt8 := configure.SearchParameters{}
+			spt8.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
 					Any: []string{"59.3.44.3", "102.33.3.44"},
 					Src: []string{},
@@ -1371,15 +1369,15 @@ var _ = Describe("InteractionDBSearch", func() {
 				},
 			}
 
-			listTask, err := getShortInformationTest(qp, &spt)
+			listTask, err := getShortInformationTest(qp, &spt8)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(3))
+			Expect(len(listTask)).Should(Equal(4))
 		})
 
-		It("Поиск по ip адресам ANY или NETWORK и port DST, должно быть получено '3' значений (Тестовая функция)", func() {
-			spt := configure.SearchParameters{}
-			spt.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
+		It("Поиск по ip адресам ANY или NETWORK и port DST, должно быть получено '7' значений (Тестовая функция)", func() {
+			spt9 := configure.SearchParameters{}
+			spt9.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
 					Any: []string{"102.33.3.44"},
 					Src: []string{},
@@ -1397,12 +1395,20 @@ var _ = Describe("InteractionDBSearch", func() {
 				},
 			}
 
-			listTask, err := getShortInformationTest(qp, &spt)
+			listTask, err := getShortInformationTest(qp, &spt9)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(3))
+			Expect(len(listTask)).Should(Equal(7))
 		})
 	})
+
+	/*
+	   Не все тесты прошли успешно, прошли только 4 из 9 тестов по поиску информации
+	   по сетевым фильтрам (ip, network, port)
+	   !!! Похоже проблемма в логике !!!
+	   Не прошли тесты в которых есть запрос на поиск по PORT && (IP || NETWORK)
+	   посмотреть лигику отдельно
+	*/
 
 	Context("Тест 17. Проверяем поиск информации по сетевым параметрам (IP, Port, Network) и какой либо доп. параметр", func() {
 		It("Поиск только по (ip адресам или network) и временному диапазону, должно быть получено '' значений", func() {
