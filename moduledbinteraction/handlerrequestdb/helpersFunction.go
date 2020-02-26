@@ -34,3 +34,297 @@ func getInfoTaskForID(qp QueryParameters, taskID string) (*[]configure.Informati
 
 	return &itf, nil
 }
+
+//getShortInformation получить краткую информацию об найденных задачах
+func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]*configure.BriefTaskInformation, error) {
+	getQueryTmpNetParamsTest := func(fcp configure.FiltrationControlParametersNetworkFilters, queryType string) (bson.E, bson.D) {
+		listQueryType := map[string]struct {
+			e string
+			o configure.FiltrationControlIPorNetorPortParameters
+		}{
+			"ip":      {e: "ip", o: fcp.IP},
+			"port":    {e: "port", o: fcp.Port},
+			"network": {e: "network", o: fcp.Network},
+		}
+
+		numIPAny := len(listQueryType[queryType].o.Any)
+		numIPSrc := len(listQueryType[queryType].o.Src)
+		numIPDst := len(listQueryType[queryType].o.Dst)
+
+		if numIPAny == 0 && numIPSrc == 0 && numIPDst == 0 {
+			return bson.E{}, bson.D{}
+		}
+
+		if numIPAny > 0 && numIPSrc == 0 && numIPDst == 0 {
+			be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}
+			bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}}
+
+			return be, bd
+		}
+
+		if numIPSrc > 0 && numIPAny == 0 && numIPDst == 0 {
+			be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}
+			bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}}
+
+			return be, bd
+		}
+
+		if numIPDst > 0 && numIPAny == 0 && numIPSrc == 0 {
+			be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}
+			bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}}
+
+			return be, bd
+		}
+
+		if (numIPSrc > 0 && numIPDst > 0) && numIPAny == 0 {
+			be := bson.E{Key: "$and", Value: bson.A{
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+			}}
+			bd := bson.D{{Key: "$and", Value: bson.A{
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+			}}}
+
+			return be, bd
+		}
+
+		return bson.E{Key: "$or", Value: bson.A{
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+			}}, bson.D{{Key: "$or", Value: bson.A{
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+			}}}
+	}
+
+	getQueryTmpNetParams := func(fcp configure.FiltrationControlParametersNetworkFilters, queryType string) bson.E {
+		listQueryType := map[string]struct {
+			e string
+			o configure.FiltrationControlIPorNetorPortParameters
+		}{
+			"ip":      {e: "ip", o: fcp.IP},
+			"port":    {e: "port", o: fcp.Port},
+			"network": {e: "network", o: fcp.Network},
+		}
+
+		numIPAny := len(listQueryType[queryType].o.Any)
+		numIPSrc := len(listQueryType[queryType].o.Src)
+		numIPDst := len(listQueryType[queryType].o.Dst)
+
+		if numIPAny == 0 && numIPSrc == 0 && numIPDst == 0 {
+			return bson.E{}
+		}
+
+		if numIPAny > 0 && numIPSrc == 0 && numIPDst == 0 {
+			return bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}
+		}
+
+		if numIPSrc > 0 && numIPAny == 0 && numIPDst == 0 {
+			return bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}
+		}
+
+		if numIPDst > 0 && numIPAny == 0 && numIPSrc == 0 {
+			return bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}
+		}
+
+		if (numIPSrc > 0 && numIPDst > 0) && numIPAny == 0 {
+			return bson.E{Key: "$and", Value: bson.A{
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+			}}
+		}
+
+		return bson.E{Key: "$or", Value: bson.A{
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+		}}
+	}
+
+	checkParameterContainsValues := func(fcinpp configure.FiltrationControlIPorNetorPortParameters) bool {
+		if len(fcinpp.Any) > 0 {
+			return true
+		}
+
+		if len(fcinpp.Src) > 0 {
+			return true
+		}
+
+		if len(fcinpp.Dst) > 0 {
+			return true
+		}
+
+		return false
+	}
+
+	queryTemplate := map[string]bson.E{
+		"sourceID":          bson.E{Key: "source_id", Value: bson.D{{Key: "$eq", Value: sp.ID}}},
+		"filesIsFound":      bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: bson.D{{Key: "$gt", Value: 0}}},
+		"taskProcessed":     bson.E{Key: "general_information_about_task.task_processed", Value: sp.TaskProcessed},
+		"filesIsDownloaded": bson.E{Key: "detailed_information_on_downloading.number_files_downloaded", Value: bson.D{{Key: "$gt", Value: 0}}},
+		"allFilesIsDownloaded": bson.E{Key: "$expr", Value: bson.D{
+			{Key: "$eq", Value: bson.A{"$detailed_information_on_downloading.number_files_total", "$detailed_information_on_downloading.number_files_downloaded"}}}},
+		"sizeAllFiles": bson.E{Key: "detailed_information_on_filtering.size_files_found_result_filtering", Value: bson.D{
+			{Key: "$gte", Value: sp.InformationAboutFiltering.SizeAllFilesMin},
+			{Key: "$lte", Value: sp.InformationAboutFiltering.SizeAllFilesMax},
+		}},
+		"countAllFiles": bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: bson.D{
+			{Key: "$gte", Value: sp.InformationAboutFiltering.CountAllFilesMin},
+			{Key: "$lte", Value: sp.InformationAboutFiltering.CountAllFilesMax},
+		}},
+		"dateTimeParameters": bson.E{Key: "$and", Value: bson.A{
+			bson.D{{Key: "filtering_option.date_time_interval.start", Value: bson.D{
+				{Key: "$gte", Value: sp.InstalledFilteringOption.DateTime.Start}}}},
+			bson.D{{Key: "filtering_option.date_time_interval.end", Value: bson.D{
+				{Key: "$lte", Value: sp.InstalledFilteringOption.DateTime.End}}}},
+		}},
+		"transportProtocol":        bson.E{Key: "filtering_option.protocol", Value: sp.InstalledFilteringOption.Protocol},
+		"statusFilteringTask":      bson.E{Key: "detailed_information_on_filtering.task_status", Value: sp.StatusFilteringTask},
+		"statusFileDownloadTask":   bson.E{Key: "detailed_information_on_downloading.task_status", Value: sp.StatusFileDownloadTask},
+		"networkParametersIP":      getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "ip"),
+		"networkParametersPort":    getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "port"),
+		"networkParametersNetwork": getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "network"),
+	}
+
+	var (
+		querySourceID               bson.E
+		queryFilesIsFound           bson.E
+		querySizeAllFiles           bson.E
+		queryCountAllFiles          bson.E
+		queryTaskProcessed          bson.E
+		queryFilesIsDownloaded      bson.E
+		queryTransportProtocol      bson.E
+		querydateTimeParameters     bson.E
+		queryStatusFilteringTask    bson.E
+		queryAllFilesIsDownloaded   bson.E
+		queryNetworkParametersPort  bson.E
+		queryNetworkParametersIPNet bson.E
+		queryStatusFileDownloadTask bson.E
+	)
+
+	//поиск по ID источника
+	if sp.ID > 0 {
+		querySourceID = queryTemplate["sourceID"]
+	}
+
+	//была ли задача обработана
+	if sp.TaskProcessed {
+		queryTaskProcessed = bson.E{Key: "general_information_about_task.task_processed", Value: sp.TaskProcessed}
+	}
+
+	//выполнялась ли выгрузка файлов
+	if sp.FilesDownloaded.FilesIsDownloaded {
+		queryFilesIsDownloaded = queryTemplate["filesIsDownloaded"]
+	}
+
+	//все ли файлы были выгружены
+	if sp.FilesDownloaded.AllFilesIsDownloaded {
+		queryFilesIsDownloaded = queryTemplate["filesIsDownloaded"]
+		queryAllFilesIsDownloaded = queryTemplate["allFilesIsDownloaded"]
+	}
+
+	//были ли найденны какие либо файлы в результате фильтрации
+	if sp.InformationAboutFiltering.FilesIsFound {
+		queryFilesIsFound = queryTemplate["filesIsFound"]
+	}
+
+	//диапазон количества найденных файлов
+	cafmin := sp.InformationAboutFiltering.CountAllFilesMin
+	cafmax := sp.InformationAboutFiltering.CountAllFilesMax
+	if (cafmax > 0) && (cafmax > cafmin) {
+		queryCountAllFiles = queryTemplate["countAllFiles"]
+	}
+
+	//диапазон общего размера всех найденных файлов
+	safmin := sp.InformationAboutFiltering.SizeAllFilesMin
+	safmax := sp.InformationAboutFiltering.SizeAllFilesMax
+	if (safmax > 0) && (safmax > safmin) {
+		querySizeAllFiles = queryTemplate["sizeAllFiles"]
+	}
+
+	//временной диапазон фильтруемых данных
+	dts := sp.InstalledFilteringOption.DateTime.Start
+	dte := sp.InstalledFilteringOption.DateTime.End
+	if (dts > 0) && (dte > 0) && (dts < dte) {
+		querydateTimeParameters = queryTemplate["dateTimeParameters"]
+	}
+
+	//транспортный протокол
+	if sp.InstalledFilteringOption.Protocol == "tcp" || sp.InstalledFilteringOption.Protocol == "udp" {
+		queryTransportProtocol = queryTemplate["transportProtocol"]
+	}
+
+	//статус задачи по фильтрации
+	if (len(sp.StatusFilteringTask) > 0) && (sp.StatusFilteringTask != "any") {
+		queryStatusFilteringTask = queryTemplate["statusFilteringTask"]
+	}
+
+	//статус задачи по скачиванию файлов
+	if (len(sp.StatusFileDownloadTask) > 0) && (sp.StatusFileDownloadTask != "any") {
+		queryStatusFileDownloadTask = queryTemplate["statusFileDownloadTask"]
+	}
+
+	isContainsValueIP := checkParameterContainsValues(sp.InstalledFilteringOption.NetworkFilters.IP)
+	isContainsValuePort := checkParameterContainsValues(sp.InstalledFilteringOption.NetworkFilters.Port)
+	isContainsValueNetwork := checkParameterContainsValues(sp.InstalledFilteringOption.NetworkFilters.Network)
+
+	if isContainsValuePort {
+		queryNetworkParametersPort, _ = getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "port")
+	}
+
+	if isContainsValueIP && !isContainsValueNetwork {
+		queryNetworkParametersIPNet, _ = getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "ip")
+	}
+
+	if isContainsValueNetwork && !isContainsValueIP {
+		queryNetworkParametersIPNet, _ = getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "network")
+	}
+
+	if isContainsValueIP && isContainsValueNetwork {
+		_, bdIP := getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "ip")
+		_, bdNetwork := getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "network")
+
+		queryNetworkParametersIPNet = bson.E{Key: "$or", Value: bson.A{bdIP, bdNetwork}}
+	}
+
+	lbti := []*configure.BriefTaskInformation{}
+
+	cur, err := qp.Find(bson.D{
+		querySourceID,
+		queryTaskProcessed,
+		queryFilesIsDownloaded,
+		queryAllFilesIsDownloaded,
+		queryFilesIsFound,
+		queryCountAllFiles,
+		querySizeAllFiles,
+		querydateTimeParameters,
+		queryTransportProtocol,
+		queryStatusFilteringTask,
+		queryStatusFileDownloadTask,
+		queryNetworkParametersPort,
+		queryNetworkParametersIPNet})
+	if err != nil {
+		return lbti, err
+	}
+
+	for cur.Next(context.Background()) {
+		var model configure.BriefTaskInformation
+		err := cur.Decode(&model)
+		if err != nil {
+			return lbti, err
+		}
+
+		lbti = append(lbti, &model)
+	}
+
+	if err := cur.Err(); err != nil {
+		return lbti, err
+	}
+
+	cur.Close(context.Background())
+
+	return lbti, nil
+}

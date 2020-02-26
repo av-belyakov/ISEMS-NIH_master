@@ -48,6 +48,23 @@ func HandlerMsgFromDB(
 					})
 				}
 			}
+
+		case "information search control":
+			switch res.Instruction {
+			case "short search result":
+				fmt.Printf("func 'HandlerMsgFromDB', Instruction: 'information search control', Response: '%v'\n", res)
+
+				if err := sendMsgCompliteTaskSearchShortInformationAboutTask(res, hsm.TSSQ, outCoreChans.OutCoreChanAPI); err != nil {
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
+				}
+
+			case "full search result":
+				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'full search result', Response: '%v'\n", res)
+
+			}
 		}
 
 	case "API module":
@@ -174,7 +191,7 @@ func HandlerMsgFromDB(
 		case "download control":
 			//пока заглушка
 
-		case "information search results":
+		case "information search control":
 			//пока заглушка
 
 		case "error notification":

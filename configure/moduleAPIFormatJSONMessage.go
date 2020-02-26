@@ -423,7 +423,7 @@ type SearchInformationResponseCommanInfo struct {
 // TaskIDApp - уникальный цифровой идентификатор задачи присвоенный приложением
 // Status - статус выполняемой задачи
 // TotalNumberTasksFound - общее количество найденных задач
-// PaginationOptions - параметры разбиения страницы
+// PaginationOptions - параметры разбиения по частям
 // ShortListFoundTasks - краткий список найденных задач
 type SearchInformationResponseOptionCommanInfo struct {
 	TaskIDApp             string                  `json:"tidapp"`
@@ -433,7 +433,7 @@ type SearchInformationResponseOptionCommanInfo struct {
 	ShortListFoundTasks   []*BriefTaskInformation `json:"slft"`
 }
 
-//PaginationOption параметры разбиения страницы
+//PaginationOption параметры разбиения по частям
 // ChunkSize - размер сегмента (кол-во задач в сегменте)
 // ChunkNumber - общее количество сегментов
 // ChunkCurrentNumber - номер текущего фрагмента

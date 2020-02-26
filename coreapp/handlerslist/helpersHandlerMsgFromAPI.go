@@ -267,8 +267,7 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 	}
 
 	i, err := hsm.TSSQ.GetInformationAboutSearchTask(taskID)
-	fmt.Println(err)
-	fmt.Println(i)
+	fmt.Printf("func 'handlerInformationSearchControlTypeSearchCommanInformation', Error: '%v', Info: '%v'\n", err, i)
 
 	chanToDB <- &configure.MsgBetweenCoreAndDB{
 		MsgGenerator:    "Core module",

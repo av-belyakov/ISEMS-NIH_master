@@ -107,6 +107,78 @@ func sendMsgCompleteTaskFiltration(
 	return nil
 }
 
+//sendMsgCompliteTaskSearchShortInformationAboutTask отправляет краткую информацию полученную
+// при поиске в БД ранее выполняемых задач по фильтрации и скачиванию
+func sendMsgCompliteTaskSearchShortInformationAboutTask(
+	res *configure.MsgBetweenCoreAndDB,
+	tssq *configure.TemporaryStorageSearchQueries,
+	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) error {
+
+	const chunkSize = 101
+
+	//получаем информацию о задаче
+	info, err := tssq.GetInformationAboutSearchTask(res.TaskID)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', Info: '%v'\n", info)
+
+	/*
+		!!!
+		   Продумать формат сообщения клиенту API содержащего найденную информацию, котороую можно отправлять
+		   полностью или частями
+		!!!
+
+		тип SearchInformationResponseOptionCommanInfo
+	*/
+
+	numTaskFound := len(info.ListFoundInformation.List)
+	if numTaskFound < chunkSize {
+		//отправляем целиком
+
+		fmt.Println("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', SEND FULL")
+
+		resMsg := configure.SearchInformationResponseCommanInfo{
+			MsgOption: configure.SearchInformationResponseOptionCommanInfo{
+				TaskIDApp:             res.TaskID,
+				Status:                "complete",
+				TotalNumberTasksFound: numTaskFound,
+				PaginationOptions: configure.PaginationOption{
+					ChunkSize:          chunkSize,
+					ChunkNumber:        1,
+					ChunkCurrentNumber: 1,
+				},
+				ShortListFoundTasks: info.ListFoundInformation.List,
+			},
+		}
+
+		resMsg.MsgType = "information"
+		resMsg.MsgSection = "information search control"
+		resMsg.MsgInstruction = "task processing"
+		resMsg.ClientTaskID = res.TaskIDClientAPI
+
+		msgJSON, err := json.Marshal(resMsg)
+		if err != nil {
+			return err
+		}
+
+		chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+			MsgGenerator: "Core module",
+			MsgRecipient: "API module",
+			IDClientAPI:  res.IDClientAPI,
+			MsgJSON:      msgJSON,
+		}
+
+		return nil
+	}
+
+	//делим список на сегменты и отправляем по кусочкам
+	fmt.Println("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', SEND CHUNK")
+
+	return nil
+}
+
 //checkParametersDownloadTask проверяет ряд параметров в информации о задаче полученной из БД
 func checkParametersDownloadTask(
 	res *configure.MsgBetweenCoreAndDB,
