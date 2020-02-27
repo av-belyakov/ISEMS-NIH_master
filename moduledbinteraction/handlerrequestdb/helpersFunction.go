@@ -311,13 +311,48 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 	}
 
 	for cur.Next(context.Background()) {
-		var model configure.BriefTaskInformation
+		var model configure.InformationAboutTask
 		err := cur.Decode(&model)
 		if err != nil {
 			return lbti, err
 		}
 
-		lbti = append(lbti, &model)
+		bti := configure.BriefTaskInformation{
+			TaskID:       model.TaskID,
+			ClientTaskID: model.ClientTaskID,
+			SourceID:     model.SourceID,
+			ParametersFiltration: configure.ParametersFiltrationOptions{
+				DateTime: configure.DateTimeParameters{
+					Start: model.FilteringOption.DateTime.Start,
+					End:   model.FilteringOption.DateTime.End,
+				},
+				Protocol: model.FilteringOption.Protocol,
+				Filters: configure.FiltrationControlParametersNetworkFilters{
+					IP: configure.FiltrationControlIPorNetorPortParameters{
+						Any: model.FilteringOption.Filters.IP.Any,
+						Src: model.FilteringOption.Filters.IP.Src,
+						Dst: model.FilteringOption.Filters.IP.Dst,
+					},
+					Port: configure.FiltrationControlIPorNetorPortParameters{
+						Any: model.FilteringOption.Filters.Port.Any,
+						Src: model.FilteringOption.Filters.Port.Src,
+						Dst: model.FilteringOption.Filters.Port.Dst,
+					},
+					Network: configure.FiltrationControlIPorNetorPortParameters{
+						Any: model.FilteringOption.Filters.Network.Any,
+						Src: model.FilteringOption.Filters.Network.Src,
+						Dst: model.FilteringOption.Filters.Network.Dst,
+					},
+				},
+			},
+			FilteringTaskStatus:                  model.DetailedInformationOnFiltering.TaskStatus,
+			FileDownloadTaskStatus:               model.DetailedInformationOnDownloading.TaskStatus,
+			NumberFilesFoundAsResultFiltering:    model.DetailedInformationOnFiltering.NumberFilesFoundResultFiltering,
+			TotalSizeFilesFoundAsResultFiltering: model.DetailedInformationOnFiltering.SizeFilesFoundResultFiltering,
+			NumberFilesDownloaded:                model.DetailedInformationOnDownloading.NumberFilesDownloaded,
+		}
+
+		lbti = append(lbti, &bti)
 	}
 
 	if err := cur.Err(); err != nil {

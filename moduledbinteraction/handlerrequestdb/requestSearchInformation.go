@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"ISEMS-NIH_master/configure"
-	//	"github.com/mongodb/mongo-go-driver/bson"
 )
 
 //SearchShortInformationAboutTasks поиск ОБЩЕЙ информации по задачам
@@ -13,8 +12,6 @@ func SearchShortInformationAboutTasks(
 	req *configure.MsgBetweenCoreAndDB,
 	tssq *configure.TemporaryStorageSearchQueries,
 	qp QueryParameters) {
-
-	fmt.Println("func 'SearchShortInformationAboutTasks', START...")
 
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator:    req.MsgRecipient,
@@ -41,8 +38,6 @@ func SearchShortInformationAboutTasks(
 		return
 	}
 
-	fmt.Printf("forming query for DB to search parameters: %v\n", info)
-
 	listShortTaskInfo, err := getShortInformation(qp, &info.SearchParameters)
 	if err != nil {
 		msgRes.MsgSection = "error notification"
@@ -57,8 +52,6 @@ func SearchShortInformationAboutTasks(
 		return
 	}
 
-	fmt.Printf("func 'SearchShortInformationAboutTasks', SEARCH INFO: '%v'\n", listShortTaskInfo)
-
 	//добавляем найденную информацию в TemporaryStorageSearchQueries
 	if err := tssq.AddInformationFoundSearchResult(req.TaskID, listShortTaskInfo); err != nil {
 		msgRes.MsgSection = "error notification"
@@ -72,8 +65,6 @@ func SearchShortInformationAboutTasks(
 
 		return
 	}
-
-	fmt.Printf("func 'SearchShortInformationAboutTasks', msgRes: '%v'\n", msgRes)
 
 	chanIn <- &msgRes
 }

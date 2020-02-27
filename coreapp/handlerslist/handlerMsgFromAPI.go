@@ -576,11 +576,10 @@ func HandlerMsgFromAPI(
 		// УПРАВЛЕНИЕ ПОИСКОМ ИНФОРМАЦИИ В БД ПРИЛОЖЕНИЯ
 		case "information search control":
 			fmt.Println("func 'HandlerMsgFromAPI', MsgType: 'command', MsgSection: 'information search control'")
+			fmt.Println(msgc)
 
 			//поиск информации по заданному фильтру
 			if msgc.MsgInstruction == "search common information" {
-				fmt.Println("func 'HandlerMsgFromAPI', MsgType: 'command', MsgSection: 'information search control', Instruction: 'search common information'")
-
 				var siatr configure.SearchInformationAboutTasksRequest
 				if err := json.Unmarshal(msgJSON, &siatr); err != nil {
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
@@ -597,14 +596,36 @@ func HandlerMsgFromAPI(
 				return
 			}
 
-			//получить часть списка найденной информации
-			if msgc.MsgInstruction == "get part list found information" {
-
-				return
-			}
-
 			//получить полную информацию о задаче по ее ID
-			if msgc.MsgInstruction == "get full information about task" {
+			if msgc.MsgInstruction == "get all information by task ID" {
+				var ribtid configure.RequestInformationByTaskID
+				if err := json.Unmarshal(msgJSON, &ribtid); err != nil {
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: "bad cast type JSON messages",
+						FuncName:    funcName,
+					})
+
+					return
+				}
+
+				/*
+				   в moduleAPIFOrmatJSONMessage определил типы которые будут использоваться для обработки запроса на
+				   получение подробной информации о задаче по ее ID и тип который будет содержать ответ с найденной инормацией о
+				   задаче или пустой тип И СТАТУС 'not found' - для не найденной задачи или 'refused' если был не верно сформирован
+				   запрос на поиск задачи (конкретнее, не верный ID задачи)
+				*/
+
+				fmt.Printf("func 'HandlerMsgFromAPI', MsgType: 'command', MsgSection: 'information search control', Instruction: 'get full information about task', RESEIVED REQUEST: %v\n", ribtid)
+
+				//проверяем ID задачи
+				/*
+					pattern := `^Application\sISEMS-NIH\s(master|slave),\sv\d+\.\d+\.\d+`
+					rx := regexp.MustCompile(pattern)
+					numVersion := rx.FindString(string(content))
+				*/
+
+				//передаем в БД ID задачи для дальнейшего поиска
 
 				return
 			}

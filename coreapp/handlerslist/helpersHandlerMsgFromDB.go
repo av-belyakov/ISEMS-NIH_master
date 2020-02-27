@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 
 	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
@@ -114,7 +115,7 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 	tssq *configure.TemporaryStorageSearchQueries,
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) error {
 
-	const chunkSize = 101
+	const chunkSize = 100
 
 	//получаем информацию о задаче
 	info, err := tssq.GetInformationAboutSearchTask(res.TaskID)
@@ -122,41 +123,34 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 		return err
 	}
 
-	fmt.Printf("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', Info: '%v'\n", info)
-
-	/*
-		!!!
-		   Продумать формат сообщения клиенту API содержащего найденную информацию, котороую можно отправлять
-		   полностью или частями
-		!!!
-
-		тип SearchInformationResponseOptionCommanInfo
-	*/
-
 	numTaskFound := len(info.ListFoundInformation.List)
+
+	//	fmt.Printf("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', Info: '%v'\n", info)
+
+	resMsg := configure.SearchInformationResponseCommanInfo{
+		MsgOption: configure.SearchInformationResponseOptionCommanInfo{
+			TaskIDApp:             res.TaskID,
+			Status:                "complete",
+			TotalNumberTasksFound: numTaskFound,
+			PaginationOptions: configure.PaginationOption{
+				ChunkSize:          chunkSize,
+				ChunkNumber:        1,
+				ChunkCurrentNumber: 1,
+			},
+		},
+	}
+
+	resMsg.MsgType = "information"
+	resMsg.MsgSection = "information search control"
+	resMsg.MsgInstruction = "processing information search task"
+	resMsg.ClientTaskID = res.TaskIDClientAPI
+
+	//отправляем всю информацию целиком
 	if numTaskFound < chunkSize {
-		//отправляем целиком
 
 		fmt.Println("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', SEND FULL")
 
-		resMsg := configure.SearchInformationResponseCommanInfo{
-			MsgOption: configure.SearchInformationResponseOptionCommanInfo{
-				TaskIDApp:             res.TaskID,
-				Status:                "complete",
-				TotalNumberTasksFound: numTaskFound,
-				PaginationOptions: configure.PaginationOption{
-					ChunkSize:          chunkSize,
-					ChunkNumber:        1,
-					ChunkCurrentNumber: 1,
-				},
-				ShortListFoundTasks: info.ListFoundInformation.List,
-			},
-		}
-
-		resMsg.MsgType = "information"
-		resMsg.MsgSection = "information search control"
-		resMsg.MsgInstruction = "task processing"
-		resMsg.ClientTaskID = res.TaskIDClientAPI
+		resMsg.MsgOption.ShortListFoundTasks = info.ListFoundInformation.List
 
 		msgJSON, err := json.Marshal(resMsg)
 		if err != nil {
@@ -173,10 +167,39 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 		return nil
 	}
 
-	//делим список на сегменты и отправляем по кусочкам
-	fmt.Println("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', SEND CHUNK")
+	numChunk := getNumParts(numTaskFound, chunkSize)
+	resMsg.MsgOption.PaginationOptions.ChunkNumber = numChunk
+
+	//сегментируем найденый список
+	for i := 0; i < numChunk; i++ {
+		//		fmt.Printf("Send chunks num: '%v' from '%v' (full task found: '%v')\n", i, numChunk, numTaskFound)
+
+		num := i * chunkSize
+		if i == numChunk-1 {
+			resMsg.MsgOption.ShortListFoundTasks = info.ListFoundInformation.List[num:]
+		} else {
+			resMsg.MsgOption.ShortListFoundTasks = info.ListFoundInformation.List[num:(num + chunkSize)]
+		}
+
+		resMsg.MsgOption.PaginationOptions.ChunkCurrentNumber = i + 1
+		msgJSON, err := json.Marshal(resMsg)
+		if err != nil {
+			return err
+		}
+
+		chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+			MsgGenerator: "Core module",
+			MsgRecipient: "API module",
+			IDClientAPI:  res.IDClientAPI,
+			MsgJSON:      msgJSON,
+		}
+	}
 
 	return nil
+}
+
+func getNumParts(fullSize, sizeChunk int) int {
+	return int(math.Round(float64(fullSize) / float64(sizeChunk)))
 }
 
 //checkParametersDownloadTask проверяет ряд параметров в информации о задаче полученной из БД

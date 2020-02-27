@@ -409,9 +409,116 @@ type SearchFilteringOptions struct {
 
 // ПОЛУЧИТЬ ВЫБРАННУЮ ЧАСТЬ КРАТКОЙ ИНФОРМАЦИИ ИЗ СПИСКА НАЙДЕННЫХ ЗАДАЧ
 
-// ПОЛУЧИТЬ ПОЛНУЮ ИНФОРМАЦИЮ ПО ЗАДАЧЕ
+// ПОЧТИ ПОЛНАЯ ИНФОРМАЦИЮ ПО ЗАДАЧЕ (нет только списка найденных файлов)
 
-// ОТВЕТ ПРИ ПОИСКЕ ИНФОРМАЦИИ О ЗАДАЧАХ
+//RequestInformationByTaskID запрос на получение информации о задаче по ее ID
+type RequestInformationByTaskID struct {
+	MsgCommon
+	MsgOption ParametersGetInformationByTaskID `json:"o"`
+}
+
+//ParametersGetInformationByTaskID содержит параметры для поиска информации о задаче по ее ID
+type ParametersGetInformationByTaskID struct {
+	ReguestTaskID string `json:"rtid"`
+}
+
+//ResponseInformationByTaskID содержит почти полную информацию (кроме списка найденных файлов) о найденной задаче
+// Status — статус выполняемой задачи
+// TaskParameter - параметры выполняемой задачи
+type ResponseInformationByTaskID struct {
+	Status        string                `json:"s"`
+	TaskParameter ResponseTaskParameter `json:"tp"`
+}
+
+//ResponseTaskParameter содержит основные параметры найденной задачи
+// TaskID — внутренний идентификатор задачи
+// ClientTaskID — идентификатор задачи присвоенный клиентом
+// SourceID -  идентификатор источника
+// GeneralInformationAboutTask - основные параметры задачи, не относящиеся ни к одному из разделов
+// FilteringOption - параметры фильтрации
+// DetailedInformationOnFiltering - результаты фильтрации
+// DetailedInformationOnDownloading - результаты выгрузки файлов
+type ResponseTaskParameter struct {
+	TaskID                           string                      `json:"tid"`
+	ClientTaskID                     string                      `json:"ctid"`
+	SourceID                         int                         `json:"sid"`
+	GeneralInformationAboutTask      GeneralInformationAboutTask `json:"giat"`
+	FilteringOption                  TaskFilteringOption         `json:"fo"`
+	DetailedInformationOnFiltering   InformationOnFiltering      `json:"diof"`
+	DetailedInformationOnDownloading InformationOnDownloading    `json:"diod"`
+}
+
+//GeneralInformationAboutTask содкржит общие параметры задачи
+// TaskProcessed - была ли обработана задача (фильтрация файлов выполнена, какие либо файлы были загружены, тогда клиент API может отметить подобную задачу как отработанную)
+// DateTimeProcessed - дата и время завершения задачи
+// ClientIDIP - идентификатор клиента API (его ID:IP !!!!!!!!!!!! Надо не забыть !!!!!)
+// DetailDescription - детальное описание
+type GeneralInformationAboutTask struct {
+	TaskProcessed     bool              `json:"tp"`
+	DateTimeProcessed int64             `json:"dtp"`
+	ClientIDIP        string            `json:"cidip"`
+	DetailDescription DetailDescription `json:"dd"`
+}
+
+//DetailDescription детальное описание
+// UserNameClosedProcess — имя пользователя (внутри клиента API) который закрыл задачу
+// DescriptionProcessingResults — не обязательное описание причины закрытия задачи, от клиента API
+type DetailDescription struct {
+	UserNameClosedProcess        string `json:"uncp"`
+	DescriptionProcessingResults string `json:"dpr"`
+}
+
+//TaskFilteringOption параметры фильтрации
+// DateTime - временной интервал
+// Protocol - протокол транспортного уровня
+// Filters - сетевые фильтры
+type TaskFilteringOption struct {
+	DateTime DateTimeParameters                        `json:"dt"`
+	Protocol string                                    `json:"p"`
+	Filters  FiltrationControlParametersNetworkFilters `json:"f"`
+}
+
+//InformationOnFiltering результаты выполнения задачи по фильтрации
+// TaskStatus — статус задачи 'not executed'/'wait'/'refused'/'execute'/'not fully completed'/'complete'
+// TimeIntervalTaskExecution — интервал выполнения задачи
+// WasIndexUsed — использовались ли индексы при выполнении данной задачи
+// NumberFilesMeetFilterParameters - кол-во файлов удовлетворяющих параметрам фильтрации
+// NumberProcessedFiles - кол-во обработанных файлов
+// NumberFilesFoundResultFiltering - кол-во найденных, в результате фильтрации, файлов
+// NumberDirectoryFiltartion - кол-во директорий по которым выполняется фильтрация
+// NumberErrorProcessedFiles - кол-во не обработанных файлов или файлов обработанных с ошибками
+// SizeFilesMeetFilterParameters - общий размер файлов (в байтах) удовлетворяющих параметрам фильтрации
+// SizeFilesFoundResultFiltering - общий размер найденных, в результате фильтрации, файлов (в байтах)
+// PathDirectoryForFilteredFiles - путь к директории в которой хранятся отфильтрованные файлы
+type InformationOnFiltering struct {
+	TaskStatus                      string             `json:"ts"`
+	TimeIntervalTaskExecution       DateTimeParameters `json:"tte"`
+	WasIndexUsed                    bool               `json:"wiu"`
+	NumberProcessedFiles            int                `json:"mpf"`
+	NumberDirectoryFiltartion       int                `json:"ndf"`
+	NumberErrorProcessedFiles       int                `json:"nepf"`
+	NumberFilesMeetFilterParameters int                `json:"nfmfp"`
+	NumberFilesFoundResultFiltering int                `json:"nffrf"`
+	SizeFilesMeetFilterParameters   int64              `json:"sfmfp"`
+	SizeFilesFoundResultFiltering   int64              `json:"sffrf"`
+	PathDirectoryForFilteredFiles   string             `json:"pdfff"`
+}
+
+//InformationOnDownloading результаты выполнения задачи по скачиванию файлов
+// TaskStatus -  статус задачи
+// TimeIntervalTaskExecution — интервал выполнения задачи
+// NumberFilesTotal - общее количество файлов подлежащих скачиванию
+// NumberFilesDownloaded - количество уже загруженных файлов
+// NumberFilesDownloadedError - количество файлов загруженных с ошибкой
+// PathDirectoryStorageDownloadedFiles - путь до директории долговременного хранения скаченных файлов
+type InformationOnDownloading struct {
+	TaskStatus                          string             `json:"ts"`
+	TimeIntervalTaskExecution           DateTimeParameters `json:"tte"`
+	NumberFilesTotal                    int                `json:"nft"`
+	NumberFilesDownloaded               int                `json:"nfd"`
+	NumberFilesDownloadedError          int                `json:"nfde"`
+	PathDirectoryStorageDownloadedFiles string             `json:"pdsdf"`
+}
 
 //SearchInformationResponseCommanInfo общее описание ответа при поиске информации о задачах
 type SearchInformationResponseCommanInfo struct {
