@@ -70,6 +70,18 @@ func SearchShortInformationAboutTasks(
 }
 
 //SearchFullInformationAboutTasks поиск ПОЛНОЙ информации по задачам
-func SearchFullInformationAboutTasks() {
+func SearchFullInformationAboutTasks(
+	chanIn chan<- *configure.MsgBetweenCoreAndDB,
+	req *configure.MsgBetweenCoreAndDB,
+	qp QueryParameters) {
+
 	fmt.Println("func 'SearchFullInformationAboutTasks', START...")
+
+	/*
+	   в moduleAPIFOrmatJSONMessage определил типы которые будут использоваться для обработки запроса на
+	   получение подробной информации о задаче по ее ID и тип который будет содержать ответ с найденной инормацией о
+	   задаче или пустой тип И СТАТУС 'not found' - для не найденной задачи или 'refused' если был не верно сформирован
+	   запрос на поиск задачи (конкретнее, не верный ID задачи)
+	*/
+
 }

@@ -119,8 +119,9 @@ func (wr *WrappersRouteRequest) WrapperFuncSearch(
 
 		handlerrequestdb.SearchShortInformationAboutTasks(wr.ChanIn, msg, tssq, qp)
 
-	case "search full information":
+	case "search full information by task ID":
 		fmt.Println("func 'WrapperFuncSearch', Instruction: 'search full information'")
 
+		handlerrequestdb.SearchFullInformationAboutTasks(wr.ChanIn, msg, qp)
 	}
 }

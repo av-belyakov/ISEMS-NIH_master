@@ -596,7 +596,7 @@ func HandlerMsgFromAPI(
 				return
 			}
 
-			//получить полную информацию о задаче по ее ID
+			//получить полную информацию о задаче по ее ID (всю информацию кроме списка найденных файлов)
 			if msgc.MsgInstruction == "get all information by task ID" {
 				var ribtid configure.RequestInformationByTaskID
 				if err := json.Unmarshal(msgJSON, &ribtid); err != nil {
@@ -609,25 +609,63 @@ func HandlerMsgFromAPI(
 					return
 				}
 
-				/*
-				   в moduleAPIFOrmatJSONMessage определил типы которые будут использоваться для обработки запроса на
-				   получение подробной информации о задаче по ее ID и тип который будет содержать ответ с найденной инормацией о
-				   задаче или пустой тип И СТАТУС 'not found' - для не найденной задачи или 'refused' если был не верно сформирован
-				   запрос на поиск задачи (конкретнее, не верный ID задачи)
-				*/
-
 				fmt.Printf("func 'HandlerMsgFromAPI', MsgType: 'command', MsgSection: 'information search control', Instruction: 'get full information about task', RESEIVED REQUEST: %v\n", ribtid)
 
 				//проверяем ID задачи
-				/*
-					pattern := `^Application\sISEMS-NIH\s(master|slave),\sv\d+\.\d+\.\d+`
-					rx := regexp.MustCompile(pattern)
-					numVersion := rx.FindString(string(content))
-				*/
+				if ok := checkValidtaskID(ribtid.MsgOption.ReguestTaskID); !ok {
+					emt := ErrorMessageType{
+						TaskID:          ribtid.MsgOption.ReguestTaskID,
+						TaskIDClientAPI: ribtid.ClientTaskID,
+						IDClientAPI:     msg.IDClientAPI,
+						Section:         "information search control",
+						Instruction:     "task processing",
+						MsgType:         "danger",
+						ChanToAPI:       outCoreChans.OutCoreChanAPI,
+						MsgHuman: common.PatternUserMessage(&common.TypePatternUserMessage{
+							TaskType:   "поиск информации о задаче",
+							TaskAction: "задача отклонена",
+							Message:    "принят некорректный идентификатор задачи",
+						}),
+					}
 
-				//передаем в БД ID задачи для дальнейшего поиска
+					//сообщение о том что задача была отклонена
+					if err := ErrorMessage(emt); err != nil {
+						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
+					}
+
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprintf("invalid task ID '%v' accepted%v", ribtid.MsgOption.ReguestTaskID, funcName),
+						FuncName:    funcName,
+					})
+
+					return
+				}
+
+				outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
+					MsgGenerator:    "Core module",
+					MsgRecipient:    "DB module",
+					MsgSection:      "information search control",
+					Instruction:     "search full information by task ID",
+					IDClientAPI:     msg.IDClientAPI,
+					TaskIDClientAPI: ribtid.ClientTaskID,
+					AdvancedOptions: ribtid.MsgOption.ReguestTaskID,
+				}
 
 				return
+			}
+
+			//запрос на получение части списка файлов найденных в результате успешной фильтрации
+			if msgc.MsgInstruction == "get part of the list of found files" {
+				/*
+				   здесть нужно обязательно получать ID задачи по которой нужен список найденных файлов,
+				   размер запрашиваемой части, количество элементов списка на которые нужно сдвинутся
+
+				   данный запрос выполняется только после обработки запроса по поиску информации о задаче,
+				   хотя в данном приложении это ни как не учитывается
+				*/
 			}
 
 			return

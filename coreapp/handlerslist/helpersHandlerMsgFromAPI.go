@@ -1,9 +1,9 @@
 package handlerslist
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 
 	"ISEMS-NIH_master/common"
@@ -22,26 +22,14 @@ func handlerFiltrationControlTypeStart(
 
 	funcName := "handlerFiltrationControlTypeStart"
 
-	//сообщение о том что задача была отклонена
-	resMsg := configure.FiltrationControlTypeInfo{
-		MsgOption: configure.FiltrationControlMsgTypeInfo{
-			ID:     fcts.MsgOption.ID,
-			Status: "refused",
-		},
-	}
-	resMsg.MsgType = "information"
-	resMsg.MsgSection = "filtration control"
-	resMsg.MsgInstruction = "task processing"
-	resMsg.ClientTaskID = fcts.ClientTaskID
-
-	msgJSON, err := json.Marshal(resMsg)
-	if err != nil {
-		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-			Description: fmt.Sprint(err),
-			FuncName:    funcName,
-		})
-
-		return
+	emt := ErrorMessageType{
+		SourceID:        fcts.MsgOption.ID,
+		TaskIDClientAPI: fcts.MsgCommon.ClientTaskID,
+		IDClientAPI:     clientID,
+		Section:         "filtration control",
+		Instruction:     "task processing",
+		MsgType:         "danger",
+		ChanToAPI:       chanToAPI,
 	}
 
 	//проверяем параметры фильтрации
@@ -51,23 +39,14 @@ func handlerFiltrationControlTypeStart(
 			FuncName:    funcName,
 		})
 
-		//отправляем информационное сообщение
-		notifications.SendNotificationToClientAPI(
-			chanToAPI,
-			notifications.NotificationSettingsToClientAPI{
-				MsgType:        "danger",
-				MsgDescription: msg,
-				Sources:        []int{fcts.MsgOption.ID},
-			},
-			fcts.ClientTaskID,
-			clientID)
+		emt.MsgHuman = msg
 
-		//отправляем сообщение что задача была отклонена
-		chanToAPI <- &configure.MsgBetweenCoreAndAPI{
-			MsgGenerator: "Core module",
-			MsgRecipient: "API module",
-			IDClientAPI:  clientID,
-			MsgJSON:      msgJSON,
+		//сообщение о том что задача была отклонена
+		if err := ErrorMessage(emt); err != nil {
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(err),
+				FuncName:    funcName,
+			})
 		}
 
 		return
@@ -81,27 +60,19 @@ func handlerFiltrationControlTypeStart(
 			FuncName:    funcName,
 		})
 
-		//отправляем информационное сообщение
-		notifications.SendNotificationToClientAPI(
-			chanToAPI,
-			notifications.NotificationSettingsToClientAPI{
-				MsgType: "danger",
-				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
-					SourceID:   fcts.MsgOption.ID,
-					TaskType:   "фильтрация",
-					TaskAction: "задача отклонена",
-					Message:    "источник не подключен",
-				}),
-			},
-			fcts.ClientTaskID,
-			clientID)
+		emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+			SourceID:   fcts.MsgOption.ID,
+			TaskType:   "фильтрация",
+			TaskAction: "задача отклонена",
+			Message:    "источник не подключен",
+		})
 
-		//отправляем сообщение что задача была отклонена
-		chanToAPI <- &configure.MsgBetweenCoreAndAPI{
-			MsgGenerator: "Core module",
-			MsgRecipient: "API module",
-			IDClientAPI:  clientID,
-			MsgJSON:      msgJSON,
+		//сообщение о том что задача была отклонена
+		if err := ErrorMessage(emt); err != nil {
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(err),
+				FuncName:    funcName,
+			})
 		}
 
 		return
@@ -178,21 +149,13 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 
 	funcName := "handlerInformationSearchControlTypeSearchCommanInformation"
 
-	//сообщение о том что задача была отклонена
-	resMsg := configure.SearchInformationResponseCommanInfo{MsgOption: configure.SearchInformationResponseOptionCommanInfo{Status: "refused"}}
-	resMsg.MsgType = "information"
-	resMsg.MsgSection = "information search control"
-	resMsg.MsgInstruction = "task processing"
-	resMsg.ClientTaskID = siatr.ClientTaskID
-
-	msgJSON, err := json.Marshal(resMsg)
-	if err != nil {
-		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-			Description: fmt.Sprint(err),
-			FuncName:    funcName,
-		})
-
-		return
+	emt := ErrorMessageType{
+		TaskIDClientAPI: siatr.MsgCommon.ClientTaskID,
+		IDClientAPI:     clientID,
+		Section:         "information search control",
+		Instruction:     "task processing",
+		MsgType:         "danger",
+		ChanToAPI:       chanToAPI,
 	}
 
 	//проверяем параметры необходимые для поиска общей информации по задачам
@@ -202,26 +165,14 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 			FuncName:    funcName,
 		})
 
-		//отправляем информационное сообщение
-		notifications.SendNotificationToClientAPI(
-			chanToAPI,
-			notifications.NotificationSettingsToClientAPI{
-				MsgType: "danger",
-				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
-					TaskType:   "поиск",
-					TaskAction: "задача отклонена",
-					Message:    msg,
-				}),
-			},
-			siatr.ClientTaskID,
-			clientID)
+		emt.MsgHuman = msg
 
-		//отправляем сообщение что задача была отклонена
-		chanToAPI <- &configure.MsgBetweenCoreAndAPI{
-			MsgGenerator: "Core module",
-			MsgRecipient: "API module",
-			IDClientAPI:  clientID,
-			MsgJSON:      msgJSON,
+		//сообщение о том что задача была отклонена
+		if err := ErrorMessage(emt); err != nil {
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(err),
+				FuncName:    funcName,
+			})
 		}
 
 		return
@@ -241,26 +192,18 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 			FuncName:    funcName,
 		})
 
-		//отправляем информационное сообщение
-		notifications.SendNotificationToClientAPI(
-			chanToAPI,
-			notifications.NotificationSettingsToClientAPI{
-				MsgType: "danger",
-				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
-					TaskType:   "поиск",
-					TaskAction: "задача отклонена",
-					Message:    "невозможно выполнить поиск, внутренняя ошибка приложения",
-				}),
-			},
-			siatr.ClientTaskID,
-			clientID)
+		emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+			TaskType:   "поиск информации о задаче",
+			TaskAction: "задача отклонена",
+			Message:    "невозможно выполнить поиск, внутренняя ошибка приложения",
+		})
 
-		//отправляем сообщение что задача была отклонена
-		chanToAPI <- &configure.MsgBetweenCoreAndAPI{
-			MsgGenerator: "Core module",
-			MsgRecipient: "API module",
-			IDClientAPI:  clientID,
-			MsgJSON:      msgJSON,
+		//сообщение о том что задача была отклонена
+		if err := ErrorMessage(emt); err != nil {
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(err),
+				FuncName:    funcName,
+			})
 		}
 
 		return
@@ -373,7 +316,7 @@ func CheckParametersSearchCommonInformation(siatro *configure.SearchInformationA
 				SourceID:   siatro.ID,
 				TaskType:   "поиск информации",
 				TaskAction: "задача отклонена",
-				Message:    "начальное время для поиска информации не должно быть больше конечного времени",
+				Message:    "начальное время, для поиска информации, не должно быть больше конечного",
 			}), false
 		}
 
@@ -590,4 +533,11 @@ func checkNetworkParametersIsNotEmpty(np map[string]map[string]*[]string) bool {
 	}
 
 	return false
+}
+
+func checkValidtaskID(taskID string) bool {
+	rx := regexp.MustCompile(`^(\w)+$`)
+	ok := rx.MatchString(taskID)
+
+	return ok
 }

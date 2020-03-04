@@ -391,6 +391,101 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 	return lbti, nil
 }
 
+func SearchFullInformationAboutTasks(qp QueryParameters, taskID string) (configure.ResponseTaskParameter, error) {
+	cur, err := qp.Find(bson.D{bson.E{Key: "task_id", Value: taskID}})
+	if err != nil {
+		return configure.ResponseTaskParameter{}, err
+	}
+
+	liat := []*configure.InformationAboutTask{}
+	for cur.Next(context.Background()) {
+		var model configure.InformationAboutTask
+		if err := cur.Decode(&model); err != nil {
+			return configure.ResponseTaskParameter{}, err
+		}
+
+		liat = append(liat, &model)
+	}
+
+	if err := cur.Err(); err != nil {
+		return configure.ResponseTaskParameter{}, err
+	}
+
+	cur.Close(context.Background())
+
+	if len(liat) == 0 {
+		return configure.ResponseTaskParameter{}, err
+	}
+
+	rtp := configure.ResponseTaskParameter{
+		TaskID:       liat[0].TaskID,
+		ClientTaskID: liat[0].ClientTaskID,
+		SourceID:     liat[0].SourceID,
+		GeneralInformationAboutTask: configure.GeneralInformationAboutTask{
+			TaskProcessed:     liat[0].GeneralInformationAboutTask.TaskProcessed,
+			DateTimeProcessed: liat[0].GeneralInformationAboutTask.DateTimeProcessed,
+			ClientIDIP:        liat[0].GeneralInformationAboutTask.ClientID,
+			DetailDescription: configure.DetailDescription{
+				UserNameClosedProcess:        liat[0].GeneralInformationAboutTask.DetailDescription.UserNameProcessed,
+				DescriptionProcessingResults: liat[0].GeneralInformationAboutTask.DetailDescription.DescriptionProcessingResults,
+			},
+		},
+		FilteringOption: configure.TaskFilteringOption{
+			DateTime: configure.DateTimeParameters{
+				Start: liat[0].FilteringOption.DateTime.Start,
+				End:   liat[0].FilteringOption.DateTime.End,
+			},
+			Protocol: liat[0].FilteringOption.Protocol,
+			Filters: configure.FiltrationControlParametersNetworkFilters{
+				IP: configure.FiltrationControlIPorNetorPortParameters{
+					Any: liat[0].FilteringOption.Filters.IP.Any,
+					Src: liat[0].FilteringOption.Filters.IP.Src,
+					Dst: liat[0].FilteringOption.Filters.IP.Dst,
+				},
+				Port: configure.FiltrationControlIPorNetorPortParameters{
+					Any: liat[0].FilteringOption.Filters.Port.Any,
+					Src: liat[0].FilteringOption.Filters.Port.Src,
+					Dst: liat[0].FilteringOption.Filters.Port.Dst,
+				},
+				Network: configure.FiltrationControlIPorNetorPortParameters{
+					Any: liat[0].FilteringOption.Filters.Network.Any,
+					Src: liat[0].FilteringOption.Filters.Network.Src,
+					Dst: liat[0].FilteringOption.Filters.Network.Dst,
+				},
+			},
+		},
+		DetailedInformationOnFiltering: configure.InformationOnFiltering{
+			TaskStatus: liat[0].DetailedInformationOnFiltering.TaskStatus,
+			TimeIntervalTaskExecution: configure.DateTimeParameters{
+				Start: liat[0].DetailedInformationOnFiltering.TimeIntervalTaskExecution.Start,
+				End:   liat[0].DetailedInformationOnFiltering.TimeIntervalTaskExecution.End,
+			},
+			WasIndexUsed:                    liat[0].DetailedInformationOnFiltering.WasIndexUsed,
+			NumberProcessedFiles:            liat[0].DetailedInformationOnFiltering.NumberProcessedFiles,
+			NumberDirectoryFiltartion:       liat[0].DetailedInformationOnFiltering.NumberDirectoryFiltartion,
+			NumberErrorProcessedFiles:       liat[0].DetailedInformationOnFiltering.NumberErrorProcessedFiles,
+			NumberFilesMeetFilterParameters: liat[0].DetailedInformationOnFiltering.NumberFilesMeetFilterParameters,
+			NumberFilesFoundResultFiltering: liat[0].DetailedInformationOnFiltering.NumberFilesFoundResultFiltering,
+			SizeFilesMeetFilterParameters:   liat[0].DetailedInformationOnFiltering.SizeFilesMeetFilterParameters,
+			SizeFilesFoundResultFiltering:   liat[0].DetailedInformationOnFiltering.SizeFilesFoundResultFiltering,
+			PathDirectoryForFilteredFiles:   liat[0].DetailedInformationOnFiltering.PathDirectoryForFilteredFiles,
+		},
+		DetailedInformationOnDownloading: configure.InformationOnDownloading{
+			TaskStatus: liat[0].DetailedInformationOnDownloading.TaskStatus,
+			TimeIntervalTaskExecution: configure.DateTimeParameters{
+				Start: liat[0].DetailedInformationOnDownloading.TimeIntervalTaskExecution.Start,
+				End:   liat[0].DetailedInformationOnDownloading.TimeIntervalTaskExecution.End,
+			},
+			NumberFilesTotal:                    liat[0].DetailedInformationOnDownloading.NumberFilesTotal,
+			NumberFilesDownloaded:               liat[0].DetailedInformationOnDownloading.NumberFilesDownloaded,
+			NumberFilesDownloadedError:          liat[0].DetailedInformationOnDownloading.NumberFilesDownloadedError,
+			PathDirectoryStorageDownloadedFiles: liat[0].DetailedInformationOnDownloading.PathDirectoryStorageDownloadedFiles,
+		},
+	}
+
+	return rtp, err
+}
+
 var _ = Describe("InteractionDBSearch", func() {
 	ctx, cancel := context.WithTimeout(context.Background(), 1000*time.Second)
 	defer cancel()
@@ -1172,14 +1267,29 @@ var _ = Describe("InteractionDBSearch", func() {
 		})
 	})
 
-	Context("Тест 17. Проверяем поиск информации по сетевым параметрам (IP, Port, Network) и какой либо доп. параметр", func() {
-		It("Поиск только по (ip адресам или network) и временному диапазону, должно быть получено '' значений", func() {
+	Context("Тест 17. Проверяем поиск полной информации по ID задачи", func() {
+		It("Должна быть получена полная информация о существующей задаче, ошибки быть не должно", func() {
+			tid := "ea94311cca456ee618bfc2fc135220c1"
 
+			info, err := SearchFullInformationAboutTasks(qp, tid)
+
+			fmt.Printf("INFORMATION ABOUT TASK BY TASK ID: '%v'\n", info)
+
+			/*
+			   Данный тест прошел успешно, желательно ЕЩЕ РАЗ ПРОВЕРИТЬ добавляемые в configure.ResponseTaskParameter
+			   параметры, что бы они совпадали с параметрами из configure.InformationAboutTask и можно это переносить
+			   в обработчик запроса, который находится в модуле взаимодействия с БД
+			*/
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(info.TaskID).Should(Equal(tid))
 		})
 
-		It("Поиск только по (ip адресам или network) и временному диапазону и статусу фильтрации, должно быть получено '' значений", func() {
+		/*
+			It("Поиск только по (ip адресам или network) и временному диапазону и статусу фильтрации, должно быть получено '' значений", func() {
 
-		})
+			})
+		*/
 	})
 
 	/*
