@@ -392,6 +392,8 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 }
 
 func SearchFullInformationAboutTasks(qp QueryParameters, taskID string) (configure.ResponseTaskParameter, error) {
+	const maxCountFiles = 50
+
 	cur, err := qp.Find(bson.D{bson.E{Key: "task_id", Value: taskID}})
 	if err != nil {
 		return configure.ResponseTaskParameter{}, err
@@ -414,7 +416,30 @@ func SearchFullInformationAboutTasks(qp QueryParameters, taskID string) (configu
 	cur.Close(context.Background())
 
 	if len(liat) == 0 {
+
+		fmt.Println("--- func 'SearchFullInformationAboutTasks', INFORMATION NOT FOUND ---")
+
 		return configure.ResponseTaskParameter{}, err
+	}
+
+	numFiles := len(liat[0].ListFilesResultTaskExecution)
+
+	maxListSize := numFiles
+	var filesList []configure.FileInformation
+	if numFiles > 0 {
+		if numFiles > maxCountFiles {
+			maxListSize = maxCountFiles
+		}
+
+		filesList = make([]configure.FileInformation, 0, maxListSize)
+
+		for i := 0; i < maxListSize; i++ {
+			filesList = append(filesList, configure.FileInformation{
+				Name:     liat[0].ListFilesResultTaskExecution[i].FileName,
+				Size:     liat[0].ListFilesResultTaskExecution[i].FileSize,
+				IsLoaded: liat[0].ListFilesResultTaskExecution[i].FileLoaded,
+			})
+		}
 	}
 
 	rtp := configure.ResponseTaskParameter{
@@ -424,7 +449,7 @@ func SearchFullInformationAboutTasks(qp QueryParameters, taskID string) (configu
 		GeneralInformationAboutTask: configure.GeneralInformationAboutTask{
 			TaskProcessed:     liat[0].GeneralInformationAboutTask.TaskProcessed,
 			DateTimeProcessed: liat[0].GeneralInformationAboutTask.DateTimeProcessed,
-			ClientIDIP:        liat[0].GeneralInformationAboutTask.ClientID,
+			ClientIDIP:        liat[0].GeneralInformationAboutTask.ClientID, // <ID_client:IP_client>
 			DetailDescription: configure.DetailDescription{
 				UserNameClosedProcess:        liat[0].GeneralInformationAboutTask.DetailDescription.UserNameProcessed,
 				DescriptionProcessingResults: liat[0].GeneralInformationAboutTask.DetailDescription.DescriptionProcessingResults,
@@ -481,6 +506,7 @@ func SearchFullInformationAboutTasks(qp QueryParameters, taskID string) (configu
 			NumberFilesDownloadedError:          liat[0].DetailedInformationOnDownloading.NumberFilesDownloadedError,
 			PathDirectoryStorageDownloadedFiles: liat[0].DetailedInformationOnDownloading.PathDirectoryStorageDownloadedFiles,
 		},
+		DetailedInformationListFiles: filesList,
 	}
 
 	return rtp, err
@@ -1269,7 +1295,7 @@ var _ = Describe("InteractionDBSearch", func() {
 
 	Context("Тест 17. Проверяем поиск полной информации по ID задачи", func() {
 		It("Должна быть получена полная информация о существующей задаче, ошибки быть не должно", func() {
-			tid := "ea94311cca456ee618bfc2fc135220c1"
+			tid := "4b52190d116d33306aae803e98c55df6"
 
 			info, err := SearchFullInformationAboutTasks(qp, tid)
 

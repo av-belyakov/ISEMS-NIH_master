@@ -411,6 +411,13 @@ type SearchFilteringOptions struct {
 
 // ПОЧТИ ПОЛНАЯ ИНФОРМАЦИЮ ПО ЗАДАЧЕ (нет только списка найденных файлов)
 
+//SearchInformationResponseInformationByTaskID ответ содержащий почти полную информацию о задаче
+// поиск которой осуществлялся по ее ID (может быть не весь список файлов)
+type SearchInformationResponseInformationByTaskID struct {
+	MsgCommon
+	MsgOption ResponseInformationByTaskID `json:"o"`
+}
+
 //RequestInformationByTaskID запрос на получение информации о задаче по ее ID
 type RequestInformationByTaskID struct {
 	MsgCommon
@@ -438,6 +445,7 @@ type ResponseInformationByTaskID struct {
 // FilteringOption - параметры фильтрации
 // DetailedInformationOnFiltering - результаты фильтрации
 // DetailedInformationOnDownloading - результаты выгрузки файлов
+// DetailedInformationListFiles - подробная информация о первых 50 найденных файлах (первые 50 и все остальные передаются отдельным запросом)
 type ResponseTaskParameter struct {
 	TaskID                           string                      `json:"tid"`
 	ClientTaskID                     string                      `json:"ctid"`
@@ -446,6 +454,7 @@ type ResponseTaskParameter struct {
 	FilteringOption                  TaskFilteringOption         `json:"fo"`
 	DetailedInformationOnFiltering   InformationOnFiltering      `json:"diof"`
 	DetailedInformationOnDownloading InformationOnDownloading    `json:"diod"`
+	DetailedInformationListFiles     []FileInformation           `json:"dilf"`
 }
 
 //GeneralInformationAboutTask содкржит общие параметры задачи
@@ -518,6 +527,16 @@ type InformationOnDownloading struct {
 	NumberFilesDownloaded               int                `json:"nfd"`
 	NumberFilesDownloadedError          int                `json:"nfde"`
 	PathDirectoryStorageDownloadedFiles string             `json:"pdsdf"`
+}
+
+//FileInformation информация о файле
+// Name - название файла
+// Size - размер файла
+// IsLoaded - был ли файл загружен (true - загружен)
+type FileInformation struct {
+	Name     string `json:"n"`
+	Size     int64  `json:"s"`
+	IsLoaded bool   `json:"isl"`
 }
 
 //SearchInformationResponseCommanInfo общее описание ответа при поиске информации о задачах

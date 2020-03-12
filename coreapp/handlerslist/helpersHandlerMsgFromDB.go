@@ -198,6 +198,42 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 	return nil
 }
 
+//sendMsgCompliteTaskSearchInformationByTaskID отправляет полную информацию о найденной задаче
+// клиенту API, есть только ограничение по размеру списка файлов
+func sendMsgCompliteTaskSearchInformationByTaskID(res *configure.MsgBetweenCoreAndDB, chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) error {
+	funcName := ", function 'sendMsgCompliteTaskSearchInformationByTaskID'"
+
+	rtp, ok := res.AdvancedOptions.(configure.ResponseTaskParameter)
+	if !ok {
+		return fmt.Errorf("type conversion error%v", funcName)
+	}
+
+	resMsg := configure.SearchInformationResponseInformationByTaskID{
+		MsgOption: configure.ResponseInformationByTaskID{
+			Status:        "complete",
+			TaskParameter: rtp,
+		},
+	}
+	resMsg.MsgType = "information"
+	resMsg.MsgSection = "information search control"
+	resMsg.MsgInstruction = "processing get all information by task ID"
+	resMsg.ClientTaskID = res.TaskIDClientAPI
+
+	msgJSON, err := json.Marshal(resMsg)
+	if err != nil {
+		return err
+	}
+
+	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+		MsgGenerator: "Core module",
+		MsgRecipient: "API module",
+		IDClientAPI:  res.IDClientAPI,
+		MsgJSON:      msgJSON,
+	}
+
+	return nil
+}
+
 func getNumParts(fullSize, sizeChunk int) int {
 	return int(math.Round(float64(fullSize) / float64(sizeChunk)))
 }

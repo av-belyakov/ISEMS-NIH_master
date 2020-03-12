@@ -649,6 +649,7 @@ func HandlerMsgFromAPI(
 					MsgRecipient:    "DB module",
 					MsgSection:      "information search control",
 					Instruction:     "search full information by task ID",
+					TaskID:          ribtid.MsgOption.ReguestTaskID,
 					IDClientAPI:     msg.IDClientAPI,
 					TaskIDClientAPI: ribtid.ClientTaskID,
 					AdvancedOptions: ribtid.MsgOption.ReguestTaskID,

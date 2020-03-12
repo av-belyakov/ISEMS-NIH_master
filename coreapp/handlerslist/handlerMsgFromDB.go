@@ -61,9 +61,55 @@ func HandlerMsgFromDB(
 					})
 				}
 
-			case "full search result":
-				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'full search result', Response: '%v'\n", res)
+			//полная информация по taskID, может быть не полным список файлов (максимальный размер не больше 50)
+			case "information by task ID":
+				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'information by task ID', Response: '%v'\n", res)
 
+				if err := sendMsgCompliteTaskSearchInformationByTaskID(res, outCoreChans.OutCoreChanAPI); err != nil {
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
+				}
+
+			//дополнительный список файлов по конкретной задаче
+			case "list files by task ID":
+				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'list files by task ID', Response: '%v'\n", res)
+
+				/*
+					Поиск информации по заданным параметрам и поиск задачи по ее ID
+					реализовал. По тестам все работает.
+
+					Теперь необходимо:
+					 - Сделать обработку запроса на получения заданной части из списка файлов
+				*/
+
+			//если информация о задаче при поиске по taskID найдена не была
+			case "task not found":
+				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'task not found', Response: '%v'\n", res)
+
+				resMsg := configure.SearchInformationResponseInformationByTaskID{MsgOption: configure.ResponseInformationByTaskID{Status: "not found"}}
+				resMsg.MsgType = "information"
+				resMsg.MsgSection = "information search control"
+				resMsg.MsgInstruction = "processing get all information by task ID"
+				resMsg.ClientTaskID = res.TaskIDClientAPI
+
+				msgJSON, err := json.Marshal(resMsg)
+				if err != nil {
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
+
+					return
+				}
+
+				outCoreChans.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
+					MsgGenerator: "Core module",
+					MsgRecipient: "API module",
+					IDClientAPI:  res.IDClientAPI,
+					MsgJSON:      msgJSON,
+				}
 			}
 		}
 
