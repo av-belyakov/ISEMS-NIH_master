@@ -145,3 +145,162 @@ type FilesInformation struct {
 	FileHex    string `json:"file_hex" bson:"file_hex"`
 	FileLoaded bool   `json:"file_loaded" bson:"file_loaded"`
 }
+
+/* описание метаданных получаемых от Joy */
+
+//GeneralDescriptionNetworkPacket информация по сетевым пакетам
+// FileName - название файла
+// FileCreationTime - время создания файла
+// FileProcessingTime - время обработки файла
+// NetworkParameters - общие сетевые параметры
+type GeneralDescriptionNetworkPacket struct {
+	FileName           string
+	FileCreationTime   int64
+	FileProcessingTime int64
+	NetworkParameters  CommonNetworkParameters
+}
+
+//CommonNetworkParameters общие сетевые параметры
+// SrcAddr - ip адрес источника (src address)
+// DstAddr - ip адрес назначения (dsc address)
+// Proto - тип протокола транспортного уровня
+// SrcPort - сетевой порт источника (src port)
+// DstPort - сетевой порт назначения (dsc port)
+// BytesOut - кол-во отправленных байт
+// NumPktsOut - кол-во отправленных пакетов
+// BytesIn - кол-во принятых байт
+// NumPktsIn - кол-во принятых пакетов
+// TimeStart - начальное время пакета
+// TimeEnd - конечное время пакета
+// Packets - список с подробным описанием пакетов
+// PacketsIP - детальное описание ip пакета
+// PacketsHTTP - детальное описание HTTP пакета
+// PacketsDNS - детальное описание DNS пакета
+// PacketsSSH - детальное описание SSH пакета
+// PacketsTLS - детальное описание TLS пакета
+type CommonNetworkParameters struct {
+	SrcAddr     string                       `json:"sa" bson:"sa"`
+	DstAddr     string                       `json:"da" bson:"da"`
+	Proto       int                          `json:"pr" bson:"pr"`
+	SrcPort     int                          `json:"sp" bson:"sp"`
+	DstPort     int                          `json:"dp" bson:"dp"`
+	BytesOut    int                          `json:"bytes_out" bson:"bytes_out"`
+	NumPktsOut  int                          `json:"num_pkts_out" bson:"num_pkts_out"`
+	BytesIn     int                          `json:"bytes_in" bson:"bytes_in"`
+	NumPktsIn   int                          `json:"num_pkts_in" bson:"num_pkts_in"`
+	TimeStart   float32                      `json:"time_start" bson:"time_start"`
+	TimeEnd     float32                      `json:"time_end" bson:"time_end"`
+	Packets     []DetailedDescriptionPackets `json:"packets" bson:"packets"`
+	PacketsIP   DetailedPacketsIP            `json:"ip" bson:"ip"`
+	PacketsHTTP DetailedPacketsHTTP          `json:"http" bson:"http"`
+	PacketsDNS  DetailedPacketsDNS           `json:"dns" bson:"dns"`
+	PacketsSSH  DetailedPacketsSSH           `json:"ssh" bson:"ssh"`
+	PacketsTLS  DetailedPacketsTLS           `json:"tls" bson:"tls"`
+	//	PacketsDHCP  DetailedPacketsDHCP           `json:"" bson:""`
+}
+
+//DetailedDescriptionPackets подробное описание пакета
+// Byte - размер в байтах
+// Direction - направление передачи пакета
+// InterPacketTimes - время прибытия между пакетами
+type DetailedDescriptionPackets struct {
+	Byte             int    `json:"b" bson:"b"`
+	Direction        string `json:"dir" bson:"dir"`
+	InterPacketTimes int    `json:"ipt" bson:"ipt"`
+}
+
+//DetailedPacketsIP делаьное описание ip пакета
+// OutputPackets - описание исходящих ip пакетов
+// InputPackets - описание входящих ip пакетов
+type DetailedPacketsIP struct {
+	OutputPackets DetailedOutputInputPackets `json:"out" bson:"out"`
+	InputPackets  DetailedOutputInputPackets `json:"in" bson:"in"`
+}
+
+//DetailedOutputInputPackets детальное описание входящих и исходящих пакетов
+// TTL - время жизни пакета
+// ID - id пакета
+type DetailedOutputInputPackets struct {
+	TTL int   `json:"ttl" bson:"ttl"`
+	ID  []int `json:"id" bson:"id"`
+}
+
+//DetailedPacketsHTTP детальное описание HTTP пакета
+// OutputPacketsHTTP - описание исходящих HTTP пакетов
+// InputPacketsHTTP - описание входящих HTTP пакетов
+type DetailedPacketsHTTP struct {
+	OutputPacketsHTTP DetailedOutputPacketsHTTP `json:"" bson:""`
+	InputPacketsHTTP  DetailedInputPacketsHTTP  `json:"" bson:""`
+}
+
+//DetailedPacketsDNS детальное описание DNS пакета
+type DetailedPacketsDNS struct {
+}
+
+//DetailedPacketsSSH детальное описание SSH пакета
+type DetailedPacketsSSH struct {
+}
+
+//DetailedPacketsTLS детальное описание TLS пакета
+type DetailedPacketsTLS struct {
+}
+
+//DetailedOutputPacketsHTTP детальное описание изходящих HTTP сообщений
+// Method - метод
+// URI - уникальный идентификатор ресурса
+// Version - версия HTTP протокола
+// Host - имя хоста
+// UserAgent
+// Accept
+// AcceptLanguage
+// AcceptEncoding
+// CacheControl
+// Pragma
+// Connection
+// Body - первые 32 байта данных
+type DetailedOutputPacketsHTTP struct {
+	Method         string `json:"method" bson:"method"`
+	URI            string `json:"uri" bson:"uri"`
+	Version        string `json:"version" bson:"version"`
+	Host           string `json:"Host" bson:"Host"`
+	UserAgent      string `json:"User-Agent" bson:"User-Agent"`
+	Accept         string `json:"Accept" bson:"Accept"`
+	AcceptLanguage string `json:"Accept-Language" bson:"Accept-Language"`
+	AcceptEncoding string `json:"Accept-Encoding" bson:"Accept-Encoding"`
+	CacheControl   string `json:"Cache-Control" bson:"Cache-Control"`
+	Pragma         string `json:"" bson:""`
+	Connection     string `json:"Connection" bson:"Connection"`
+	Body           byte   `json:"body" bson:"body"`
+}
+
+//DetailedInputPacketsHTTP детальное описание изходящих HTTP сообщений
+// Version - версия HTTP протокола
+// Code - код ответа сервера
+// Reason - описание причины
+// ContentType - тип передаваемого контента
+// ContentLength - длинна контента
+// LastModified - время модификации
+// ETag
+// Accept-Ranges
+// Server
+// XAmzCfID
+// CacheControl
+// Date
+// Connection
+// Body - первые 32 байта данных
+type DetailedInputPacketsHTTP struct {
+	Version       string `json:"version" bson:"version"`
+	Code          int    `json:"code" bson:"code"`
+	Reason        string `json:"reason" bson:"reason"`
+	ContentType   string `json:"Content-Type" bson:"Content-Type"`
+	ContentLength int    `json:"Content-Length" bson:"Content-Length"`
+	LastModified  string `json:"Last-Modified" bson:"Last-Modified"`
+	ETag          string `json:"ETag" bson:"ETag"`
+	AcceptRanges  string `json:"Accept-Ranges" bson:"Accept-Ranges"`
+	Server        string `json:"Server" bson:"Server"`
+	XAmzCfID      string `json:"X-Amz-Cf-Id" bson:"X-Amz-Cf-Id"`
+	CacheControl  string `json:"Cache-Control" bson:"Cache-Control"`
+	Date          string `json:"Date" bson:"Date"`
+	Connection    string `json:"Connection" bson:"Connection"`
+	Body          byte   `json:"body" bson:"body"`
+}
