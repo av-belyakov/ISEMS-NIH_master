@@ -575,9 +575,6 @@ func HandlerMsgFromAPI(
 
 		// УПРАВЛЕНИЕ ПОИСКОМ ИНФОРМАЦИИ В БД ПРИЛОЖЕНИЯ
 		case "information search control":
-			fmt.Println("func 'HandlerMsgFromAPI', MsgType: 'command', MsgSection: 'information search control'")
-			fmt.Println(msgc)
-
 			//поиск информации по заданному фильтру
 			if msgc.MsgInstruction == "search common information" {
 				var siatr configure.SearchInformationAboutTasksRequest
@@ -609,12 +606,10 @@ func HandlerMsgFromAPI(
 					return
 				}
 
-				fmt.Printf("func 'HandlerMsgFromAPI', MsgType: 'command', MsgSection: 'information search control', Instruction: 'get full information about task', RESEIVED REQUEST: %v\n", ribtid)
-
 				//проверяем ID задачи
-				if ok := checkValidtaskID(ribtid.MsgOption.ReguestTaskID); !ok {
+				if ok := checkValidtaskID(ribtid.MsgOption.RequestTaskID); !ok {
 					emt := ErrorMessageType{
-						TaskID:          ribtid.MsgOption.ReguestTaskID,
+						TaskID:          ribtid.MsgOption.RequestTaskID,
 						TaskIDClientAPI: ribtid.ClientTaskID,
 						IDClientAPI:     msg.IDClientAPI,
 						Section:         "information search control",
@@ -637,7 +632,7 @@ func HandlerMsgFromAPI(
 					}
 
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						Description: fmt.Sprintf("invalid task ID '%v' accepted%v", ribtid.MsgOption.ReguestTaskID, funcName),
+						Description: fmt.Sprintf("invalid task ID '%v' accepted%v", ribtid.MsgOption.RequestTaskID, funcName),
 						FuncName:    funcName,
 					})
 
@@ -649,24 +644,72 @@ func HandlerMsgFromAPI(
 					MsgRecipient:    "DB module",
 					MsgSection:      "information search control",
 					Instruction:     "search full information by task ID",
-					TaskID:          ribtid.MsgOption.ReguestTaskID,
+					TaskID:          ribtid.MsgOption.RequestTaskID,
 					IDClientAPI:     msg.IDClientAPI,
 					TaskIDClientAPI: ribtid.ClientTaskID,
-					AdvancedOptions: ribtid.MsgOption.ReguestTaskID,
 				}
 
 				return
 			}
 
 			//запрос на получение части списка файлов найденных в результате успешной фильтрации
-			if msgc.MsgInstruction == "get part of the list of found files" {
-				/*
-				   здесть нужно обязательно получать ID задачи по которой нужен список найденных файлов,
-				   размер запрашиваемой части, количество элементов списка на которые нужно сдвинутся
+			if msgc.MsgInstruction == "get part of the list files" {
+				var glffr configure.GetListFoundFilesRequest
+				if err := json.Unmarshal(msgJSON, &glffr); err != nil {
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: "bad cast type JSON messages",
+						FuncName:    funcName,
+					})
 
-				   данный запрос выполняется только после обработки запроса по поиску информации о задаче,
-				   хотя в данном приложении это ни как не учитывается
-				*/
+					return
+				}
+
+				//проверяем ID задачи
+				if ok := checkValidtaskID(glffr.MsgOption.RequestTaskID); !ok {
+					emt := ErrorMessageType{
+						TaskID:          glffr.MsgOption.RequestTaskID,
+						TaskIDClientAPI: glffr.ClientTaskID,
+						IDClientAPI:     msg.IDClientAPI,
+						Section:         "information search control",
+						Instruction:     "task processing",
+						MsgType:         "danger",
+						ChanToAPI:       outCoreChans.OutCoreChanAPI,
+						MsgHuman: common.PatternUserMessage(&common.TypePatternUserMessage{
+							TaskType:   "поиск информации о задаче",
+							TaskAction: "задача отклонена",
+							Message:    "принят некорректный идентификатор задачи",
+						}),
+					}
+
+					//сообщение о том что задача была отклонена
+					if err := ErrorMessage(emt); err != nil {
+						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
+					}
+
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprintf("invalid task ID '%v' accepted%v", glffr.MsgOption.RequestTaskID, funcName),
+						FuncName:    funcName,
+					})
+
+					return
+				}
+
+				outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
+					MsgGenerator:    "Core module",
+					MsgRecipient:    "DB module",
+					MsgSection:      "information search control",
+					Instruction:     "get part of the list files",
+					TaskID:          glffr.MsgOption.RequestTaskID,
+					IDClientAPI:     msg.IDClientAPI,
+					TaskIDClientAPI: glffr.ClientTaskID,
+					AdvancedOptions: glffr.MsgOption,
+				}
+
+				return
 			}
 
 			return

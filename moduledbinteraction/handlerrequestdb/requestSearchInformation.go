@@ -2,6 +2,8 @@ package handlerrequestdb
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"ISEMS-NIH_master/configure"
 
@@ -138,7 +140,8 @@ func SearchFullInformationAboutTasks(
 	cur.Close(context.Background())
 
 	if len(liat) == 0 {
-		msgRes.Instruction = "task not found"
+		msgRes.AdvancedOptions = configure.ResponseInformationByTaskID{Status: "task not found"}
+
 		chanIn <- &msgRes
 
 		return
@@ -171,7 +174,7 @@ func SearchFullInformationAboutTasks(
 		GeneralInformationAboutTask: configure.GeneralInformationAboutTask{
 			TaskProcessed:     liat[0].GeneralInformationAboutTask.TaskProcessed,
 			DateTimeProcessed: liat[0].GeneralInformationAboutTask.DateTimeProcessed,
-			ClientIDIP:        liat[0].GeneralInformationAboutTask.ClientID, // <ID_client:IP_client>
+			ClientIDIP:        liat[0].GeneralInformationAboutTask.ClientID,
 			DetailDescription: configure.DetailDescription{
 				UserNameClosedProcess:        liat[0].GeneralInformationAboutTask.DetailDescription.UserNameProcessed,
 				DescriptionProcessingResults: liat[0].GeneralInformationAboutTask.DetailDescription.DescriptionProcessingResults,
@@ -231,7 +234,143 @@ func SearchFullInformationAboutTasks(
 		DetailedInformationListFiles: filesList,
 	}
 
-	msgRes.AdvancedOptions = rtp
+	msgRes.AdvancedOptions = configure.ResponseInformationByTaskID{
+		Status:        "complete",
+		TaskParameter: rtp,
+	}
+
+	chanIn <- &msgRes
+}
+
+//GetListFoundFiles получить список найденных в результате фильтрации файлов
+func GetListFoundFiles(
+	chanIn chan<- *configure.MsgBetweenCoreAndDB,
+	req *configure.MsgBetweenCoreAndDB,
+	qp QueryParameters) {
+
+	msgRes := configure.MsgBetweenCoreAndDB{
+		MsgGenerator:    req.MsgRecipient,
+		MsgRecipient:    req.MsgGenerator,
+		MsgSection:      "information search control",
+		Instruction:     "list files by task ID",
+		IDClientAPI:     req.IDClientAPI,
+		TaskID:          req.TaskID,
+		TaskIDClientAPI: req.TaskIDClientAPI,
+	}
+
+	//приняты некорректные параметры запроса
+	errMsg := "invalid request parameters were accepted"
+
+	lffro, ok := req.AdvancedOptions.(configure.GetListFoundFilesRequestOption)
+	if !ok {
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: errMsg,
+			ErrorBody:             errors.New(errMsg),
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	lfi := make([]*configure.FilesInformation, 0, lffro.PartSize)
+	cur, err := qp.Find(bson.D{bson.E{Key: "task_id", Value: lffro.RequestTaskID}})
+	if err != nil {
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: "search for information in the database is not possible, error processing the request to the database",
+			ErrorBody:             err,
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	liat := []*configure.InformationAboutTask{}
+	for cur.Next(context.Background()) {
+		var model configure.InformationAboutTask
+		if err := cur.Decode(&model); err != nil {
+			msgRes.MsgSection = "error notification"
+			msgRes.AdvancedOptions = configure.ErrorNotification{
+				SourceReport:          "DB module",
+				HumanDescriptionError: "search for information in the database is not possible, internal error when processing the DB response",
+				ErrorBody:             err,
+			}
+
+			chanIn <- &msgRes
+
+			return
+		}
+
+		liat = append(liat, &model)
+	}
+
+	if err := cur.Err(); err != nil {
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: "search for information in the database is not possible, internal error when processing the DB response",
+			ErrorBody:             err,
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	cur.Close(context.Background())
+
+	// информация по задаче не найдена
+	if len(liat) == 0 {
+		msgRes.AdvancedOptions = configure.ListFoundFilesResponseOption{Status: "task not found"}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	partSize := lffro.PartSize
+	if partSize > 250 {
+		partSize = 250
+	}
+
+	commonPartSize := (partSize + lffro.OffsetListParts)
+	numFoundFiles := len(liat[0].ListFilesResultTaskExecution)
+	if numFoundFiles < (lffro.OffsetListParts + 1) {
+		// общее количество найденных файлов, меньше чем количество файлов, на которое нужно выполнить смещение
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: "the total number of files found is less than the number of files to offset",
+			ErrorBody:             fmt.Errorf("the total number of files found for the issue with ID %q is less than the number of files to offset", lffro.RequestTaskID),
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	if numFoundFiles <= commonPartSize {
+		lfi = append(lfi, liat[0].ListFilesResultTaskExecution[lffro.OffsetListParts:]...)
+	} else {
+		lfi = append(lfi, liat[0].ListFilesResultTaskExecution[lffro.OffsetListParts:commonPartSize]...)
+	}
+
+	lf := configure.ListFoundFilesResponseOption{
+		Status:          "complete",
+		TaskID:          lffro.RequestTaskID,
+		ClientTaskID:    liat[0].ClientTaskID,
+		SourceID:        liat[0].SourceID,
+		FullListSize:    numFoundFiles,
+		RequestPartSize: partSize,
+		OffsetListParts: lffro.OffsetListParts,
+		ListFiles:       lfi,
+	}
+	msgRes.AdvancedOptions = lf
 
 	chanIn <- &msgRes
 }

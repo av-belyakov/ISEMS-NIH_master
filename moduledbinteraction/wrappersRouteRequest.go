@@ -123,5 +123,10 @@ func (wr *WrappersRouteRequest) WrapperFuncSearch(
 		fmt.Println("func 'WrapperFuncSearch', Instruction: 'search full information'")
 
 		handlerrequestdb.SearchFullInformationAboutTasks(wr.ChanIn, msg, qp)
+
+	case "get part of the list files":
+		fmt.Println("func 'WrapperFuncSearch', Instruction: 'get part of the list files'")
+
+		handlerrequestdb.GetListFoundFiles(wr.ChanIn, msg, qp)
 	}
 }

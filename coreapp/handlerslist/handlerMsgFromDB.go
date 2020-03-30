@@ -25,6 +25,9 @@ func HandlerMsgFromDB(
 	case "Core module":
 		switch res.MsgSection {
 		case "error notification":
+
+			fmt.Println("func 'HandlerMsgFromDB', MsgRecipient: 'Core module', MsgSection: 'error notification'")
+
 			//если сообщение об ошибке только для ядра приложения
 			if en, ok := res.AdvancedOptions.(configure.ErrorNotification); ok {
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
@@ -76,44 +79,41 @@ func HandlerMsgFromDB(
 			case "list files by task ID":
 				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'list files by task ID', Response: '%v'\n", res)
 
-				/*
-					Поиск информации по заданным параметрам и поиск задачи по ее ID
-					реализовал. По тестам все работает.
-
-					Теперь необходимо:
-					 - Сделать обработку запроса на получения заданной части из списка файлов
-				*/
-
-			//если информация о задаче при поиске по taskID найдена не была
-			case "task not found":
-				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'task not found', Response: '%v'\n", res)
-
-				resMsg := configure.SearchInformationResponseInformationByTaskID{MsgOption: configure.ResponseInformationByTaskID{Status: "not found"}}
-				resMsg.MsgType = "information"
-				resMsg.MsgSection = "information search control"
-				resMsg.MsgInstruction = "processing get all information by task ID"
-				resMsg.ClientTaskID = res.TaskIDClientAPI
-
-				msgJSON, err := json.Marshal(resMsg)
-				if err != nil {
+				if err := sendMsgCompliteTaskListFilesByTaskID(res, outCoreChans.OutCoreChanAPI); err != nil {
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
 					})
-
-					return
 				}
 
-				outCoreChans.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
-					MsgGenerator: "Core module",
-					MsgRecipient: "API module",
-					IDClientAPI:  res.IDClientAPI,
-					MsgJSON:      msgJSON,
-				}
 			}
 		}
 
 	case "API module":
+		if res.MsgSection == "error notification" {
+			en, ok := res.AdvancedOptions.(configure.ErrorNotification)
+			if !ok {
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: "type conversion error section type 'error notification'",
+					FuncName:    funcName,
+				})
+			} else {
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(en.ErrorBody),
+					FuncName:    funcName,
+				})
+
+				ns := notifications.NotificationSettingsToClientAPI{
+					MsgType: "danger",
+					MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+						Message: "ошибка базы данных при обработке запроса",
+					}),
+				}
+
+				notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, res.TaskIDClientAPI, res.IDClientAPI)
+			}
+		}
+
 		taskInfo, taskIsExist := hsm.SMT.GetStoringMemoryTask(res.TaskID)
 		if !taskIsExist {
 			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
@@ -239,31 +239,6 @@ func HandlerMsgFromDB(
 
 		case "information search control":
 			//пока заглушка
-
-		case "error notification":
-			en, ok := res.AdvancedOptions.(configure.ErrorNotification)
-			if !ok {
-				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-					Description: "type conversion error section type 'error notification'",
-					FuncName:    funcName,
-				})
-
-				return
-			}
-
-			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-				Description: fmt.Sprint(en.ErrorBody),
-				FuncName:    funcName,
-			})
-
-			ns := notifications.NotificationSettingsToClientAPI{
-				MsgType: "danger",
-				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
-					Message: "ошибка базы данных при обработке запроса",
-				}),
-			}
-
-			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, taskInfo.ClientTaskID, res.IDClientAPI)
 
 		case "message notification":
 			mn, ok := res.AdvancedOptions.(configure.MessageNotification)

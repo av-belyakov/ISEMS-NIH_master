@@ -149,11 +149,15 @@ type FilesInformation struct {
 /* описание метаданных получаемых от Joy */
 
 //GeneralDescriptionNetworkPacket информация по сетевым пакетам
+// SourceID - идентификатор источника
+// TaskID - идентификатор задачи (если есть)
 // FileName - название файла
 // FileCreationTime - время создания файла
 // FileProcessingTime - время обработки файла
 // NetworkParameters - общие сетевые параметры
 type GeneralDescriptionNetworkPacket struct {
+	SourceID           int
+	TaskID             string
 	FileName           string
 	FileCreationTime   int64
 	FileProcessingTime int64
@@ -213,8 +217,8 @@ type DetailedDescriptionPackets struct {
 // OutputPackets - описание исходящих ip пакетов
 // InputPackets - описание входящих ip пакетов
 type DetailedPacketsIP struct {
-	OutputPackets DetailedOutputInputPackets `json:"out" bson:"out"`
-	InputPackets  DetailedOutputInputPackets `json:"in" bson:"in"`
+	OutputPackets DetailedOutputInputPackets `json:"out" bson:"ip_out"`
+	InputPackets  DetailedOutputInputPackets `json:"in" bson:"ip_in"`
 }
 
 //DetailedOutputInputPackets детальное описание входящих и исходящих пакетов
@@ -229,13 +233,71 @@ type DetailedOutputInputPackets struct {
 // OutputPacketsHTTP - описание исходящих HTTP пакетов
 // InputPacketsHTTP - описание входящих HTTP пакетов
 type DetailedPacketsHTTP struct {
-	OutputPacketsHTTP DetailedOutputPacketsHTTP `json:"" bson:""`
-	InputPacketsHTTP  DetailedInputPacketsHTTP  `json:"" bson:""`
+	OutputPacketsHTTP DetailedOutputPacketsHTTP `json:"out" bson:"http_out"`
+	InputPacketsHTTP  DetailedInputPacketsHTTP  `json:"in" bson:"http_in"`
 }
 
 //DetailedPacketsDNS детальное описание DNS пакета
+// QueryName - запрашиваемое доменное имя (в запросе)
+// ResponsedName - запрашиваемое доменное имя (в ответе)
+// ResponseCode - код ответа
+// ResourceRecord - ресурсная запись
 type DetailedPacketsDNS struct {
+	QueryName      string                         `json:"qn" bson:"qname"`
+	ResponsedName  string                         `json:"rn" bson:"rname"`
+	ResponseCode   int                            `json:"rc" bson:"rcode"`
+	ResourceRecord []ResourceRecordDescriptionDNS `json:"rr" bson:"resrec"`
 }
+
+//ResourceRecordDescriptionDNS детальное описание ресурсной записи DNS протокола
+// Address - ip address
+// CanonicalName - каноническое имя
+// Type - тип ресурсной записи
+// Class - класс ресурсной записи
+// RdLength - длинна
+// TTL - время жизни
+type ResourceRecordDescriptionDNS struct {
+	Address       string `json:"a" bson:"a"`
+	CanonicalName string `json:"cname" bson:"cname"`
+	Type          int    `json:"type" bson:"type"`
+	Class         string `json:"class" bson:"class"`
+	RdLength      int    `json:"rdlength" bson:"rdlength"`
+	TTL           int    `json:"ttl" bson:"ttl"`
+}
+
+/*
+{"rn": {"type": "string",
+                                            "title": "response name",
+                                            "description": "DNS name"
+                                           },
+
+                                     "rc": {"type": "integer",
+                                            "title": "return code.",
+                                            "description": "The status code returned by the DNS server (0=no problem, other=error)."
+                                           },
+
+                                     "rr": {"type": "array",
+                                            "title": "response record.",
+                                            "description": "A DNS record.",
+                                            "items": {"type": "object",
+                                                      "title": "DNS record.",
+                                                      "description": "A record returned by the DNS server.",
+                                                      "properties": {"a": {"type": "string",
+                                                                           "title": "address.",
+                                                                           "description": "The IP address corresponding to the DNS name."
+                                                                          },
+
+                                                                     "ttl": {"type": "integer",
+                                                                             "title": "TTL",
+                                                                             "description": "Time To Live (TTL); the number of seconds that the address/name correspondence is to be considered valid."
+                                                                            }
+		                                                    }
+                                                     }
+                                           },
+
+                                     "required": []
+                                    }
+*/
 
 //DetailedPacketsSSH детальное описание SSH пакета
 type DetailedPacketsSSH struct {

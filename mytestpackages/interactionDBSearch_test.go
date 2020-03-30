@@ -3,6 +3,7 @@ package mytestpackages
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -417,7 +418,7 @@ func SearchFullInformationAboutTasks(qp QueryParameters, taskID string) (configu
 
 	if len(liat) == 0 {
 
-		fmt.Println("--- func 'SearchFullInformationAboutTasks', INFORMATION NOT FOUND ---")
+		//fmt.Println("--- func 'SearchFullInformationAboutTasks', INFORMATION NOT FOUND ---")
 
 		return configure.ResponseTaskParameter{}, err
 	}
@@ -510,6 +511,63 @@ func SearchFullInformationAboutTasks(qp QueryParameters, taskID string) (configu
 	}
 
 	return rtp, err
+}
+
+func GetListFoundFiles(qp QueryParameters, glffro configure.GetListFoundFilesRequestOption) ([]*configure.FilesInformation, error) {
+	lfi := make([]*configure.FilesInformation, 0, glffro.PartSize)
+
+	cur, err := qp.Find(bson.D{bson.E{Key: "task_id", Value: glffro.RequestTaskID}})
+	if err != nil {
+		return lfi, err
+	}
+
+	liat := []*configure.InformationAboutTask{}
+	for cur.Next(context.Background()) {
+		var model configure.InformationAboutTask
+		if err := cur.Decode(&model); err != nil {
+			return lfi, err
+		}
+
+		liat = append(liat, &model)
+	}
+
+	if err := cur.Err(); err != nil {
+		return lfi, err
+	}
+
+	cur.Close(context.Background())
+
+	if len(liat) == 0 {
+		// информация по задаче с ID '' не найдена
+
+		return lfi, fmt.Errorf("information about the task with ID %q was not found", glffro.RequestTaskID)
+	}
+
+	fmt.Printf("func 'GetListFoundFiles', FOUND LIST: %v\n", liat[0].ListFilesResultTaskExecution)
+
+	commonPartSize := (glffro.PartSize + glffro.OffsetListParts)
+	numFoundFiles := len(liat[0].ListFilesResultTaskExecution)
+	if numFoundFiles < (glffro.OffsetListParts + 1) {
+		// общее количество найденных по задаче с ID '' файлов, меньше чем количество файлов, на которое нужно выполнить смещение
+
+		return lfi, fmt.Errorf("the total number of files found for the issue with ID %q is less than the number of files to offset", glffro.RequestTaskID)
+	}
+
+	if numFoundFiles <= commonPartSize {
+
+		fmt.Println("func 'GetListFoundFiles', numFoundFiles <= commonPartSize")
+
+		lfi = append(lfi, liat[0].ListFilesResultTaskExecution[glffro.OffsetListParts:]...)
+		fmt.Println(liat[0].ListFilesResultTaskExecution[glffro.OffsetListParts:])
+	} else {
+
+		fmt.Println("func 'GetListFoundFiles', ELSE")
+		fmt.Println(liat[0].ListFilesResultTaskExecution[glffro.OffsetListParts:commonPartSize])
+
+		lfi = append(lfi, liat[0].ListFilesResultTaskExecution[glffro.OffsetListParts:commonPartSize]...)
+	}
+
+	return lfi, nil
 }
 
 var _ = Describe("InteractionDBSearch", func() {
@@ -1299,7 +1357,7 @@ var _ = Describe("InteractionDBSearch", func() {
 
 			info, err := SearchFullInformationAboutTasks(qp, tid)
 
-			fmt.Printf("INFORMATION ABOUT TASK BY TASK ID: '%v'\n", info)
+			//fmt.Printf("INFORMATION ABOUT TASK BY TASK ID: '%v'\n", info)
 
 			/*
 			   Данный тест прошел успешно, желательно ЕЩЕ РАЗ ПРОВЕРИТЬ добавляемые в configure.ResponseTaskParameter
@@ -1316,6 +1374,34 @@ var _ = Describe("InteractionDBSearch", func() {
 
 			})
 		*/
+	})
+
+	Context("Тест 18. Получаем ограниченный список найденных файлов, со смещением", func() {
+		It("Должен быть получен ограниченный список файлов по найденный по ID задачи и с указанным смещением", func() {
+			list, err := GetListFoundFiles(qp, configure.GetListFoundFilesRequestOption{
+				RequestTaskID:   "84a41784eb71e77e8fb7d2f0ddfcbf00",
+				PartSize:        3,
+				OffsetListParts: 3,
+			})
+
+			fmt.Printf("______ Count: '%v', List: %v ______ \n", len(list), list)
+
+			Expect(len(list)).Should(Equal(3))
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+	})
+
+	Context("Тест регулярки", func() {
+		It("Должно быть TRUE", func() {
+			pattern := `^(\w|_)+\.(tdp|pcap)$`
+
+			patterCheckFileName := regexp.MustCompile(pattern)
+			ok := patterCheckFileName.MatchString("dump_085020263881.pcap")
+
+			//fmt.Printf("file dump is '%v'\n", ok)
+
+			Expect(ok).Should(BeTrue())
+		})
 	})
 
 	/*

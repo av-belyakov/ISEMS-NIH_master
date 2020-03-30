@@ -358,16 +358,16 @@ type SearchInformationAboutTasksRequest struct {
 }
 
 //SearchInformationAboutTasksRequestOption дополнительные опции для поиска информации по задаче
-// TaskProcessed - была ли задача отмечена клиентом API как завершенная
 // ID - уникальный цифровой идентификатор источника
+// TaskProcessed - была ли задача отмечена клиентом API как завершенная
 // StatusFilteringTask - статус задачи по фильтрации
 // StatusFileDownloadTask - статус задачи по скачиванию файлов
 // FilesDownloaded - опции выгрузки файлов
 // InformationAboutFiltering - поиск по информации о результатах фильтрации
 // InstalledFilteringOption - установленные опции фильтрации
 type SearchInformationAboutTasksRequestOption struct {
-	TaskProcessed             bool                             `json:"tp"`
 	ID                        int                              `json:"id"`
+	TaskProcessed             bool                             `json:"tp"`
 	StatusFilteringTask       string                           `json:"sft"`
 	StatusFileDownloadTask    string                           `json:"sfdt"`
 	FilesDownloaded           FilesDownloadedOptions           `json:"fd"`
@@ -407,8 +407,6 @@ type SearchFilteringOptions struct {
 	NetworkFilters FiltrationControlParametersNetworkFilters `json:"nf"`
 }
 
-// ПОЛУЧИТЬ ВЫБРАННУЮ ЧАСТЬ КРАТКОЙ ИНФОРМАЦИИ ИЗ СПИСКА НАЙДЕННЫХ ЗАДАЧ
-
 // ПОЧТИ ПОЛНАЯ ИНФОРМАЦИЮ ПО ЗАДАЧЕ (нет только списка найденных файлов)
 
 //SearchInformationResponseInformationByTaskID ответ содержащий почти полную информацию о задаче
@@ -426,7 +424,7 @@ type RequestInformationByTaskID struct {
 
 //ParametersGetInformationByTaskID содержит параметры для поиска информации о задаче по ее ID
 type ParametersGetInformationByTaskID struct {
-	ReguestTaskID string `json:"rtid"`
+	RequestTaskID string `json:"rtid"`
 }
 
 //ResponseInformationByTaskID содержит почти полную информацию (кроме списка найденных файлов) о найденной задаче
@@ -601,6 +599,54 @@ type ParametersFiltrationOptions struct {
 	Filters  FiltrationControlParametersNetworkFilters `json:"f"`
 }
 
-// ОТВЕТ ПРИ ЗАПРОСЕ СЛЕДУЮЩЕЙ ЧАСТИ НАЙДЕННЫХ ЗАДАЧ
+// ЗАПРОС ОГРАНИЧЕННОГО СПИСКА НАЙДЕННЫХ В РЕЗУЛЬТАТЕ ФИЛЬТРАЦИИ ФАЙЛОВ
 
-// ОТВЕТ НА ЗАПРОС ПОЛНОЙ ИНФОРМАЦИИ О ЗАДАЧЕ
+//GetListFoundFilesRequest содержит запрос на получение ограниченного списка найденных файлов
+type GetListFoundFilesRequest struct {
+	MsgCommon
+	MsgOption GetListFoundFilesRequestOption `json:"o"`
+}
+
+//GetListFoundFilesRequestOption содержит параметры для запроса списка файлов
+// RequestTaskID - ID искомой задачи
+// PartSize - количество запрашиваемых файлов
+// OffsetListParts - смещение по списку файлов
+type GetListFoundFilesRequestOption struct {
+	RequestTaskID   string `json:"rtid"`
+	PartSize        int    `json:"ps"`
+	OffsetListParts int    `json:"olp"`
+}
+
+// ОТВЕТ НА ЗАПРОС ОГРАНИЧЕННОГО СПИСКА НАЙДЕННЫХ В РЕЗУЛЬТАТЕ ФИЛЬТРАЦИИ ФАЙЛОВ
+
+//ListFoundFilesResponse содержит ответ с ограниченным списком найденных файлов
+type ListFoundFilesResponse struct {
+	MsgCommon
+	MsgOption ListFoundFilesResponseOption `json:"o"`
+}
+
+//ListFoundFilesResponseOption содержит детальный ответ с ограниченным списком найденных файлов
+// Status — статус выполняемой задачи
+// TaskID — внутренний идентификатор задачи
+// ClientTaskID — идентификатор задачи присвоенный клиентом
+// SourceID -  идентификатор источника
+// FullListSize — полный размер списка файловом
+// RequestPartSize — размер запрашиваемой частично
+// OffsetListParts — смещение по списку файлов
+// ListFiles — список найденных файлов
+type ListFoundFilesResponseOption struct {
+	Status          string              `json:"s"`
+	TaskID          string              `json:"tid"`
+	ClientTaskID    string              `json:"ctid"`
+	SourceID        int                 `json:"sid"`
+	FullListSize    int                 `json:"fls"`
+	RequestPartSize int                 `json:"rps"`
+	OffsetListParts int                 `json:"olp"`
+	ListFiles       []*FilesInformation `json:"lf"`
+}
+
+/*
+	Получение списка файлов доделал
+	теперь необходимо продумать и реализовать возможность отмечать задачу как завершенную
+
+*/

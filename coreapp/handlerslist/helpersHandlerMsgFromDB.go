@@ -125,6 +125,22 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 
 	numTaskFound := len(info.ListFoundInformation.List)
 
+	if numTaskFound == 0 {
+		//информационное сообщение о том что искомая задача не найдена
+		notifications.SendNotificationToClientAPI(
+			chanToAPI,
+			notifications.NotificationSettingsToClientAPI{
+				MsgType: "warning",
+				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+					TaskType:   "поиск информации по задаче",
+					TaskAction: "по переданным пользователем параметрам не найдено ни одной задачи",
+				}),
+			},
+			res.TaskIDClientAPI,
+			res.IDClientAPI)
+
+	}
+
 	//	fmt.Printf("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', Info: '%v'\n", info)
 
 	resMsg := configure.SearchInformationResponseCommanInfo{
@@ -203,20 +219,78 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 func sendMsgCompliteTaskSearchInformationByTaskID(res *configure.MsgBetweenCoreAndDB, chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) error {
 	funcName := ", function 'sendMsgCompliteTaskSearchInformationByTaskID'"
 
-	rtp, ok := res.AdvancedOptions.(configure.ResponseTaskParameter)
+	ribtid, ok := res.AdvancedOptions.(configure.ResponseInformationByTaskID)
 	if !ok {
 		return fmt.Errorf("type conversion error%v", funcName)
 	}
 
-	resMsg := configure.SearchInformationResponseInformationByTaskID{
-		MsgOption: configure.ResponseInformationByTaskID{
-			Status:        "complete",
-			TaskParameter: rtp,
-		},
+	if ribtid.Status == "task not found" {
+		//информационное сообщение о том что искомая задача не найдена
+		notifications.SendNotificationToClientAPI(
+			chanToAPI,
+			notifications.NotificationSettingsToClientAPI{
+				MsgType: "warning",
+				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+					TaskType:   "поиск информации по задаче",
+					TaskAction: "по переданному пользователем идентификатору не найдено ни одной задачи",
+				}),
+			},
+			res.TaskIDClientAPI,
+			res.IDClientAPI)
+
 	}
+
+	resMsg := configure.SearchInformationResponseInformationByTaskID{MsgOption: ribtid}
 	resMsg.MsgType = "information"
 	resMsg.MsgSection = "information search control"
 	resMsg.MsgInstruction = "processing get all information by task ID"
+	resMsg.ClientTaskID = res.TaskIDClientAPI
+
+	msgJSON, err := json.Marshal(resMsg)
+	if err != nil {
+		return err
+	}
+
+	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+		MsgGenerator: "Core module",
+		MsgRecipient: "API module",
+		IDClientAPI:  res.IDClientAPI,
+		MsgJSON:      msgJSON,
+	}
+
+	return nil
+}
+
+//sendMsgCompliteTaskListFilesByTaskID отправляет информацию со списком найденных файлов
+func sendMsgCompliteTaskListFilesByTaskID(res *configure.MsgBetweenCoreAndDB, chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) error {
+	funcName := ", function 'sendMsgCompliteTaskListFilesByTaskID'"
+
+	fmt.Println("func 'sendMsgCompliteTaskListFilesByTaskID', START...")
+
+	lffro, ok := res.AdvancedOptions.(configure.ListFoundFilesResponseOption)
+	if !ok {
+		return fmt.Errorf("type conversion error%v", funcName)
+	}
+
+	if lffro.Status == "task not found" {
+		//информационное сообщение о том что искомая задача не найдена
+		notifications.SendNotificationToClientAPI(
+			chanToAPI,
+			notifications.NotificationSettingsToClientAPI{
+				MsgType: "warning",
+				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+					TaskType:   "поиск информации по задаче",
+					TaskAction: "по переданному пользователем идентификатору не найдено ни одной задачи",
+				}),
+			},
+			res.TaskIDClientAPI,
+			res.IDClientAPI)
+	}
+
+	resMsg := configure.ListFoundFilesResponse{MsgOption: lffro}
+	resMsg.MsgType = "information"
+	resMsg.MsgSection = "information search control"
+	resMsg.MsgInstruction = "processing list files by task ID"
 	resMsg.ClientTaskID = res.TaskIDClientAPI
 
 	msgJSON, err := json.Marshal(resMsg)
