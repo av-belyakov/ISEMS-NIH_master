@@ -141,8 +141,6 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 
 	}
 
-	//	fmt.Printf("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', Info: '%v'\n", info)
-
 	resMsg := configure.SearchInformationResponseCommanInfo{
 		MsgOption: configure.SearchInformationResponseOptionCommanInfo{
 			TaskIDApp:             res.TaskID,
@@ -163,9 +161,6 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 
 	//отправляем всю информацию целиком
 	if numTaskFound < chunkSize {
-
-		fmt.Println("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', SEND FULL")
-
 		resMsg.MsgOption.ShortListFoundTasks = info.ListFoundInformation.List
 
 		msgJSON, err := json.Marshal(resMsg)
@@ -188,8 +183,6 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 
 	//сегментируем найденый список
 	for i := 0; i < numChunk; i++ {
-		//		fmt.Printf("Send chunks num: '%v' from '%v' (full task found: '%v')\n", i, numChunk, numTaskFound)
-
 		num := i * chunkSize
 		if i == numChunk-1 {
 			resMsg.MsgOption.ShortListFoundTasks = info.ListFoundInformation.List[num:]

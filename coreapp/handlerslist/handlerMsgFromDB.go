@@ -26,7 +26,7 @@ func HandlerMsgFromDB(
 		switch res.MsgSection {
 		case "error notification":
 
-			fmt.Println("func 'HandlerMsgFromDB', MsgRecipient: 'Core module', MsgSection: 'error notification'")
+			//fmt.Println("func 'HandlerMsgFromDB', MsgRecipient: 'Core module', MsgSection: 'error notification'")
 
 			//если сообщение об ошибке только для ядра приложения
 			if en, ok := res.AdvancedOptions.(configure.ErrorNotification); ok {
@@ -55,7 +55,7 @@ func HandlerMsgFromDB(
 		case "information search control":
 			switch res.Instruction {
 			case "short search result":
-				fmt.Printf("func 'HandlerMsgFromDB', Instruction: 'information search control', Response: '%v'\n", res)
+				//fmt.Printf("func 'HandlerMsgFromDB', Instruction: 'information search control', Response: '%v'\n", res)
 
 				if err := sendMsgCompliteTaskSearchShortInformationAboutTask(res, hsm.TSSQ, outCoreChans.OutCoreChanAPI); err != nil {
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
@@ -66,7 +66,7 @@ func HandlerMsgFromDB(
 
 			//полная информация по taskID, может быть не полным список файлов (максимальный размер не больше 50)
 			case "information by task ID":
-				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'information by task ID', Response: '%v'\n", res)
+				//fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'information by task ID', Response: '%v'\n", res)
 
 				if err := sendMsgCompliteTaskSearchInformationByTaskID(res, outCoreChans.OutCoreChanAPI); err != nil {
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
@@ -77,7 +77,7 @@ func HandlerMsgFromDB(
 
 			//дополнительный список файлов по конкретной задаче
 			case "list files by task ID":
-				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'list files by task ID', Response: '%v'\n", res)
+				//fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'list files by task ID', Response: '%v'\n", res)
 
 				if err := sendMsgCompliteTaskListFilesByTaskID(res, outCoreChans.OutCoreChanAPI); err != nil {
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{

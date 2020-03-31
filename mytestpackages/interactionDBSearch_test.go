@@ -1381,10 +1381,13 @@ var _ = Describe("InteractionDBSearch", func() {
 			list, err := GetListFoundFiles(qp, configure.GetListFoundFilesRequestOption{
 				RequestTaskID:   "84a41784eb71e77e8fb7d2f0ddfcbf00",
 				PartSize:        3,
-				OffsetListParts: 3,
+				OffsetListParts: 6,
 			})
 
 			fmt.Printf("______ Count: '%v', List: %v ______ \n", len(list), list)
+			for _, fi := range list {
+				fmt.Printf("file name: %q\n", fi.FileName)
+			}
 
 			Expect(len(list)).Should(Equal(3))
 			Expect(err).ShouldNot(HaveOccurred())
