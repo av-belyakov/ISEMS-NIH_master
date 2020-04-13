@@ -14,6 +14,7 @@ import (
 	"github.com/mongodb/mongo-go-driver/mongo/options"
 	"github.com/mongodb/mongo-go-driver/mongo/readpref"
 
+	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
 	//. "ISEMS-NIH_master/mytestpackages"
 )
@@ -37,6 +38,19 @@ func (qp QueryParameters) Find(elem interface{}) (*mongo.Cursor, error) {
 	options := options.Find()
 
 	return collection.Find(context.TODO(), elem, options)
+}
+
+//UpdateOne обновляет параметры в элементе
+func (qp QueryParameters) UpdateOne(searchElem, update interface{}) error {
+
+	//fmt.Printf("\t===== REQUEST TO DB 'UPDATE ONE' current time: %v ======\n", time.Now())
+
+	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
+	if _, err := collection.UpdateOne(context.TODO(), searchElem, update); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func connectToDB(ctx context.Context, conf configureDB) (*mongo.Client, error) {
@@ -568,6 +582,60 @@ func GetListFoundFiles(qp QueryParameters, glffro configure.GetListFoundFilesReq
 	}
 
 	return lfi, nil
+}
+
+func MarkTaskCompleteProcess(qp QueryParameters, clientID, clientTaskID string, mtcro configure.MarkTaskCompletedRequestOption) (string, string, error) {
+	errMsg := fmt.Sprintf("Не возможно отметить задачу с ID %q как успешно завершенную. Внутренняя ошибка приложения.", clientTaskID)
+
+	//получаем некоторую информацию о задаче
+	cur, err := qp.Find(bson.D{bson.E{Key: "task_id", Value: mtcro.RequestTaskID}})
+	if err != nil {
+		return "danger", errMsg, err
+	}
+
+	liat := []*configure.InformationAboutTask{}
+	for cur.Next(context.Background()) {
+		var model configure.InformationAboutTask
+		if err := cur.Decode(&model); err != nil {
+			return "danger", errMsg, err
+		}
+
+		liat = append(liat, &model)
+	}
+
+	if err := cur.Err(); err != nil {
+		return "danger", errMsg, err
+	}
+
+	cur.Close(context.Background())
+
+	// информация по задаче с ID '' не найдена
+	if len(liat) == 0 {
+		return "warning", fmt.Sprintf("Не возможно отметить задачу с ID %q как успешно завершенную. Задачи с переданным идентификатором не найдено.", clientTaskID), nil
+	}
+
+	fts := liat[0].DetailedInformationOnFiltering.TaskStatus != "complete"
+	dfd := liat[0].DetailedInformationOnDownloading.NumberFilesDownloaded == 0
+
+	if fts || dfd {
+		return "warning", fmt.Sprintf("Не возможно отметить задачу с ID %q как успешно завершенную. Не была выполнена фильтрация или скачивание файлов.", clientTaskID), nil
+	}
+
+	//отмечаем задачу как завершенную
+	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: mtcro.RequestTaskID}},
+		bson.D{
+			bson.E{Key: "$set", Value: bson.D{
+				bson.E{Key: "general_information_about_task.task_processed", Value: true},
+				bson.E{Key: "general_information_about_task.date_time_processed", Value: time.Now().Unix()},
+				bson.E{Key: "general_information_about_task.client_id", Value: clientID},
+				bson.E{Key: "general_information_about_task.detail_description_general_information_about_task.user_name_processed", Value: mtcro.UserName},
+				bson.E{Key: "general_information_about_task.detail_description_general_information_about_task.description_processing_results", Value: mtcro.Description},
+			}},
+		}); err != nil {
+		return "danger", errMsg, err
+	}
+
+	return "success", fmt.Sprintf("Задача с ID %q успешно отмечена как завершенная", clientTaskID), nil
 }
 
 var _ = Describe("InteractionDBSearch", func() {
@@ -1394,7 +1462,7 @@ var _ = Describe("InteractionDBSearch", func() {
 		})
 	})
 
-	Context("Тест регулярки", func() {
+	Context("Тест 19. Тест регулярки", func() {
 		It("Должно быть TRUE", func() {
 			pattern := `^(\w|_)+\.(tdp|pcap)$`
 
@@ -1407,6 +1475,40 @@ var _ = Describe("InteractionDBSearch", func() {
 		})
 	})
 
+	Context("Тест 20. Отмечаем задачу как завершенную", func() {
+		It("Указанная задача должна быть отмечена как завершенная, ошибок при этом быть не должно", func() {
+			var err error
+
+			msgType, msgDesc, err := MarkTaskCompleteProcess(qp, "fifini3r3:127.0.0.1", "nvnu838fnc88h83", configure.MarkTaskCompletedRequestOption{
+				RequestTaskID: "6377cebfcf92be74078854fa2b4bed1c",
+				UserName:      "user client API",
+				Description:   "просто описание причины закрытия",
+			})
+
+			fmt.Printf("Result, processed type: %q, message: %q", msgType, msgDesc)
+
+			Expect(msgType).ShouldNot(Equal("success"))
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+	})
+
+	Context("Тест 21. Проверка имени пользователя с помощью RegExp", func() {
+		It("Проверка должна проходить успешно", func() {
+			ok, err := common.CheckUserName("user-Name-Ё1 _яr")
+
+			Expect(ok).Should(BeTrue())
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+	})
+
+	Context("Тест 22. Проверка поля 'description' с помощью RegExp", func() {
+		It("Проверка должна проходить успешно", func() {
+			ok, err := common.CheckFieldDescription("user-Name-Ё1 _я!r твашт? 12. fd@vd.r, e:")
+
+			Expect(ok).Should(BeTrue())
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+	})
 	/*
 	   Context("", func(){
 	   	It("", func(){

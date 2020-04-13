@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"ISEMS-NIH_master/configure"
 
@@ -373,4 +374,262 @@ func GetListFoundFiles(
 	msgRes.AdvancedOptions = lf
 
 	chanIn <- &msgRes
+}
+
+//GetInfoTaskFromMarkTaskCompleteProcess обрабатываем запрос на получения информации при
+// выполнении команды 'отметить задачу как обработанную'
+func GetInfoTaskFromMarkTaskCompleteProcess(
+	chanIn chan<- *configure.MsgBetweenCoreAndDB,
+	req *configure.MsgBetweenCoreAndDB,
+	qp QueryParameters) {
+
+	fmt.Println("func 'GetInfoTaskFromMarkTaskCompleteProcess', START...")
+
+	msgRes := configure.MsgBetweenCoreAndDB{
+		MsgGenerator:    req.MsgRecipient,
+		MsgRecipient:    req.MsgGenerator,
+		MsgSection:      "information search control",
+		Instruction:     "mark an task as completed processed",
+		IDClientAPI:     req.IDClientAPI,
+		TaskID:          req.TaskID,
+		TaskIDClientAPI: req.TaskIDClientAPI,
+	}
+
+	fmt.Println("func 'GetInfoTaskFromMarkTaskCompleteProcess', get information about task ID")
+
+	errMsg := fmt.Sprintf("It is not possible to mark a task with ID %q as successfully completed. Internal application error.", req.TaskIDClientAPI)
+
+	listTaskInfo, err := getInfoTaskForID(qp, req.TaskID)
+	if err != nil {
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: errMsg,
+			ErrorBody:             err,
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	ti := (*listTaskInfo)[0]
+
+	fmt.Println(ti)
+
+	mtcro, ok := req.AdvancedOptions.(configure.MarkTaskCompletedRequestOption)
+	if !ok {
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: errMsg,
+			ErrorBody:             errors.New(errMsg),
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	isDownloaded := ti.DetailedInformationOnDownloading.NumberFilesDownloaded > 0
+	taskStatus := ti.DetailedInformationOnFiltering.TaskStatus == "complete"
+
+	msgRes.AdvancedOptions = configure.TypeGetInfoTaskFromMarkTaskCompleteProcess{
+		UserName:             mtcro.UserName,
+		Description:          mtcro.Description,
+		FiltrationTaskStatus: taskStatus,
+		FilesDownloaded:      isDownloaded,
+	}
+
+	fmt.Println("func 'GetInfoTaskFromMarkTaskCompleteProcess', send message to Core")
+	fmt.Println(msgRes)
+
+	chanIn <- &msgRes
+
+}
+
+//MarkTaskCompleteProcess отметить задачу как завершенную
+func MarkTaskCompleteProcess(
+	chanIn chan<- *configure.MsgBetweenCoreAndDB,
+	req *configure.MsgBetweenCoreAndDB,
+	qp QueryParameters) {
+
+	fmt.Println("func 'MarkTaskCompleteProcess', START...")
+
+	msgRes := configure.MsgBetweenCoreAndDB{
+		MsgGenerator:    req.MsgRecipient,
+		MsgRecipient:    req.MsgGenerator,
+		MsgSection:      "information search control",
+		Instruction:     "mark an task as completed",
+		IDClientAPI:     req.IDClientAPI,
+		TaskID:          req.TaskID,
+		TaskIDClientAPI: req.TaskIDClientAPI,
+	}
+
+	errMsg := fmt.Sprintf("It is not possible to mark a task with ID %q as successfully completed. Internal application error.", req.TaskIDClientAPI)
+	tgitfmtcp, ok := req.AdvancedOptions.(configure.TypeGetInfoTaskFromMarkTaskCompleteProcess)
+	if !ok {
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: errMsg,
+			ErrorBody:             errors.New(errMsg),
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	fmt.Println("func 'MarkTaskCompleteProcess', отмечаем задачу как завершенную")
+
+	//отмечаем задачу как завершенную
+	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}},
+		bson.D{
+			bson.E{Key: "$set", Value: bson.D{
+				bson.E{Key: "general_information_about_task.task_processed", Value: true},
+				bson.E{Key: "general_information_about_task.date_time_processed", Value: time.Now().Unix()},
+				bson.E{Key: "general_information_about_task.client_id", Value: req.IDClientAPI},
+				bson.E{Key: "general_information_about_task.detail_description_general_information_about_task.user_name_processed", Value: tgitfmtcp.UserName},
+				bson.E{Key: "general_information_about_task.detail_description_general_information_about_task.description_processing_results", Value: tgitfmtcp.Description},
+			}},
+		}); err != nil {
+
+		fmt.Println("func 'MarkTaskCompleteProcess', ERROR")
+		fmt.Println(err)
+
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: "search for information in the database is not possible, error processing the request to the database",
+			ErrorBody:             err,
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	fmt.Println("func 'MarkTaskCompleteProcess', запись в БД завершена")
+
+	chanIn <- &msgRes
+
+	/*errMsg := fmt.Sprintf("Не возможно отметить задачу с ID %q как успешно завершенную. Внутренняя ошибка приложения.", req.TaskIDClientAPI)
+
+	msgRes := configure.MsgBetweenCoreAndDB{
+		MsgGenerator:    req.MsgRecipient,
+		MsgRecipient:    req.MsgGenerator,
+		MsgSection:      "information search control",
+		Instruction:     "mark an task as completed",
+		IDClientAPI:     req.IDClientAPI,
+		TaskID:          req.TaskID,
+		TaskIDClientAPI: req.TaskIDClientAPI,
+	}
+
+	mtcro, ok := req.AdvancedOptions.(configure.MarkTaskCompletedRequestOption)
+	if !ok {
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: errMsg,
+			ErrorBody:             errors.New(errMsg),
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	//получаем некоторую информацию о задаче
+	cur, err := qp.Find(bson.D{bson.E{Key: "task_id", Value: mtcro.RequestTaskID}})
+	if err != nil {
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: "search for information in the database is not possible, error processing the request to the database",
+			ErrorBody:             err,
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	liat := []*configure.InformationAboutTask{}
+	for cur.Next(context.Background()) {
+		var model configure.InformationAboutTask
+		if err := cur.Decode(&model); err != nil {
+			if err != nil {
+				msgRes.MsgSection = "error notification"
+				msgRes.AdvancedOptions = configure.ErrorNotification{
+					SourceReport:          "DB module",
+					HumanDescriptionError: "search for information in the database is not possible, error processing the request to the database",
+					ErrorBody:             err,
+				}
+
+				chanIn <- &msgRes
+
+				return
+			}
+		}
+
+		liat = append(liat, &model)
+	}
+
+	if err := cur.Err(); err != nil {
+		if err != nil {
+			msgRes.MsgSection = "error notification"
+			msgRes.AdvancedOptions = configure.ErrorNotification{
+				SourceReport:          "DB module",
+				HumanDescriptionError: "search for information in the database is not possible, error processing the request to the database",
+				ErrorBody:             err,
+			}
+
+			chanIn <- &msgRes
+
+			return
+		}
+	}
+
+	cur.Close(context.Background())
+
+	// информация по задаче с ID '' не найдена
+	if len(liat) == 0 {
+		return "warning", fmt.Sprintf("Не возможно отметить задачу с ID %q как успешно завершенную. Задачи с переданным идентификатором не найдено.", clientTaskID), nil
+	}
+
+	fts := liat[0].DetailedInformationOnFiltering.TaskStatus != "complete"
+	dfd := liat[0].DetailedInformationOnDownloading.NumberFilesDownloaded == 0
+
+	if fts || dfd {
+		return "warning", fmt.Sprintf("Не возможно отметить задачу с ID %q как успешно завершенную. Не была выполнена фильтрация или скачивание файлов.", clientTaskID), nil
+	}
+
+	//отмечаем задачу как завершенную
+	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: mtcro.RequestTaskID}},
+		bson.D{
+			bson.E{Key: "$set", Value: bson.D{
+				bson.E{Key: "general_information_about_task.task_processed", Value: true},
+				bson.E{Key: "general_information_about_task.date_time_processed", Value: time.Now().Unix()},
+				bson.E{Key: "general_information_about_task.client_id", Value: req.IDClientAPI},
+				bson.E{Key: "general_information_about_task.detail_description_general_information_about_task.user_name_processed", Value: mtcro.UserName},
+				bson.E{Key: "general_information_about_task.detail_description_general_information_about_task.description_processing_results", Value: mtcro.Description},
+			}},
+		}); err != nil {
+		if err != nil {
+			msgRes.MsgSection = "error notification"
+			msgRes.AdvancedOptions = configure.ErrorNotification{
+				SourceReport:          "DB module",
+				HumanDescriptionError: "search for information in the database is not possible, error processing the request to the database",
+				ErrorBody:             err,
+			}
+
+			chanIn <- &msgRes
+
+			return
+		}
+	}
+
+	chanIn <- &msgRes*/
+	//return "success", fmt.Sprintf("Задача с ID %q успешно отмечена как завершенная", clientTaskID), nil
 }

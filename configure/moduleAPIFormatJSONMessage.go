@@ -645,8 +645,20 @@ type ListFoundFilesResponseOption struct {
 	ListFiles       []*FilesInformation `json:"lf"`
 }
 
-/*
-	Получение списка файлов доделал
-	теперь необходимо продумать и реализовать возможность отмечать задачу как завершенную
+// ЗАПРОС НА ЗАКРЫТИЕ ЗАДАЧИ
 
-*/
+//MarkTaskCompletedRequest содержит запрос на закрытие задачи
+type MarkTaskCompletedRequest struct {
+	MsgCommon
+	MsgOption MarkTaskCompletedRequestOption `json:"o"`
+}
+
+//MarkTaskCompletedRequestOption содержит параметры для закрытие задачи
+// RequestTaskID — внутренний идентификатор задачи
+// UserName - имя пользователя
+// Description - дополнительное описание
+type MarkTaskCompletedRequestOption struct {
+	RequestTaskID string `json:"tid"`
+	UserName      string `json:"un"`
+	Description   string `json:"d"`
+}

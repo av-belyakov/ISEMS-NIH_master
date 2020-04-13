@@ -128,5 +128,16 @@ func (wr *WrappersRouteRequest) WrapperFuncSearch(
 		fmt.Println("func 'WrapperFuncSearch', Instruction: 'get part of the list files'")
 
 		handlerrequestdb.GetListFoundFiles(wr.ChanIn, msg, qp)
+
+	case "get info from mark an task as completed":
+		fmt.Println("func 'WrapperFuncSearch', Instruction: 'get info from mark an task as completed'")
+
+		handlerrequestdb.GetInfoTaskFromMarkTaskCompleteProcess(wr.ChanIn, msg, qp)
+
+	case "mark an task as completed":
+		fmt.Println("func 'WrapperFuncSearch', Instruction: 'mark an task as completed'")
+
+		handlerrequestdb.MarkTaskCompleteProcess(wr.ChanIn, msg, qp)
+
 	}
 }

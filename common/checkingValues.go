@@ -76,3 +76,27 @@ func CheckFolders(f []string) (bool, error) {
 
 	return true, nil
 }
+
+//CheckUserName проверяет имя пользователя
+func CheckUserName(str string) (bool, error) {
+	pattern := "^(\\w|\\s|[а-яА-ЯёЁ_-])*$"
+
+	rx, err := regexp.Compile(pattern)
+	if err != nil {
+		return false, err
+	}
+
+	return rx.MatchString(str), nil
+}
+
+//CheckFieldDescription проверяет содержимое поля 'description'
+func CheckFieldDescription(str string) (bool, error) {
+	pattern := "^(\\w|\\s|[а-яА-ЯёЁ!?.,:;@'_-])*$"
+
+	rx, err := regexp.Compile(pattern)
+	if err != nil {
+		return false, err
+	}
+
+	return rx.MatchString(str), nil
+}
