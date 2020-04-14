@@ -728,31 +728,72 @@ func HandlerMsgFromAPI(
 
 				fmt.Printf("---------- \n %v ------------\n", mtcr)
 
-				emt := ErrorMessageType{
-					TaskID:          mtcr.MsgOption.RequestTaskID,
-					TaskIDClientAPI: mtcr.ClientTaskID,
-					IDClientAPI:     msg.IDClientAPI,
-					Section:         "information search control",
-					Instruction:     "task processing",
-					MsgType:         "danger",
-					ChanToAPI:       outCoreChans.OutCoreChanAPI,
+				/*				emt := ErrorMessageType{
+								TaskID:          mtcr.MsgOption.RequestTaskID,
+								TaskIDClientAPI: mtcr.ClientTaskID,
+								IDClientAPI:     msg.IDClientAPI,
+								Section:         "information search control",
+								Instruction:     "task processing",
+								MsgType:         "warning",
+								ChanToAPI:       outCoreChans.OutCoreChanAPI,
+							}*/
+
+				resMsg := configure.MarkTaskCompletedResponse{
+					MsgOption: configure.MarkTaskCompletedResponseOption{
+						SuccessStatus: false,
+						RequestTaskID: mtcr.MsgOption.RequestTaskID,
+					},
 				}
+				resMsg.MsgType = "command"
+				resMsg.MsgSection = "information search control"
+				resMsg.MsgInstruction = "mark an task as completed"
+				resMsg.ClientTaskID = mtcr.ClientTaskID
 
 				//проверяем ID задачи
 				if ok := checkValidtaskID(mtcr.MsgOption.RequestTaskID); !ok {
-					emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
-						TaskType:   "изменение статуса задачи на 'завершена'",
-						TaskAction: "задача отклонена",
-						Message:    "принят некорректный идентификатор задачи",
-					})
+					notifications.SendNotificationToClientAPI(
+						outCoreChans.OutCoreChanAPI,
+						notifications.NotificationSettingsToClientAPI{
+							MsgType: "warning",
+							MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+								TaskType:   "изменение статуса задачи на 'завершена'",
+								TaskAction: "задача отклонена",
+								Message:    "принят некорректный идентификатор задачи",
+							}),
+						},
+						mtcr.ClientTaskID,
+						msg.IDClientAPI)
 
-					//сообщение о том что задача была отклонена
-					if err := ErrorMessage(emt); err != nil {
+					msgJSON, err := json.Marshal(resMsg)
+					if err != nil {
 						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprint(err),
 							FuncName:    funcName,
 						})
+
+						return
 					}
+
+					outCoreChans.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
+						MsgGenerator: "Core module",
+						MsgRecipient: "API module",
+						IDClientAPI:  msg.IDClientAPI,
+						MsgJSON:      msgJSON,
+					}
+
+					/*					emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+											TaskType:   "изменение статуса задачи на 'завершена'",
+											TaskAction: "задача отклонена",
+											Message:    "принят некорректный идентификатор задачи",
+										})
+
+										//сообщение о том что задача была отклонена
+										if err := ErrorMessage(emt); err != nil {
+											saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+												Description: fmt.Sprint(err),
+												FuncName:    funcName,
+											})
+										}*/
 
 					return
 				}
@@ -760,20 +801,48 @@ func HandlerMsgFromAPI(
 				//проверяем имя пользователя
 				if ok, err := common.CheckUserName(mtcr.MsgOption.UserName); !ok {
 					if err != nil {
-						emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
-							TaskType:   "изменение статуса задачи на 'завершена'",
-							TaskAction: "задача отклонена",
-							Message:    "внутренняя ошибка приложения",
+						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
 						})
 
-						//сообщение о том что задача была отклонена
-						if err := ErrorMessage(emt); err != nil {
-							saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-								Description: fmt.Sprint(err),
-								FuncName:    funcName,
-							})
-						}
+						/*						emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+													TaskType:   "изменение статуса задачи на 'завершена'",
+													TaskAction: "задача отклонена",
+													Message:    "внутренняя ошибка приложения",
+												})
 
+												//сообщение о том что задача была отклонена
+												if err := ErrorMessage(emt); err != nil {
+													saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+														Description: fmt.Sprint(err),
+														FuncName:    funcName,
+													})
+												}
+
+												saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+													Description: fmt.Sprint(err),
+													FuncName:    funcName,
+												})*/
+
+						//return
+					}
+
+					notifications.SendNotificationToClientAPI(
+						outCoreChans.OutCoreChanAPI,
+						notifications.NotificationSettingsToClientAPI{
+							MsgType: "warning",
+							MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+								TaskType:   "изменение статуса задачи на 'завершена'",
+								TaskAction: "задача отклонена",
+								Message:    "принято некорректное имя пользователя",
+							}),
+						},
+						mtcr.ClientTaskID,
+						msg.IDClientAPI)
+
+					msgJSON, err := json.Marshal(resMsg)
+					if err != nil {
 						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprint(err),
 							FuncName:    funcName,
@@ -782,19 +851,26 @@ func HandlerMsgFromAPI(
 						return
 					}
 
-					emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
-						TaskType:   "изменение статуса задачи на 'завершена'",
-						TaskAction: "задача отклонена",
-						Message:    "некорректное имя пользователя",
-					})
-
-					//сообщение о том что задача была отклонена
-					if err := ErrorMessage(emt); err != nil {
-						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-							Description: fmt.Sprint(err),
-							FuncName:    funcName,
-						})
+					outCoreChans.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
+						MsgGenerator: "Core module",
+						MsgRecipient: "API module",
+						IDClientAPI:  msg.IDClientAPI,
+						MsgJSON:      msgJSON,
 					}
+
+					/*					emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+											TaskType:   "изменение статуса задачи на 'завершена'",
+											TaskAction: "задача отклонена",
+											Message:    "некорректное имя пользователя",
+										})
+
+										//сообщение о том что задача была отклонена
+										if err := ErrorMessage(emt); err != nil {
+											saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+												Description: fmt.Sprint(err),
+												FuncName:    funcName,
+											})
+										}*/
 
 					return
 				}
@@ -802,7 +878,11 @@ func HandlerMsgFromAPI(
 				//проверяем описание причины изменения состояния задачи
 				if ok, err := common.CheckFieldDescription(mtcr.MsgOption.Description); !ok {
 					if err != nil {
-						emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
+						/*emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
 							TaskType:   "изменение статуса задачи на 'завершена'",
 							TaskAction: "задача отклонена",
 							Message:    "внутренняя ошибка приложения",
@@ -819,24 +899,54 @@ func HandlerMsgFromAPI(
 						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprint(err),
 							FuncName:    funcName,
+						})*/
+
+						//return
+					}
+
+					notifications.SendNotificationToClientAPI(
+						outCoreChans.OutCoreChanAPI,
+						notifications.NotificationSettingsToClientAPI{
+							MsgType: "warning",
+							MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+								TaskType:   "изменение статуса задачи на 'завершена'",
+								TaskAction: "задача отклонена",
+								Message:    "поле 'описание' содержит невалидные символы",
+							}),
+						},
+						mtcr.ClientTaskID,
+						msg.IDClientAPI)
+
+					msgJSON, err := json.Marshal(resMsg)
+					if err != nil {
+						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
 						})
 
 						return
 					}
 
-					emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
-						TaskType:   "изменение статуса задачи на 'завершена'",
-						TaskAction: "задача отклонена",
-						Message:    "поле 'описание' содержит невалидные символы",
-					})
-
-					//сообщение о том что задача была отклонена
-					if err := ErrorMessage(emt); err != nil {
-						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-							Description: fmt.Sprint(err),
-							FuncName:    funcName,
-						})
+					outCoreChans.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
+						MsgGenerator: "Core module",
+						MsgRecipient: "API module",
+						IDClientAPI:  msg.IDClientAPI,
+						MsgJSON:      msgJSON,
 					}
+
+					/*					emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
+											TaskType:   "изменение статуса задачи на 'завершена'",
+											TaskAction: "задача отклонена",
+											Message:    "поле 'описание' содержит невалидные символы",
+										})
+
+										//сообщение о том что задача была отклонена
+										if err := ErrorMessage(emt); err != nil {
+											saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+												Description: fmt.Sprint(err),
+												FuncName:    funcName,
+											})
+										}*/
 
 					return
 				}
@@ -853,7 +963,6 @@ func HandlerMsgFromAPI(
 					TaskIDClientAPI: mtcr.ClientTaskID,
 					AdvancedOptions: mtcr.MsgOption,
 				}
-
 			}
 
 			return

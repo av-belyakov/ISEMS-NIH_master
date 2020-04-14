@@ -31,6 +31,10 @@ func SendNotificationToClientAPI(
 		},
 	}
 
+	if len(ns.Sources) == 0 {
+		notify.MsgOptions.Notification.Sources = make([]int, 0, 0)
+	}
+
 	notify.MsgType = "information"
 	notify.MsgSection = "user notification"
 	notify.MsgInstruction = "send notification"

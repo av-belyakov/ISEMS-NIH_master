@@ -654,11 +654,27 @@ type MarkTaskCompletedRequest struct {
 }
 
 //MarkTaskCompletedRequestOption содержит параметры для закрытие задачи
-// RequestTaskID — внутренний идентификатор задачи
+// RequestTaskID - внутренний идентификатор задачи
 // UserName - имя пользователя
 // Description - дополнительное описание
 type MarkTaskCompletedRequestOption struct {
 	RequestTaskID string `json:"tid"`
 	UserName      string `json:"un"`
 	Description   string `json:"d"`
+}
+
+// ОТВЕТ НА ЗАПРОС ПО ЗАКРЫТИЮ ЗАДАЧИ
+
+//MarkTaskCompletedResponse содержит запрос на закрытие задачи
+type MarkTaskCompletedResponse struct {
+	MsgCommon
+	MsgOption MarkTaskCompletedResponseOption `json:"o"`
+}
+
+//MarkTaskCompletedResponseOption содержит параметры для закрытие задачи
+// SuccessStatus - статус успешности выполнения
+// RequestTaskID - внутренний идентификатор задачи
+type MarkTaskCompletedResponseOption struct {
+	SuccessStatus bool   `json:"ss"`
+	RequestTaskID string `json:"tid"`
 }

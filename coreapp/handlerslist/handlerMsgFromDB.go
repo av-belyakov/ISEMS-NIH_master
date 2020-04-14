@@ -90,9 +90,19 @@ func HandlerMsgFromDB(
 			case "mark an task as completed processed":
 				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'mark an task as completed', Response: '%v'\n", res)
 
+				resMsg := configure.MarkTaskCompletedResponse{
+					MsgOption: configure.MarkTaskCompletedResponseOption{
+						SuccessStatus: false,
+						RequestTaskID: res.TaskID,
+					},
+				}
+				resMsg.MsgType = "command"
+				resMsg.MsgSection = "information search control"
+				resMsg.MsgInstruction = "mark an task as completed"
+				resMsg.ClientTaskID = res.TaskIDClientAPI
+
 				tgitfmtcp, ok := res.AdvancedOptions.(configure.TypeGetInfoTaskFromMarkTaskCompleteProcess)
 				if !ok {
-					//информационное сообщение о том что задача добавлена в очередь
 					notifications.SendNotificationToClientAPI(
 						outCoreChans.OutCoreChanAPI,
 						notifications.NotificationSettingsToClientAPI{
@@ -111,13 +121,65 @@ func HandlerMsgFromDB(
 						FuncName:    funcName,
 					})
 
+					msgJSON, err := json.Marshal(resMsg)
+					if err != nil {
+						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
+
+						return
+					}
+
+					outCoreChans.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
+						MsgGenerator: "Core module",
+						MsgRecipient: "API module",
+						IDClientAPI:  res.IDClientAPI,
+						MsgJSON:      msgJSON,
+					}
+
 					return
 				}
 
-				fmt.Println(tgitfmtcp)
+				//задача по переданному ID не найдена
+				if !tgitfmtcp.TaskIsExist {
+					fmt.Println("func 'HandlerMsgFromDB', информационное сообщение о том что, задача по переданному ID не найдена")
+
+					notifications.SendNotificationToClientAPI(
+						outCoreChans.OutCoreChanAPI,
+						notifications.NotificationSettingsToClientAPI{
+							MsgType: "warning",
+							MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+								TaskType:   "изменение статуса задачи на 'завершена'",
+								TaskAction: "задача отклонена",
+								Message:    "невозможно отметить задачу как завершенную, так как задачи по принятому идентификатору в СУБД не найдено",
+							}),
+						},
+						res.TaskIDClientAPI,
+						res.IDClientAPI)
+
+					msgJSON, err := json.Marshal(resMsg)
+					if err != nil {
+						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
+
+						return
+					}
+
+					outCoreChans.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
+						MsgGenerator: "Core module",
+						MsgRecipient: "API module",
+						IDClientAPI:  res.IDClientAPI,
+						MsgJSON:      msgJSON,
+					}
+
+					return
+				}
 
 				//проверяем была ли выполненна задача по фильтрации
-				// и загружался ли хотябы один файл
+				// и загружался ли хотя бы один файл
 				if !tgitfmtcp.FiltrationTaskStatus || !tgitfmtcp.FilesDownloaded {
 
 					fmt.Println("func 'HandlerMsgFromDB', информационное сообщение о том что, невозможно отметить задачу как завершенную")
@@ -135,6 +197,23 @@ func HandlerMsgFromDB(
 						},
 						res.TaskIDClientAPI,
 						res.IDClientAPI)
+
+					msgJSON, err := json.Marshal(resMsg)
+					if err != nil {
+						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
+
+						return
+					}
+
+					outCoreChans.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
+						MsgGenerator: "Core module",
+						MsgRecipient: "API module",
+						IDClientAPI:  res.IDClientAPI,
+						MsgJSON:      msgJSON,
+					}
 
 					return
 				}
@@ -157,20 +236,46 @@ func HandlerMsgFromDB(
 
 				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'mark an task as completed', Response: '%v'\n", res)
 
-				/*
-									   Сделал до сего момента,
-										Запись данных производится
+				//информационное сообщение о том что, невозможно отметить задачу как завершенную
+				notifications.SendNotificationToClientAPI(
+					outCoreChans.OutCoreChanAPI,
+					notifications.NotificationSettingsToClientAPI{
+						MsgType: "success",
+						MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+							TaskType:   "изменение статуса задачи на 'завершена'",
+							TaskAction: "задача выполнена",
+							Message:    "выбранная задача была успешно отмечена как 'завершена'",
+						}),
+					},
+					res.TaskIDClientAPI,
+					res.IDClientAPI)
 
-					посмотреть ЕСТЬ ЛИ проверка на наличие задачи по переданному ID
+				resMsg := configure.MarkTaskCompletedResponse{
+					MsgOption: configure.MarkTaskCompletedResponseOption{
+						SuccessStatus: true,
+						RequestTaskID: res.TaskID,
+					},
+				}
+				resMsg.MsgType = "command"
+				resMsg.MsgSection = "information search control"
+				resMsg.MsgInstruction = "mark an task as completed"
+				resMsg.ClientTaskID = res.TaskIDClientAPI
+				msgJSON, err := json.Marshal(resMsg)
+				if err != nil {
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
 
-									   Дополнительно потестировать и сделать отправку клиенту API сообщения о
-									   успешность изменения состояния задачи
+					return
+				}
 
-									   от клиента API -> handlerAPI -> module DB (ищем задачу) ->
-									   -> handlerDB (проверяем параметры) -> moduleDB (запись в БД) ->
-									   -> handlerDB (сообщение об успешности клиенту API)
-
-				*/
+				outCoreChans.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
+					MsgGenerator: "Core module",
+					MsgRecipient: "API module",
+					IDClientAPI:  res.IDClientAPI,
+					MsgJSON:      msgJSON,
+				}
 
 			}
 

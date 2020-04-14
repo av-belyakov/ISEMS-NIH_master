@@ -25,7 +25,13 @@ type TypeFiltrationMsgFoundFileInformationAndTaskStatus struct {
 }
 
 //TypeGetInfoTaskFromMarkTaskCompleteProcess описание типа при обработке задачи по маркированию задачи как завершенная
+// TaskIsExist - найдена ли информация по задаче
+// UserName - имя пользователя полученное от клиента API
+// Description - общее описание причины закрытия задачи
+// FiltrationTaskStatus - была ли выполнена задача по фильтрации сет. трафика
+// FilesDownloaded - выполнялась ли загрузка хотя бы одного файла
 type TypeGetInfoTaskFromMarkTaskCompleteProcess struct {
+	TaskIsExist          bool
 	UserName             string
 	Description          string
 	FiltrationTaskStatus bool
