@@ -10,7 +10,7 @@ import (
 	"ISEMS-NIH_master/configure"
 )
 
-//GetAllSourcesList получить весь список источников
+//GetAllSourcesList получить весь список источников и отправить его 'NI module'
 func GetAllSourcesList(
 	chanIn chan<- *configure.MsgBetweenCoreAndDB,
 	req *configure.MsgBetweenCoreAndDB,
@@ -19,6 +19,42 @@ func GetAllSourcesList(
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: req.MsgRecipient,
 		MsgRecipient: req.MsgGenerator,
+		MsgSection:   "source control",
+		IDClientAPI:  req.IDClientAPI,
+		TaskID:       req.TaskID,
+	}
+
+	sourcesList, err := findAll(qp)
+	if err != nil {
+		msgRes.MsgRecipient = "Core module"
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: "an error occurred while processing request get the list of sources",
+			ErrorBody:             err,
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	msgRes.MsgSection = "source list"
+	msgRes.AdvancedOptions = sourcesList
+
+	//отправка списка источников маршрутизатору ядра приложения
+	chanIn <- &msgRes
+}
+
+//GetAllSourcesListForClientAPI получить весь список источников и отправить его 'API module'
+func GetAllSourcesListForClientAPI(
+	chanIn chan<- *configure.MsgBetweenCoreAndDB,
+	req *configure.MsgBetweenCoreAndDB,
+	qp QueryParameters) {
+
+	msgRes := configure.MsgBetweenCoreAndDB{
+		MsgGenerator: req.MsgRecipient,
+		MsgRecipient: "API module",
 		MsgSection:   "source control",
 		IDClientAPI:  req.IDClientAPI,
 		TaskID:       req.TaskID,

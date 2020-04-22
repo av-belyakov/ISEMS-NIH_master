@@ -614,7 +614,7 @@ func (smt *StoringMemoryTask) CheckTimeUpdateStoringMemoryTask(sec int) chan Msg
 					chanOut <- MsgChanStoringMemoryTask{
 						ID:          id,
 						Type:        "warning",
-						Description: fmt.Sprintf("информация по задаче с ID %v достаточно долго не обновлялась, возможно выполнение задачи было приостановленно", id),
+						Description: fmt.Sprintf("информация по задаче с ID %q достаточно долго не обновлялась, возможно выполнение задачи было приостановленно", id),
 					}
 				}
 			}

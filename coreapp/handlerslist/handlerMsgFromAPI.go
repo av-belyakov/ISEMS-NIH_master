@@ -136,7 +136,7 @@ func HandlerMsgFromAPI(
 					MsgGenerator: "API module",
 					MsgRecipient: "DB module",
 					MsgSection:   "source control",
-					Instruction:  "find_all",
+					Instruction:  "find_all_for_client_API",
 					TaskID:       taskID,
 				}
 

@@ -29,6 +29,9 @@ func (wr *WrappersRouteRequest) WrapperFuncSourceControl(msg *configure.MsgBetwe
 	case "find_all":
 		handlerrequestdb.GetAllSourcesList(wr.ChanIn, msg, qp)
 
+	case "find_all_for_client_API":
+		handlerrequestdb.GetAllSourcesListForClientAPI(wr.ChanIn, msg, qp)
+
 	case "insert":
 		handlerrequestdb.InsertListSources(wr.ChanIn, msg, qp)
 
