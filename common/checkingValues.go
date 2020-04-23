@@ -62,7 +62,7 @@ func CheckFolders(f []string) (bool, error) {
 		return false, nil
 	}
 
-	pattern := "^(/|_|\\w)+$"
+	pattern := "^(/|_|-|\\w)+$"
 	rx, err := regexp.Compile(pattern)
 	if err != nil {
 		return false, err

@@ -318,9 +318,6 @@ func HandlerMsgFromDB(
 		switch res.MsgSection {
 		case "source list":
 			if err := getCurrentSourceListForAPI(outCoreChans.OutCoreChanAPI, res, taskInfo.ClientID, taskInfo.ClientTaskID); err != nil {
-
-				fmt.Printf("ERROR: %v\n", err)
-
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
 					FuncName:    funcName,
@@ -453,6 +450,7 @@ func HandlerMsgFromDB(
 
 			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, taskInfo.ClientTaskID, res.IDClientAPI)
 		}
+
 	case "NI module":
 		switch res.MsgSection {
 		case "source list":

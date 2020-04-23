@@ -11,6 +11,15 @@ import (
 	"ISEMS-NIH_master/configure"
 )
 
+type validateUserDataSourceSettings struct {
+	SourceID  int
+	ShortName string
+	IP        string
+	Token     string
+	AsServer  bool
+	Settings  configure.InfoServiceSettings
+}
+
 func createStringFromSourceList(l []int) string {
 	var strSourceID string
 
@@ -48,8 +57,8 @@ func createSourceList(isl *configure.InformationSourcesList, l []configure.Infor
 	}
 }
 
-func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]configure.SourceSetting, []int) {
-	listTrastedSources := make([]configure.SourceSetting, 0, len(*l))
+func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]validateUserDataSourceSettings, []int) {
+	listTrastedSources := make([]validateUserDataSourceSettings, 0, len(*l))
 	listInvalidSource := []int{}
 
 	for _, s := range *l {
@@ -59,6 +68,8 @@ func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]configu
 
 		if !ipIsValid || !tokenIsValid || !foldersIsValid {
 			listInvalidSource = append(listInvalidSource, s.ID)
+
+			continue
 		}
 
 		if (s.Argument.Settings.MaxCountProcessFiltration > 0) && (s.Argument.Settings.MaxCountProcessFiltration < 10) {
@@ -70,7 +81,13 @@ func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]configu
 			serverPort = 13113
 		}
 
-		listTrastedSources = append(listTrastedSources, configure.SourceSetting{
+		typeAreaNetwork := "ip"
+		if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe" {
+			typeAreaNetwork = "pppoe"
+		}
+
+		listTrastedSources = append(listTrastedSources, validateUserDataSourceSettings{
+			SourceID:  s.ID,
 			ShortName: s.Argument.ShortName,
 			IP:        s.Argument.IP,
 			Token:     s.Argument.Token,
@@ -80,6 +97,7 @@ func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]configu
 				EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
 				MaxCountProcessFiltration: mcpf,
 				StorageFolders:            s.Argument.Settings.StorageFolders,
+				TypeAreaNetwork:           typeAreaNetwork,
 			},
 		})
 	}
@@ -103,27 +121,21 @@ func updateSourceList(
 		return listTaskExecuted, listInvalidSource
 	}
 
-	typeAreaNetwork := "ip"
-
 	//если список источников в памяти приложения пуст
 	if isl.GetCountSources() == 0 {
-		for _, s := range l {
-			if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe" {
-				typeAreaNetwork = "pppoe"
-			}
-
-			isl.AddSourceSettings(s.ID, configure.SourceSetting{
-				ShortName:  s.Argument.ShortName,
-				IP:         s.Argument.IP,
-				Token:      s.Argument.Token,
+		for _, si := range *listTrastedSources {
+			isl.AddSourceSettings(si.SourceID, configure.SourceSetting{
+				ShortName:  si.ShortName,
+				IP:         si.IP,
+				Token:      si.Token,
 				ClientName: clientName,
-				AsServer:   s.Argument.Settings.AsServer,
+				AsServer:   si.AsServer,
 				Settings: configure.InfoServiceSettings{
-					IfAsServerThenPort:        s.Argument.Settings.Port,
-					EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
-					MaxCountProcessFiltration: s.Argument.Settings.MaxCountProcessFiltration,
-					StorageFolders:            s.Argument.Settings.StorageFolders,
-					TypeAreaNetwork:           typeAreaNetwork,
+					IfAsServerThenPort:        si.Settings.IfAsServerThenPort,
+					EnableTelemetry:           si.Settings.EnableTelemetry,
+					MaxCountProcessFiltration: si.Settings.MaxCountProcessFiltration,
+					StorageFolders:            si.Settings.StorageFolders,
+					TypeAreaNetwork:           si.Settings.TypeAreaNetwork,
 				},
 			})
 		}
@@ -135,26 +147,22 @@ func updateSourceList(
 
 	_, listDisconnected := isl.GetListsConnectedAndDisconnectedSources()
 
-	for _, source := range l {
-		if strings.ToLower(source.Argument.Settings.TypeAreaNetwork) == "pppoe" {
-			typeAreaNetwork = "pppoe"
-		}
-
+	for _, si := range *listTrastedSources {
 		//если источника нет в списке
-		s, isExist := isl.GetSourceSetting(source.ID)
+		s, isExist := isl.GetSourceSetting(si.SourceID)
 		if !isExist {
-			isl.AddSourceSettings(source.ID, configure.SourceSetting{
-				ShortName:  source.Argument.ShortName,
-				IP:         source.Argument.IP,
-				Token:      source.Argument.Token,
+			isl.AddSourceSettings(si.SourceID, configure.SourceSetting{
+				ShortName:  si.ShortName,
+				IP:         si.IP,
+				Token:      si.Token,
 				ClientName: clientName,
-				AsServer:   source.Argument.Settings.AsServer,
+				AsServer:   si.AsServer,
 				Settings: configure.InfoServiceSettings{
-					IfAsServerThenPort:        source.Argument.Settings.Port,
-					EnableTelemetry:           source.Argument.Settings.EnableTelemetry,
-					MaxCountProcessFiltration: source.Argument.Settings.MaxCountProcessFiltration,
-					StorageFolders:            source.Argument.Settings.StorageFolders,
-					TypeAreaNetwork:           typeAreaNetwork,
+					IfAsServerThenPort:        si.Settings.IfAsServerThenPort,
+					EnableTelemetry:           si.Settings.EnableTelemetry,
+					MaxCountProcessFiltration: si.Settings.MaxCountProcessFiltration,
+					StorageFolders:            si.Settings.StorageFolders,
+					TypeAreaNetwork:           si.Settings.TypeAreaNetwork,
 				},
 			})
 
@@ -162,21 +170,21 @@ func updateSourceList(
 		}
 
 		//если на источнике ожидает выполнения или выполняется какая либо задача задача
-		if _, ok := qts.GetAllTaskQueueTaskStorage(source.ID); ok {
-			listTaskExecuted = append(listTaskExecuted, source.ID)
+		if _, ok := qts.GetAllTaskQueueTaskStorage(si.SourceID); ok {
+			listTaskExecuted = append(listTaskExecuted, si.SourceID)
 		}
 
 		//проверяем имеет ли право клиент делать какие либо изменения с информацией по источнику
 		if clientName != s.ClientName && clientName != "root token" {
-			listInvalidSource = append(listInvalidSource, source.ID)
+			listInvalidSource = append(listInvalidSource, si.SourceID)
 
 			continue
 		}
 
-		changeToken := (s.Token != source.Argument.Token)
-		changeIP := (s.IP != source.Argument.IP)
-		changeAsServer := (s.AsServer != source.Argument.Settings.AsServer)
-		changeEnTelemetry := (s.Settings.EnableTelemetry != source.Argument.Settings.EnableTelemetry)
+		changeToken := (s.Token != si.Token)
+		changeIP := (s.IP != si.IP)
+		changeAsServer := (s.AsServer != si.AsServer)
+		changeEnTelemetry := (s.Settings.EnableTelemetry != si.Settings.EnableTelemetry)
 
 		//проверяем параметры подключения
 		if changeToken || changeIP || changeAsServer || changeEnTelemetry {
@@ -184,21 +192,21 @@ func updateSourceList(
 		}
 
 		//полная замена информации об источнике
-		if _, ok := listDisconnected[source.ID]; ok {
-			isl.DelSourceSettings(source.ID)
+		if _, ok := listDisconnected[si.SourceID]; ok {
+			isl.DelSourceSettings(si.SourceID)
 
-			isl.AddSourceSettings(source.ID, configure.SourceSetting{
-				ShortName:  source.Argument.ShortName,
-				IP:         source.Argument.IP,
-				Token:      source.Argument.Token,
+			isl.AddSourceSettings(si.SourceID, configure.SourceSetting{
+				ShortName:  si.ShortName,
+				IP:         si.IP,
+				Token:      si.Token,
 				ClientName: clientName,
-				AsServer:   source.Argument.Settings.AsServer,
+				AsServer:   si.AsServer,
 				Settings: configure.InfoServiceSettings{
-					IfAsServerThenPort:        source.Argument.Settings.Port,
-					EnableTelemetry:           source.Argument.Settings.EnableTelemetry,
-					MaxCountProcessFiltration: source.Argument.Settings.MaxCountProcessFiltration,
-					StorageFolders:            source.Argument.Settings.StorageFolders,
-					TypeAreaNetwork:           typeAreaNetwork,
+					IfAsServerThenPort:        si.Settings.IfAsServerThenPort,
+					EnableTelemetry:           si.Settings.EnableTelemetry,
+					MaxCountProcessFiltration: si.Settings.MaxCountProcessFiltration,
+					StorageFolders:            si.Settings.StorageFolders,
+					TypeAreaNetwork:           si.Settings.TypeAreaNetwork,
 				},
 			})
 
@@ -207,10 +215,10 @@ func updateSourceList(
 
 		if sourcesIsReconnect {
 			//закрываем соединение и удаляем дискриптор
-			if cl, isExist := isl.GetLinkWebsocketConnect(source.Argument.IP); isExist {
+			if cl, isExist := isl.GetLinkWebsocketConnect(si.IP); isExist {
 				cl.Link.Close()
 
-				isl.DelLinkWebsocketConnection(source.Argument.IP)
+				isl.DelLinkWebsocketConnection(si.IP)
 			}
 
 			sourcesIsReconnect = false
@@ -221,38 +229,40 @@ func updateSourceList(
 }
 
 //getSourceListToStoreDB формирует список источников для последующей их записи в БД
-func getSourceListToStoreDB(trastedSoures []int, l *[]configure.DetailedListSources, clientName string, mcpf int8) (*[]configure.InformationAboutSource, error) {
+func getSourceListToStoreDB(trustedSoures []int, l *[]configure.DetailedListSources, clientName string, mcpf int8) (*[]configure.InformationAboutSource, error) {
 	list := make([]configure.InformationAboutSource, 0, len(*l))
 
 	typeAreaNetwork := "ip"
 
-	sort.Ints(trastedSoures)
+	sort.Ints(trustedSoures)
 	for _, s := range *l {
-		if sort.SearchInts(trastedSoures, s.ID) != -1 {
-			if (s.Argument.Settings.MaxCountProcessFiltration > 0) && (s.Argument.Settings.MaxCountProcessFiltration < 10) {
-				mcpf = s.Argument.Settings.MaxCountProcessFiltration
-			}
+		for _, trustedSoure := range trustedSoures {
+			if trustedSoure == s.ID {
+				if (s.Argument.Settings.MaxCountProcessFiltration > 0) && (s.Argument.Settings.MaxCountProcessFiltration < 10) {
+					mcpf = s.Argument.Settings.MaxCountProcessFiltration
+				}
 
-			if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe" {
-				typeAreaNetwork = "pppoe"
-			}
+				if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe" {
+					typeAreaNetwork = "pppoe"
+				}
 
-			list = append(list, configure.InformationAboutSource{
-				ID:            s.ID,
-				IP:            s.Argument.IP,
-				Token:         s.Argument.Token,
-				ShortName:     s.Argument.ShortName,
-				Description:   s.Argument.Description,
-				AsServer:      s.Argument.Settings.AsServer,
-				NameClientAPI: clientName,
-				SourceSetting: configure.InfoServiceSettings{
-					IfAsServerThenPort:        s.Argument.Settings.Port,
-					EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
-					MaxCountProcessFiltration: mcpf,
-					StorageFolders:            s.Argument.Settings.StorageFolders,
-					TypeAreaNetwork:           typeAreaNetwork,
-				},
-			})
+				list = append(list, configure.InformationAboutSource{
+					ID:            s.ID,
+					IP:            s.Argument.IP,
+					Token:         s.Argument.Token,
+					ShortName:     s.Argument.ShortName,
+					Description:   s.Argument.Description,
+					AsServer:      s.Argument.Settings.AsServer,
+					NameClientAPI: clientName,
+					SourceSetting: configure.InfoServiceSettings{
+						IfAsServerThenPort:        s.Argument.Settings.Port,
+						EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
+						MaxCountProcessFiltration: mcpf,
+						StorageFolders:            s.Argument.Settings.StorageFolders,
+						TypeAreaNetwork:           typeAreaNetwork,
+					},
+				})
+			}
 		}
 	}
 
