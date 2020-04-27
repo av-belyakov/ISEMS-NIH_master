@@ -324,6 +324,12 @@ func performActionSelectedSources(
 				})
 
 				aie.IsSuccess = true
+				aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   s.ID,
+					TaskType:   "управление источниками",
+					TaskAction: "задача выполнена",
+					Message:    "источник был успешно добавлен в базу данных",
+				})
 			}
 			listActionIsExecuted = append(listActionIsExecuted, aie)
 
@@ -427,6 +433,12 @@ func performActionSelectedSources(
 			})
 
 			aie.IsSuccess = true
+			aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   s.ID,
+				TaskType:   "управление источниками",
+				TaskAction: "задача выполнена",
+				Message:    "информация по источнику была успешно обновлена",
+			})
 
 			listActionIsExecuted = append(listActionIsExecuted, aie)
 
@@ -445,6 +457,12 @@ func performActionSelectedSources(
 			isl.DelSourceSettings(s.ID)
 
 			aie.IsSuccess = true
+			aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
+				SourceID:   s.ID,
+				TaskType:   "управление источниками",
+				TaskAction: "задача выполнена",
+				Message:    "информация по источнику была успешно удалена",
+			})
 
 			listActionIsExecuted = append(listActionIsExecuted, aie)
 
