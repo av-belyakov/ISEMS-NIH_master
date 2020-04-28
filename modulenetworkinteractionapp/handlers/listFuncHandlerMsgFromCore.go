@@ -61,15 +61,23 @@ func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]validat
 	listTrastedSources := make([]validateUserDataSourceSettings, 0, len(*l))
 	listInvalidSource := []int{}
 
+	fmt.Println("func 'validateUserData'")
+
 	for _, s := range *l {
-		ipIsValid, _ := common.CheckStringIP(s.Argument.IP)
-		tokenIsValid, _ := common.CheckStringToken(s.Argument.Token)
-		foldersIsValid, _ := common.CheckFolders(s.Argument.Settings.StorageFolders)
+		fmt.Printf("action type: '%v'\n", s.ActionType)
 
-		if !ipIsValid || !tokenIsValid || !foldersIsValid {
-			listInvalidSource = append(listInvalidSource, s.ID)
+		if s.ActionType == "add" || s.ActionType == "update" {
+			ipIsValid, _ := common.CheckStringIP(s.Argument.IP)
+			tokenIsValid, _ := common.CheckStringToken(s.Argument.Token)
+			foldersIsValid, _ := common.CheckFolders(s.Argument.Settings.StorageFolders)
 
-			continue
+			fmt.Printf("ipIsValid: %v, tokenIsValid: %v, foldersIsValid: %v\n", ipIsValid, tokenIsValid, foldersIsValid)
+
+			if !ipIsValid || !tokenIsValid || !foldersIsValid {
+				listInvalidSource = append(listInvalidSource, s.ID)
+
+				continue
+			}
 		}
 
 		if (s.Argument.Settings.MaxCountProcessFiltration > 0) && (s.Argument.Settings.MaxCountProcessFiltration < 10) {
@@ -116,6 +124,9 @@ func updateSourceList(
 	var listTaskExecuted []int
 
 	listTrastedSources, listInvalidSource := validateUserData(&l, mcpf)
+
+	fmt.Println("func 'updateSourceList', START...")
+	fmt.Printf("listTrastedSources: '%v'\n", listTrastedSources)
 
 	if len(*listTrastedSources) == 0 {
 		return listTaskExecuted, listInvalidSource
@@ -277,55 +288,59 @@ func performActionSelectedSources(
 	clientName string,
 	mcpf int8) (*[]configure.ActionTypeListSources, *[]int, error) {
 
-	listTrastedSources, listInvalidSource := validateUserData(l, mcpf)
+	listTrustedSources, listInvalidSource := validateUserData(l, mcpf)
 	listActionIsExecuted := make([]configure.ActionTypeListSources, 0, len(*l))
 
-	if len(*listTrastedSources) == 0 {
+	fmt.Println("func 'performActionSelectedSources', START...")
+	fmt.Printf("listTrastedSources: '%v'\n, listInvalidSource: '%v'\n", listTrustedSources, listInvalidSource)
+
+	fmt.Printf("-------------------")
+	fmt.Printf("DetailedListSources: '%v'\n", l)
+
+	if len(*listTrustedSources) == 0 {
 		return &listActionIsExecuted, &listInvalidSource, errors.New("parameters of all sources passed by the user have incorrect values, the action on any source will not be performed")
 	}
 
 	var ok bool
 	var sourceInfo *configure.SourceSetting
 
-	typeAreaNetwork := "ip"
+	for _, ts := range *listTrustedSources {
+		var actionType string
 
-	for _, s := range *l {
+		for _, s := range *l {
+			if ts.SourceID == s.ID {
+				actionType = s.ActionType
+
+				break
+			}
+		}
+
 		aie := configure.ActionTypeListSources{
-			ID:         s.ID,
+			ID:         ts.SourceID,
 			Status:     "disconnect",
-			ActionType: s.ActionType,
+			ActionType: actionType,
 		}
 
-		if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe" {
-			typeAreaNetwork = "pppoe"
-		}
-
-		//проверяем максимальное кол-во одновременно запущеных задач фильтрации
-		if s.Argument.Settings.MaxCountProcessFiltration > 1 && 10 > s.Argument.Settings.MaxCountProcessFiltration {
-			mcpf = s.Argument.Settings.MaxCountProcessFiltration
-		}
-
-		//есть ли источник с таким ID
-		if sourceInfo, ok = isl.GetSourceSetting(s.ID); !ok {
-			if s.ActionType == "add" {
-				isl.AddSourceSettings(s.ID, configure.SourceSetting{
-					ShortName:  s.Argument.ShortName,
-					IP:         s.Argument.IP,
-					Token:      s.Argument.Token,
+		if sourceInfo, ok = isl.GetSourceSetting(ts.SourceID); !ok {
+			if actionType == "add" {
+				isl.AddSourceSettings(ts.SourceID, configure.SourceSetting{
+					ShortName:  ts.ShortName,
+					IP:         ts.IP,
+					Token:      ts.Token,
 					ClientName: clientName,
-					AsServer:   s.Argument.Settings.AsServer,
+					AsServer:   ts.AsServer,
 					Settings: configure.InfoServiceSettings{
-						IfAsServerThenPort:        s.Argument.Settings.Port,
-						EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
-						MaxCountProcessFiltration: mcpf,
-						StorageFolders:            s.Argument.Settings.StorageFolders,
-						TypeAreaNetwork:           typeAreaNetwork,
+						IfAsServerThenPort:        ts.Settings.IfAsServerThenPort,
+						EnableTelemetry:           ts.Settings.EnableTelemetry,
+						MaxCountProcessFiltration: ts.Settings.MaxCountProcessFiltration,
+						StorageFolders:            ts.Settings.StorageFolders,
+						TypeAreaNetwork:           ts.Settings.TypeAreaNetwork,
 					},
 				})
 
 				aie.IsSuccess = true
 				aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-					SourceID:   s.ID,
+					SourceID:   ts.SourceID,
 					TaskType:   "управление источниками",
 					TaskAction: "задача выполнена",
 					Message:    "источник был успешно добавлен в базу данных",
@@ -341,7 +356,7 @@ func performActionSelectedSources(
 		}
 
 		//обработка запроса статуса соединений
-		if s.ActionType == "status request" {
+		if actionType == "status request" {
 			aie.IsSuccess = true
 
 			listActionIsExecuted = append(listActionIsExecuted, aie)
@@ -350,10 +365,10 @@ func performActionSelectedSources(
 		}
 
 		//если источник найден
-		if s.ActionType == "add" {
+		if actionType == "add" {
 			aie.IsSuccess = false
 			aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-				SourceID:   s.ID,
+				SourceID:   ts.SourceID,
 				TaskType:   "управление источниками",
 				TaskAction: "задача отклонена",
 				Message:    "невозможно добавить источник, источник с таким ID уже существует",
@@ -364,12 +379,12 @@ func performActionSelectedSources(
 			continue
 		}
 
-		if s.ActionType == "update" || s.ActionType == "delete" {
+		if actionType == "update" || actionType == "delete" {
 			//проверяем имеет ли право клиент делать какие либо изменения с информацией по источнику
 			if (clientName != sourceInfo.ClientName) && (clientName != "root token") {
 				aie.IsSuccess = false
 				aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-					SourceID:   s.ID,
+					SourceID:   ts.SourceID,
 					TaskType:   "управление источниками",
 					TaskAction: "задача отклонена",
 					Message:    "недостаточно прав для выполнения действий с источником, возможно он был добавлен другим клиентом",
@@ -381,14 +396,14 @@ func performActionSelectedSources(
 			}
 
 			//проверяем ожидает или выполняется на источнике какая либо задача
-			if listSourceTask, ok := qts.GetAllTaskQueueTaskStorage(s.ID); ok {
+			if listSourceTask, ok := qts.GetAllTaskQueueTaskStorage(ts.SourceID); ok {
 
-				fmt.Printf("func 'listFuncHandlerMsgFromCore', ===== ALL TASKS source ID '%v' (%v)\n", s.ID, listSourceTask)
+				fmt.Printf("func 'listFuncHandlerMsgFromCore', ===== ALL TASKS source ID '%v' (%v)\n", ts.SourceID, listSourceTask)
 
 				if len(listSourceTask) > 0 {
 					aie.IsSuccess = false
 					aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-						SourceID:   s.ID,
+						SourceID:   ts.SourceID,
 						TaskType:   "управление источниками",
 						TaskAction: "задача отклонена",
 						Message:    "невозможно выполнить действия на источнике, так как в настоящее время на данном сенсоре ожидает выполнения или уже выполняется какая либо задача",
@@ -401,11 +416,11 @@ func performActionSelectedSources(
 			}
 		}
 
-		if s.ActionType == "update" {
-			changeToken := (sourceInfo.Token != s.Argument.Token)
-			changeIP := (sourceInfo.IP != s.Argument.IP)
-			changeAsServer := (sourceInfo.AsServer != s.Argument.Settings.AsServer)
-			changeEnTelemetry := (sourceInfo.Settings.EnableTelemetry != s.Argument.Settings.EnableTelemetry)
+		if actionType == "update" {
+			changeToken := (sourceInfo.Token != ts.Token)
+			changeIP := (sourceInfo.IP != ts.IP)
+			changeAsServer := (sourceInfo.AsServer != ts.AsServer)
+			changeEnTelemetry := (sourceInfo.Settings.EnableTelemetry != ts.Settings.EnableTelemetry)
 
 			//проверяем параметры подключения
 			if changeToken || changeIP || changeAsServer || changeEnTelemetry {
@@ -417,24 +432,24 @@ func performActionSelectedSources(
 				}
 			}
 
-			isl.AddSourceSettings(s.ID, configure.SourceSetting{
-				ShortName:  s.Argument.ShortName,
-				IP:         s.Argument.IP,
-				Token:      s.Argument.Token,
+			isl.AddSourceSettings(ts.SourceID, configure.SourceSetting{
+				ShortName:  ts.ShortName,
+				IP:         ts.IP,
+				Token:      ts.Token,
 				ClientName: clientName,
-				AsServer:   s.Argument.Settings.AsServer,
+				AsServer:   ts.AsServer,
 				Settings: configure.InfoServiceSettings{
-					IfAsServerThenPort:        s.Argument.Settings.Port,
-					EnableTelemetry:           s.Argument.Settings.EnableTelemetry,
-					MaxCountProcessFiltration: mcpf,
-					StorageFolders:            s.Argument.Settings.StorageFolders,
-					TypeAreaNetwork:           typeAreaNetwork,
+					IfAsServerThenPort:        ts.Settings.IfAsServerThenPort,
+					EnableTelemetry:           ts.Settings.EnableTelemetry,
+					MaxCountProcessFiltration: ts.Settings.MaxCountProcessFiltration,
+					StorageFolders:            ts.Settings.StorageFolders,
+					TypeAreaNetwork:           ts.Settings.TypeAreaNetwork,
 				},
 			})
 
 			aie.IsSuccess = true
 			aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-				SourceID:   s.ID,
+				SourceID:   ts.SourceID,
 				TaskType:   "управление источниками",
 				TaskAction: "задача выполнена",
 				Message:    "информация по источнику была успешно обновлена",
@@ -445,7 +460,7 @@ func performActionSelectedSources(
 			continue
 		}
 
-		if s.ActionType == "delete" {
+		if actionType == "delete" {
 			//закрываем соединение и удаляем дискриптор
 			if cl, isExist := isl.GetLinkWebsocketConnect(sourceInfo.IP); isExist {
 				cl.Link.Close()
@@ -454,11 +469,11 @@ func performActionSelectedSources(
 			}
 
 			//удаление всей информации об источнике
-			isl.DelSourceSettings(s.ID)
+			isl.DelSourceSettings(ts.SourceID)
 
 			aie.IsSuccess = true
 			aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-				SourceID:   s.ID,
+				SourceID:   ts.SourceID,
 				TaskType:   "управление источниками",
 				TaskAction: "задача выполнена",
 				Message:    "информация по источнику была успешно удалена",
@@ -470,11 +485,11 @@ func performActionSelectedSources(
 		}
 
 		//при переподключении
-		if s.ActionType == "reconnect" {
+		if actionType == "reconnect" {
 			if !sourceInfo.ConnectionStatus {
 				aie.IsSuccess = false
 				aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-					SourceID:   s.ID,
+					SourceID:   ts.SourceID,
 					TaskType:   "управление источниками",
 					TaskAction: "задача отклонена",
 					Message:    "невозможно выполнить переподключение, источник не подключен",
@@ -486,10 +501,10 @@ func performActionSelectedSources(
 			}
 
 			//проверяем не ожидает ли или выполняется скачивание файлов с источника
-			if qts.IsExistTaskDownloadQueueTaskStorage(s.ID) {
+			if qts.IsExistTaskDownloadQueueTaskStorage(ts.SourceID) {
 				aie.IsSuccess = false
 				aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-					SourceID:   s.ID,
+					SourceID:   ts.SourceID,
 					TaskType:   "управление источниками",
 					TaskAction: "задача отклонена",
 					Message:    "невозможно выполнить переподключение, с источника осуществляется скачивание файлов",
@@ -512,7 +527,6 @@ func performActionSelectedSources(
 			listActionIsExecuted = append(listActionIsExecuted, aie)
 		}
 	}
-
 	return &listActionIsExecuted, &listInvalidSource, nil
 }
 

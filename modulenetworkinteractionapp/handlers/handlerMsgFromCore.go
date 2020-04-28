@@ -210,6 +210,11 @@ func HandlerMsgFromCore(
 			listActionType, listInvalidSource, err := performActionSelectedSources(isl, qts, &ado.MsgOptions.SourceList, msg.ClientName, mcpf)
 			if err != nil {
 				strSourceID := createStringFromSourceList(*listInvalidSource)
+				strSource := "источником"
+
+				if len(*listInvalidSource) > 1 {
+					strSource = "источниками"
+				}
 
 				clientNotify.AdvancedOptions = configure.MessageNotification{
 					SourceReport:                 "NI module",
@@ -217,7 +222,7 @@ func HandlerMsgFromCore(
 					TypeActionPerformed:          "perform actions on sources",
 					CriticalityMessage:           "warning",
 					Sources:                      *listInvalidSource,
-					HumanDescriptionNotification: fmt.Sprintf("невозможно выполнить действия над источниками:%v, приняты некорректные значения", strSourceID),
+					HumanDescriptionNotification: fmt.Sprintf("невозможно выполнить действия над %v: %v, приняты некорректные значения", strSource, strSourceID),
 				}
 
 				chanInCore <- &clientNotify
