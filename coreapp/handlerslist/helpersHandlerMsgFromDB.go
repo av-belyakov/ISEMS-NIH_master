@@ -14,6 +14,7 @@ import (
 //getCurrentSourceListForAPI подготавливает список актуальных источников для передаче клиенту API
 func getCurrentSourceListForAPI(
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
+	isl *configure.InformationSourcesList,
 	res *configure.MsgBetweenCoreAndDB,
 	clientID, clientTaskID string) error {
 
@@ -28,11 +29,21 @@ func getCurrentSourceListForAPI(
 
 	//формируем ответ клиенту API
 	for _, s := range listSource {
+		var cs bool
+		var dlc int64
+
+		if si, ok := isl.GetSourceSetting(s.ID); ok {
+			cs = si.ConnectionStatus
+			dlc = si.DateLastConnected
+		}
+
 		list = append(list, configure.ShortListSources{
-			ID:          s.ID,
-			IP:          s.IP,
-			ShortName:   s.ShortName,
-			Description: s.Description,
+			ID:                s.ID,
+			IP:                s.IP,
+			ShortName:         s.ShortName,
+			ConnectionStatus:  cs,
+			DateLastConnected: dlc,
+			Description:       s.Description,
 		})
 	}
 

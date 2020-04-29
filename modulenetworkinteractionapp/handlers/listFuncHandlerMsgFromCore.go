@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -61,17 +60,11 @@ func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]validat
 	listTrastedSources := make([]validateUserDataSourceSettings, 0, len(*l))
 	listInvalidSource := []int{}
 
-	fmt.Println("func 'validateUserData'")
-
 	for _, s := range *l {
-		fmt.Printf("action type: '%v'\n", s.ActionType)
-
 		if s.ActionType == "add" || s.ActionType == "update" {
 			ipIsValid, _ := common.CheckStringIP(s.Argument.IP)
 			tokenIsValid, _ := common.CheckStringToken(s.Argument.Token)
 			foldersIsValid, _ := common.CheckFolders(s.Argument.Settings.StorageFolders)
-
-			fmt.Printf("ipIsValid: %v, tokenIsValid: %v, foldersIsValid: %v\n", ipIsValid, tokenIsValid, foldersIsValid)
 
 			if !ipIsValid || !tokenIsValid || !foldersIsValid {
 				listInvalidSource = append(listInvalidSource, s.ID)
@@ -124,9 +117,6 @@ func updateSourceList(
 	var listTaskExecuted []int
 
 	listTrastedSources, listInvalidSource := validateUserData(&l, mcpf)
-
-	fmt.Println("func 'updateSourceList', START...")
-	fmt.Printf("listTrastedSources: '%v'\n", listTrastedSources)
 
 	if len(*listTrastedSources) == 0 {
 		return listTaskExecuted, listInvalidSource
@@ -291,12 +281,6 @@ func performActionSelectedSources(
 	listTrustedSources, listInvalidSource := validateUserData(l, mcpf)
 	listActionIsExecuted := make([]configure.ActionTypeListSources, 0, len(*l))
 
-	fmt.Println("func 'performActionSelectedSources', START...")
-	fmt.Printf("listTrastedSources: '%v'\n, listInvalidSource: '%v'\n", listTrustedSources, listInvalidSource)
-
-	fmt.Printf("-------------------")
-	fmt.Printf("DetailedListSources: '%v'\n", l)
-
 	if len(*listTrustedSources) == 0 {
 		return &listActionIsExecuted, &listInvalidSource, errors.New("parameters of all sources passed by the user have incorrect values, the action on any source will not be performed")
 	}
@@ -397,9 +381,6 @@ func performActionSelectedSources(
 
 			//проверяем ожидает или выполняется на источнике какая либо задача
 			if listSourceTask, ok := qts.GetAllTaskQueueTaskStorage(ts.SourceID); ok {
-
-				fmt.Printf("func 'listFuncHandlerMsgFromCore', ===== ALL TASKS source ID '%v' (%v)\n", ts.SourceID, listSourceTask)
-
 				if len(listSourceTask) > 0 {
 					aie.IsSuccess = false
 					aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{

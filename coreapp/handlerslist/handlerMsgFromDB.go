@@ -317,7 +317,7 @@ func HandlerMsgFromDB(
 
 		switch res.MsgSection {
 		case "source list":
-			if err := getCurrentSourceListForAPI(outCoreChans.OutCoreChanAPI, res, taskInfo.ClientID, taskInfo.ClientTaskID); err != nil {
+			if err := getCurrentSourceListForAPI(outCoreChans.OutCoreChanAPI, hsm.ISL, res, taskInfo.ClientID, taskInfo.ClientTaskID); err != nil {
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
 					FuncName:    funcName,

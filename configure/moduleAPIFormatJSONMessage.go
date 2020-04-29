@@ -135,12 +135,16 @@ type SourceListToAPI struct {
 // ID - уникальный числовой идентификатор источника
 // IP - ip адрес источника
 // ShortName - краткое название источника
+// ConnectionStatus - статус сетевого соединения (true - connect, false - disconnect)
+// DateLastConnected - дата последнего соединения
 // Description - описание источника
 type ShortListSources struct {
-	ID          int    `json:"id"`
-	IP          string `json:"ip"`
-	ShortName   string `json:"sn"`
-	Description string `json:"d"`
+	ID                int    `json:"id"`
+	IP                string `json:"ip"`
+	ShortName         string `json:"sn"`
+	ConnectionStatus  bool   `json:"cs"`
+	DateLastConnected int64  `json:"dlc"`
+	Description       string `json:"d"`
 }
 
 //DetailedListSources весь список источников ->API
