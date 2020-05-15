@@ -289,6 +289,9 @@ func HandlerMsgFromCore(
 		}
 
 	case "filtration control":
+
+		fmt.Println("func 'handlerMsgFromCore', section 'filtration control'")
+
 		//проверяем наличие подключения для заданного источника
 		si, ok := isl.GetSourceSetting(msg.SourceID)
 		if !ok {
@@ -354,6 +357,8 @@ func HandlerMsgFromCore(
 
 				return
 			}
+
+			fmt.Println("func 'handlerMsgFromCore', section 'filtration control' --> task to --> source")
 
 			//передаем задачу источнику
 			cwt <- configure.MsgWsTransmission{

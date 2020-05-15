@@ -284,6 +284,9 @@ func RouteWssConnectionResponse(
 				}
 
 			case "filtration":
+
+				fmt.Println("func 'RouteWssConnectionResponse', MESSAGE filtration")
+
 				if err := processresponse.ProcessingReceivedMsgTypeFiltering(processresponse.ParametersProcessingReceivedMsgTypeFiltering{
 					SMT:      smt,
 					Message:  message,
