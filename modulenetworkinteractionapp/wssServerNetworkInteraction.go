@@ -73,7 +73,7 @@ func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWrit
 		w.Write(bodyHTTPResponseError)
 
 		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-			Description: fmt.Sprintf("missing or incorrect identification token (сlient ipaddress %v)", req.RemoteAddr),
+			Description: fmt.Sprintf("missing or incorrect identification token (сlient ipaddress %v), module 'wssServerNetworkInteraction'", req.RemoteAddr),
 			FuncName:    "HandlerRequest",
 		})
 
@@ -143,6 +143,8 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 		})
 	}
 	defer connClose(sws.COut, c, sws.SourceList, clientID, remoteIP)
+
+	fmt.Printf("CONNECTION with source ID '%v'\n", clientID)
 
 	//изменяем состояние соединения для данного источника
 	_ = sws.SourceList.ChangeSourceConnectionStatus(clientID, true)

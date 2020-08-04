@@ -98,7 +98,7 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 		w.Write(bodyHTTPResponseError)
 
 		settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-			Description: fmt.Sprintf("missing or incorrect identification token (сlient ipaddress %v)", req.RemoteAddr),
+			Description: fmt.Sprintf("missing or incorrect identification token (сlient ipaddress %v), module 'mainAPIApp'", req.RemoteAddr),
 			FuncName:    funcName,
 		})
 	}
@@ -124,7 +124,7 @@ func (settingsServerAPI *settingsServerAPI) HandlerRequest(w http.ResponseWriter
 	w.Write(bodyHTTPResponseError)
 
 	settingsServerAPI.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-		Description: fmt.Sprintf("missing or incorrect identification token (сlient ipaddress %v)", req.RemoteAddr),
+		Description: fmt.Sprintf("missing or incorrect identification token (сlient ipaddress %v), module 'mainAPIApp' bodyHTTPResponseError", req.RemoteAddr),
 		FuncName:    funcName,
 	})
 }

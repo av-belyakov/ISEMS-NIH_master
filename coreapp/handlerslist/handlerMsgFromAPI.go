@@ -464,7 +464,7 @@ func HandlerMsgFromAPI(
 						MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
 							SourceID:   dcts.MsgOption.ID,
 							TaskType:   "скачивание файлов",
-							TaskAction: "добавлена в очередь",
+							TaskAction: "задача добавлена в очередь",
 						}),
 						Sources: []int{dcts.MsgOption.ID},
 					},

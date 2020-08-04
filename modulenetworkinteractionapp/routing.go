@@ -260,6 +260,8 @@ func RouteWssConnectionResponse(
 				})
 			}
 
+			fmt.Printf("Received message type: '%v'\n", messageType.Type)
+
 			switch messageType.Type {
 			case "pong":
 				chanInCore <- &configure.MsgBetweenCoreAndNI{

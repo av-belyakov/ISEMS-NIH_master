@@ -75,6 +75,9 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 		},
 	}
 
+	fmt.Println("---=== RECEIVED information for filtration ===---")
+	fmt.Println(msg)
+
 	if resMsg.Info.TaskStatus == "execute" {
 		//отправляем в ядро, а от туда в БД и клиенту API
 		pprmtf.Chans.ChanInCore <- msg
