@@ -296,6 +296,9 @@ func HandlerMsgFromAPI(
 					return
 				}
 
+				fmt.Println("func 'helpersHandlerMsgFromAPI', section: 'download control', instruction: 'to start downloading'")
+				fmt.Println(dcts)
+
 				emt.TaskID = dcts.MsgOption.TaskIDApp
 				emt.TaskIDClientAPI = dcts.ClientTaskID
 				emt.Sources = []int{dcts.MsgOption.ID}
@@ -357,8 +360,16 @@ func HandlerMsgFromAPI(
 					if ti.TaskStatus == "execution" {
 						//проверяем наличие выполняемой задачи
 						if smti, ok := hsm.SMT.GetStoringMemoryTask(dcts.MsgOption.TaskIDApp); ok {
+
+							fmt.Println("*-*- func 'handlerMsgFromAPI', task status 'execution' -*-*")
+							fmt.Println(smti)
+							fmt.Println("*-*-*-*-*-*")
+
 							//проверяем завершена ли задача
 							if smti.TaskStatus {
+
+								fmt.Println("*-*- func 'handlerMsgFromAPI', 1111 -*-*")
+
 								errMsg = fmt.Sprintf("Task with ID '%v' for source ID %v rejected. You cannot add a task with the same ID many times in a short period of time.", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
 								emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
 									SourceID:   dcts.MsgOption.ID,
@@ -367,6 +378,9 @@ func HandlerMsgFromAPI(
 									Message:    "нельзя добавлять задачу с одним и тем же идентификатором множество раз в течении небольшого периода времени",
 								})
 							} else {
+
+								fmt.Println("*-*- func 'handlerMsgFromAPI', 2222 -*-*")
+
 								errMsg = fmt.Sprintf("You cannot add a task with ID '%v' to a source with ID %v because it is already running", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
 								emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
 									SourceID:   dcts.MsgOption.ID,
@@ -377,6 +391,9 @@ func HandlerMsgFromAPI(
 							}
 						}
 					} else if ti.TaskStatus == "wait" {
+
+						fmt.Println("*-*- func 'handlerMsgFromAPI', 3333 -*-*")
+
 						errMsg = fmt.Sprintf("Unable to add task with ID '%v' because it is already pending", dcts.MsgOption.TaskIDApp)
 						emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
 							SourceID:   dcts.MsgOption.ID,
@@ -385,6 +402,9 @@ func HandlerMsgFromAPI(
 							Message:    "невозможно добавить задачу источнику, задача по скачиванию файлов уже выполняется",
 						})
 					} else {
+
+						fmt.Println("*-*- func 'handlerMsgFromAPI', 4444 -*-*")
+
 						errMsg = fmt.Sprintf("Unable to add task with ID '%v'. The task has been completed, but has not yet been removed from the pending task list", dcts.MsgOption.ID)
 						emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
 							SourceID:   dcts.MsgOption.ID,

@@ -66,7 +66,19 @@ func UpdateInformationAboutTask(
 		return nil
 	}
 
-	numberFilesDownloaded := 0
+	numberFilesDownloaded := ti.TaskParameter.DownloadTask.NumberFilesDownloaded
+
+	//восстанавливаем задачу по ее ID
+	taskInfo, _ := getInfoTaskForID(qp, req.TaskID)
+
+	fmt.Println("*-*-*-*---*-*-*")
+	fmt.Printf("Module DB, requestDownload, number_files_downloaded: '%v'\n", numberFilesDownloaded)
+	if len(*taskInfo) > 0 {
+		numberFilesDownloaded = (*taskInfo)[0].DetailedInformationOnDownloading.NumberFilesDownloaded + ti.TaskParameter.DownloadTask.NumberFilesDownloaded
+	}
+	fmt.Printf("NumberFilesDownloaded: '%v'\n", (*taskInfo)[0].DetailedInformationOnDownloading.NumberFilesDownloaded)
+	fmt.Printf("NEW numberFilesDownloaded: '%v'\n", numberFilesDownloaded)
+
 	var arrayFiles []interface{}
 	if ti.TaskParameter.DownloadTask.Status == "complete" {
 		for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
@@ -74,19 +86,6 @@ func UpdateInformationAboutTask(
 				arrayFiles = append(arrayFiles, bson.D{bson.E{Key: "elem.file_name", Value: fn}})
 			}
 		}
-
-		//восстанавливаем задачу по ее ID
-		taskInfo, _ := getInfoTaskForID(qp, req.TaskID)
-
-		fmt.Println("*-*-*-*---*-*-*")
-		fmt.Printf("Module DB, requestDownload, number_files_downloaded: '%v'\n", numberFilesDownloaded)
-		if len(*taskInfo) > 0 {
-			numberFilesDownloaded = (*taskInfo)[0].DetailedInformationOnDownloading.NumberFilesDownloaded
-
-			fmt.Printf("NumberFilesDownloaded: '%v'\n", (*taskInfo)[0].DetailedInformationOnDownloading.NumberFilesDownloaded)
-		}
-		fmt.Println(taskInfo)
-		fmt.Println("*-*-*-*---*-*-*")
 	} else {
 		for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
 			if fi.IsLoaded && (fi.TimeDownload > time.Now().Unix()-(timeUpdate*2)) {

@@ -215,6 +215,9 @@ func RouteCoreRequest(
 
 		//обработка сообщения от ядра
 		case msg := <-chanOutCore:
+
+			fmt.Println("func 'Routing' (moduleNetworkInteraction), received new request")
+
 			go handlers.HandlerMsgFromCore(cwt, isl, msg, smt, qts, saveMessageApp, chanInCore, chanInCRRF)
 		}
 	}

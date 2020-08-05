@@ -56,6 +56,11 @@ func Routing(trc TypeRoutingCore) {
 	//обработчик модуля очереди ожидающих задач QueueTaskStorage
 	go func() {
 		for msg := range trc.ChanMsgInfoQueueTaskStorage {
+
+			fmt.Println("func 'Routing', слушаем канал от обработчика модуля очереди ожидающих задач QueueTaskStorage")
+			fmt.Println(msg)
+			fmt.Printf("source ID: '%v', task ID: '%v'\n", msg.SourceID, msg.TaskID)
+
 			emt := handlerslist.ErrorMessageType{
 				SourceID:    msg.SourceID,
 				TaskID:      msg.TaskID,
@@ -66,6 +71,10 @@ func Routing(trc TypeRoutingCore) {
 
 			qti, err := trc.QTS.GetQueueTaskStorage(msg.SourceID, msg.TaskID)
 			if err != nil {
+
+				fmt.Println("func 'Routing', 1 ERROR")
+				fmt.Println(fmt.Sprint(err))
+
 				trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
 					FuncName:    funcName,
@@ -73,6 +82,9 @@ func Routing(trc TypeRoutingCore) {
 
 				continue
 			}
+
+			fmt.Println("func 'Routing', 1 SUCCESS")
+			fmt.Println(qti)
 
 			emt.TaskIDClientAPI = qti.TaskIDClientAPI
 			emt.IDClientAPI = qti.IDClientAPI
@@ -106,6 +118,8 @@ func Routing(trc TypeRoutingCore) {
 						FuncName:    funcName,
 					})
 				}
+
+				fmt.Println("func 'Routing', 2 NOT OK")
 
 				continue
 			}
@@ -163,6 +177,8 @@ func Routing(trc TypeRoutingCore) {
 			if qti.TaskType == "download control" {
 				emt.Section = "download control"
 
+				fmt.Println("func 'Routing', TYPE DOWNLOAD CONTROL")
+
 				npfp := directorypathshaper.NecessaryParametersFiltrationProblem{
 					SourceID:         msg.SourceID,
 					SourceShortName:  si.ShortName,
@@ -182,7 +198,12 @@ func Routing(trc TypeRoutingCore) {
 						Message:    "невозможно создать директорию для хранения файлов или запись скачиваемых файлов в созданную директорию невозможна",
 					})
 
+					fmt.Println("func 'Routing', 2 ERROR")
+
 					if err := handlerslist.ErrorMessage(emt); err != nil {
+
+						fmt.Println("func 'Routing', 2.1 ERROR")
+
 						trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprint(err),
 							FuncName:    funcName,
@@ -193,6 +214,9 @@ func Routing(trc TypeRoutingCore) {
 					// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
 					// функцией 'CheckTimeQueueTaskStorage')
 					if err := trc.QTS.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "complete"); err != nil {
+
+						fmt.Println("func 'Routing', 2.2 ERROR")
+
 						trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprint(err),
 							FuncName:    funcName,
@@ -201,6 +225,8 @@ func Routing(trc TypeRoutingCore) {
 
 					continue
 				}
+
+				fmt.Println("func 'Routing', 2 SUCCESS добавляем задачу в 'StoringMemoryTask'")
 
 				//добавляем задачу в 'StoringMemoryTask'
 				trc.SMT.AddStoringMemoryTask(msg.TaskID, configure.TaskDescription{
@@ -243,6 +269,8 @@ func Routing(trc TypeRoutingCore) {
 
 				//отправляем информационное сообщение пользователю о начале выполнения задачи
 				notifications.SendNotificationToClientAPI(trc.ChanColl.OutCoreChanAPI, ns, qti.TaskIDClientAPI, qti.IDClientAPI)
+
+				fmt.Println("func 'Routing', 3 SUCCESS отправляем в NI module для вызова обработчика задания")
 
 				//отправляем в NI module для вызова обработчика задания
 				trc.ChanColl.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{

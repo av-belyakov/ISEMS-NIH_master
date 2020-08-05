@@ -410,6 +410,9 @@ func HandlerMsgFromCore(
 		}
 
 	case "download control":
+
+		fmt.Printf("func 'handlerMsgFromCore', command: '%v'\n", msg.Command)
+
 		if msg.Command == "start" {
 			chanInCRRF <- &configure.MsgChannelReceivingFiles{
 				SourceID: msg.SourceID,
