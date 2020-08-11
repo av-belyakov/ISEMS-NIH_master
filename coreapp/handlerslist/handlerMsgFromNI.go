@@ -244,15 +244,19 @@ func HandlerMsgFromNI(
 
 		//при завершении скачивания файла
 		case "file download complete":
+
+			fmt.Printf("func 'handlerMsgFromNI', Section: '%v', Command: '%v'\n", msg.Section, msg.Command)
+
 			//записываем информацию в БД
 			// Модуль БД сам определяет когда стоит добавить запись в БД
 			// а когда (основываясь на таймере) добавление записи в БД не происходит
 			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
-				MsgGenerator: "NI module",
-				MsgRecipient: "DB module",
-				MsgSection:   "download control",
-				Instruction:  "update",
-				TaskID:       msg.TaskID,
+				MsgGenerator:    "NI module",
+				MsgRecipient:    "DB module",
+				MsgSection:      "download control",
+				Instruction:     "update",
+				TaskID:          msg.TaskID,
+				AdvancedOptions: "file complete",
 			}
 
 			//отправляем информацию клиенту API
@@ -275,6 +279,8 @@ func HandlerMsgFromNI(
 
 			hdtsct.ResMsgInfo.MsgOption.Status = "complete"
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
+
+			fmt.Printf("func 'handlerMsgFromNI', Section: '%v', Command: '%v'\n", msg.Section, msg.Command)
 
 			if err := handlerDownloadTaskStatusComplete(hdtsct); err != nil {
 				return err
@@ -305,11 +311,12 @@ func HandlerMsgFromNI(
 
 			//записываем информацию в БД
 			hdtsct.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
-				MsgGenerator: "NI module",
-				MsgRecipient: "DB module",
-				MsgSection:   "download control",
-				Instruction:  "update",
-				TaskID:       hdtsct.TaskID,
+				MsgGenerator:    "NI module",
+				MsgRecipient:    "DB module",
+				MsgSection:      "download control",
+				Instruction:     "update",
+				TaskID:          hdtsct.TaskID,
+				AdvancedOptions: "task complete",
 			}
 
 			//отправляем информационное сообщение клиенту API

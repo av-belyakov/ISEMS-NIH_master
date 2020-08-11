@@ -415,6 +415,7 @@ func HandlerMsgFromAPI(
 					}
 
 					if len(errMsg) > 0 {
+
 						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: errMsg,
 							FuncName:    funcName,

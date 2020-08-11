@@ -189,18 +189,24 @@ func sendInformationFiltrationTask(
 }
 
 func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteType) error {
-	//обновление статуса задачи
+	fmt.Println("func 'handlerDownloadTaskStatusComplete', отправляем информацию в БД")
+
+	//обновление статуса задачи по скачиванию файлов
 	if err := setStatusCompleteDownloadTask(hdtsct.TaskID, hdtsct.SMT); err != nil {
 		return err
 	}
 
+	//устанавливаем общий статус задачи в StoringMemoryTask как завершенный (то есть TRUE)
+	hdtsct.SMT.CompleteStoringMemoryTask(hdtsct.TaskID)
+
 	//записываем информацию в БД
 	hdtsct.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
-		MsgGenerator: "NI module",
-		MsgRecipient: "DB module",
-		MsgSection:   "download control",
-		Instruction:  "update",
-		TaskID:       hdtsct.TaskID,
+		MsgGenerator:    "NI module",
+		MsgRecipient:    "DB module",
+		MsgSection:      "download control",
+		Instruction:     "update",
+		TaskID:          hdtsct.TaskID,
+		AdvancedOptions: "task complete",
 	}
 
 	//отправляем информацию по задаче клиенту API
@@ -208,6 +214,7 @@ func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteT
 	if err != nil {
 		return err
 	}
+
 	hdtsct.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
 		MsgGenerator: "Core module",
 		MsgRecipient: "API module",
@@ -218,15 +225,11 @@ func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteT
 	//отправляем информационное сообщение клиенту API
 	notifications.SendNotificationToClientAPI(hdtsct.OutCoreChanAPI, hdtsct.NS, hdtsct.ClientTaskID, hdtsct.ClientID)
 
-	//изменяем статус задачи в storingMemoryQueueTask
-	// на 'complete' (ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА
-	// функцией 'CheckTimeQueueTaskStorage')
+	//изменяем статус задачи в storingMemoryQueueTask на 'complete'
+	//(ПОСЛЕ ЭТОГО ОНА БУДЕТ АВТОМАТИЧЕСКИ УДАЛЕНА функцией 'CheckTimeQueueTaskStorage')
 	if err := hdtsct.QTS.ChangeTaskStatusQueueTask(hdtsct.SourceID, hdtsct.TaskID, "complete"); err != nil {
 		return err
 	}
-
-	//устанавливаем статус задачи в StoringMemoryTask как завершенный
-	hdtsct.SMT.CompleteStoringMemoryTask(hdtsct.TaskID)
 
 	return nil
 }

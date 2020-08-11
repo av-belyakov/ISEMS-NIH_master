@@ -335,13 +335,23 @@ DONE:
 					switch msgRes.Info.Command {
 					//готовность к передаче файла (slave -> master)
 					case "ready for the transfer":
+
+						fmt.Println("--*-* func 'processingDownloadFile', RECEIVE message 'ready for the transfer'")
+
 						//если задача находится в стадии останова игнорировать ответ slave
 						if ti.IsSlowDown {
+
+							fmt.Println("--*-* func 'processingDownloadFile', задача находится в стадии останова игнорировать ответ slave")
+
 							break
 						}
 
+						fmt.Println("--*-* func 'processingDownloadFile', создаем дескриптор файла для последующей записи в него")
+
 						//создаем дескриптор файла для последующей записи в него
 						lfd.addFileDescription(msgRes.Info.FileOptions.Hex, path.Join(pathDirStorage, msgRes.Info.FileOptions.Name))
+
+						fmt.Println("--*-* func 'processingDownloadFile', обновляем информацию о задаче")
 
 						//обновляем информацию о задаче
 						tpdf.smt.UpdateTaskDownloadAllParameters(tpdf.taskID, configure.DownloadTaskParameters{
@@ -372,6 +382,9 @@ DONE:
 
 							break DONE
 						}
+
+						fmt.Println("--*-* func 'processingDownloadFile', send message 'ready to receive file'")
+						fmt.Println("msgJSON")
 
 						tpdf.channels.cwtRes <- configure.MsgWsTransmission{
 							DestinationHost: tpdf.sourceIP,
@@ -527,6 +540,9 @@ DONE:
 		msgToCore.Command = "task stoped error"
 
 	}
+
+	fmt.Println("func 'processingDownloadFile', завершаем передачу файлов и отправляем информацию в ядро")
+	fmt.Println(msgToCore)
 
 	tpdf.channels.chanInCore <- &msgToCore
 	tpdf.channels.chanDone <- struct{}{}

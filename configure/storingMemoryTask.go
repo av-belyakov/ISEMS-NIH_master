@@ -454,7 +454,7 @@ func (smt *StoringMemoryTask) IncrementNumberFilesDownloadedError(taskID string)
 	<-chanRes
 }
 
-//UpdateTaskFiltrationAllParameters управление задачами по фильтрации
+//UpdateTaskFiltrationAllParameters обновление параметров выполнения задачи по фильтрации
 func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, ftp FiltrationTaskParameters) {
 	chanRes := make(chan channelResSettings)
 
@@ -601,14 +601,14 @@ func (smt *StoringMemoryTask) CheckTimeUpdateStoringMemoryTask(sec int) chan Msg
 			timeNow := time.Now().Unix()
 
 			for id, t := range smt.tasks {
-				if t.TaskStatus && ((t.TimeUpdate + 60) < timeNow) {
+				if t.TaskStatus && ((t.TimeUpdate + 180) < timeNow) {
 					//если задача выполнена и прошло какое то время удаляем ее
 					smt.delStoringMemoryTask(id)
 
 					continue
 				}
 
-				if (t.TimeUpdate + 121) < timeNow {
+				if (t.TimeUpdate + 241) < timeNow {
 					smt.CompleteStoringMemoryTask(id)
 
 					chanOut <- MsgChanStoringMemoryTask{
