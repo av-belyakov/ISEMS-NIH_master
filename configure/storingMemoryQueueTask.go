@@ -20,6 +20,8 @@ type QueueTaskStorage struct {
 // IDClientAPI - уникальный идентификатор клиента
 // TaskIDClientAPI - идентификатор задачи полученный от клиента
 // TaskStatus - статус задачи 'wait', 'execution', 'complete', 'pause'
+// UserName - имя пользователя инициировавшего задачу (если поле пустое,
+//  то считается что выполнение задачи было инициировано автоматически)
 // TimeUpdate - время последнего обновления задачи (используется для
 //  удаления 'подвисших' задач)
 // TaskType - тип задачи ('filtration control', 'download control')
@@ -84,8 +86,11 @@ type chanResponse struct {
 }
 
 //CommonTaskInfo общая информация о задаче
+// IDClientAPI - ID клиента API
+// TaskIDClientAPI - ID задачи клиента API
+// TaskType - тип задачи
 type CommonTaskInfo struct {
-	IDClientAPI, TaskIDClientAPI, TaskType string
+	IDClientAPI, TaskIDClientAPI, TaskType, UserName string
 }
 
 func checkTaskID(qts *QueueTaskStorage, sourceID int, taskID string) bool {
@@ -128,6 +133,7 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				msgRes.TaskStatus = settings.TaskStatus
 				msgRes.IDClientAPI = settings.IDClientAPI
 				msgRes.TaskIDClientAPI = settings.TaskIDClientAPI
+				msgRes.UserName = settings.UserName
 
 				msgRes.CheckingStatusItems = StatusItems{
 					AvailabilityConnection:    settings.CheckingStatusItems.AvailabilityConnection,
@@ -155,6 +161,7 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskType = msg.TaskType
 				qts.StorageList[msg.SourceID][msg.TaskID].IDClientAPI = msg.IDClientAPI
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskIDClientAPI = msg.TaskIDClientAPI
+				qts.StorageList[msg.SourceID][msg.TaskID].UserName = msg.UserName
 
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.FilterationParameters = msg.AdditionalOption.FilterationParameters
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.PathDirectoryForFilteredFiles = msg.AdditionalOption.PathDirectoryForFilteredFiles
@@ -431,6 +438,7 @@ DONE:
 	qti.TaskType = msgRes.TaskType
 	qti.IDClientAPI = msgRes.IDClientAPI
 	qti.TaskIDClientAPI = msgRes.TaskIDClientAPI
+	qti.UserName = msgRes.UserName
 
 	return sourceID, &qti, nil
 }
@@ -499,6 +507,7 @@ func (qts *QueueTaskStorage) GetQueueTaskStorage(sourceID int, taskID string) (*
 	qti.TaskType = msgRes.TaskType
 	qti.IDClientAPI = msgRes.IDClientAPI
 	qti.TaskIDClientAPI = msgRes.TaskIDClientAPI
+	qti.UserName = msgRes.UserName
 
 	return &qti, nil
 }
@@ -523,6 +532,7 @@ func (qts *QueueTaskStorage) AddQueueTaskStorage(
 	cr.TaskType = cti.TaskType
 	cr.IDClientAPI = cti.IDClientAPI
 	cr.TaskIDClientAPI = cti.TaskIDClientAPI
+	cr.UserName = cti.UserName
 
 	qts.ChannelReq <- cr
 

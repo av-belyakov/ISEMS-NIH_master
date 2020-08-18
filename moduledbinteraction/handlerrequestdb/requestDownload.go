@@ -69,6 +69,7 @@ func UpdateInformationAboutTask(
 	//обновление основной информации
 	commonValueUpdate := bson.D{
 		bson.E{Key: "$set", Value: bson.D{
+			bson.E{Key: "user_initiated_file_download_process", Value: ti.UserName},
 			bson.E{Key: "detailed_information_on_downloading.task_status", Value: taskStatus},
 			bson.E{Key: "detailed_information_on_downloading.time_interval_task_execution.start", Value: ti.TimeInterval.Start},
 			bson.E{Key: "detailed_information_on_downloading.path_directory_storage_downloaded_files", Value: ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles},

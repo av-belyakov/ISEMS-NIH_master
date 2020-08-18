@@ -31,6 +31,8 @@ type InfoServiceSettings struct {
 // ClientTaskID - уникальный идентификатор задачи полученный от клиента
 // GeneralInformationAboutTask - общая информация о задаче
 // SourceID - идентификатор источника на котором выполняется задача
+// UserInitiatedFilteringProcess - имя пользователя инициировавшего процесс фильтрации
+// UserInitiatedFileDownloadProcess - имя пользователя инициировавшего процесс скачивания файлов
 // FilteringOption - параметры фильтрации полученные от клиента
 type InformationAboutTask struct {
 	TaskID                           string                                 `json:"task_id" bson:"task_id"`
@@ -38,6 +40,8 @@ type InformationAboutTask struct {
 	ClientTaskID                     string                                 `json:"client_task_id" bson:"client_task_id"`
 	GeneralInformationAboutTask      DescriptionGeneralInformationAboutTask `json:"general_information_about_task" bson:"general_information_about_task"`
 	SourceID                         int                                    `json:"source_id" bson:"source_id"`
+	UserInitiatedFilteringProcess    string                                 `json:"user_initiated_filtering_process" bson:"user_initiated_filtering_process"`
+	UserInitiatedFileDownloadProcess string                                 `json:"user_initiated_file_download_process" bson:"user_initiated_file_download_process"`
 	FilteringOption                  FilteringOption                        `json:"filtering_option" bson:"filtering_option"`
 	DetailedInformationOnFiltering   DetailedInformationFiltering           `json:"detailed_information_on_filtering" bson:"detailed_information_on_filtering"`
 	DetailedInformationOnDownloading DetailedInformationDownloading         `json:"detailed_information_on_downloading" bson:"detailed_information_on_downloading"`

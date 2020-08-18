@@ -438,6 +438,7 @@ func HandlerMsgFromAPI(
 					IDClientAPI:     msg.IDClientAPI,
 					TaskIDClientAPI: dcts.ClientTaskID,
 					TaskType:        "download control",
+					UserName:        dcts.MsgOption.UserName,
 				}, &configure.DescriptionParametersReceivedFromUser{
 					DownloadList: dcts.MsgOption.FileList,
 				})

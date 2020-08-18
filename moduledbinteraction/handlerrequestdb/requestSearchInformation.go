@@ -169,9 +169,11 @@ func SearchFullInformationAboutTasks(
 	}
 
 	rtp := configure.ResponseTaskParameter{
-		TaskID:       liat[0].TaskID,
-		ClientTaskID: liat[0].ClientTaskID,
-		SourceID:     liat[0].SourceID,
+		TaskID:                           liat[0].TaskID,
+		ClientTaskID:                     liat[0].ClientTaskID,
+		SourceID:                         liat[0].SourceID,
+		UserInitiatedFilteringProcess:    liat[0].UserInitiatedFilteringProcess,
+		UserInitiatedFileDownloadProcess: liat[0].UserInitiatedFileDownloadProcess,
 		GeneralInformationAboutTask: configure.GeneralInformationAboutTask{
 			TaskProcessed:     liat[0].GeneralInformationAboutTask.TaskProcessed,
 			DateTimeProcessed: liat[0].GeneralInformationAboutTask.DateTimeProcessed,

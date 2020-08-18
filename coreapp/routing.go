@@ -136,6 +136,7 @@ func Routing(trc TypeRoutingCore) {
 				trc.SMT.AddStoringMemoryTask(msg.TaskID, configure.TaskDescription{
 					ClientID:                        qti.IDClientAPI,
 					ClientTaskID:                    qti.TaskIDClientAPI,
+					UserName:                        qti.UserName,
 					TaskType:                        "filtration control",
 					ModuleThatSetTask:               "API module",
 					ModuleResponsibleImplementation: "NI module",
@@ -232,6 +233,7 @@ func Routing(trc TypeRoutingCore) {
 				trc.SMT.AddStoringMemoryTask(msg.TaskID, configure.TaskDescription{
 					ClientID:                        qti.IDClientAPI,
 					ClientTaskID:                    qti.TaskIDClientAPI,
+					UserName:                        qti.UserName,
 					TaskType:                        "download control",
 					ModuleThatSetTask:               "API module",
 					ModuleResponsibleImplementation: "NI module",

@@ -15,6 +15,8 @@ type StoringMemoryTask struct {
 //TaskDescription описание задачи
 // ClientID - уникальный идентификатор клиента
 // ClientTaskID - идентификатор задачи полученный от клиента
+// UserName - имя пользователя инициировавшего задачу (если поле пустое, то
+//  считается что выполнение задачи было инициировано автоматически)
 // TaskType - тип выполняемой задачи ("filtration control", "download control")
 // TaskStatus - статус задачи, false выполняется, true завершена
 // IsSlowDown - останавливается ли задача
@@ -29,6 +31,7 @@ type StoringMemoryTask struct {
 type TaskDescription struct {
 	ClientID                        string
 	ClientTaskID                    string
+	UserName                        string
 	TaskType                        string
 	TaskStatus                      bool
 	IsSlowDown                      bool

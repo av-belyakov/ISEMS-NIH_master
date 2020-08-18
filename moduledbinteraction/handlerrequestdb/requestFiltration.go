@@ -73,11 +73,12 @@ func CreateNewFiltrationTask(
 	}
 
 	itf := configure.InformationAboutTask{
-		TaskID:          req.TaskID,
-		ClientID:        req.IDClientAPI,
-		ClientTaskID:    req.TaskIDClientAPI,
-		SourceID:        sourceID,
-		FilteringOption: tf.TaskParameters.FilterationParameters,
+		TaskID:                        req.TaskID,
+		ClientID:                      req.IDClientAPI,
+		ClientTaskID:                  req.TaskIDClientAPI,
+		SourceID:                      sourceID,
+		UserInitiatedFilteringProcess: tf.UserName,
+		FilteringOption:               tf.TaskParameters.FilterationParameters,
 		DetailedInformationOnFiltering: configure.DetailedInformationFiltering{
 			TaskStatus:   "wait",
 			WasIndexUsed: isFound,

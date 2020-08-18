@@ -231,8 +231,14 @@ type FiltrationControlTypeStart struct {
 }
 
 //FiltrationControlCommonParametersFiltration описание параметров фильтрации
+// ID - уникальный идентификатор источника
+// UserName - имя пользователя инициировавшего задачу (если поле пустое, то считается что выполнение задачи было инициировано автоматически)
+// DateTime - интервал времени фильтрации
+// Protocol - протокол транспортного уровня
+// Filters - параметры фильтрации (ip адреса, сети, порты)
 type FiltrationControlCommonParametersFiltration struct {
 	ID       int                                       `json:"id"`
+	UserName string                                    `json:"un"`
 	DateTime DateTimeParameters                        `json:"dt"`
 	Protocol string                                    `json:"p"`
 	Filters  FiltrationControlParametersNetworkFilters `json:"f"`
@@ -304,10 +310,12 @@ type DownloadControlTypeStart struct {
 //DownloadControlAdditionalOption список файлов на скачивание
 // ID - уникальный идентификатор источника
 // TaskIDApp - уникальный идентификатор задачи по фильтрации
+// UserName - имя пользователя инициировавшего задачу (если поле пустое, то считается что выполнение задачи было инициировано автоматически)
 // FileList - список файлов для скачивания полученных от клиента
 type DownloadControlAdditionalOption struct {
 	ID        int      `json:"id"`
 	TaskIDApp string   `json:"tidapp"`
+	UserName  string   `json:"un"`
 	FileList  []string `json:"fl"`
 }
 
@@ -443,6 +451,8 @@ type ResponseInformationByTaskID struct {
 // TaskID — внутренний идентификатор задачи
 // ClientTaskID — идентификатор задачи присвоенный клиентом
 // SourceID -  идентификатор источника
+// UserInitiatedFilteringProcess - пользователь инициировавший задачу по фильтрации
+// UserInitiatedFileDownloadProcess - пользователь инициировавший задачу по скачиванию файлов
 // GeneralInformationAboutTask - основные параметры задачи, не относящиеся ни к одному из разделов
 // FilteringOption - параметры фильтрации
 // DetailedInformationOnFiltering - результаты фильтрации
@@ -452,6 +462,8 @@ type ResponseTaskParameter struct {
 	TaskID                           string                      `json:"tid"`
 	ClientTaskID                     string                      `json:"ctid"`
 	SourceID                         int                         `json:"sid"`
+	UserInitiatedFilteringProcess    string                      `json:"uifp"`
+	UserInitiatedFileDownloadProcess string                      `json:"uifdp"`
 	GeneralInformationAboutTask      GeneralInformationAboutTask `json:"giat"`
 	FilteringOption                  TaskFilteringOption         `json:"fo"`
 	DetailedInformationOnFiltering   InformationOnFiltering      `json:"diof"`

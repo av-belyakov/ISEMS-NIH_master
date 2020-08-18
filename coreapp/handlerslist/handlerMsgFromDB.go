@@ -86,7 +86,7 @@ func HandlerMsgFromDB(
 					})
 				}
 
-				//краткая информация по задаче и параметры для перевода задачи в состояние 'обработана'
+			//краткая информация по задаче и параметры для перевода задачи в состояние 'обработана'
 			case "mark an task as completed processed":
 				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'mark an task as completed', Response: '%v'\n", res)
 

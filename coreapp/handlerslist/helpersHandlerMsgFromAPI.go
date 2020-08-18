@@ -86,6 +86,7 @@ func handlerFiltrationControlTypeStart(
 		IDClientAPI:     clientID,
 		TaskIDClientAPI: fcts.ClientTaskID,
 		TaskType:        "filtration control",
+		UserName:        fcts.MsgOption.UserName,
 	}, &configure.DescriptionParametersReceivedFromUser{
 		FilterationParameters: configure.FilteringOption{
 			DateTime: configure.TimeInterval{
