@@ -132,6 +132,7 @@ type ErrorNotification struct {
 }
 
 //MessageNotification содержит информационное сообщение о выполненном действии
+// RequestIsGeneratedAutomatically — был ли запрос на поиск сгенерирован автоматически (TRUE — да, FALSE — нет)
 // SourceReport - DB module/NI module/API module
 // Section - раздел к которому относится действие
 // TypeActionPerformed - тип выполненного действия
@@ -139,12 +140,13 @@ type ErrorNotification struct {
 // HumanDescriptionError - сообщение для пользователя
 // Sources - срез ID источников связанных с данным сообщением
 type MessageNotification struct {
-	SourceReport                 string
-	Section                      string
-	TypeActionPerformed          string
-	CriticalityMessage           string
-	HumanDescriptionNotification string
-	Sources                      []int
+	RequestIsGeneratedAutomatically bool
+	SourceReport                    string
+	Section                         string
+	TypeActionPerformed             string
+	CriticalityMessage              string
+	HumanDescriptionNotification    string
+	Sources                         []int
 }
 
 //MsgChannelReceivingFiles взаимодействие при приеме запрошенных файлов

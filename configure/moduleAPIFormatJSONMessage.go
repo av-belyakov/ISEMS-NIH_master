@@ -370,6 +370,7 @@ type SearchInformationAboutTasksRequest struct {
 }
 
 //SearchInformationAboutTasksRequestOption дополнительные опции для поиска информации по задаче
+// SearchRequestIsGeneratedAutomatically — был ли запрос на поиск сгенерирован автоматически (TRUE — да, FALSE - нет)
 // ID - уникальный цифровой идентификатор источника
 // TaskProcessed - была ли задача отмечена клиентом API как завершенная
 // StatusFilteringTask - статус задачи по фильтрации
@@ -378,13 +379,14 @@ type SearchInformationAboutTasksRequest struct {
 // InformationAboutFiltering - поиск по информации о результатах фильтрации
 // InstalledFilteringOption - установленные опции фильтрации
 type SearchInformationAboutTasksRequestOption struct {
-	ID                        int                              `json:"id"`
-	TaskProcessed             bool                             `json:"tp"`
-	StatusFilteringTask       string                           `json:"sft"`
-	StatusFileDownloadTask    string                           `json:"sfdt"`
-	FilesDownloaded           FilesDownloadedOptions           `json:"fd"`
-	InformationAboutFiltering InformationAboutFilteringOptions `json:"iaf"`
-	InstalledFilteringOption  SearchFilteringOptions           `json:"ifo"`
+	SearchRequestIsGeneratedAutomatically bool                             `json:"sriga"`
+	ID                                    int                              `json:"id"`
+	TaskProcessed                         bool                             `json:"tp"`
+	StatusFilteringTask                   string                           `json:"sft"`
+	StatusFileDownloadTask                string                           `json:"sfdt"`
+	FilesDownloaded                       FilesDownloadedOptions           `json:"fd"`
+	InformationAboutFiltering             InformationAboutFilteringOptions `json:"iaf"`
+	InstalledFilteringOption              SearchFilteringOptions           `json:"ifo"`
 }
 
 //FilesDownloadedOptions опции выгрузки файлов
@@ -435,8 +437,11 @@ type RequestInformationByTaskID struct {
 }
 
 //ParametersGetInformationByTaskID содержит параметры для поиска информации о задаче по ее ID
+// SearchRequestIsGeneratedAutomatically — был ли запрос на поиск сгенерирован автоматически (TRUE — да, FALSE - нет)
+// ReguestTaskID - запрашиваемый уникальный цифровой идентификатор задачи  по фильтрации и скачиванию, выполняемой или выполненной
 type ParametersGetInformationByTaskID struct {
-	RequestTaskID string `json:"rtid"`
+	SearchRequestIsGeneratedAutomatically bool   `json:"sriga"`
+	RequestTaskID                         string `json:"rtid"`
 }
 
 //ResponseInformationByTaskID содержит почти полную информацию (кроме списка найденных файлов) о найденной задаче

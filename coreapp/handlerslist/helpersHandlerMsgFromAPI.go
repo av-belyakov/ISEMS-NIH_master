@@ -22,14 +22,20 @@ func handlerFiltrationControlTypeStart(
 
 	funcName := "handlerFiltrationControlTypeStart"
 
+	var sriga bool
+	if fcts.MsgOption.UserName == "" {
+		sriga = true
+	}
+
 	emt := ErrorMessageType{
-		SourceID:        fcts.MsgOption.ID,
-		TaskIDClientAPI: fcts.MsgCommon.ClientTaskID,
-		IDClientAPI:     clientID,
-		Section:         "filtration control",
-		Instruction:     "task processing",
-		MsgType:         "danger",
-		ChanToAPI:       chanToAPI,
+		SourceID:                              fcts.MsgOption.ID,
+		TaskIDClientAPI:                       fcts.MsgCommon.ClientTaskID,
+		IDClientAPI:                           clientID,
+		Section:                               "filtration control",
+		Instruction:                           "task processing",
+		MsgType:                               "danger",
+		SearchRequestIsGeneratedAutomatically: sriga,
+		ChanToAPI:                             chanToAPI,
 	}
 
 	//проверяем параметры фильтрации
@@ -123,6 +129,11 @@ func handlerFiltrationControlTypeStart(
 		})
 	}
 
+	//информационное сообщение отправляем только если задача была сгенерирована пользователем
+	if sriga {
+		return
+	}
+
 	//информационное сообщение о том что задача добавлена в очередь
 	notifications.SendNotificationToClientAPI(
 		chanToAPI,
@@ -151,12 +162,13 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 	funcName := "handlerInformationSearchControlTypeSearchCommanInformation"
 
 	emt := ErrorMessageType{
-		TaskIDClientAPI: siatr.MsgCommon.ClientTaskID,
-		IDClientAPI:     clientID,
-		Section:         "information search control",
-		Instruction:     "task processing",
-		MsgType:         "danger",
-		ChanToAPI:       chanToAPI,
+		TaskIDClientAPI:                       siatr.MsgCommon.ClientTaskID,
+		IDClientAPI:                           clientID,
+		Section:                               "information search control",
+		Instruction:                           "task processing",
+		MsgType:                               "danger",
+		SearchRequestIsGeneratedAutomatically: siatr.MsgOption.SearchRequestIsGeneratedAutomatically,
+		ChanToAPI:                             chanToAPI,
 	}
 
 	//проверяем параметры необходимые для поиска общей информации по задачам

@@ -296,6 +296,11 @@ func HandlerMsgFromAPI(
 					return
 				}
 
+				//проверяем что задача была сгенерирована пользователем
+				if dcts.MsgOption.UserName == "" {
+					emt.SearchRequestIsGeneratedAutomatically = true
+				}
+
 				fmt.Println("func 'helpersHandlerMsgFromAPI', section: 'download control', instruction: 'to start downloading'")
 				fmt.Println(dcts)
 
@@ -643,6 +648,7 @@ func HandlerMsgFromAPI(
 							TaskAction: "задача отклонена",
 							Message:    "принят некорректный идентификатор задачи",
 						}),
+						SearchRequestIsGeneratedAutomatically: ribtid.MsgOption.SearchRequestIsGeneratedAutomatically,
 					}
 
 					//сообщение о том что задача была отклонена

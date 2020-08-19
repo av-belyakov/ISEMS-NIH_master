@@ -442,6 +442,11 @@ func HandlerMsgFromDB(
 				return
 			}
 
+			//не отправляем сообщение так как запрос был сформирован автоматически
+			if mn.RequestIsGeneratedAutomatically {
+				return
+			}
+
 			ns := notifications.NotificationSettingsToClientAPI{
 				MsgType:        mn.CriticalityMessage,
 				MsgDescription: mn.HumanDescriptionNotification,
