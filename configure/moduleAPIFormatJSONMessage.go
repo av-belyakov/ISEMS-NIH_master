@@ -372,29 +372,29 @@ type SearchInformationAboutTasksRequest struct {
 //SearchInformationAboutTasksRequestOption дополнительные опции для поиска информации по задаче
 // SearchRequestIsGeneratedAutomatically — был ли запрос на поиск сгенерирован автоматически (TRUE — да, FALSE - нет)
 // ID - уникальный цифровой идентификатор источника
+// ConsiderParameterTaskProcessed - учитывать параметр TaskProcessed
 // TaskProcessed - была ли задача отмечена клиентом API как завершенная
 // StatusFilteringTask - статус задачи по фильтрации
 // StatusFileDownloadTask - статус задачи по скачиванию файлов
-// FilesDownloaded - опции выгрузки файлов
+// ConsiderParameterFilesIsDownloaded - учитывать параметр FilesIsDownloaded
+// FilesIsDownloaded - выполнялась ли выгрузка файлов
+// ConsiderParameterAllFilesIsDownloaded - учитывать параметр AllFilesIsDownloaded
+// AllFilesIsDownloaded - были ли выгружены все файлы
 // InformationAboutFiltering - поиск по информации о результатах фильтрации
 // InstalledFilteringOption - установленные опции фильтрации
 type SearchInformationAboutTasksRequestOption struct {
 	SearchRequestIsGeneratedAutomatically bool                             `json:"sriga"`
 	ID                                    int                              `json:"id"`
+	ConsiderParameterTaskProcessed        bool                             `json:"cptp"`
 	TaskProcessed                         bool                             `json:"tp"`
 	StatusFilteringTask                   string                           `json:"sft"`
 	StatusFileDownloadTask                string                           `json:"sfdt"`
-	FilesDownloaded                       FilesDownloadedOptions           `json:"fd"`
+	ConsiderParameterFilesIsDownloaded    bool                             `json:"cpfid"`
+	FilesIsDownloaded                     bool                             `json:"fid"`
+	ConsiderParameterAllFilesIsDownloaded bool                             `json:"cpafid"`
+	AllFilesIsDownloaded                  bool                             `json:"afid"`
 	InformationAboutFiltering             InformationAboutFilteringOptions `json:"iaf"`
 	InstalledFilteringOption              SearchFilteringOptions           `json:"ifo"`
-}
-
-//FilesDownloadedOptions опции выгрузки файлов
-// FilesIsDownloaded - выполнялась ли выгрузка файлов
-// AllFilesIsDownloaded - были ли выгружены все файлы
-type FilesDownloadedOptions struct {
-	FilesIsDownloaded    bool `json:"fid"`
-	AllFilesIsDownloaded bool `json:"afid"`
 }
 
 //InformationAboutFilteringOptions опции для поиска по информации о результатах фильтрации

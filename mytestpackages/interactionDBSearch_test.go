@@ -203,6 +203,346 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 	}
 
 	queryTemplate := map[string]bson.E{
+		"sourceID":             bson.E{Key: "source_id", Value: bson.D{{Key: "$eq", Value: sp.ID}}},
+		"filesIsFound":         bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: bson.D{{Key: "$gt", Value: 0}}},
+		"taskProcessed":        bson.E{Key: "general_information_about_task.task_processed", Value: sp.TaskProcessed},
+		"filesIsDownloaded":    bson.E{Key: "detailed_information_on_downloading.number_files_downloaded", Value: bson.D{{Key: "$gt", Value: 0}}},
+		"filesIsNotDownloaded": bson.E{Key: "detailed_information_on_downloading.number_files_downloaded", Value: bson.D{{Key: "$eq", Value: 0}}},
+		"allFilesIsDownloaded": bson.E{Key: "$expr", Value: bson.D{
+			{Key: "$eq", Value: bson.A{"$detailed_information_on_downloading.number_files_total", "$detailed_information_on_downloading.number_files_downloaded"}}}},
+		"allFilesIsNotDownloaded": bson.E{Key: "$expr", Value: bson.D{
+			{Key: "$ne", Value: bson.A{"$detailed_information_on_downloading.number_files_total", "$detailed_information_on_downloading.number_files_downloaded"}}}},
+		"sizeAllFiles": bson.E{Key: "detailed_information_on_filtering.size_files_found_result_filtering", Value: bson.D{
+			{Key: "$gte", Value: sp.InformationAboutFiltering.SizeAllFilesMin},
+			{Key: "$lte", Value: sp.InformationAboutFiltering.SizeAllFilesMax},
+		}},
+		"countAllFiles": bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: bson.D{
+			{Key: "$gte", Value: sp.InformationAboutFiltering.CountAllFilesMin},
+			{Key: "$lte", Value: sp.InformationAboutFiltering.CountAllFilesMax},
+		}},
+		"dateTimeParameters": bson.E{Key: "$and", Value: bson.A{
+			bson.D{{Key: "filtering_option.date_time_interval.start", Value: bson.D{
+				{Key: "$gte", Value: sp.InstalledFilteringOption.DateTime.Start}}}},
+			bson.D{{Key: "filtering_option.date_time_interval.end", Value: bson.D{
+				{Key: "$lte", Value: sp.InstalledFilteringOption.DateTime.End}}}},
+		}},
+		"transportProtocol":        bson.E{Key: "filtering_option.protocol", Value: sp.InstalledFilteringOption.Protocol},
+		"statusFilteringTask":      bson.E{Key: "detailed_information_on_filtering.task_status", Value: sp.StatusFilteringTask},
+		"statusFileDownloadTask":   bson.E{Key: "detailed_information_on_downloading.task_status", Value: sp.StatusFileDownloadTask},
+		"networkParametersIP":      getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "ip"),
+		"networkParametersPort":    getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "port"),
+		"networkParametersNetwork": getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "network"),
+	}
+
+	var (
+		querySourceID               bson.E
+		queryFilesIsFound           bson.E
+		querySizeAllFiles           bson.E
+		queryCountAllFiles          bson.E
+		queryTaskProcessed          bson.E
+		queryFilesIsDownloaded      bson.E
+		queryTransportProtocol      bson.E
+		querydateTimeParameters     bson.E
+		queryStatusFilteringTask    bson.E
+		queryAllFilesIsDownloaded   bson.E
+		queryNetworkParametersPort  bson.E
+		queryNetworkParametersIPNet bson.E
+		queryStatusFileDownloadTask bson.E
+	)
+
+	//поиск по ID источника
+	if sp.ID > 0 {
+		querySourceID = queryTemplate["sourceID"]
+	}
+
+	//была ли задача обработана
+	if sp.ConsiderParameterTaskProcessed {
+		queryTaskProcessed = bson.E{Key: "general_information_about_task.task_processed", Value: sp.TaskProcessed}
+	}
+
+	//выполнялась ли выгрузка файлов
+	if sp.ConsiderParameterFilesIsDownloaded {
+		if sp.FilesIsDownloaded {
+			queryFilesIsDownloaded = queryTemplate["filesIsDownloaded"]
+		} else {
+			queryFilesIsDownloaded = queryTemplate["filesIsNotDownloaded"]
+		}
+	}
+
+	//все ли файлы были выгружены
+	if sp.ConsiderParameterAllFilesIsDownloaded {
+		if sp.AllFilesIsDownloaded {
+			queryFilesIsDownloaded = queryTemplate["filesIsDownloaded"]
+			queryAllFilesIsDownloaded = queryTemplate["allFilesIsDownloaded"]
+		} else {
+			queryFilesIsDownloaded = queryTemplate["filesIsDownloaded"]
+			queryAllFilesIsDownloaded = queryTemplate["allFilesIsNotDownloaded"]
+		}
+	}
+
+	//были ли найденны какие либо файлы в результате фильтрации
+	if sp.InformationAboutFiltering.FilesIsFound {
+		queryFilesIsFound = queryTemplate["filesIsFound"]
+	}
+
+	//диапазон количества найденных файлов
+	cafmin := sp.InformationAboutFiltering.CountAllFilesMin
+	cafmax := sp.InformationAboutFiltering.CountAllFilesMax
+	if (cafmax > 0) && (cafmax > cafmin) {
+		queryCountAllFiles = queryTemplate["countAllFiles"]
+	}
+
+	//диапазон общего размера всех найденных файлов
+	safmin := sp.InformationAboutFiltering.SizeAllFilesMin
+	safmax := sp.InformationAboutFiltering.SizeAllFilesMax
+	if (safmax > 0) && (safmax > safmin) {
+		querySizeAllFiles = queryTemplate["sizeAllFiles"]
+	}
+
+	//временной диапазон фильтруемых данных
+	dts := sp.InstalledFilteringOption.DateTime.Start
+	dte := sp.InstalledFilteringOption.DateTime.End
+	if (dts > 0) && (dte > 0) && (dts < dte) {
+		querydateTimeParameters = queryTemplate["dateTimeParameters"]
+	}
+
+	//транспортный протокол
+	if sp.InstalledFilteringOption.Protocol == "tcp" || sp.InstalledFilteringOption.Protocol == "udp" {
+		queryTransportProtocol = queryTemplate["transportProtocol"]
+	}
+
+	//статус задачи по фильтрации
+	if (len(sp.StatusFilteringTask) > 0) && (sp.StatusFilteringTask != "any") {
+		queryStatusFilteringTask = queryTemplate["statusFilteringTask"]
+	}
+
+	//статус задачи по скачиванию файлов
+	if (len(sp.StatusFileDownloadTask) > 0) && (sp.StatusFileDownloadTask != "any") {
+		queryStatusFileDownloadTask = queryTemplate["statusFileDownloadTask"]
+	}
+
+	isContainsValueIP := checkParameterContainsValues(sp.InstalledFilteringOption.NetworkFilters.IP)
+	isContainsValuePort := checkParameterContainsValues(sp.InstalledFilteringOption.NetworkFilters.Port)
+	isContainsValueNetwork := checkParameterContainsValues(sp.InstalledFilteringOption.NetworkFilters.Network)
+
+	if isContainsValuePort {
+		queryNetworkParametersPort, _ = getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "port")
+	}
+
+	if isContainsValueIP && !isContainsValueNetwork {
+		queryNetworkParametersIPNet, _ = getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "ip")
+	}
+
+	if isContainsValueNetwork && !isContainsValueIP {
+		queryNetworkParametersIPNet, _ = getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "network")
+	}
+
+	if isContainsValueIP && isContainsValueNetwork {
+		_, bdIP := getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "ip")
+		_, bdNetwork := getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "network")
+
+		queryNetworkParametersIPNet = bson.E{Key: "$or", Value: bson.A{bdIP, bdNetwork}}
+	}
+
+	lbti := []*configure.BriefTaskInformation{}
+
+	cur, err := qp.Find(bson.D{
+		querySourceID,
+		queryTaskProcessed,
+		queryFilesIsDownloaded,
+		queryAllFilesIsDownloaded,
+		queryFilesIsFound,
+		queryCountAllFiles,
+		querySizeAllFiles,
+		querydateTimeParameters,
+		queryTransportProtocol,
+		queryStatusFilteringTask,
+		queryStatusFileDownloadTask,
+		queryNetworkParametersPort,
+		queryNetworkParametersIPNet})
+	if err != nil {
+		return lbti, err
+	}
+
+	for cur.Next(context.Background()) {
+		var model configure.InformationAboutTask
+		err := cur.Decode(&model)
+		if err != nil {
+			return lbti, err
+		}
+
+		bti := configure.BriefTaskInformation{
+			TaskID:       model.TaskID,
+			ClientTaskID: model.ClientTaskID,
+			SourceID:     model.SourceID,
+			ParametersFiltration: configure.ParametersFiltrationOptions{
+				DateTime: configure.DateTimeParameters{
+					Start: model.FilteringOption.DateTime.Start,
+					End:   model.FilteringOption.DateTime.End,
+				},
+				Protocol: model.FilteringOption.Protocol,
+				Filters: configure.FiltrationControlParametersNetworkFilters{
+					IP: configure.FiltrationControlIPorNetorPortParameters{
+						Any: model.FilteringOption.Filters.IP.Any,
+						Src: model.FilteringOption.Filters.IP.Src,
+						Dst: model.FilteringOption.Filters.IP.Dst,
+					},
+					Port: configure.FiltrationControlIPorNetorPortParameters{
+						Any: model.FilteringOption.Filters.Port.Any,
+						Src: model.FilteringOption.Filters.Port.Src,
+						Dst: model.FilteringOption.Filters.Port.Dst,
+					},
+					Network: configure.FiltrationControlIPorNetorPortParameters{
+						Any: model.FilteringOption.Filters.Network.Any,
+						Src: model.FilteringOption.Filters.Network.Src,
+						Dst: model.FilteringOption.Filters.Network.Dst,
+					},
+				},
+			},
+			FilteringTaskStatus:                  model.DetailedInformationOnFiltering.TaskStatus,
+			FileDownloadTaskStatus:               model.DetailedInformationOnDownloading.TaskStatus,
+			NumberFilesFoundAsResultFiltering:    model.DetailedInformationOnFiltering.NumberFilesFoundResultFiltering,
+			TotalSizeFilesFoundAsResultFiltering: model.DetailedInformationOnFiltering.SizeFilesFoundResultFiltering,
+			NumberFilesDownloaded:                model.DetailedInformationOnDownloading.NumberFilesDownloaded,
+		}
+
+		lbti = append(lbti, &bti)
+	}
+
+	if err := cur.Err(); err != nil {
+		return lbti, err
+	}
+
+	cur.Close(context.Background())
+
+	return lbti, nil
+}
+
+/*func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]*configure.BriefTaskInformation, error) {
+	getQueryTmpNetParamsTest := func(fcp configure.FiltrationControlParametersNetworkFilters, queryType string) (bson.E, bson.D) {
+		listQueryType := map[string]struct {
+			e string
+			o configure.FiltrationControlIPorNetorPortParameters
+		}{
+			"ip":      {e: "ip", o: fcp.IP},
+			"port":    {e: "port", o: fcp.Port},
+			"network": {e: "network", o: fcp.Network},
+		}
+
+		numIPAny := len(listQueryType[queryType].o.Any)
+		numIPSrc := len(listQueryType[queryType].o.Src)
+		numIPDst := len(listQueryType[queryType].o.Dst)
+
+		if numIPAny == 0 && numIPSrc == 0 && numIPDst == 0 {
+			return bson.E{}, bson.D{}
+		}
+
+		if numIPAny > 0 && numIPSrc == 0 && numIPDst == 0 {
+			be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}
+			bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}}
+
+			return be, bd
+		}
+
+		if numIPSrc > 0 && numIPAny == 0 && numIPDst == 0 {
+			be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}
+			bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}}
+
+			return be, bd
+		}
+
+		if numIPDst > 0 && numIPAny == 0 && numIPSrc == 0 {
+			be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}
+			bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}}
+
+			return be, bd
+		}
+
+		if (numIPSrc > 0 && numIPDst > 0) && numIPAny == 0 {
+			be := bson.E{Key: "$and", Value: bson.A{
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+			}}
+			bd := bson.D{{Key: "$and", Value: bson.A{
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+			}}}
+
+			return be, bd
+		}
+
+		return bson.E{Key: "$or", Value: bson.A{
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+			}}, bson.D{{Key: "$or", Value: bson.A{
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+			}}}
+	}
+
+	getQueryTmpNetParams := func(fcp configure.FiltrationControlParametersNetworkFilters, queryType string) bson.E {
+		listQueryType := map[string]struct {
+			e string
+			o configure.FiltrationControlIPorNetorPortParameters
+		}{
+			"ip":      {e: "ip", o: fcp.IP},
+			"port":    {e: "port", o: fcp.Port},
+			"network": {e: "network", o: fcp.Network},
+		}
+
+		numIPAny := len(listQueryType[queryType].o.Any)
+		numIPSrc := len(listQueryType[queryType].o.Src)
+		numIPDst := len(listQueryType[queryType].o.Dst)
+
+		if numIPAny == 0 && numIPSrc == 0 && numIPDst == 0 {
+			return bson.E{}
+		}
+
+		if numIPAny > 0 && numIPSrc == 0 && numIPDst == 0 {
+			return bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}
+		}
+
+		if numIPSrc > 0 && numIPAny == 0 && numIPDst == 0 {
+			return bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}
+		}
+
+		if numIPDst > 0 && numIPAny == 0 && numIPSrc == 0 {
+			return bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}
+		}
+
+		if (numIPSrc > 0 && numIPDst > 0) && numIPAny == 0 {
+			return bson.E{Key: "$and", Value: bson.A{
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+			}}
+		}
+
+		return bson.E{Key: "$or", Value: bson.A{
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+		}}
+	}
+
+	checkParameterContainsValues := func(fcinpp configure.FiltrationControlIPorNetorPortParameters) bool {
+		if len(fcinpp.Any) > 0 {
+			return true
+		}
+
+		if len(fcinpp.Src) > 0 {
+			return true
+		}
+
+		if len(fcinpp.Dst) > 0 {
+			return true
+		}
+
+		return false
+	}
+
+	queryTemplate := map[string]bson.E{
 		"sourceID":          bson.E{Key: "source_id", Value: bson.D{{Key: "$eq", Value: sp.ID}}},
 		"filesIsFound":      bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: bson.D{{Key: "$gt", Value: 0}}},
 		"taskProcessed":     bson.E{Key: "general_information_about_task.task_processed", Value: sp.TaskProcessed},
@@ -404,7 +744,7 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 	cur.Close(context.Background())
 
 	return lbti, nil
-}
+}*/
 
 func SearchFullInformationAboutTasks(qp QueryParameters, taskID string) (configure.ResponseTaskParameter, error) {
 	const maxCountFiles = 50
@@ -657,12 +997,17 @@ var _ = Describe("InteractionDBSearch", func() {
 	}
 
 	sp := configure.SearchParameters{
-		TaskProcessed: false,
-		ID:            0,
-		FilesDownloaded: configure.FilesDownloadedOptions{
+		ConsiderParameterTaskProcessed:        false,
+		TaskProcessed:                         false,
+		ID:                                    0,
+		ConsiderParameterFilesIsDownloaded:    false,
+		FilesIsDownloaded:                     false,
+		ConsiderParameterAllFilesIsDownloaded: false,
+		AllFilesIsDownloaded:                  false,
+		/*FilesDownloaded: configure.FilesDownloadedOptions{
 			FilesIsDownloaded:    false,
 			AllFilesIsDownloaded: false,
-		},
+		},*/
 		InformationAboutFiltering: configure.InformationAboutFilteringOptions{
 			FilesIsFound:     false,
 			CountAllFilesMin: 0,
@@ -703,11 +1048,11 @@ var _ = Describe("InteractionDBSearch", func() {
 	})
 
 	Context("Тест 2. Тестируем функцию 'getShortInformation'. Запрос к БД для получения всех задач (когда в запросе ничего не задано)", func() {
-		It("При выполнения запроса должно быть получено 29 задач", func() {
+		It("При выполнения запроса должно быть получено 7 задач", func() {
 			listTask, err := getShortInformation(qp, &sp)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(29))
+			Expect(len(listTask)).Should(Equal(7))
 		})
 	})
 
@@ -737,13 +1082,14 @@ var _ = Describe("InteractionDBSearch", func() {
 		})
 
 		It("Должно быть '29' совпадений", func() {
-			Expect(len(listTask)).Should(Equal(29))
+			Expect(len(listTask)).Should(Equal(7))
 		})
 	})
 
 	Context("Тест 5. Тестируем функцию 'getShortInformation'. Ищем выполнялась ли выгрузка файлов.", func() {
 		spt3 := configure.SearchParameters{}
-		spt3.FilesDownloaded.FilesIsDownloaded = true
+		spt3.ConsiderParameterFilesIsDownloaded = true
+		spt3.FilesIsDownloaded = true
 
 		listTask, err := getShortInformation(qp, &spt3)
 
@@ -751,14 +1097,15 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
-		It("Должно быть '8' совпадений", func() {
-			Expect(len(listTask)).Should(Equal(8))
+		It("Должно быть '4' совпадений", func() {
+			Expect(len(listTask)).Should(Equal(4))
 		})
 	})
 
 	Context("Тест 6. Тестируем функцию 'getShortInformation'. Были ли выгружены ВСЕ файлы.", func() {
 		spt4 := configure.SearchParameters{}
-		spt4.FilesDownloaded.AllFilesIsDownloaded = true
+		spt4.ConsiderParameterAllFilesIsDownloaded = true
+		spt4.AllFilesIsDownloaded = true
 
 		listTask, err := getShortInformation(qp, &spt4)
 
@@ -766,8 +1113,8 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
-		It("Должно быть '7' совпадений", func() {
-			Expect(len(listTask)).Should(Equal(7))
+		It("Должно быть '1' совпадений", func() {
+			Expect(len(listTask)).Should(Equal(1))
 		})
 	})
 
@@ -781,15 +1128,15 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
-		It("Должно быть '9' совпадений", func() {
-			Expect(len(listTask)).Should(Equal(9))
+		It("Должно быть '4' совпадений", func() {
+			Expect(len(listTask)).Should(Equal(4))
 		})
 	})
 
 	Context("Тест 8. Тестируем функцию 'getShortInformation'. Поиск по общему размеру найденных файлов, где размер больше чем параметр 'SizeAllFilesMin' и меньше чем 'SizeAllFilesMax'.", func() {
 		spt6 := configure.SearchParameters{}
 		spt6.InformationAboutFiltering.SizeAllFilesMin = 3330
-		spt6.InformationAboutFiltering.SizeAllFilesMax = 13900040
+		spt6.InformationAboutFiltering.SizeAllFilesMax = 155746375
 
 		listTask, err := getShortInformation(qp, &spt6)
 
@@ -797,8 +1144,8 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
-		It("Должно быть '9' совпадений", func() {
-			Expect(len(listTask)).Should(Equal(9))
+		It("Должно быть '4' совпадений", func() {
+			Expect(len(listTask)).Should(Equal(4))
 		})
 
 		It("Должно быть '0' совпадений так как в указанных приделах данных нет", func() {
@@ -810,20 +1157,20 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Должно быть '29' совпадений, тоесть ВСЕ. Так как параметры не верны min > max и следовательно не учитиваются", func() {
+		It("Должно быть '7' совпадений, то есть ВСЕ. Так как параметры не верны min > max и следовательно не учитиваются", func() {
 			spt62 := configure.SearchParameters{}
 			spt62.InformationAboutFiltering.SizeAllFilesMin = 23900040
 			spt62.InformationAboutFiltering.SizeAllFilesMax = 100
 			listTask, _ := getShortInformation(qp, &spt62)
 
-			Expect(len(listTask)).Should(Equal(29))
+			Expect(len(listTask)).Should(Equal(7))
 		})
 	})
 
 	Context("Тест 9. Тестируем функцию 'getShortInformation'. Поиск по количеству найденных файлов, где кол-во больше чем параметр 'CountAllFilesMin' и меньше чем 'CountAllFilesMax'.", func() {
 		spt7 := configure.SearchParameters{}
 		spt7.InformationAboutFiltering.CountAllFilesMin = 5
-		spt7.InformationAboutFiltering.CountAllFilesMax = 10
+		spt7.InformationAboutFiltering.CountAllFilesMax = 69
 
 		listTask, err := getShortInformation(qp, &spt7)
 
@@ -831,32 +1178,32 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
-		It("Должно быть '9' совпадений", func() {
-			Expect(len(listTask)).Should(Equal(9))
+		It("Должно быть '4' совпадений", func() {
+			Expect(len(listTask)).Should(Equal(4))
 		})
 	})
 
 	Context("Тест 10. Тестируем функцию 'getShortInformation'. Поиск по временному диапазону", func() {
-		It("Должно быть '27' совпадений, так как временной интервал удовлетворяет заданным параметрам", func() {
+		It("Должно быть '4' совпадений, так как временной интервал удовлетворяет заданным параметрам", func() {
 			spt81 := configure.SearchParameters{}
-			spt81.InstalledFilteringOption.DateTime.Start = 1560729600
-			spt81.InstalledFilteringOption.DateTime.End = 1560898800
+			spt81.InstalledFilteringOption.DateTime.Start = 155746374
+			spt81.InstalledFilteringOption.DateTime.End = 1595081297
 
 			listTask, err := getShortInformation(qp, &spt81)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(27))
+			Expect(len(listTask)).Should(Equal(4))
 		})
 
-		It("Должно быть '2' совпадений, так как временной интервал удовлетворяет заданным параметрам", func() {
+		It("Должно быть '7' совпадений, так как временной интервал удовлетворяет заданным параметрам", func() {
 			spt82 := configure.SearchParameters{}
-			spt82.InstalledFilteringOption.DateTime.Start = 1576713599 //1576713600
-			spt82.InstalledFilteringOption.DateTime.End = 1576886401   //1576886400
+			spt82.InstalledFilteringOption.DateTime.Start = 1595081297 //1576713600
+			spt82.InstalledFilteringOption.DateTime.End = 1594723143   //1576886400
 
 			listTask, err := getShortInformation(qp, &spt82)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(2))
+			Expect(len(listTask)).Should(Equal(7))
 		})
 
 		It("Должно быть '0' совпадений, так как временной интервал НЕ удовлетворяет заданным параметрам", func() {
@@ -870,7 +1217,7 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Должно быть '29' совпадений, то есть время не учитывается так как НАЧАЛЬНОЕ время БОЛЬШЕ конечного", func() {
+		It("Должно быть '7' совпадений, то есть время не учитывается так как НАЧАЛЬНОЕ время БОЛЬШЕ конечного", func() {
 			spt84 := configure.SearchParameters{}
 			spt84.InstalledFilteringOption.DateTime.Start = 1576886400
 			spt84.InstalledFilteringOption.DateTime.End = 1576713600
@@ -878,19 +1225,19 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt84)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(29))
+			Expect(len(listTask)).Should(Equal(7))
 		})
 	})
 
 	Context("Тест 11. Тестируем функцию 'getShortInformation'. Поиск по протоколу транспортного уровня.", func() {
-		It("Должно быть '29' совпадений", func() {
+		It("Должно быть '0' совпадений", func() {
 			spt91 := configure.SearchParameters{}
 			spt91.InstalledFilteringOption.Protocol = "tcp"
 
 			listTask, err := getShortInformation(qp, &spt91)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(29))
+			Expect(len(listTask)).Should(Equal(0))
 		})
 
 		It("Должно быть '0' совпадений", func() {
@@ -905,19 +1252,19 @@ var _ = Describe("InteractionDBSearch", func() {
 	})
 
 	Context("Тест 12. Тестируем функцию 'getShortInformation'. Поиск по статусу задачи фильтрации.", func() {
-		It("Должно быть '25' совпадений", func() {
+		It("Должно быть '6' совпадений", func() {
 			spt101 := configure.SearchParameters{}
 			spt101.StatusFilteringTask = "complete"
 
 			listTask, err := getShortInformation(qp, &spt101)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(25))
+			Expect(len(listTask)).Should(Equal(6))
 		})
 
 		It("Должно быть '1' совпадений", func() {
 			spt102 := configure.SearchParameters{}
-			spt102.StatusFilteringTask = "refused"
+			spt102.StatusFilteringTask = "stop"
 
 			listTask, err := getShortInformation(qp, &spt102)
 
@@ -927,24 +1274,24 @@ var _ = Describe("InteractionDBSearch", func() {
 	})
 
 	Context("Тест 13. Тестируем функцию 'getShortInformation'. Поиск по статусу задачи по скачиванию файлов.", func() {
-		It("Должно быть '21' совпадений", func() {
+		It("Должно быть '3' совпадений", func() {
 			spt111 := configure.SearchParameters{}
 			spt111.StatusFileDownloadTask = "not executed"
 
 			listTask, err := getShortInformation(qp, &spt111)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(21))
+			Expect(len(listTask)).Should(Equal(3))
 		})
 
-		It("Должно быть '2' совпадений", func() {
+		It("Должно быть '4' совпадений", func() {
 			spt112 := configure.SearchParameters{}
-			spt112.StatusFileDownloadTask = "execute"
+			spt112.StatusFileDownloadTask = "complete"
 
 			listTask, err := getShortInformation(qp, &spt112)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(2))
+			Expect(len(listTask)).Should(Equal(4))
 		})
 	})
 
@@ -1073,12 +1420,12 @@ var _ = Describe("InteractionDBSearch", func() {
 	})
 
 	Context("Тест 16. Проверяем поиск информации по сетевым параметрам (IP, Port, Network)", func() {
-		It("Поиск только по ip адресам ANY и SRC и network ANY, при чем network не существует (Тестовая функция), должно быть получено '12' значений", func() {
+		It("Поиск только по ip адресам ANY и SRC и network ANY, при чем network не существует (Тестовая функция), должно быть получено '5' значений", func() {
 			spt1 := configure.SearchParameters{}
 			spt1.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
-					Any: []string{"45.78.9.10", "87.240.131.213"},
-					Src: []string{"192.168.13.67"},
+					Any: []string{"37.9.96.22", "74.125.153.87"},
+					Src: []string{"78.0.0.23"},
 					Dst: []string{},
 				},
 				Port: configure.FiltrationControlIPorNetorPortParameters{
@@ -1096,10 +1443,10 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt1)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(12))
+			Expect(len(listTask)).Should(Equal(5))
 		})
 
-		It("Поиск только по network ANY (Тестовая функция), должно быть получено '2' значений", func() {
+		It("Поиск только по network ANY (Тестовая функция), должно быть получено '0' значений", func() {
 			spt2 := configure.SearchParameters{}
 			spt2.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
@@ -1122,14 +1469,14 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt2)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(2))
+			Expect(len(listTask)).Should(Equal(0))
 		})
 
 		It("Поиск только по network, должно быть получено '2' значений", func() {
 			spt := configure.SearchParameters{}
 			spt.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
-					Any: []string{"78.138.105.19", "172.105.42.183", "89.23.66.14"},
+					Any: []string{"23.0.11.1", "172.105.42.183", "89.23.66.14"},
 					Src: []string{},
 					Dst: []string{},
 				},
@@ -1151,7 +1498,7 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(len(listTask)).Should(Equal(2))
 		})
 
-		It("Поиск только по ip адресам SRC и DST (соответственно между src и dst должно быть 'И'), должно быть получено '2' значений (Тестовая функция)", func() {
+		It("Поиск только по ip адресам SRC и DST (соответственно между src и dst должно быть 'И'), должно быть получено '0' значений (Тестовая функция)", func() {
 			spt3 := configure.SearchParameters{}
 			spt3.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
@@ -1174,10 +1521,10 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt3)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(2))
+			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Поиск только по ip адресам ANY и port ANY, должно быть получено '3' значений (Тестовая функция)", func() {
+		It("Поиск только по ip адресам ANY и port ANY, должно быть получено '0' значений (Тестовая функция)", func() {
 			spt4 := configure.SearchParameters{}
 			spt4.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
@@ -1200,10 +1547,10 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt4)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(3))
+			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Поиск только по ip адресам SRC и DST и port ANY, должно быть получено '1' значений (Тестовая функция)", func() {
+		It("Поиск только по ip адресам SRC и DST и port ANY, должно быть получено '0' значений (Тестовая функция)", func() {
 			spt5 := configure.SearchParameters{}
 			spt5.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
@@ -1226,10 +1573,10 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt5)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(1))
+			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Поиск только по ip адресам SRC и DST и port DST, должно быть получено '7' значений (Тестовая функция)", func() {
+		It("Поиск только по ip адресам SRC и DST и port DST, должно быть получено '0' значений (Тестовая функция)", func() {
 			spt6 := configure.SearchParameters{}
 			spt6.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
@@ -1252,10 +1599,10 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt6)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(7))
+			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Поиск только по port DST, должно быть получено '7' значений (Тестовая функция)", func() {
+		It("Поиск только по port DST, должно быть получено '0' значений (Тестовая функция)", func() {
 			spt7 := configure.SearchParameters{}
 			spt7.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
@@ -1278,10 +1625,10 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt7)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(7))
+			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Поиск только по ip адресам ANY и port DST, должно быть получено '4' значений (Тестовая функция)", func() {
+		It("Поиск только по ip адресам ANY и port DST, должно быть получено '0' значений (Тестовая функция)", func() {
 			spt8 := configure.SearchParameters{}
 			spt8.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
@@ -1304,10 +1651,10 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt8)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(4))
+			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Поиск только по ip адресам ANY и port DST, должно быть получено '4' значений (Тестовая функция)", func() {
+		It("Поиск только по ip адресам ANY и port DST, должно быть получено '0' значений (Тестовая функция)", func() {
 			spt8 := configure.SearchParameters{}
 			spt8.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
@@ -1330,10 +1677,10 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt8)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(4))
+			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Поиск по ip адресам ANY или NETWORK и port DST, должно быть получено '7' значений (Тестовая функция)", func() {
+		It("Поиск по ip адресам ANY или NETWORK и port DST, должно быть получено '0' значений (Тестовая функция)", func() {
 			spt9 := configure.SearchParameters{}
 			spt9.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
@@ -1356,10 +1703,10 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt9)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(7))
+			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Поиск по ip адресам ANY и DST или network ANY и port DST, должно быть получено '3' значений (Тестовая функция)", func() {
+		It("Поиск по ip адресам ANY и DST или network ANY и port DST, должно быть получено '0' значений (Тестовая функция)", func() {
 			spt9 := configure.SearchParameters{}
 			spt9.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
@@ -1382,10 +1729,10 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt9)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(3))
+			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Поиск только по (ip адресам или network) и временному диапазону, должно быть получено '3' значений", func() {
+		It("Поиск только по (ip адресам или network) и временному диапазону, должно быть получено '0' значений", func() {
 			spt10 := configure.SearchParameters{}
 			spt10.TaskProcessed = false
 			spt10.InstalledFilteringOption.DateTime.Start = 1560729600
@@ -1415,13 +1762,13 @@ var _ = Describe("InteractionDBSearch", func() {
 			}
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(3))
+			Expect(len(listTask)).Should(Equal(0))
 		})
 	})
 
 	Context("Тест 17. Проверяем поиск полной информации по ID задачи", func() {
 		It("Должна быть получена полная информация о существующей задаче, ошибки быть не должно", func() {
-			tid := "4b52190d116d33306aae803e98c55df6"
+			tid := "9c48085a749ab586f32e51d5ff0be1fa"
 
 			info, err := SearchFullInformationAboutTasks(qp, tid)
 
@@ -1444,10 +1791,58 @@ var _ = Describe("InteractionDBSearch", func() {
 		*/
 	})
 
-	Context("Тест 18. Получаем ограниченный список найденных файлов, со смещением", func() {
+	Context("Тест 18. Получаем список задач по таким параметрам как: была ли задача отмечена как завершенная, все ли файлы были выгружены", func() {
+		It("Должен быть получен список задач которые НЕ БЫЛИ были отмечены пользователем как завершенные", func() {
+			spt1dt := configure.SearchParameters{}
+			spt1dt.ConsiderParameterTaskProcessed = true
+			spt1dt.TaskProcessed = false
+
+			listTask, err := getShortInformation(qp, &spt1dt)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(listTask)).Should(Equal(7))
+		})
+
+		It("Должен быть получен список задач которые БЫЛИ отмечены пользователем как завершенные", func() {
+			spt2dt := configure.SearchParameters{}
+			spt2dt.ConsiderParameterTaskProcessed = true
+			spt2dt.TaskProcessed = true
+
+			listTask, err := getShortInformation(qp, &spt2dt)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(listTask)).Should(Equal(0))
+		})
+
+		It("Должен быть получен список задач файлы по которым НЕ ВЫГРУЖАЛИСЬ или были выгружены не полностью", func() {
+			spt3dt := configure.SearchParameters{}
+			spt3dt.ConsiderParameterFilesIsDownloaded = true
+			spt3dt.FilesIsDownloaded = false
+			spt3dt.ConsiderParameterAllFilesIsDownloaded = true
+			spt3dt.AllFilesIsDownloaded = false
+
+			listTask, err := getShortInformation(qp, &spt3dt)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(listTask)).Should(Equal(3))
+		})
+
+		It("Должен быть получен список задач файлы по которым были выгружены полностью", func() {
+			spt4dt := configure.SearchParameters{}
+			spt4dt.ConsiderParameterAllFilesIsDownloaded = true
+			spt4dt.AllFilesIsDownloaded = true
+
+			listTask, err := getShortInformation(qp, &spt4dt)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(listTask)).Should(Equal(1))
+		})
+	})
+
+	Context("Тест 19. Получаем ограниченный список найденных файлов, со смещением", func() {
 		It("Должен быть получен ограниченный список файлов по найденный по ID задачи и с указанным смещением", func() {
 			list, err := GetListFoundFiles(qp, configure.GetListFoundFilesRequestOption{
-				RequestTaskID:   "84a41784eb71e77e8fb7d2f0ddfcbf00",
+				RequestTaskID:   "9c48085a749ab586f32e51d5ff0be1fa",
 				PartSize:        3,
 				OffsetListParts: 6,
 			})
@@ -1462,7 +1857,7 @@ var _ = Describe("InteractionDBSearch", func() {
 		})
 	})
 
-	Context("Тест 19. Тест регулярки", func() {
+	Context("Тест 20. Тест регулярки", func() {
 		It("Должно быть TRUE", func() {
 			pattern := `^(\w|_)+\.(tdp|pcap)$`
 
@@ -1475,7 +1870,7 @@ var _ = Describe("InteractionDBSearch", func() {
 		})
 	})
 
-	Context("Тест 20. Отмечаем задачу как завершенную", func() {
+	Context("Тест 21. Отмечаем задачу как завершенную", func() {
 		It("Указанная задача должна быть отмечена как завершенная, ошибок при этом быть не должно", func() {
 			var err error
 
@@ -1492,7 +1887,7 @@ var _ = Describe("InteractionDBSearch", func() {
 		})
 	})
 
-	Context("Тест 21. Проверка имени пользователя с помощью RegExp", func() {
+	Context("Тест 22. Проверка имени пользователя с помощью RegExp", func() {
 		It("Проверка должна проходить успешно", func() {
 			ok, err := common.CheckUserName("user-Name-Ё1 _яr")
 
@@ -1501,7 +1896,7 @@ var _ = Describe("InteractionDBSearch", func() {
 		})
 	})
 
-	Context("Тест 22. Проверка поля 'description' с помощью RegExp", func() {
+	Context("Тест 23. Проверка поля 'description' с помощью RegExp", func() {
 		It("Проверка должна проходить успешно", func() {
 			ok, err := common.CheckFieldDescription("user-Name-Ё1 _я!r твашт? 12. fd@vd.r, e:")
 

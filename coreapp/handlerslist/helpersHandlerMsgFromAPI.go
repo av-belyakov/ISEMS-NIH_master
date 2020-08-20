@@ -193,11 +193,15 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 
 	//добавляем информацию о задаче в кеширующий модуль
 	taskID, _, err := hsm.TSSQ.CreateNewSearchTask(clientID, &configure.SearchParameters{
-		ID:                        siatr.MsgOption.ID,
-		TaskProcessed:             siatr.MsgOption.TaskProcessed,
-		FilesDownloaded:           siatr.MsgOption.FilesDownloaded,
-		InformationAboutFiltering: siatr.MsgOption.InformationAboutFiltering,
-		InstalledFilteringOption:  siatr.MsgOption.InstalledFilteringOption,
+		ID:                                    siatr.MsgOption.ID,
+		ConsiderParameterTaskProcessed:        siatr.MsgOption.ConsiderParameterTaskProcessed,
+		TaskProcessed:                         siatr.MsgOption.TaskProcessed,
+		ConsiderParameterFilesIsDownloaded:    siatr.MsgOption.ConsiderParameterFilesIsDownloaded,
+		FilesIsDownloaded:                     siatr.MsgOption.FilesIsDownloaded,
+		ConsiderParameterAllFilesIsDownloaded: siatr.MsgOption.ConsiderParameterAllFilesIsDownloaded,
+		AllFilesIsDownloaded:                  siatr.MsgOption.AllFilesIsDownloaded,
+		InformationAboutFiltering:             siatr.MsgOption.InformationAboutFiltering,
+		InstalledFilteringOption:              siatr.MsgOption.InstalledFilteringOption,
 	})
 	if err != nil {
 		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
