@@ -136,7 +136,7 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 
 	numTaskFound := len(info.ListFoundInformation.List)
 
-	if numTaskFound == 0 {
+	if (numTaskFound == 0) && (!(*info).SearchParameters.SearchRequestIsGeneratedAutomatically) {
 		//информационное сообщение о том что искомая задача не найдена
 		notifications.SendNotificationToClientAPI(
 			chanToAPI,

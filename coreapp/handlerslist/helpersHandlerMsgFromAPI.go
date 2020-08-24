@@ -193,6 +193,7 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 
 	//добавляем информацию о задаче в кеширующий модуль
 	taskID, _, err := hsm.TSSQ.CreateNewSearchTask(clientID, &configure.SearchParameters{
+		SearchRequestIsGeneratedAutomatically: siatr.MsgOption.SearchRequestIsGeneratedAutomatically,
 		ID:                                    siatr.MsgOption.ID,
 		ConsiderParameterTaskProcessed:        siatr.MsgOption.ConsiderParameterTaskProcessed,
 		TaskProcessed:                         siatr.MsgOption.TaskProcessed,
