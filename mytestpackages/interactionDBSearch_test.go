@@ -275,7 +275,7 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 			queryFilesIsDownloaded = queryTemplate["filesIsDownloaded"]
 			queryAllFilesIsDownloaded = queryTemplate["allFilesIsDownloaded"]
 		} else {
-			queryFilesIsDownloaded = queryTemplate["filesIsDownloaded"]
+			//queryFilesIsDownloaded = queryTemplate["filesIsDownloaded"]
 			queryAllFilesIsDownloaded = queryTemplate["allFilesIsNotDownloaded"]
 		}
 	}
@@ -1048,11 +1048,11 @@ var _ = Describe("InteractionDBSearch", func() {
 	})
 
 	Context("Тест 2. Тестируем функцию 'getShortInformation'. Запрос к БД для получения всех задач (когда в запросе ничего не задано)", func() {
-		It("При выполнения запроса должно быть получено 7 задач", func() {
+		It("При выполнения запроса должно быть получено 10 задач", func() {
 			listTask, err := getShortInformation(qp, &sp)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(7))
+			Expect(len(listTask)).Should(Equal(10))
 		})
 	})
 
@@ -1081,8 +1081,8 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
-		It("Должно быть '29' совпадений", func() {
-			Expect(len(listTask)).Should(Equal(7))
+		It("Должно быть '10' совпадений", func() {
+			Expect(len(listTask)).Should(Equal(10))
 		})
 	})
 
@@ -1128,8 +1128,8 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
-		It("Должно быть '4' совпадений", func() {
-			Expect(len(listTask)).Should(Equal(4))
+		It("Должно быть '5' совпадений", func() {
+			Expect(len(listTask)).Should(Equal(5))
 		})
 	})
 
@@ -1144,8 +1144,8 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
-		It("Должно быть '4' совпадений", func() {
-			Expect(len(listTask)).Should(Equal(4))
+		It("Должно быть '5' совпадений", func() {
+			Expect(len(listTask)).Should(Equal(5))
 		})
 
 		It("Должно быть '0' совпадений так как в указанных приделах данных нет", func() {
@@ -1157,13 +1157,13 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Должно быть '7' совпадений, то есть ВСЕ. Так как параметры не верны min > max и следовательно не учитиваются", func() {
+		It("Должно быть '10' совпадений, то есть ВСЕ. Так как параметры не верны min > max и следовательно не учитиваются", func() {
 			spt62 := configure.SearchParameters{}
 			spt62.InformationAboutFiltering.SizeAllFilesMin = 23900040
 			spt62.InformationAboutFiltering.SizeAllFilesMax = 100
 			listTask, _ := getShortInformation(qp, &spt62)
 
-			Expect(len(listTask)).Should(Equal(7))
+			Expect(len(listTask)).Should(Equal(10))
 		})
 	})
 
@@ -1178,8 +1178,8 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
-		It("Должно быть '4' совпадений", func() {
-			Expect(len(listTask)).Should(Equal(4))
+		It("Должно быть '5' совпадений", func() {
+			Expect(len(listTask)).Should(Equal(5))
 		})
 	})
 
@@ -1192,10 +1192,10 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt81)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(4))
+			Expect(len(listTask)).Should(Equal(5))
 		})
 
-		It("Должно быть '7' совпадений, так как временной интервал удовлетворяет заданным параметрам", func() {
+		It("Должно быть '10' совпадений, так как временной интервал удовлетворяет заданным параметрам", func() {
 			spt82 := configure.SearchParameters{}
 			spt82.InstalledFilteringOption.DateTime.Start = 1595081297 //1576713600
 			spt82.InstalledFilteringOption.DateTime.End = 1594723143   //1576886400
@@ -1203,7 +1203,7 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt82)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(7))
+			Expect(len(listTask)).Should(Equal(10))
 		})
 
 		It("Должно быть '0' совпадений, так как временной интервал НЕ удовлетворяет заданным параметрам", func() {
@@ -1217,7 +1217,7 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Должно быть '7' совпадений, то есть время не учитывается так как НАЧАЛЬНОЕ время БОЛЬШЕ конечного", func() {
+		It("Должно быть '10' совпадений, то есть время не учитывается так как НАЧАЛЬНОЕ время БОЛЬШЕ конечного", func() {
 			spt84 := configure.SearchParameters{}
 			spt84.InstalledFilteringOption.DateTime.Start = 1576886400
 			spt84.InstalledFilteringOption.DateTime.End = 1576713600
@@ -1225,7 +1225,7 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt84)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(7))
+			Expect(len(listTask)).Should(Equal(10))
 		})
 	})
 
@@ -1252,14 +1252,14 @@ var _ = Describe("InteractionDBSearch", func() {
 	})
 
 	Context("Тест 12. Тестируем функцию 'getShortInformation'. Поиск по статусу задачи фильтрации.", func() {
-		It("Должно быть '6' совпадений", func() {
+		It("Должно быть '9' совпадений", func() {
 			spt101 := configure.SearchParameters{}
 			spt101.StatusFilteringTask = "complete"
 
 			listTask, err := getShortInformation(qp, &spt101)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(6))
+			Expect(len(listTask)).Should(Equal(9))
 		})
 
 		It("Должно быть '1' совпадений", func() {
@@ -1274,14 +1274,14 @@ var _ = Describe("InteractionDBSearch", func() {
 	})
 
 	Context("Тест 13. Тестируем функцию 'getShortInformation'. Поиск по статусу задачи по скачиванию файлов.", func() {
-		It("Должно быть '3' совпадений", func() {
+		It("Должно быть '6' совпадений", func() {
 			spt111 := configure.SearchParameters{}
 			spt111.StatusFileDownloadTask = "not executed"
 
 			listTask, err := getShortInformation(qp, &spt111)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(3))
+			Expect(len(listTask)).Should(Equal(6))
 		})
 
 		It("Должно быть '4' совпадений", func() {
@@ -1420,7 +1420,7 @@ var _ = Describe("InteractionDBSearch", func() {
 	})
 
 	Context("Тест 16. Проверяем поиск информации по сетевым параметрам (IP, Port, Network)", func() {
-		It("Поиск только по ip адресам ANY и SRC и network ANY, при чем network не существует (Тестовая функция), должно быть получено '5' значений", func() {
+		It("Поиск только по ip адресам ANY и SRC и network ANY, при чем network не существует (Тестовая функция), должно быть получено '8' значений", func() {
 			spt1 := configure.SearchParameters{}
 			spt1.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
@@ -1443,7 +1443,7 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt1)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(5))
+			Expect(len(listTask)).Should(Equal(8))
 		})
 
 		It("Поиск только по network ANY (Тестовая функция), должно быть получено '0' значений", func() {
@@ -1800,7 +1800,7 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt1dt)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(7))
+			Expect(len(listTask)).Should(Equal(10))
 		})
 
 		It("Должен быть получен список задач которые БЫЛИ отмечены пользователем как завершенные", func() {
@@ -1816,15 +1816,15 @@ var _ = Describe("InteractionDBSearch", func() {
 
 		It("Должен быть получен список задач файлы по которым НЕ ВЫГРУЖАЛИСЬ или были выгружены не полностью", func() {
 			spt3dt := configure.SearchParameters{}
-			spt3dt.ConsiderParameterFilesIsDownloaded = true
-			spt3dt.FilesIsDownloaded = false
+			/*			spt3dt.ConsiderParameterFilesIsDownloaded = true
+						spt3dt.FilesIsDownloaded = false*/
 			spt3dt.ConsiderParameterAllFilesIsDownloaded = true
 			spt3dt.AllFilesIsDownloaded = false
 
 			listTask, err := getShortInformation(qp, &spt3dt)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(3))
+			Expect(len(listTask)).Should(Equal(4))
 		})
 
 		It("Должен быть получен список задач файлы по которым были выгружены полностью", func() {

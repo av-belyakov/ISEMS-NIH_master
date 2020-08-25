@@ -233,7 +233,7 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 			queryFilesIsDownloaded = queryTemplate["filesIsDownloaded"]
 			queryAllFilesIsDownloaded = queryTemplate["allFilesIsDownloaded"]
 		} else {
-			queryFilesIsDownloaded = queryTemplate["filesIsDownloaded"]
+			//queryFilesIsDownloaded = queryTemplate["filesIsDownloaded"]
 			queryAllFilesIsDownloaded = queryTemplate["allFilesIsNotDownloaded"]
 		}
 	}
