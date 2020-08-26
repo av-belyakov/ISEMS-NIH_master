@@ -540,6 +540,14 @@ func getSourceListsForWriteToDB(
 				typeAreaNetwork = "pppoe"
 			}
 
+			if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "vlan + pppoe" {
+				typeAreaNetwork = "vlan + pppoe"
+			}
+
+			if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe + vlan" {
+				typeAreaNetwork = "pppoe + vlan"
+			}
+
 			//проверяем максимальное кол-во одновременно запущеных задач фильтрации
 			if s.Argument.Settings.MaxCountProcessFiltration > 1 && 10 > s.Argument.Settings.MaxCountProcessFiltration {
 				mcpf = s.Argument.Settings.MaxCountProcessFiltration
