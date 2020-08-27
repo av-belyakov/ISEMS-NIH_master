@@ -105,7 +105,8 @@ func (qp QueryParameters) Find(elem interface{}) (*mongo.Cursor, error) {
 	//fmt.Println("\t===== REQUEST TO DB 'FIND' ======")
 
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
-	options := options.Find()
+	options := options.Find().SetSort(bson.D{{Key: "detailed_information_on_filtering.time_interval_task_execution.start", Value: -1}})
+	//options := options.Find()
 
 	return collection.Find(context.TODO(), elem, options)
 }

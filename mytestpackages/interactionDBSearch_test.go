@@ -35,7 +35,8 @@ func (qp QueryParameters) Find(elem interface{}) (*mongo.Cursor, error) {
 	//fmt.Println("\t===== REQUEST TO DB 'FIND' ======")
 
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
-	options := options.Find()
+	//	bson.D{{Key: "$sort", Value: bson.D{{Key: "detailed_information_on_filtering.time_interval_task_execution.start", Value: -1}}}}
+	options := options.Find().SetSort(bson.D{{Key: "detailed_information_on_filtering.time_interval_task_execution.start", Value: -1}})
 
 	return collection.Find(context.TODO(), elem, options)
 }
@@ -372,9 +373,10 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 		}
 
 		bti := configure.BriefTaskInformation{
-			TaskID:       model.TaskID,
-			ClientTaskID: model.ClientTaskID,
-			SourceID:     model.SourceID,
+			TaskID:                 model.TaskID,
+			ClientTaskID:           model.ClientTaskID,
+			SourceID:               model.SourceID,
+			StartTimeTaskExecution: model.DetailedInformationOnFiltering.TimeIntervalTaskExecution.Start,
 			ParametersFiltration: configure.ParametersFiltrationOptions{
 				DateTime: configure.DateTimeParameters{
 					Start: model.FilteringOption.DateTime.Start,
@@ -417,334 +419,6 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 
 	return lbti, nil
 }
-
-/*func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]*configure.BriefTaskInformation, error) {
-	getQueryTmpNetParamsTest := func(fcp configure.FiltrationControlParametersNetworkFilters, queryType string) (bson.E, bson.D) {
-		listQueryType := map[string]struct {
-			e string
-			o configure.FiltrationControlIPorNetorPortParameters
-		}{
-			"ip":      {e: "ip", o: fcp.IP},
-			"port":    {e: "port", o: fcp.Port},
-			"network": {e: "network", o: fcp.Network},
-		}
-
-		numIPAny := len(listQueryType[queryType].o.Any)
-		numIPSrc := len(listQueryType[queryType].o.Src)
-		numIPDst := len(listQueryType[queryType].o.Dst)
-
-		if numIPAny == 0 && numIPSrc == 0 && numIPDst == 0 {
-			return bson.E{}, bson.D{}
-		}
-
-		if numIPAny > 0 && numIPSrc == 0 && numIPDst == 0 {
-			be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}
-			bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}}
-
-			return be, bd
-		}
-
-		if numIPSrc > 0 && numIPAny == 0 && numIPDst == 0 {
-			be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}
-			bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}}
-
-			return be, bd
-		}
-
-		if numIPDst > 0 && numIPAny == 0 && numIPSrc == 0 {
-			be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}
-			bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}}
-
-			return be, bd
-		}
-
-		if (numIPSrc > 0 && numIPDst > 0) && numIPAny == 0 {
-			be := bson.E{Key: "$and", Value: bson.A{
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
-			}}
-			bd := bson.D{{Key: "$and", Value: bson.A{
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
-			}}}
-
-			return be, bd
-		}
-
-		return bson.E{Key: "$or", Value: bson.A{
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
-			}}, bson.D{{Key: "$or", Value: bson.A{
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
-			}}}
-	}
-
-	getQueryTmpNetParams := func(fcp configure.FiltrationControlParametersNetworkFilters, queryType string) bson.E {
-		listQueryType := map[string]struct {
-			e string
-			o configure.FiltrationControlIPorNetorPortParameters
-		}{
-			"ip":      {e: "ip", o: fcp.IP},
-			"port":    {e: "port", o: fcp.Port},
-			"network": {e: "network", o: fcp.Network},
-		}
-
-		numIPAny := len(listQueryType[queryType].o.Any)
-		numIPSrc := len(listQueryType[queryType].o.Src)
-		numIPDst := len(listQueryType[queryType].o.Dst)
-
-		if numIPAny == 0 && numIPSrc == 0 && numIPDst == 0 {
-			return bson.E{}
-		}
-
-		if numIPAny > 0 && numIPSrc == 0 && numIPDst == 0 {
-			return bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}
-		}
-
-		if numIPSrc > 0 && numIPAny == 0 && numIPDst == 0 {
-			return bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}
-		}
-
-		if numIPDst > 0 && numIPAny == 0 && numIPSrc == 0 {
-			return bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}
-		}
-
-		if (numIPSrc > 0 && numIPDst > 0) && numIPAny == 0 {
-			return bson.E{Key: "$and", Value: bson.A{
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
-			}}
-		}
-
-		return bson.E{Key: "$or", Value: bson.A{
-			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
-			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
-			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
-		}}
-	}
-
-	checkParameterContainsValues := func(fcinpp configure.FiltrationControlIPorNetorPortParameters) bool {
-		if len(fcinpp.Any) > 0 {
-			return true
-		}
-
-		if len(fcinpp.Src) > 0 {
-			return true
-		}
-
-		if len(fcinpp.Dst) > 0 {
-			return true
-		}
-
-		return false
-	}
-
-	queryTemplate := map[string]bson.E{
-		"sourceID":          bson.E{Key: "source_id", Value: bson.D{{Key: "$eq", Value: sp.ID}}},
-		"filesIsFound":      bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: bson.D{{Key: "$gt", Value: 0}}},
-		"taskProcessed":     bson.E{Key: "general_information_about_task.task_processed", Value: sp.TaskProcessed},
-		"filesIsDownloaded": bson.E{Key: "detailed_information_on_downloading.number_files_downloaded", Value: bson.D{{Key: "$gt", Value: 0}}},
-		"allFilesIsDownloaded": bson.E{Key: "$expr", Value: bson.D{
-			{Key: "$eq", Value: bson.A{"$detailed_information_on_downloading.number_files_total", "$detailed_information_on_downloading.number_files_downloaded"}}}},
-		"sizeAllFiles": bson.E{Key: "detailed_information_on_filtering.size_files_found_result_filtering", Value: bson.D{
-			{Key: "$gte", Value: sp.InformationAboutFiltering.SizeAllFilesMin},
-			{Key: "$lte", Value: sp.InformationAboutFiltering.SizeAllFilesMax},
-		}},
-		"countAllFiles": bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: bson.D{
-			{Key: "$gte", Value: sp.InformationAboutFiltering.CountAllFilesMin},
-			{Key: "$lte", Value: sp.InformationAboutFiltering.CountAllFilesMax},
-		}},
-		"dateTimeParameters": bson.E{Key: "$and", Value: bson.A{
-			bson.D{{Key: "filtering_option.date_time_interval.start", Value: bson.D{
-				{Key: "$gte", Value: sp.InstalledFilteringOption.DateTime.Start}}}},
-			bson.D{{Key: "filtering_option.date_time_interval.end", Value: bson.D{
-				{Key: "$lte", Value: sp.InstalledFilteringOption.DateTime.End}}}},
-		}},
-		"transportProtocol":        bson.E{Key: "filtering_option.protocol", Value: sp.InstalledFilteringOption.Protocol},
-		"statusFilteringTask":      bson.E{Key: "detailed_information_on_filtering.task_status", Value: sp.StatusFilteringTask},
-		"statusFileDownloadTask":   bson.E{Key: "detailed_information_on_downloading.task_status", Value: sp.StatusFileDownloadTask},
-		"networkParametersIP":      getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "ip"),
-		"networkParametersPort":    getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "port"),
-		"networkParametersNetwork": getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "network"),
-	}
-
-	var (
-		querySourceID               bson.E
-		queryFilesIsFound           bson.E
-		querySizeAllFiles           bson.E
-		queryCountAllFiles          bson.E
-		queryTaskProcessed          bson.E
-		queryFilesIsDownloaded      bson.E
-		queryTransportProtocol      bson.E
-		querydateTimeParameters     bson.E
-		queryStatusFilteringTask    bson.E
-		queryAllFilesIsDownloaded   bson.E
-		queryNetworkParametersPort  bson.E
-		queryNetworkParametersIPNet bson.E
-		queryStatusFileDownloadTask bson.E
-	)
-
-	//поиск по ID источника
-	if sp.ID > 0 {
-		querySourceID = queryTemplate["sourceID"]
-	}
-
-	//была ли задача обработана
-	if sp.TaskProcessed {
-		queryTaskProcessed = bson.E{Key: "general_information_about_task.task_processed", Value: sp.TaskProcessed}
-	}
-
-	//выполнялась ли выгрузка файлов
-	if sp.FilesDownloaded.FilesIsDownloaded {
-		queryFilesIsDownloaded = queryTemplate["filesIsDownloaded"]
-	}
-
-	//все ли файлы были выгружены
-	if sp.FilesDownloaded.AllFilesIsDownloaded {
-		queryFilesIsDownloaded = queryTemplate["filesIsDownloaded"]
-		queryAllFilesIsDownloaded = queryTemplate["allFilesIsDownloaded"]
-	}
-
-	//были ли найденны какие либо файлы в результате фильтрации
-	if sp.InformationAboutFiltering.FilesIsFound {
-		queryFilesIsFound = queryTemplate["filesIsFound"]
-	}
-
-	//диапазон количества найденных файлов
-	cafmin := sp.InformationAboutFiltering.CountAllFilesMin
-	cafmax := sp.InformationAboutFiltering.CountAllFilesMax
-	if (cafmax > 0) && (cafmax > cafmin) {
-		queryCountAllFiles = queryTemplate["countAllFiles"]
-	}
-
-	//диапазон общего размера всех найденных файлов
-	safmin := sp.InformationAboutFiltering.SizeAllFilesMin
-	safmax := sp.InformationAboutFiltering.SizeAllFilesMax
-	if (safmax > 0) && (safmax > safmin) {
-		querySizeAllFiles = queryTemplate["sizeAllFiles"]
-	}
-
-	//временной диапазон фильтруемых данных
-	dts := sp.InstalledFilteringOption.DateTime.Start
-	dte := sp.InstalledFilteringOption.DateTime.End
-	if (dts > 0) && (dte > 0) && (dts < dte) {
-		querydateTimeParameters = queryTemplate["dateTimeParameters"]
-	}
-
-	//транспортный протокол
-	if sp.InstalledFilteringOption.Protocol == "tcp" || sp.InstalledFilteringOption.Protocol == "udp" {
-		queryTransportProtocol = queryTemplate["transportProtocol"]
-	}
-
-	//статус задачи по фильтрации
-	if (len(sp.StatusFilteringTask) > 0) && (sp.StatusFilteringTask != "any") {
-		queryStatusFilteringTask = queryTemplate["statusFilteringTask"]
-	}
-
-	//статус задачи по скачиванию файлов
-	if (len(sp.StatusFileDownloadTask) > 0) && (sp.StatusFileDownloadTask != "any") {
-		queryStatusFileDownloadTask = queryTemplate["statusFileDownloadTask"]
-	}
-
-	isContainsValueIP := checkParameterContainsValues(sp.InstalledFilteringOption.NetworkFilters.IP)
-	isContainsValuePort := checkParameterContainsValues(sp.InstalledFilteringOption.NetworkFilters.Port)
-	isContainsValueNetwork := checkParameterContainsValues(sp.InstalledFilteringOption.NetworkFilters.Network)
-
-	if isContainsValuePort {
-		queryNetworkParametersPort, _ = getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "port")
-	}
-
-	if isContainsValueIP && !isContainsValueNetwork {
-		queryNetworkParametersIPNet, _ = getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "ip")
-	}
-
-	if isContainsValueNetwork && !isContainsValueIP {
-		queryNetworkParametersIPNet, _ = getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "network")
-	}
-
-	if isContainsValueIP && isContainsValueNetwork {
-		_, bdIP := getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "ip")
-		_, bdNetwork := getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "network")
-
-		queryNetworkParametersIPNet = bson.E{Key: "$or", Value: bson.A{bdIP, bdNetwork}}
-	}
-
-	lbti := []*configure.BriefTaskInformation{}
-
-	cur, err := qp.Find(bson.D{
-		querySourceID,
-		queryTaskProcessed,
-		queryFilesIsDownloaded,
-		queryAllFilesIsDownloaded,
-		queryFilesIsFound,
-		queryCountAllFiles,
-		querySizeAllFiles,
-		querydateTimeParameters,
-		queryTransportProtocol,
-		queryStatusFilteringTask,
-		queryStatusFileDownloadTask,
-		queryNetworkParametersPort,
-		queryNetworkParametersIPNet})
-	if err != nil {
-		return lbti, err
-	}
-
-	for cur.Next(context.Background()) {
-		var model configure.InformationAboutTask
-		err := cur.Decode(&model)
-		if err != nil {
-			return lbti, err
-		}
-
-		bti := configure.BriefTaskInformation{
-			TaskID:       model.TaskID,
-			ClientTaskID: model.ClientTaskID,
-			SourceID:     model.SourceID,
-			ParametersFiltration: configure.ParametersFiltrationOptions{
-				DateTime: configure.DateTimeParameters{
-					Start: model.FilteringOption.DateTime.Start,
-					End:   model.FilteringOption.DateTime.End,
-				},
-				Protocol: model.FilteringOption.Protocol,
-				Filters: configure.FiltrationControlParametersNetworkFilters{
-					IP: configure.FiltrationControlIPorNetorPortParameters{
-						Any: model.FilteringOption.Filters.IP.Any,
-						Src: model.FilteringOption.Filters.IP.Src,
-						Dst: model.FilteringOption.Filters.IP.Dst,
-					},
-					Port: configure.FiltrationControlIPorNetorPortParameters{
-						Any: model.FilteringOption.Filters.Port.Any,
-						Src: model.FilteringOption.Filters.Port.Src,
-						Dst: model.FilteringOption.Filters.Port.Dst,
-					},
-					Network: configure.FiltrationControlIPorNetorPortParameters{
-						Any: model.FilteringOption.Filters.Network.Any,
-						Src: model.FilteringOption.Filters.Network.Src,
-						Dst: model.FilteringOption.Filters.Network.Dst,
-					},
-				},
-			},
-			FilteringTaskStatus:                  model.DetailedInformationOnFiltering.TaskStatus,
-			FileDownloadTaskStatus:               model.DetailedInformationOnDownloading.TaskStatus,
-			NumberFilesFoundAsResultFiltering:    model.DetailedInformationOnFiltering.NumberFilesFoundResultFiltering,
-			TotalSizeFilesFoundAsResultFiltering: model.DetailedInformationOnFiltering.SizeFilesFoundResultFiltering,
-			NumberFilesDownloaded:                model.DetailedInformationOnDownloading.NumberFilesDownloaded,
-		}
-
-		lbti = append(lbti, &bti)
-	}
-
-	if err := cur.Err(); err != nil {
-		return lbti, err
-	}
-
-	cur.Close(context.Background())
-
-	return lbti, nil
-}*/
 
 func SearchFullInformationAboutTasks(qp QueryParameters, taskID string) (configure.ResponseTaskParameter, error) {
 	const maxCountFiles = 50
@@ -897,8 +571,6 @@ func GetListFoundFiles(qp QueryParameters, glffro configure.GetListFoundFilesReq
 		return lfi, fmt.Errorf("information about the task with ID %q was not found", glffro.RequestTaskID)
 	}
 
-	fmt.Printf("func 'GetListFoundFiles', FOUND LIST: %v\n", liat[0].ListFilesResultTaskExecution)
-
 	commonPartSize := (glffro.PartSize + glffro.OffsetListParts)
 	numFoundFiles := len(liat[0].ListFilesResultTaskExecution)
 	if numFoundFiles < (glffro.OffsetListParts + 1) {
@@ -1048,11 +720,11 @@ var _ = Describe("InteractionDBSearch", func() {
 	})
 
 	Context("Тест 2. Тестируем функцию 'getShortInformation'. Запрос к БД для получения всех задач (когда в запросе ничего не задано)", func() {
-		It("При выполнения запроса должно быть получено 10 задач", func() {
+		It("При выполнения запроса должно быть получено 16 задач", func() {
 			listTask, err := getShortInformation(qp, &sp)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(10))
+			Expect(len(listTask)).Should(Equal(16))
 		})
 	})
 
@@ -1081,8 +753,8 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
-		It("Должно быть '10' совпадений", func() {
-			Expect(len(listTask)).Should(Equal(10))
+		It("Должно быть '16' совпадений", func() {
+			Expect(len(listTask)).Should(Equal(16))
 		})
 	})
 
@@ -1157,13 +829,13 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Должно быть '10' совпадений, то есть ВСЕ. Так как параметры не верны min > max и следовательно не учитиваются", func() {
+		It("Должно быть '16' совпадений, то есть ВСЕ. Так как параметры не верны min > max и следовательно не учитиваются", func() {
 			spt62 := configure.SearchParameters{}
 			spt62.InformationAboutFiltering.SizeAllFilesMin = 23900040
 			spt62.InformationAboutFiltering.SizeAllFilesMax = 100
 			listTask, _ := getShortInformation(qp, &spt62)
 
-			Expect(len(listTask)).Should(Equal(10))
+			Expect(len(listTask)).Should(Equal(16))
 		})
 	})
 
@@ -1195,7 +867,7 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(len(listTask)).Should(Equal(5))
 		})
 
-		It("Должно быть '10' совпадений, так как временной интервал удовлетворяет заданным параметрам", func() {
+		It("Должно быть '16' совпадений, так как временной интервал удовлетворяет заданным параметрам", func() {
 			spt82 := configure.SearchParameters{}
 			spt82.InstalledFilteringOption.DateTime.Start = 1595081297 //1576713600
 			spt82.InstalledFilteringOption.DateTime.End = 1594723143   //1576886400
@@ -1203,7 +875,7 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt82)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(10))
+			Expect(len(listTask)).Should(Equal(16))
 		})
 
 		It("Должно быть '0' совпадений, так как временной интервал НЕ удовлетворяет заданным параметрам", func() {
@@ -1217,7 +889,7 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Должно быть '10' совпадений, то есть время не учитывается так как НАЧАЛЬНОЕ время БОЛЬШЕ конечного", func() {
+		It("Должно быть '16' совпадений, то есть время не учитывается так как НАЧАЛЬНОЕ время БОЛЬШЕ конечного", func() {
 			spt84 := configure.SearchParameters{}
 			spt84.InstalledFilteringOption.DateTime.Start = 1576886400
 			spt84.InstalledFilteringOption.DateTime.End = 1576713600
@@ -1225,7 +897,7 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt84)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(10))
+			Expect(len(listTask)).Should(Equal(16))
 		})
 	})
 
@@ -1252,14 +924,14 @@ var _ = Describe("InteractionDBSearch", func() {
 	})
 
 	Context("Тест 12. Тестируем функцию 'getShortInformation'. Поиск по статусу задачи фильтрации.", func() {
-		It("Должно быть '9' совпадений", func() {
+		It("Должно быть '12' совпадений", func() {
 			spt101 := configure.SearchParameters{}
 			spt101.StatusFilteringTask = "complete"
 
 			listTask, err := getShortInformation(qp, &spt101)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(9))
+			Expect(len(listTask)).Should(Equal(12))
 		})
 
 		It("Должно быть '1' совпадений", func() {
@@ -1274,14 +946,14 @@ var _ = Describe("InteractionDBSearch", func() {
 	})
 
 	Context("Тест 13. Тестируем функцию 'getShortInformation'. Поиск по статусу задачи по скачиванию файлов.", func() {
-		It("Должно быть '6' совпадений", func() {
+		It("Должно быть '12' совпадений", func() {
 			spt111 := configure.SearchParameters{}
 			spt111.StatusFileDownloadTask = "not executed"
 
 			listTask, err := getShortInformation(qp, &spt111)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(6))
+			Expect(len(listTask)).Should(Equal(12))
 		})
 
 		It("Должно быть '4' совпадений", func() {
@@ -1472,7 +1144,7 @@ var _ = Describe("InteractionDBSearch", func() {
 			Expect(len(listTask)).Should(Equal(0))
 		})
 
-		It("Поиск только по network, должно быть получено '2' значений", func() {
+		It("Поиск только по network, должно быть получено '5' значений", func() {
 			spt := configure.SearchParameters{}
 			spt.InstalledFilteringOption.NetworkFilters = configure.FiltrationControlParametersNetworkFilters{
 				IP: configure.FiltrationControlIPorNetorPortParameters{
@@ -1495,7 +1167,7 @@ var _ = Describe("InteractionDBSearch", func() {
 			listTask, err := getShortInformation(qp, &spt)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(2))
+			Expect(len(listTask)).Should(Equal(5))
 		})
 
 		It("Поиск только по ip адресам SRC и DST (соответственно между src и dst должно быть 'И'), должно быть получено '0' значений (Тестовая функция)", func() {
@@ -1799,8 +1471,14 @@ var _ = Describe("InteractionDBSearch", func() {
 
 			listTask, err := getShortInformation(qp, &spt1dt)
 
+			fmt.Println("-=-=-=-=-=-=-=-===")
+			for _, task := range listTask {
+				fmt.Println((*task).StartTimeTaskExecution)
+			}
+			fmt.Println("-=-=-=-=-=-=-=-===")
+
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(listTask)).Should(Equal(10))
+			Expect(len(listTask)).Should(Equal(16))
 		})
 
 		It("Должен быть получен список задач которые БЫЛИ отмечены пользователем как завершенные", func() {
@@ -1847,10 +1525,12 @@ var _ = Describe("InteractionDBSearch", func() {
 				OffsetListParts: 6,
 			})
 
-			fmt.Printf("______ Count: '%v', List: %v ______ \n", len(list), list)
-			for _, fi := range list {
-				fmt.Printf("file name: %q\n", fi.FileName)
-			}
+			/*
+				fmt.Printf("______ Count: '%v', List: %v ______ \n", len(list), list)
+				for _, fi := range list {
+					fmt.Printf("file name: %q\n", fi.FileName)
+				}
+			*/
 
 			Expect(len(list)).Should(Equal(3))
 			Expect(err).ShouldNot(HaveOccurred())

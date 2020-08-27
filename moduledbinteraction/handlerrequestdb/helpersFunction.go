@@ -330,9 +330,10 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 		}
 
 		bti := configure.BriefTaskInformation{
-			TaskID:       model.TaskID,
-			ClientTaskID: model.ClientTaskID,
-			SourceID:     model.SourceID,
+			TaskID:                 model.TaskID,
+			ClientTaskID:           model.ClientTaskID,
+			SourceID:               model.SourceID,
+			StartTimeTaskExecution: model.DetailedInformationOnFiltering.TimeIntervalTaskExecution.Start,
 			ParametersFiltration: configure.ParametersFiltrationOptions{
 				DateTime: configure.DateTimeParameters{
 					Start: model.FilteringOption.DateTime.Start,

@@ -592,6 +592,7 @@ type PaginationOption struct {
 // TaskID - ID задачи присвоенный приложением
 // ClientTaskID - ID задачи переданный клиентом API
 // SourceID - ID источника
+// StartTimeTaskExecution - время начала выполнения задачи
 // ParametersFiltrationOptions - параметры фильтрации
 // FilteringTaskStatus - статус задачи по фильтрации
 // FileDownloadTaskStatus - статус задачи по скачиванию файлов
@@ -602,6 +603,7 @@ type BriefTaskInformation struct {
 	TaskID                               string                      `json:"tid"`
 	ClientTaskID                         string                      `json:"ctid"`
 	SourceID                             int                         `json:"sid"`
+	StartTimeTaskExecution               int64                       `json:"stte"`
 	ParametersFiltration                 ParametersFiltrationOptions `json:"pf"`
 	FilteringTaskStatus                  string                      `json:"fts"`
 	FileDownloadTaskStatus               string                      `json:"fdts"`

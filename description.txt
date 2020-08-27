@@ -125,7 +125,7 @@
 					et: <BOOL> // enableTelemetry — передача телеметрии (true/false)
 					mcpf: <INT> // maxCountProcessFiltration - число 1-10, максимальное количество одновременно запущенных процессов фильтрации
 					sf: [ARRAY] // storageFolders - список директорий с файлами сет. трафика
-					tan: [STRING] // typeAreaNetwork — тип протокола канального уровня ('ip' или 'pppoe')
+					tan: [STRING] // typeAreaNetwork — тип протокола канального уровня ('ip', 'pppoe' или комбинации 'vlan + pppoe', 'pppoe + vlan')
 					}
 				}
 			}
@@ -530,15 +530,16 @@
 	i: 'search common information',
 	tid: <уникальный идентификатор задачи клиента>
 	o: {
-		sriga: <BOOL>, //SearchRequestIsGeneratedAutomatically — был ли запрос на поиск сгенерирован автоматически (TRUE — да, FALSE - нет)
+		sriga: <BOOL>, //SearchRequestIsGeneratedAutomatically — был ли запрос на поиск сгенерирован автоматически (TRUE — да, FALSE — нет)
+		cptp: <BOOL>, //ConsiderParameterTaskProcessed — учитывать параметр TaskProcessed
 		tp: <BOOL>, //TaskProcessed — была ли задача отмечена клиентом API как завершенная
 		id: <INT>, //ID - уникальный цифровой идентификатор источника
 		sft: <STRING>, //StatusFilteringTask - статус задачи по фильтрации
-		sfdt: <STRING>, //StatusFileDownloadTask - статус задачи по скачиванию файлов	в
-		fd: { //FilesDownloaded — опции выгрузки файлов
-			fid: <BOOL>, //FilesIsDownloaded — выполнялась ли выгрузка файлов
-			afid: <BOOL>, //AllFilesIsDownloaded — все ли файлы были выгружены
-		},
+		sfdt: <STRING>, //StatusFileDownloadTask - статус задачи по скачиванию файлов
+		cpfid: <BOOL>, //ConsiderParameterFilesDownloaded — учитывать параметр  FilesIsDownloaded
+		fid: <BOOL>, //FilesIsDownloaded — выполнялась ли выгрузка файлов
+		cpafid: <BOOL>, //ConsiderParameterAllFilesIsDownloaded -  учитывать параметр AllFilesIsDownloaded
+		afid: <BOOL>, //AllFilesIsDownloaded — все ли файлы были выгружены
 		iaf: { //InformationAboutFiltering — поиск информации по результатам фильтрации
 			fif: <BOOL>, //FilesIsFound — были ли найдены в результате фильтрации какие либо файлы
 			cafmin: <INT>, //CountAllFilesMin — минимальное общее количество всех найденных в результате фильтрации файлов
@@ -602,6 +603,7 @@
 			tid: <STRING> //TaskID - ID задачи присвоенный приложением
 			ctid: <STRING> //ClientTaskID - ID задачи переданный клиентом API
 			sid: <STRING> //SourceID - ID источника
+			stte: <INT> //StartTimeTaskExecution — время начала выполнения задачи
 			pf: { //ParametersFiltrationOptions - параметры фильтрации
 				dt: {
 					s: <INT> //DateTimeStart — начальное дата и время в unixtime (то есть количество секунд с начала эпохи Unix)
@@ -812,4 +814,4 @@
 	}
 }
 
-	А также типовое информационное сообщение со статусом success, warning или danger.
+	А также типовое информационное сообщение со статусом success, warning или danger. 
