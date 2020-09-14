@@ -43,6 +43,10 @@ func SearchShortInformationAboutTasks(
 		return
 	}
 
+	fmt.Println("func 'SearchShortInformationAboutTasks', START...")
+	fmt.Println("take information from module cashe")
+	fmt.Println(info)
+
 	listShortTaskInfo, err := getShortInformation(qp, &info.SearchParameters)
 	if err != nil {
 		msgRes.MsgSection = "error notification"

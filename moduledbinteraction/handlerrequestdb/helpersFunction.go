@@ -163,7 +163,7 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 	queryTemplate := map[string]bson.E{
 		"sourceID":             bson.E{Key: "source_id", Value: bson.D{{Key: "$eq", Value: sp.ID}}},
 		"filesIsFound":         bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: bson.D{{Key: "$gt", Value: 0}}},
-		"taskProcessed":        bson.E{Key: "general_information_about_task.task_processed", Value: sp.TaskProcessed},
+		"taskProcessed":        bson.E{Key: "general_information_about_task.task_processed", Value: bson.D{{Key: "$eq", Value: sp.TaskProcessed}}},
 		"filesIsDownloaded":    bson.E{Key: "detailed_information_on_downloading.number_files_downloaded", Value: bson.D{{Key: "$gt", Value: 0}}},
 		"filesIsNotDownloaded": bson.E{Key: "detailed_information_on_downloading.number_files_downloaded", Value: bson.D{{Key: "$eq", Value: 0}}},
 		"allFilesIsDownloaded": bson.E{Key: "$expr", Value: bson.D{
@@ -215,7 +215,7 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 
 	//была ли задача обработана
 	if sp.ConsiderParameterTaskProcessed {
-		queryTaskProcessed = bson.E{Key: "general_information_about_task.task_processed", Value: sp.TaskProcessed}
+		queryTaskProcessed = queryTemplate["taskProcessed"]
 	}
 
 	//выполнялась ли выгрузка файлов

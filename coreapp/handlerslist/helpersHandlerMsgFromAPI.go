@@ -171,6 +171,9 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 		ChanToAPI:                             chanToAPI,
 	}
 
+	fmt.Printf("func '%v'\n", funcName)
+	fmt.Println(siatr)
+
 	//проверяем параметры необходимые для поиска общей информации по задачам
 	if msg, ok := CheckParametersSearchCommonInformation(&siatr.MsgOption); !ok {
 		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
@@ -191,6 +194,16 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 		return
 	}
 
+	/*
+	   StatusFilteringTask                   string                           `json:"sft"`
+	   	StatusFileDownloadTask                string
+	*/
+
+	fmt.Printf("task processed: '%v', files is downloaded: '%v'\n", siatr.MsgOption.StatusFilteringTask, siatr.MsgOption.StatusFileDownloadTask)
+
+	siatr.MsgOption.InstalledFilteringOption.DateTime.Start = siatr.MsgOption.InstalledFilteringOption.DateTime.Start / 1000
+	siatr.MsgOption.InstalledFilteringOption.DateTime.End = siatr.MsgOption.InstalledFilteringOption.DateTime.End / 1000
+
 	//добавляем информацию о задаче в кеширующий модуль
 	taskID, _, err := hsm.TSSQ.CreateNewSearchTask(clientID, &configure.SearchParameters{
 		SearchRequestIsGeneratedAutomatically: siatr.MsgOption.SearchRequestIsGeneratedAutomatically,
@@ -203,6 +216,8 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 		AllFilesIsDownloaded:                  siatr.MsgOption.AllFilesIsDownloaded,
 		InformationAboutFiltering:             siatr.MsgOption.InformationAboutFiltering,
 		InstalledFilteringOption:              siatr.MsgOption.InstalledFilteringOption,
+		StatusFilteringTask:                   siatr.MsgOption.StatusFilteringTask,
+		StatusFileDownloadTask:                siatr.MsgOption.StatusFileDownloadTask,
 	})
 	if err != nil {
 		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
