@@ -88,7 +88,7 @@ func HandlerMsgFromDB(
 
 			//краткая информация по задаче и параметры для перевода задачи в состояние 'обработана'
 			case "mark an task as completed processed":
-				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'mark an task as completed', Response: '%v'\n", res)
+				//				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'mark an task as completed', Response: '%v'\n", res)
 
 				resMsg := configure.MarkTaskCompletedResponse{
 					MsgOption: configure.MarkTaskCompletedResponseOption{
@@ -143,7 +143,7 @@ func HandlerMsgFromDB(
 
 				//задача по переданному ID не найдена
 				if !tgitfmtcp.TaskIsExist {
-					fmt.Println("func 'HandlerMsgFromDB', информационное сообщение о том что, задача по переданному ID не найдена")
+					//					fmt.Println("func 'HandlerMsgFromDB', информационное сообщение о том что, задача по переданному ID не найдена")
 
 					notifications.SendNotificationToClientAPI(
 						outCoreChans.OutCoreChanAPI,
@@ -182,7 +182,7 @@ func HandlerMsgFromDB(
 				// и загружался ли хотя бы один файл
 				if !tgitfmtcp.FiltrationTaskStatus || !tgitfmtcp.FilesDownloaded {
 
-					fmt.Println("func 'HandlerMsgFromDB', информационное сообщение о том что, невозможно отметить задачу как завершенную")
+					//					fmt.Println("func 'HandlerMsgFromDB', информационное сообщение о том что, невозможно отметить задачу как завершенную")
 
 					//информационное сообщение о том что, невозможно отметить задачу как завершенную
 					notifications.SendNotificationToClientAPI(
@@ -218,7 +218,7 @@ func HandlerMsgFromDB(
 					return
 				}
 
-				fmt.Println("func 'HandlerMsgFromDB', отправляем запрос модулю БД для изменения состояния задачи")
+				//			fmt.Println("func 'HandlerMsgFromDB', отправляем запрос модулю БД для изменения состояния задачи")
 
 				//отправляем запрос модулю БД для изменения состояния задачи
 				outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
@@ -234,7 +234,7 @@ func HandlerMsgFromDB(
 
 			case "mark an task as completed":
 
-				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'mark an task as completed', Response: '%v'\n", res)
+				//				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'mark an task as completed', Response: '%v'\n", res)
 
 				//информационное сообщение о том что, невозможно отметить задачу как завершенную
 				notifications.SendNotificationToClientAPI(

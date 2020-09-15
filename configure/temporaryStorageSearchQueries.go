@@ -116,6 +116,7 @@ func CreateTmpStorageID(clientID string, sp *SearchParameters) string {
 	s = append(s, nf.Network.Any...)
 	s = append(s, nf.Network.Dst...)
 	s = append(s, nf.Network.Src...)
+	s = append(s, strconv.FormatInt(time.Now().Unix(), 10))
 
 	h := sha1.New()
 	io.WriteString(h, strings.Join(s, "_"))
@@ -267,9 +268,11 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 
 //CreateNewSearchTask создание новой временной записи о поисковой задаче
 func (tssq *TemporaryStorageSearchQueries) CreateNewSearchTask(clientID string, sp *SearchParameters) (string, *SearchTaskDescription, error) {
-	//fmt.Println("func 'CreateNewTemporaryStorage', START...")
+	fmt.Println("func 'CreateNewTemporaryStorage', START...")
 
 	taskID := CreateTmpStorageID(clientID, sp)
+
+	fmt.Printf("create NEW Task ID = '%v'\n", taskID)
 
 	chanRes := make(chan SearchChannelResponse)
 

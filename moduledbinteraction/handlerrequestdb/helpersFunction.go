@@ -2,6 +2,7 @@ package handlerrequestdb
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/mongodb/mongo-go-driver/bson"
 
@@ -37,6 +38,9 @@ func getInfoTaskForID(qp QueryParameters, taskID string) (*[]configure.Informati
 
 //getShortInformation получить краткую информацию об найденных задачах
 func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]*configure.BriefTaskInformation, error) {
+
+	fmt.Println("func 'getShortInformation'")
+
 	getQueryTmpNetParamsTest := func(fcp configure.FiltrationControlParametersNetworkFilters, queryType string) (bson.E, bson.D) {
 		listQueryType := map[string]struct {
 			e string
@@ -110,27 +114,27 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 			"network": {e: "network", o: fcp.Network},
 		}
 
-		numIPAny := len(listQueryType[queryType].o.Any)
-		numIPSrc := len(listQueryType[queryType].o.Src)
-		numIPDst := len(listQueryType[queryType].o.Dst)
+		numAny := len(listQueryType[queryType].o.Any)
+		numSrc := len(listQueryType[queryType].o.Src)
+		numDst := len(listQueryType[queryType].o.Dst)
 
-		if numIPAny == 0 && numIPSrc == 0 && numIPDst == 0 {
+		if numAny == 0 && numSrc == 0 && numDst == 0 {
 			return bson.E{}
 		}
 
-		if numIPAny > 0 && numIPSrc == 0 && numIPDst == 0 {
+		if numAny > 0 && numSrc == 0 && numDst == 0 {
 			return bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}
 		}
 
-		if numIPSrc > 0 && numIPAny == 0 && numIPDst == 0 {
+		if numSrc > 0 && numAny == 0 && numDst == 0 {
 			return bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}
 		}
 
-		if numIPDst > 0 && numIPAny == 0 && numIPSrc == 0 {
+		if numDst > 0 && numAny == 0 && numSrc == 0 {
 			return bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}
 		}
 
-		if (numIPSrc > 0 && numIPDst > 0) && numIPAny == 0 {
+		if (numSrc > 0 && numDst > 0) && numAny == 0 {
 			return bson.E{Key: "$and", Value: bson.A{
 				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
 				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},

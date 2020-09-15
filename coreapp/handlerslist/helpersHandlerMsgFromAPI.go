@@ -173,6 +173,7 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 
 	fmt.Printf("func '%v'\n", funcName)
 	fmt.Println(siatr)
+	fmt.Printf("client ID: %v\n", clientID)
 
 	//проверяем параметры необходимые для поиска общей информации по задачам
 	if msg, ok := CheckParametersSearchCommonInformation(&siatr.MsgOption); !ok {
@@ -193,13 +194,6 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 
 		return
 	}
-
-	/*
-	   StatusFilteringTask                   string                           `json:"sft"`
-	   	StatusFileDownloadTask                string
-	*/
-
-	fmt.Printf("task processed: '%v', files is downloaded: '%v'\n", siatr.MsgOption.StatusFilteringTask, siatr.MsgOption.StatusFileDownloadTask)
 
 	siatr.MsgOption.InstalledFilteringOption.DateTime.Start = siatr.MsgOption.InstalledFilteringOption.DateTime.Start / 1000
 	siatr.MsgOption.InstalledFilteringOption.DateTime.End = siatr.MsgOption.InstalledFilteringOption.DateTime.End / 1000
@@ -324,9 +318,6 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 
 //CheckParametersSearchCommonInformation проверяет параметры запроса для поиска общей информации
 func CheckParametersSearchCommonInformation(siatro *configure.SearchInformationAboutTasksRequestOption) (string, bool) {
-
-	fmt.Println("func 'checkParametersSearchCommonInformation', START...")
-
 	checkDateTimeFiltering := func(dtp configure.DateTimeParameters) (string, bool) {
 		if dtp.Start == 0 && dtp.End != 0 {
 			return common.PatternUserMessage(&common.TypePatternUserMessage{

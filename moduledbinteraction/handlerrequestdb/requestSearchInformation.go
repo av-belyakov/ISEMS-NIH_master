@@ -43,9 +43,12 @@ func SearchShortInformationAboutTasks(
 		return
 	}
 
-	fmt.Println("func 'SearchShortInformationAboutTasks', START...")
-	fmt.Println("take information from module cashe")
-	fmt.Println(info)
+	/*
+		fmt.Println("func 'SearchShortInformationAboutTasks', START...")
+		fmt.Println("take information from module cashe")
+		fmt.Printf("task ID: %v\n", req.TaskID)
+		fmt.Println(info)
+	*/
 
 	listShortTaskInfo, err := getShortInformation(qp, &info.SearchParameters)
 	if err != nil {
@@ -60,6 +63,11 @@ func SearchShortInformationAboutTasks(
 
 		return
 	}
+
+	/*
+		fmt.Println("func 'requestSearchInformation'")
+		fmt.Println(*(listShortTaskInfo[0]))
+	*/
 
 	//добавляем найденную информацию в TemporaryStorageSearchQueries
 	if err := tssq.AddInformationFoundSearchResult(req.TaskID, listShortTaskInfo); err != nil {

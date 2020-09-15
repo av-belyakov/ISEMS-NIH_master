@@ -301,9 +301,6 @@ func HandlerMsgFromAPI(
 					emt.SearchRequestIsGeneratedAutomatically = true
 				}
 
-				fmt.Println("func 'helpersHandlerMsgFromAPI', section: 'download control', instruction: 'to start downloading'")
-				fmt.Println(dcts)
-
 				emt.TaskID = dcts.MsgOption.TaskIDApp
 				emt.TaskIDClientAPI = dcts.ClientTaskID
 				emt.Sources = []int{dcts.MsgOption.ID}
@@ -366,14 +363,14 @@ func HandlerMsgFromAPI(
 						//проверяем наличие выполняемой задачи
 						if smti, ok := hsm.SMT.GetStoringMemoryTask(dcts.MsgOption.TaskIDApp); ok {
 
-							fmt.Println("*-*- func 'handlerMsgFromAPI', task status 'execution' -*-*")
-							fmt.Println(smti)
-							fmt.Println("*-*-*-*-*-*")
+							//							fmt.Println("*-*- func 'handlerMsgFromAPI', task status 'execution' -*-*")
+							//							fmt.Println(smti)
+							//							fmt.Println("*-*-*-*-*-*")
 
 							//проверяем завершена ли задача
 							if smti.TaskStatus {
 
-								fmt.Println("*-*- func 'handlerMsgFromAPI', 1111 -*-*")
+								//								fmt.Println("*-*- func 'handlerMsgFromAPI', 1111 -*-*")
 
 								errMsg = fmt.Sprintf("Task with ID '%v' for source ID %v rejected. You cannot add a task with the same ID many times in a short period of time.", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
 								emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
@@ -384,7 +381,7 @@ func HandlerMsgFromAPI(
 								})
 							} else {
 
-								fmt.Println("*-*- func 'handlerMsgFromAPI', 2222 -*-*")
+								//								fmt.Println("*-*- func 'handlerMsgFromAPI', 2222 -*-*")
 
 								errMsg = fmt.Sprintf("You cannot add a task with ID '%v' to a source with ID %v because it is already running", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
 								emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
@@ -397,7 +394,7 @@ func HandlerMsgFromAPI(
 						}
 					} else if ti.TaskStatus == "wait" {
 
-						fmt.Println("*-*- func 'handlerMsgFromAPI', 3333 -*-*")
+						//						fmt.Println("*-*- func 'handlerMsgFromAPI', 3333 -*-*")
 
 						errMsg = fmt.Sprintf("Unable to add task with ID '%v' because it is already pending", dcts.MsgOption.TaskIDApp)
 						emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
@@ -408,7 +405,7 @@ func HandlerMsgFromAPI(
 						})
 					} else {
 
-						fmt.Println("*-*- func 'handlerMsgFromAPI', 4444 -*-*")
+						//						fmt.Println("*-*- func 'handlerMsgFromAPI', 4444 -*-*")
 
 						errMsg = fmt.Sprintf("Unable to add task with ID '%v'. The task has been completed, but has not yet been removed from the pending task list", dcts.MsgOption.ID)
 						emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
@@ -741,7 +738,7 @@ func HandlerMsgFromAPI(
 			}
 
 			if msgc.MsgInstruction == "mark an task as completed" {
-				fmt.Println("func 'handlerMsgFromAPI', Instruction: 'mark an task as completed'")
+				//				fmt.Println("func 'handlerMsgFromAPI', Instruction: 'mark an task as completed'")
 
 				var mtcr configure.MarkTaskCompletedRequest
 				if err := json.Unmarshal(msgJSON, &mtcr); err != nil {
@@ -754,17 +751,7 @@ func HandlerMsgFromAPI(
 					return
 				}
 
-				fmt.Printf("---------- \n %v ------------\n", mtcr)
-
-				/*				emt := ErrorMessageType{
-								TaskID:          mtcr.MsgOption.RequestTaskID,
-								TaskIDClientAPI: mtcr.ClientTaskID,
-								IDClientAPI:     msg.IDClientAPI,
-								Section:         "information search control",
-								Instruction:     "task processing",
-								MsgType:         "warning",
-								ChanToAPI:       outCoreChans.OutCoreChanAPI,
-							}*/
+				//				fmt.Printf("---------- \n %v ------------\n", mtcr)
 
 				resMsg := configure.MarkTaskCompletedResponse{
 					MsgOption: configure.MarkTaskCompletedResponseOption{
@@ -979,7 +966,7 @@ func HandlerMsgFromAPI(
 					return
 				}
 
-				fmt.Println("func 'handlerMsgFromAPI', check value 'SUCCESS'")
+				//				fmt.Println("func 'handlerMsgFromAPI', check value 'SUCCESS'")
 
 				outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 					MsgGenerator:    "Core module",
