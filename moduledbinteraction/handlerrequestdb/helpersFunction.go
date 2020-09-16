@@ -41,7 +41,7 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 
 	fmt.Println("func 'getShortInformation'")
 
-	getQueryTmpNetParamsTest := func(fcp configure.FiltrationControlParametersNetworkFilters, queryType string) (bson.E, bson.D) {
+	getQueryTmpNetParams := func(fcp configure.FiltrationControlParametersNetworkFilters, queryType string) (bson.E, bson.D) {
 		listQueryType := map[string]struct {
 			e string
 			o configure.FiltrationControlIPorNetorPortParameters
@@ -51,36 +51,45 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 			"network": {e: "network", o: fcp.Network},
 		}
 
-		numIPAny := len(listQueryType[queryType].o.Any)
-		numIPSrc := len(listQueryType[queryType].o.Src)
-		numIPDst := len(listQueryType[queryType].o.Dst)
+		numAny := len(listQueryType[queryType].o.Any)
+		numSrc := len(listQueryType[queryType].o.Src)
+		numDst := len(listQueryType[queryType].o.Dst)
 
-		if numIPAny == 0 && numIPSrc == 0 && numIPDst == 0 {
+		if numAny == 0 && numSrc == 0 && numDst == 0 {
 			return bson.E{}, bson.D{}
 		}
 
-		if numIPAny > 0 && numIPSrc == 0 && numIPDst == 0 {
-			be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}
-			bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}}
+		if numAny > 0 && numSrc == 0 && numDst == 0 {
+			be := bson.E{Key: "$or", Value: bson.A{
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+			}}
+
+			bd := bson.D{{Key: "$or", Value: bson.A{
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+			}}}
 
 			return be, bd
 		}
 
-		if numIPSrc > 0 && numIPAny == 0 && numIPDst == 0 {
+		if numSrc > 0 && numAny == 0 && numDst == 0 {
 			be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}
 			bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}}
 
 			return be, bd
 		}
 
-		if numIPDst > 0 && numIPAny == 0 && numIPSrc == 0 {
+		if numDst > 0 && numAny == 0 && numSrc == 0 {
 			be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}
 			bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}}
 
 			return be, bd
 		}
 
-		if (numIPSrc > 0 && numIPDst > 0) && numIPAny == 0 {
+		if (numSrc > 0 && numDst > 0) && numAny == 0 {
 			be := bson.E{Key: "$and", Value: bson.A{
 				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
 				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
@@ -102,50 +111,6 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
 				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
 			}}}
-	}
-
-	getQueryTmpNetParams := func(fcp configure.FiltrationControlParametersNetworkFilters, queryType string) bson.E {
-		listQueryType := map[string]struct {
-			e string
-			o configure.FiltrationControlIPorNetorPortParameters
-		}{
-			"ip":      {e: "ip", o: fcp.IP},
-			"port":    {e: "port", o: fcp.Port},
-			"network": {e: "network", o: fcp.Network},
-		}
-
-		numAny := len(listQueryType[queryType].o.Any)
-		numSrc := len(listQueryType[queryType].o.Src)
-		numDst := len(listQueryType[queryType].o.Dst)
-
-		if numAny == 0 && numSrc == 0 && numDst == 0 {
-			return bson.E{}
-		}
-
-		if numAny > 0 && numSrc == 0 && numDst == 0 {
-			return bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}
-		}
-
-		if numSrc > 0 && numAny == 0 && numDst == 0 {
-			return bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}
-		}
-
-		if numDst > 0 && numAny == 0 && numSrc == 0 {
-			return bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}
-		}
-
-		if (numSrc > 0 && numDst > 0) && numAny == 0 {
-			return bson.E{Key: "$and", Value: bson.A{
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
-			}}
-		}
-
-		return bson.E{Key: "$or", Value: bson.A{
-			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
-			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
-			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
-		}}
 	}
 
 	checkParameterContainsValues := func(fcinpp configure.FiltrationControlIPorNetorPortParameters) bool {
@@ -188,12 +153,9 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 			bson.D{{Key: "filtering_option.date_time_interval.end", Value: bson.D{
 				{Key: "$lte", Value: sp.InstalledFilteringOption.DateTime.End}}}},
 		}},
-		"transportProtocol":        bson.E{Key: "filtering_option.protocol", Value: sp.InstalledFilteringOption.Protocol},
-		"statusFilteringTask":      bson.E{Key: "detailed_information_on_filtering.task_status", Value: sp.StatusFilteringTask},
-		"statusFileDownloadTask":   bson.E{Key: "detailed_information_on_downloading.task_status", Value: sp.StatusFileDownloadTask},
-		"networkParametersIP":      getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "ip"),
-		"networkParametersPort":    getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "port"),
-		"networkParametersNetwork": getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "network"),
+		"transportProtocol":      bson.E{Key: "filtering_option.protocol", Value: sp.InstalledFilteringOption.Protocol},
+		"statusFilteringTask":    bson.E{Key: "detailed_information_on_filtering.task_status", Value: sp.StatusFilteringTask},
+		"statusFileDownloadTask": bson.E{Key: "detailed_information_on_downloading.task_status", Value: sp.StatusFileDownloadTask},
 	}
 
 	var (
@@ -237,7 +199,6 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 			queryFilesIsDownloaded = queryTemplate["filesIsDownloaded"]
 			queryAllFilesIsDownloaded = queryTemplate["allFilesIsDownloaded"]
 		} else {
-			//queryFilesIsDownloaded = queryTemplate["filesIsDownloaded"]
 			queryAllFilesIsDownloaded = queryTemplate["allFilesIsNotDownloaded"]
 		}
 	}
@@ -288,20 +249,20 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 	isContainsValueNetwork := checkParameterContainsValues(sp.InstalledFilteringOption.NetworkFilters.Network)
 
 	if isContainsValuePort {
-		queryNetworkParametersPort, _ = getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "port")
+		queryNetworkParametersPort, _ = getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "port")
 	}
 
 	if isContainsValueIP && !isContainsValueNetwork {
-		queryNetworkParametersIPNet, _ = getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "ip")
+		queryNetworkParametersIPNet, _ = getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "ip")
 	}
 
 	if isContainsValueNetwork && !isContainsValueIP {
-		queryNetworkParametersIPNet, _ = getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "network")
+		queryNetworkParametersIPNet, _ = getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "network")
 	}
 
 	if isContainsValueIP && isContainsValueNetwork {
-		_, bdIP := getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "ip")
-		_, bdNetwork := getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "network")
+		_, bdIP := getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "ip")
+		_, bdNetwork := getQueryTmpNetParams(sp.InstalledFilteringOption.NetworkFilters, "network")
 
 		queryNetworkParametersIPNet = bson.E{Key: "$or", Value: bson.A{bdIP, bdNetwork}}
 	}
