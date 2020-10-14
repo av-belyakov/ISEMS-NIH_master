@@ -980,6 +980,34 @@ func HandlerMsgFromAPI(
 				}
 			}
 
+			if msgc.MsgInstruction == "delete all information about a task" {
+				fmt.Println("func 'handlerMsgFromAPI', Instruction: 'delete all information about a task'")
+
+				var diltc configure.DeleteInformationListTaskCompleted
+				if err := json.Unmarshal(msgJSON, &diltc); err != nil {
+
+					fmt.Println(err)
+
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: "bad cast type JSON messages",
+						FuncName:    funcName,
+					})
+
+					return
+				}
+
+				fmt.Printf("---- func 'handlerMsgFromAPI' \n------ \n %v ------------\n", diltc)
+				/*
+					Сделать дольнейшую обработку задачи
+				*/
+
+			}
+
+			/*
+				Дальше сделать обработку запроса на удаления информации по выполненным задачам
+			*/
+
 			return
 
 		default:
