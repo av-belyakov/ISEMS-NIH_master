@@ -983,7 +983,7 @@ func HandlerMsgFromAPI(
 			if msgc.MsgInstruction == "delete all information about a task" {
 				fmt.Println("func 'handlerMsgFromAPI', Instruction: 'delete all information about a task'")
 
-				var diltc configure.DeleteInformationListTaskCompleted
+				var diltc configure.DeleteInformationListTaskCompletedRequest
 				if err := json.Unmarshal(msgJSON, &diltc); err != nil {
 
 					fmt.Println(err)
@@ -998,15 +998,67 @@ func HandlerMsgFromAPI(
 				}
 
 				fmt.Printf("---- func 'handlerMsgFromAPI' \n------ \n %v ------------\n", diltc)
-				/*
-					Сделать дольнейшую обработку задачи
-				*/
 
+				resMsg := configure.DeleteInformationListTaskCompletedResponse{
+					MsgOption: configure.MarkTaskCompletedResponseOption{SuccessStatus: false},
+				}
+				resMsg.MsgType = "command"
+				resMsg.MsgSection = "information search control"
+				resMsg.MsgInstruction = "delete all information about a task"
+				resMsg.ClientTaskID = diltc.ClientTaskID
+
+				trustListTaskID := make([]string, 0, len(diltc.MsgOption.ListTaskID))
+				//проверяем ID задач из списка
+				for _, tid := range diltc.MsgOption.ListTaskID {
+					if ok := checkValidtaskID(tid); ok {
+						trustListTaskID = append(trustListTaskID, tid)
+					}
+				}
+
+				if len(trustListTaskID) == 0 {
+					notifications.SendNotificationToClientAPI(
+						outCoreChans.OutCoreChanAPI,
+						notifications.NotificationSettingsToClientAPI{
+							MsgType: "warning",
+							MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+								TaskType:   "удаление информации о задачах из списка переданного пользователем",
+								TaskAction: "задача отклонена",
+								Message:    "все идентификаторы задач, принятые от пользователя, являются некорректные",
+							}),
+						},
+						diltc.ClientTaskID,
+						msg.IDClientAPI)
+
+					msgJSON, err := json.Marshal(resMsg)
+					if err != nil {
+						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
+
+						return
+					}
+
+					outCoreChans.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
+						MsgGenerator: "Core module",
+						MsgRecipient: "API module",
+						IDClientAPI:  msg.IDClientAPI,
+						MsgJSON:      msgJSON,
+					}
+
+					return
+				}
+
+				outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
+					MsgGenerator:    "Core module",
+					MsgRecipient:    "DB module",
+					MsgSection:      "information search control",
+					Instruction:     "delete all information about a task",
+					IDClientAPI:     msg.IDClientAPI,
+					TaskIDClientAPI: diltc.ClientTaskID,
+					AdvancedOptions: &diltc.MsgOption,
+				}
 			}
-
-			/*
-				Дальше сделать обработку запроса на удаления информации по выполненным задачам
-			*/
 
 			return
 

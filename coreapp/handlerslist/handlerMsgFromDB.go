@@ -277,6 +277,34 @@ func HandlerMsgFromDB(
 					MsgJSON:      msgJSON,
 				}
 
+			case "delete all information about a task":
+
+				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'delete all information about a task', Response: '%v'\n", res)
+
+				resMsg := configure.DeleteInformationListTaskCompletedResponse{
+					MsgOption: configure.MarkTaskCompletedResponseOption{SuccessStatus: true},
+				}
+				resMsg.MsgType = "command"
+				resMsg.MsgSection = "information search control"
+				resMsg.MsgInstruction = "delete all information about a task"
+				resMsg.ClientTaskID = res.TaskIDClientAPI
+				msgJSON, err := json.Marshal(resMsg)
+				if err != nil {
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
+
+					return
+				}
+
+				outCoreChans.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
+					MsgGenerator: "Core module",
+					MsgRecipient: "API module",
+					IDClientAPI:  res.IDClientAPI,
+					MsgJSON:      msgJSON,
+				}
+
 			}
 		}
 

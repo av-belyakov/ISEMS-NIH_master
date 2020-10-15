@@ -704,22 +704,25 @@ type MarkTaskCompletedResponseOption struct {
 
 // ЗАПРОС НА УДАЛЕНИЕ ВЫБРАННЫХ ЗАДАЧ
 
-//DeleteInformationListTaskCompleted содержит запрос на удаления инфромации
+//DeleteInformationListTaskCompletedRequest содержит запрос на удаления инфромации
 // о выполненных задачах и связанных с ними файлов
-type DeleteInformationListTaskCompleted struct {
+type DeleteInformationListTaskCompletedRequest struct {
 	MsgCommon
-	MsgOption DeleteInformationListTaskCompletedOption `json:"o"`
+	MsgOption DeleteInformationListTaskCompletedRequestOption `json:"o"`
 }
 
-//DeleteInformationListTaskCompletedOption содержит опции запроса на удаления инфромации
+//DeleteInformationListTaskCompletedRequestOption содержит опции запроса на удаления инфромации
 // о выполненных задачах и связанных с ними файлов
 // ListTaskID - список задач подлежащих удалению (при этом так же удаляется и файлы связанные с выбранной задачей)
-type DeleteInformationListTaskCompletedOption struct {
+type DeleteInformationListTaskCompletedRequestOption struct {
 	ListTaskID []string `json:"ltid"`
 }
 
-/*
-	ltid: <ARRAY>, //ListTaskID — список задач подлежащих удалению
-	dtrf: <BOOL> //DeleteTaskRelatedFiles - удалять связанные с задачами файлы
+// ОТВЕТ НА УДАЛЕНИЕ ВЫБРАННЫХ ЗАДАЧ
 
-*/
+//DeleteInformationListTaskCompletedResponse содержит запрос на удаления инфромации
+// о выполненных задачах и связанных с ними файлов
+type DeleteInformationListTaskCompletedResponse struct {
+	MsgCommon
+	MsgOption MarkTaskCompletedResponseOption `json:"o"`
+}

@@ -142,5 +142,9 @@ func (wr *WrappersRouteRequest) WrapperFuncSearch(
 
 		handlerrequestdb.MarkTaskCompleteProcess(wr.ChanIn, msg, qp)
 
+	case "delete all information about a task":
+		fmt.Println("func 'WrapperFuncSearch', Instruction: 'delete all information about a task'")
+
+		handlerrequestdb.DeleteInformationAboutTask(wr.ChanIn, msg, qp)
 	}
 }

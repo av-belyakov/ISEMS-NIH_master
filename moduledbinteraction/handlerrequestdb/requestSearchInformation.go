@@ -538,3 +538,53 @@ func MarkTaskCompleteProcess(
 
 	chanIn <- &msgRes
 }
+
+//DeleteInformationAboutTask удалить всю информацию о выбранных задачах
+func DeleteInformationAboutTask(
+	chanIn chan<- *configure.MsgBetweenCoreAndDB,
+	req *configure.MsgBetweenCoreAndDB,
+	qp QueryParameters) {
+
+	fmt.Println("func 'DeleteInformationAboutTask', START...")
+
+	msgRes := configure.MsgBetweenCoreAndDB{
+		MsgGenerator:    req.MsgRecipient,
+		MsgRecipient:    req.MsgGenerator,
+		MsgSection:      "information search control",
+		Instruction:     "delete all information about a task",
+		IDClientAPI:     req.IDClientAPI,
+		TaskIDClientAPI: req.TaskIDClientAPI,
+	}
+
+	l, ok := req.AdvancedOptions.(*configure.DeleteInformationListTaskCompletedRequestOption)
+	if !ok {
+
+		fmt.Println("an incorrect list of issues that should be deleted was accepted")
+
+		errMsg := "an incorrect list of issues that should be deleted was accepted"
+
+		msgRes.MsgRecipient = "Core module"
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: errMsg,
+			ErrorBody:             errors.New(errMsg),
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	fmt.Printf("func 'DeleteInformationAboutTask', ------- delete information about task -------\n %v \n", (*l).ListTaskID)
+
+	/*
+		!!!! ВРЕМЕННО ЗАКОМЕНТИЛ ДЛЯ ТОГО ЧТО БЫ ДЕЙСТВИЕ ПОКА НЕ ВЫПОЛНЯЛОСЬ !!!!
+
+		for _, id := range (*l).ListTaskID {
+			_ = qp.DeleteOneData(bson.D{bson.E{Key: "id", Value: id}})
+		}
+	*/
+
+	chanIn <- &msgRes
+}

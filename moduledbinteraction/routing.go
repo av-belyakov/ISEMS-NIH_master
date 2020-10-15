@@ -38,8 +38,6 @@ func RouteRequest(
 			go wrapperFunc.WrapperFuncDownload(msg, smt, qts, saveMessageApp)
 
 		case "information search control":
-			fmt.Printf("func 'RouteRequest', Section:'%v'\n", msg.MsgSection)
-
 			go wrapperFunc.WrapperFuncSearch(msg, tssq, saveMessageApp)
 
 		case "error notification":
