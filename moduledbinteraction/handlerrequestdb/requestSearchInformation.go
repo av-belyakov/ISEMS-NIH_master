@@ -578,13 +578,9 @@ func DeleteInformationAboutTask(
 
 	fmt.Printf("func 'DeleteInformationAboutTask', ------- delete information about task -------\n %v \n", (*l).ListTaskID)
 
-	/*
-		!!!! ВРЕМЕННО ЗАКОМЕНТИЛ ДЛЯ ТОГО ЧТО БЫ ДЕЙСТВИЕ ПОКА НЕ ВЫПОЛНЯЛОСЬ !!!!
-
-		for _, id := range (*l).ListTaskID {
-			_ = qp.DeleteOneData(bson.D{bson.E{Key: "id", Value: id}})
-		}
-	*/
+	for _, id := range (*l).ListTaskID {
+		_ = qp.DeleteOneData(bson.D{bson.E{Key: "task_id", Value: id}})
+	}
 
 	chanIn <- &msgRes
 }
