@@ -726,3 +726,54 @@ type DeleteInformationListTaskCompletedResponse struct {
 	MsgCommon
 	MsgOption MarkTaskCompletedResponseOption `json:"o"`
 }
+
+// ЗАПРОС НА ПОЛУЧЕНИЕ ИНФОРМАЦИИ НЕОБХОДИМОЙ ДЛЯ НАЧАЛА АНАЛИЗА ФАЙЛОВ СЕТ. ТРАФИКА
+
+//CommonAnalyticsInformationAboutTaskRequest содержит ID задачи по которой необходимо получить общую
+// аналитическую информацию
+type CommonAnalyticsInformationAboutTaskRequest struct {
+	MsgCommon
+	MsgOption ParametersGetInformationByTaskID `json:"o"`
+}
+
+// ОТВЕТ С ИНФОРМАЦИЕЙ НЕОБХОДИМОЙ ДЛЯ НАЧАЛА АНАЛИЗА ФАЙЛОВ СЕТ. ТРАФИКА
+
+//CommonAnalyticsInformationAboutTaskRespons содержит опции с общей аналитической информацией о задаче и
+// полученном сетевом трафике
+type CommonAnalyticsInformationAboutTaskRespons struct {
+	MsgCommon
+	MsgOption ParametersCommonAnalyticsInformation `json:"o"`
+}
+
+//ParametersCommonAnalyticsInformation содержит общую аналитическую информацию о задаче и
+// полученном сетевом трафике
+// TaskID - ID задачи
+// SourceID - ID источника
+// GeneralInformationAboutTask - основные параметры задачи, не относящиеся ни к одному из разделов
+// InstalledFilteringOption - установленные опции фильтрации
+// CommonInformationAboutReceivedFiles - общая информация о принятых файлах
+// DetailedInformationAboutReceivedFiles - детальная информация о принятых файлах
+type ParametersCommonAnalyticsInformation struct {
+	TaskID                                string                                           `json:"tid"`
+	SourceID                              int                                              `json:"sid"`
+	GeneralInformationAboutTask           GeneralInformationAboutTask                      `json:"giat"`
+	InstalledFilteringOption              SearchFilteringOptions                           `json:"ifo"`
+	CommonInformationAboutReceivedFiles   CommonInformationAboutReceivedFilesDescription   `json:"giarf"`
+	DetailedInformationAboutReceivedFiles DetailedInformationAboutReceivedFilesDescription `json:"diarf"`
+}
+
+//CommonInformationAboutReceivedFilesDescription содержит описание общей информации о полученных файлах
+// NumberFilesTotal - общее количество файлов подлежащих скачиванию
+// NumberFilesDownloaded - количество уже загруженных файлов
+// SizeFilesFoundResultFiltering - общий размер найденных, в результате фильтрации, файлов (в байтах)
+// PathDirectoryStorageDownloadedFiles - путь до директории долговременного хранения скаченных файлов
+type CommonInformationAboutReceivedFilesDescription struct {
+	NumberFilesTotal                    int    `json:"nft"`
+	NumberFilesDownloaded               int    `json:"nfd"`
+	SizeFilesFoundResultFiltering       int64  `json:"sffrf"`
+	PathDirectoryStorageDownloadedFiles string `json:"pdsdf"`
+}
+
+//DetailedInformationAboutReceivedFilesDescription содержит описание детальной информации о разобранном сет. трафике
+type DetailedInformationAboutReceivedFilesDescription struct {
+}

@@ -1060,6 +1060,34 @@ func HandlerMsgFromAPI(
 				}
 			}
 
+			if msgc.MsgInstruction == "get analytics information about task ID" {
+				fmt.Println("func 'handlerMsgFromAPI', Instruction: 'get analytics information about task ID'")
+
+				var caiatr configure.CommonAnalyticsInformationAboutTaskRequest
+
+				if err := json.Unmarshal(msgJSON, &caiatr); err != nil {
+
+					fmt.Println(err)
+
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: "bad cast type JSON messages",
+						FuncName:    funcName,
+					})
+
+					return
+				}
+
+				fmt.Printf("---- func 'handlerMsgFromAPI' \n +++++++++++++++ \n %v ------------\n", caiatr)
+
+				/*
+
+					Получаем запрос на общую аналитическую информацию о задаче и загруженных файлах. Сделать поиск информации в БД
+
+
+				*/
+			}
+
 			return
 
 		default:
