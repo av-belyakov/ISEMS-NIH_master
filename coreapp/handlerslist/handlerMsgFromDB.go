@@ -305,6 +305,10 @@ func HandlerMsgFromDB(
 					MsgJSON:      msgJSON,
 				}
 
+			case "get common analytics information about task ID":
+
+				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'get common analytics information about task ID', Response: '%v'\n", res)
+
 			}
 		}
 

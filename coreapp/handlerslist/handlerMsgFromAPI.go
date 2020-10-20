@@ -1060,7 +1060,7 @@ func HandlerMsgFromAPI(
 				}
 			}
 
-			if msgc.MsgInstruction == "get analytics information about task ID" {
+			if msgc.MsgInstruction == "get common analytics information about task ID" {
 				fmt.Println("func 'handlerMsgFromAPI', Instruction: 'get analytics information about task ID'")
 
 				var caiatr configure.CommonAnalyticsInformationAboutTaskRequest
@@ -1080,12 +1080,53 @@ func HandlerMsgFromAPI(
 
 				fmt.Printf("---- func 'handlerMsgFromAPI' \n +++++++++++++++ \n %v ------------\n", caiatr)
 
-				/*
+				//проверяем ID задачи
+				if ok := checkValidtaskID(caiatr.MsgOption.RequestTaskID); !ok {
+					emt := ErrorMessageType{
+						TaskID:          caiatr.MsgOption.RequestTaskID,
+						TaskIDClientAPI: caiatr.ClientTaskID,
+						IDClientAPI:     msg.IDClientAPI,
+						Section:         "information search control",
+						Instruction:     "task processing",
+						MsgType:         "danger",
+						ChanToAPI:       outCoreChans.OutCoreChanAPI,
+						MsgHuman: common.PatternUserMessage(&common.TypePatternUserMessage{
+							TaskType:   "поиск информации о задаче",
+							TaskAction: "задача отклонена",
+							Message:    "принят некорректный идентификатор задачи",
+						}),
+						SearchRequestIsGeneratedAutomatically: caiatr.MsgOption.SearchRequestIsGeneratedAutomatically,
+					}
 
-					Получаем запрос на общую аналитическую информацию о задаче и загруженных файлах. Сделать поиск информации в БД
+					//сообщение о том что задача была отклонена
+					if err := ErrorMessage(emt); err != nil {
+						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprint(err),
+							FuncName:    funcName,
+						})
+					}
 
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprintf("invalid task ID '%v' accepted%v", caiatr.MsgOption.RequestTaskID, funcName),
+						FuncName:    funcName,
+					})
 
-				*/
+					return
+				}
+
+				fmt.Println("---- func 'handlerMsgFromAPI' send request to DataBase")
+
+				outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
+					MsgGenerator:    "Core module",
+					MsgRecipient:    "DB module",
+					MsgSection:      "information search control",
+					Instruction:     "get common analytics information about task ID",
+					TaskID:          caiatr.MsgOption.RequestTaskID,
+					IDClientAPI:     msg.IDClientAPI,
+					TaskIDClientAPI: caiatr.ClientTaskID,
+				}
+
+				return
 			}
 
 			return

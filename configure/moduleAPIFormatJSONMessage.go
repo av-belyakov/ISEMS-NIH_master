@@ -742,7 +742,15 @@ type CommonAnalyticsInformationAboutTaskRequest struct {
 // полученном сетевом трафике
 type CommonAnalyticsInformationAboutTaskRespons struct {
 	MsgCommon
-	MsgOption ParametersCommonAnalyticsInformation `json:"o"`
+	MsgOption CommonAnalyticsInformationAboutTaskResponsOption `json:"o"`
+}
+
+//CommonAnalyticsInformationAboutTaskResponsOption содержит общую аналитическую информацию о задаче и статус выполняемой задачи
+// Status — статус выполняемой задачи
+// TaskParameter - параметры выполняемой задачи
+type CommonAnalyticsInformationAboutTaskResponsOption struct {
+	Status        string                               `json:"s"`
+	TaskParameter ParametersCommonAnalyticsInformation `json:"tp"`
 }
 
 //ParametersCommonAnalyticsInformation содержит общую аналитическую информацию о задаче и

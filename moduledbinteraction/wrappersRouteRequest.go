@@ -146,5 +146,11 @@ func (wr *WrappersRouteRequest) WrapperFuncSearch(
 		fmt.Println("func 'WrapperFuncSearch', Instruction: 'delete all information about a task'")
 
 		handlerrequestdb.DeleteInformationAboutTask(wr.ChanIn, msg, qp)
+
+	case "get common analytics information about task ID":
+		fmt.Println("func 'WrapperFuncSearch', Instruction: 'get common analytics information about task ID'")
+
+		handlerrequestdb.CommonAnalyticsInformationAboutTaskID(wr.ChanIn, msg, qp)
+
 	}
 }

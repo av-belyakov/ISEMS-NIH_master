@@ -584,3 +584,115 @@ func DeleteInformationAboutTask(
 
 	chanIn <- &msgRes
 }
+
+//CommonAnalyticsInformationAboutTaskID получить общую информацию о задаче и загруженном, и разобранном сетевом трафике
+func CommonAnalyticsInformationAboutTaskID(
+	chanIn chan<- *configure.MsgBetweenCoreAndDB,
+	req *configure.MsgBetweenCoreAndDB,
+	qp QueryParameters) {
+
+	fmt.Println("func 'CommonAnalyticsInformationAboutTaskID', START...")
+
+	msgRes := configure.MsgBetweenCoreAndDB{
+		MsgGenerator:    req.MsgRecipient,
+		MsgRecipient:    req.MsgGenerator,
+		MsgSection:      "information search control",
+		Instruction:     "get common analytics information about task ID",
+		IDClientAPI:     req.IDClientAPI,
+		TaskIDClientAPI: req.TaskIDClientAPI,
+	}
+
+	errMsg := fmt.Sprintf("It is not possible to mark a task with ID %q as successfully completed. Internal application error.", req.TaskIDClientAPI)
+
+	/*
+		Ищем информацию о задаче в коллекции 'task_list' где хранится
+		ОБЩАЯ информация по задаче фильтрации и скачивания и список найденных
+		и загруженных файлов. Это се наполняет структуры:
+			- GeneralInformationAboutTask
+			- InstalledFilteringOption
+			- CommonInformationAboutReceivedFiles
+	*/
+	listTaskInfo, err := getInfoTaskForID(qp, req.TaskID)
+	if err != nil {
+		msgRes.MsgSection = "error notification"
+		msgRes.AdvancedOptions = configure.ErrorNotification{
+			SourceReport:          "DB module",
+			HumanDescriptionError: errMsg,
+			ErrorBody:             err,
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	//проверяем найдена ли задача
+	if len(*listTaskInfo) == 0 {
+		msgRes.AdvancedOptions = configure.TypeGetInfoTaskFromMarkTaskCompleteProcess{}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
+	ti := (*listTaskInfo)[0]
+
+	pcai := configure.ParametersCommonAnalyticsInformation{
+		TaskID:   ti.TaskID,
+		SourceID: ti.SourceID,
+		GeneralInformationAboutTask: configure.GeneralInformationAboutTask{
+			TaskProcessed:     ti.GeneralInformationAboutTask.TaskProcessed,
+			DateTimeProcessed: ti.GeneralInformationAboutTask.DateTimeProcessed,
+			ClientIDIP:        ti.GeneralInformationAboutTask.ClientID,
+			DetailDescription: configure.DetailDescription{
+				UserNameClosedProcess:        ti.GeneralInformationAboutTask.DetailDescription.UserNameProcessed,
+				DescriptionProcessingResults: ti.GeneralInformationAboutTask.DetailDescription.DescriptionProcessingResults,
+			},
+		},
+		InstalledFilteringOption: configure.SearchFilteringOptions{
+			DateTime: configure.DateTimeParameters{
+				Start: ti.FilteringOption.DateTime.Start,
+				End:   ti.FilteringOption.DateTime.End,
+			},
+			Protocol: ti.FilteringOption.Protocol,
+			NetworkFilters: configure.FiltrationControlParametersNetworkFilters{
+				IP: configure.FiltrationControlIPorNetorPortParameters{
+					Any: ti.FilteringOption.Filters.IP.Any,
+					Src: ti.FilteringOption.Filters.IP.Src,
+					Dst: ti.FilteringOption.Filters.IP.Dst,
+				},
+				Port: configure.FiltrationControlIPorNetorPortParameters{
+					Any: ti.FilteringOption.Filters.Port.Any,
+					Src: ti.FilteringOption.Filters.Port.Src,
+					Dst: ti.FilteringOption.Filters.Port.Dst,
+				},
+				Network: configure.FiltrationControlIPorNetorPortParameters{
+					Any: ti.FilteringOption.Filters.Network.Any,
+					Src: ti.FilteringOption.Filters.Network.Src,
+					Dst: ti.FilteringOption.Filters.Network.Dst,
+				},
+			},
+		},
+		CommonInformationAboutReceivedFiles: configure.CommonInformationAboutReceivedFilesDescription{
+			NumberFilesTotal:                    ti.DetailedInformationOnDownloading.NumberFilesTotal,
+			NumberFilesDownloaded:               ti.DetailedInformationOnDownloading.NumberFilesDownloaded,
+			SizeFilesFoundResultFiltering:       ti.DetailedInformationOnFiltering.SizeFilesFoundResultFiltering,
+			PathDirectoryStorageDownloadedFiles: ti.DetailedInformationOnDownloading.PathDirectoryStorageDownloadedFiles,
+		},
+		DetailedInformationAboutReceivedFiles: configure.DetailedInformationAboutReceivedFilesDescription{},
+	}
+
+	/*
+	   Наполнение информацией структуры DetailedInformationAboutReceivedFiles поке не реализованно
+	   (нет описания самой структуры)
+	*/
+
+	fmt.Printf("func 'CommonAnalyticsInformationAboutTaskID', FOUND INFORMATION: \n ********** %v ********** \n", pcai)
+
+	msgRes.AdvancedOptions = configure.CommonAnalyticsInformationAboutTaskResponsOption{
+		Status:        "complete",
+		TaskParameter: pcai,
+	}
+
+	chanIn <- &msgRes
+}

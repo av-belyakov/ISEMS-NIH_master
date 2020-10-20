@@ -9,6 +9,7 @@ import (
 	"ISEMS-NIH_master/configure"
 )
 
+//getInfoTaskForID получить информацию о найденной по параметру 'task_id' задаче
 func getInfoTaskForID(qp QueryParameters, taskID string) (*[]configure.InformationAboutTask, error) {
 	itf := []configure.InformationAboutTask{}
 
