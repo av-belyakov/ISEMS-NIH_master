@@ -265,6 +265,55 @@ func sendMsgCompliteTaskSearchInformationByTaskID(res *configure.MsgBetweenCoreA
 	return nil
 }
 
+//sendMsgCompliteTaskGetCommonAnalyticsInformationAboutTaskID отправляет общую аналитическую информацию о задаче
+// и обработанных файлах сетевого трафика
+func sendMsgCompliteTaskGetCommonAnalyticsInformationAboutTaskID(res *configure.MsgBetweenCoreAndDB, chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) error {
+	funcName := ", function 'sendMsgCompliteTaskGetCommonAnalyticsInformationAboutTaskID'"
+
+	caiatro, ok := res.AdvancedOptions.(configure.CommonAnalyticsInformationAboutTaskResponsOption)
+	if !ok {
+		return fmt.Errorf("type conversion error%v", funcName)
+	}
+
+	if caiatro.Status == "task not found" {
+		//информационное сообщение о том что искомая задача не найдена
+		notifications.SendNotificationToClientAPI(
+			chanToAPI,
+			notifications.NotificationSettingsToClientAPI{
+				MsgType: "warning",
+				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+					TaskType:   "поиск информации по задаче",
+					TaskAction: "по переданному пользователем идентификатору не найдено ни одной задачи",
+				}),
+			},
+			res.TaskIDClientAPI,
+			res.IDClientAPI)
+
+	}
+
+	resMsg := configure.CommonAnalyticsInformationAboutTaskRespons{MsgOption: caiatro}
+	resMsg.MsgType = "information"
+	resMsg.MsgSection = "information search control"
+	resMsg.MsgInstruction = "processing get common analytics information about task ID"
+	resMsg.ClientTaskID = res.TaskIDClientAPI
+
+	msgJSON, err := json.Marshal(resMsg)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("func 'sendMsgCompliteTaskGetCommonAnalyticsInformationAboutTaskID' ---> SEND MSG 'processing get common analytics information about task ID' TO client API")
+
+	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
+		MsgGenerator: "Core module",
+		MsgRecipient: "API module",
+		IDClientAPI:  res.IDClientAPI,
+		MsgJSON:      msgJSON,
+	}
+
+	return nil
+}
+
 //sendMsgCompliteTaskListFilesByTaskID отправляет информацию со списком найденных файлов
 func sendMsgCompliteTaskListFilesByTaskID(res *configure.MsgBetweenCoreAndDB, chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) error {
 	funcName := ", function 'sendMsgCompliteTaskListFilesByTaskID'"

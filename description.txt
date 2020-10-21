@@ -863,29 +863,31 @@
 {
 	t: 'command',
 	s: 'information search control', 
-	i: 'send analytics information about task ID',
+	i: 'processing get common analytics information about task ID',
 	tid: <уникальный идентификатор задачи клиента>,
 	o: {
-	    tid: <STRING> //TaskID - ID задачи
-		sid: <INT> //SourceID - ID источника
-		giat: { //GeneralInformationAboutTask - основные параметры задачи, не относящиеся ни к одному из разделов
-			tp: <BOOL>, // TaskProcessed - была ли обработана задача (фильтрация файлов выполнена, какие либо файлы были загружены, тогда клиент API может отметить подобную задачу как отработанную)
-			dtp: <INT>, // DateTimeProcessed - дата и время завершения задачи
-			cidip: <STRING>, // ClientIDIP - идентификатор клиента API (его ID:IP !!!!!!!!!!!! Надо не забыть !!!!!)
-			dd: <STRING>, // DetailDescription - детальное описание
-		},
-		ifo: { //InstalledFilteringOption — установленные опции фильтрации
-			dt: { //DateTime -  дата и время фильтруемых файлов
-				s: <INT>, //Start - начальное дата и время фильтруемых файлов
-				e: <INT>, //End - конечное дата и время фильтруемых файлов
+		s: <STRING> //Status — статус выполняемой задачи
+		tp: { //TaskParameter
+		    tid: <STRING> //TaskID - ID задачи
+			sid: <INT> //SourceID - ID источника
+			giat: { //GeneralInformationAboutTask - основные параметры задачи, не относящиеся ни к одному из разделов
+				tp: <BOOL>, // TaskProcessed - была ли обработана задача (фильтрация файлов выполнена, какие либо файлы были загружены, тогда клиент API может отметить подобную задачу как отработанную)
+				dtp: <INT>, // DateTimeProcessed - дата и время завершения задачи
+				cidip: <STRING>, // ClientIDIP - идентификатор клиента API (его ID:IP !!!!!!!!!!!! Надо не забыть !!!!!)
+				dd: <STRING>, // DetailDescription - детальное описание
 			},
-			p: <STRING>, //Protocol — транспортный протокол
-			nf: { //NetworkFilters — сетевые фильтры
-				ip: { //IP — фильтры для поиска по ip адресам
-					any: <ARRAY>, //Any — вы обе стороны
-					src: <ARRAY>, //Src — только как источник
-					dst: <ARRAY>, //Dst — только как получатель
+			ifo: { //InstalledFilteringOption — установленные опции фильтрации
+				dt: { //DateTime -  дата и время фильтруемых файлов
+					s: <INT>, //Start - начальное дата и время фильтруемых файлов
+					e: <INT>, //End - конечное дата и время фильтруемых файлов
 				},
+				p: <STRING>, //Protocol — транспортный протокол
+				nf: { //NetworkFilters — сетевые фильтры
+					ip: { //IP — фильтры для поиска по ip адресам
+						any: <ARRAY>, //Any — вы обе стороны
+						src: <ARRAY>, //Src — только как источник
+						dst: <ARRAY>, //Dst — только как получатель
+					},	
 				pt: { //Port — фильтры для поиска по сетевым портам
 					any: <ARRAY>, //Any — вы обе стороны
 					src: <ARRAY>, //Src	 — только как источник
@@ -897,15 +899,15 @@
 					dst: <ARRAY>, //Dst — только как получатель				
 				}
 			},
-		},
-		giarf: { //CommonInformationAboutReceivedFiles - общая информация о принятых файлах
-			nft: <INT>, // NumberFilesTotal - общее количество файлов подлежащих скачиванию
-			nfd: <INT>, // NumberFilesDownloaded - количество уже загруженных файлов
-	 		sffrf: <INT>, // SizeFilesFoundResultFiltering - общий размер найденных, в результате фильтрации, файлов (в байтах)
-			pdsdf: <STRING>, // PathDirectoryStorageDownloadedFiles - путь до директории долговременного хранения скаченных файлов
-		},
-		diarf: { //DetailedInformationAboutReceivedFiles - детальная информация о принятых файлах
+			giarf: { //CommonInformationAboutReceivedFiles - общая информация о принятых файлах
+				nft: <INT>, // NumberFilesTotal - общее количество файлов подлежащих скачиванию
+				nfd: <INT>, // NumberFilesDownloaded - количество уже загруженных файлов
+	 			sffrf: <INT>, // SizeFilesFoundResultFiltering - общий размер найденных, в результате фильтрации, файлов (в байтах)
+				pdsdf: <STRING>, // PathDirectoryStorageDownloadedFiles - путь до директории долговременного хранения скаченных файлов
+			},
+			diarf: { //DetailedInformationAboutReceivedFiles - детальная информация о принятых файлах
 
+			}
 		}
 	}
 }

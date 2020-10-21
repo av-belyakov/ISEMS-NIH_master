@@ -309,6 +309,13 @@ func HandlerMsgFromDB(
 
 				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'get common analytics information about task ID', Response: '%v'\n", res)
 
+				if err := sendMsgCompliteTaskGetCommonAnalyticsInformationAboutTaskID(res, outCoreChans.OutCoreChanAPI); err != nil {
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
+				}
+
 			}
 		}
 
