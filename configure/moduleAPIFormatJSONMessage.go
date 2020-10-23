@@ -766,17 +766,21 @@ type ParametersCommonAnalyticsInformation struct {
 	SourceID                              int                                              `json:"sid"`
 	GeneralInformationAboutTask           GeneralInformationAboutTask                      `json:"giat"`
 	InstalledFilteringOption              SearchFilteringOptions                           `json:"ifo"`
-	CommonInformationAboutReceivedFiles   CommonInformationAboutReceivedFilesDescription   `json:"giarf"`
+	CommonInformationAboutReceivedFiles   CommonInformationAboutReceivedFilesDescription   `json:"ciarf"`
 	DetailedInformationAboutReceivedFiles DetailedInformationAboutReceivedFilesDescription `json:"diarf"`
 }
 
 //CommonInformationAboutReceivedFilesDescription содержит описание общей информации о полученных файлах
 // NumberFilesTotal - общее количество файлов подлежащих скачиванию
+// DownloadTaskStatus - статус задачи на скачивание файлов
+// FilteringTaskStatus - статус задачи фильтрации
 // NumberFilesDownloaded - количество уже загруженных файлов
 // SizeFilesFoundResultFiltering - общий размер найденных, в результате фильтрации, файлов (в байтах)
 // PathDirectoryStorageDownloadedFiles - путь до директории долговременного хранения скаченных файлов
 type CommonInformationAboutReceivedFilesDescription struct {
 	NumberFilesTotal                    int    `json:"nft"`
+	DownloadTaskStatus                  string `json:"dts"`
+	FilteringTaskStatus                 string `json:"fts"`
 	NumberFilesDownloaded               int    `json:"nfd"`
 	SizeFilesFoundResultFiltering       int64  `json:"sffrf"`
 	PathDirectoryStorageDownloadedFiles string `json:"pdsdf"`

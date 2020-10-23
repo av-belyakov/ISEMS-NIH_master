@@ -90,8 +90,6 @@ func UpdateInformationAboutTask(
 	if isTaskComplete {
 		taskInfo, _ := getInfoTaskForID(qp, req.TaskID)
 
-		fmt.Println("*-*-*-*---*-*-*")
-		fmt.Printf("Module DB, requestDownload, number_files_downloaded: '%v'\n", ti.TaskParameter.DownloadTask.NumberFilesDownloaded)
 		if len(*taskInfo) > 0 {
 			commonValueUpdate = bson.D{
 				bson.E{Key: "$set", Value: bson.D{
@@ -104,8 +102,6 @@ func UpdateInformationAboutTask(
 				}}}
 
 		}
-		fmt.Printf("NumberFilesDownloaded: '%v'\n", (*taskInfo)[0].DetailedInformationOnDownloading.NumberFilesDownloaded)
-		fmt.Printf("NEW numberFilesDownloaded: '%v'\n", (*taskInfo)[0].DetailedInformationOnDownloading.NumberFilesDownloaded+ti.TaskParameter.DownloadTask.NumberFilesDownloaded)
 
 		for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
 			if fi.IsLoaded {
@@ -119,69 +115,6 @@ func UpdateInformationAboutTask(
 			}
 		}
 	}
-
-	/*
-			for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
-				if fi.IsLoaded {
-					arrayFiles = append(arrayFiles, bson.D{bson.E{Key: "elem.file_name", Value: fn}})
-				}
-			}
-		} else {
-			for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
-				if fi.IsLoaded && (fi.TimeDownload > time.Now().Unix()-(timeUpdate*2)) {
-					arrayFiles = append(arrayFiles, bson.D{bson.E{Key: "elem.file_name", Value: fn}})
-				}
-			}
-		}
-	*/
-
-	/*	if ti.TaskParameter.DownloadTask.Status == "complete" {
-			numberFilesDownloaded := ti.TaskParameter.DownloadTask.NumberFilesDownloaded
-			numberFilesDownloadedError := ti.TaskParameter.DownloadTask.NumberFilesDownloadedError
-
-			fmt.Println("------ func 'UpdateInformationAboutTask' ------")
-			fmt.Println(req)
-
-			//if verificationStatus, ok := req.AdvancedOptions.(string); ok {
-			//if verificationStatus == "complete" {
-			//восстанавливаем задачу по ее ID
-			taskInfo, _ := getInfoTaskForID(qp, req.TaskID)
-
-			fmt.Println("*-*-*-*---*-*-*")
-			fmt.Printf("Module DB, requestDownload, number_files_downloaded: '%v'\n", numberFilesDownloaded)
-			if len(*taskInfo) > 0 {
-				numberFilesDownloaded = (*taskInfo)[0].DetailedInformationOnDownloading.NumberFilesDownloaded + ti.TaskParameter.DownloadTask.NumberFilesDownloaded
-				numberFilesDownloadedError = (*taskInfo)[0].DetailedInformationOnDownloading.NumberFilesDownloadedError + ti.TaskParameter.DownloadTask.NumberFilesDownloadedError
-			}
-			fmt.Printf("NumberFilesDownloaded: '%v'\n", (*taskInfo)[0].DetailedInformationOnDownloading.NumberFilesDownloaded)
-			fmt.Printf("NEW numberFilesDownloaded: '%v'\n", numberFilesDownloaded)
-			//}
-			//}
-
-			//обновление основной информации
-			commonValueUpdate = bson.D{
-				bson.E{Key: "$set", Value: bson.D{
-					bson.E{Key: "detailed_information_on_downloading.task_status", Value: taskStatus},
-					bson.E{Key: "detailed_information_on_downloading.time_interval_task_execution.start", Value: ti.TimeInterval.Start},
-					bson.E{Key: "detailed_information_on_downloading.time_interval_task_execution.end", Value: time.Now().Unix()},
-					//			bson.E{Key: "detailed_information_on_downloading.number_files_downloaded", Value: ti.TaskParameter.DownloadTask.NumberFilesDownloaded},
-					bson.E{Key: "detailed_information_on_downloading.number_files_downloaded", Value: numberFilesDownloaded},
-					bson.E{Key: "detailed_information_on_downloading.number_files_downloaded_error", Value: numberFilesDownloadedError},
-					bson.E{Key: "detailed_information_on_downloading.path_directory_storage_downloaded_files", Value: ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles},
-				}}}
-
-			for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
-				if fi.IsLoaded {
-					arrayFiles = append(arrayFiles, bson.D{bson.E{Key: "elem.file_name", Value: fn}})
-				}
-			}
-		} else {
-			for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
-				if fi.IsLoaded && (fi.TimeDownload > time.Now().Unix()-(timeUpdate*2)) {
-					arrayFiles = append(arrayFiles, bson.D{bson.E{Key: "elem.file_name", Value: fn}})
-				}
-			}
-		}*/
 
 	//обновляем детальную информацию о ходе скачивания файлов
 	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, commonValueUpdate); err != nil {

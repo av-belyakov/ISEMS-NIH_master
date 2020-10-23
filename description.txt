@@ -899,7 +899,7 @@
 					dst: <ARRAY>, //Dst — только как получатель				
 				}
 			},
-			giarf: { //CommonInformationAboutReceivedFiles - общая информация о принятых файлах
+			ciarf: { //CommonInformationAboutReceivedFiles - общая информация о принятых файлах
 				nft: <INT>, // NumberFilesTotal - общее количество файлов подлежащих скачиванию
 				nfd: <INT>, // NumberFilesDownloaded - количество уже загруженных файлов
 	 			sffrf: <INT>, // SizeFilesFoundResultFiltering - общий размер найденных, в результате фильтрации, файлов (в байтах)

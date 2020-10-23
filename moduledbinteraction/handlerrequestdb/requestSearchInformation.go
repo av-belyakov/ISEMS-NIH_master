@@ -675,6 +675,8 @@ func CommonAnalyticsInformationAboutTaskID(
 		},
 		CommonInformationAboutReceivedFiles: configure.CommonInformationAboutReceivedFilesDescription{
 			NumberFilesTotal:                    ti.DetailedInformationOnDownloading.NumberFilesTotal,
+			DownloadTaskStatus:                  ti.DetailedInformationOnDownloading.TaskStatus,
+			FilteringTaskStatus:                 ti.DetailedInformationOnFiltering.TaskStatus,
 			NumberFilesDownloaded:               ti.DetailedInformationOnDownloading.NumberFilesDownloaded,
 			SizeFilesFoundResultFiltering:       ti.DetailedInformationOnFiltering.SizeFilesFoundResultFiltering,
 			PathDirectoryStorageDownloadedFiles: ti.DetailedInformationOnDownloading.PathDirectoryStorageDownloadedFiles,
