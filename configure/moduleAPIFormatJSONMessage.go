@@ -681,7 +681,7 @@ type MarkTaskCompletedRequest struct {
 // UserName - имя пользователя
 // Description - дополнительное описание
 type MarkTaskCompletedRequestOption struct {
-	RequestTaskID string `json:"tid"`
+	RequestTaskID string `json:"rtid"`
 	UserName      string `json:"un"`
 	Description   string `json:"d"`
 }

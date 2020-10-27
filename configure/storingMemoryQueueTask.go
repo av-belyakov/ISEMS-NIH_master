@@ -118,8 +118,6 @@ func NewRepositoryQTS() *QueueTaskStorage {
 
 			switch msg.Action {
 			case "get information for task":
-				fmt.Println("func 'storingMemoryQueueTask', action: 'get information for task'")
-
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'get information for task'", msg.SourceID)
 					msg.ChanRes <- msgRes
@@ -145,8 +143,6 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				msg.ChanRes <- msgRes
 
 			case "add task":
-				fmt.Println("func 'storingMemoryQueueTask', action: 'add task'")
-
 				ts := "wait"
 				msgRes.TaskStatus = ts
 
@@ -177,13 +173,9 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				msg.ChanRes <- msgRes
 
 			case "add confirmed list of files":
-				fmt.Println("func 'storingMemoryQueueTask', action: 'add confirmed list of files'")
-
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'add confirmed list of files'", msg.SourceID)
 					msg.ChanRes <- msgRes
-
-					fmt.Printf("func 'storingMemoryQueueTask', error: problem with ID %v not found, not correct sourceID or taskID, 'add confirmed list of files'", msg.SourceID)
 
 					break
 				}
@@ -194,13 +186,9 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				msg.ChanRes <- msgRes
 
 			case "add information on the filter":
-				fmt.Println("func 'storingMemoryQueueTask', action: 'add information on the filter'")
-
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'add information on the filter'", msg.SourceID)
 					msg.ChanRes <- msgRes
-
-					fmt.Printf("func 'storingMemoryQueueTask', error: problem with ID %v not found, not correct sourceID or taskID, 'add information on the filter'", msg.SourceID)
 
 					break
 				}
@@ -210,13 +198,9 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				msg.ChanRes <- msgRes
 
 			case "add path directory for filtered files":
-				fmt.Println("func 'storingMemoryQueueTask', action: 'add path directory for filtered files'")
-
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'add path directory for filtered files'", msg.SourceID)
 					msg.ChanRes <- msgRes
-
-					fmt.Printf("func 'storingMemoryQueueTask', error: problem with ID %v not found, not correct sourceID or taskID, 'add path directory for filtered files'", msg.SourceID)
 
 					break
 				}
@@ -226,13 +210,9 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				msg.ChanRes <- msgRes
 
 			case "delete task":
-				fmt.Println("func 'storingMemoryQueueTask', action: 'delete task'")
-
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'delete task'", msg.SourceID)
 					msg.ChanRes <- msgRes
-
-					fmt.Printf("func 'storingMemoryQueueTask', error: problem with ID %v not found, not correct sourceID or taskID, 'delete task'", msg.SourceID)
 
 					break
 				}
@@ -250,13 +230,9 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				msg.ChanRes <- msgRes
 
 			case "change task status":
-				fmt.Println("func 'storingMemoryQueueTask', action: 'change task status'")
-
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'change task status'", msg.SourceID)
 					msg.ChanRes <- msgRes
-
-					fmt.Printf("func 'storingMemoryQueueTask', error: problem with ID %v not found, not correct sourceID or taskID, 'change task status'", msg.SourceID)
 
 					break
 				}
@@ -267,13 +243,9 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				msg.ChanRes <- msgRes
 
 			case "change availability connection on connection":
-				fmt.Println("func 'storingMemoryQueueTask', action: 'change availability connection on connection'")
-
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'change availability connection on connection'", msg.SourceID)
 					msg.ChanRes <- msgRes
-
-					fmt.Printf("func 'storingMemoryQueueTask', error: problem with ID %v not found, not correct sourceID or taskID, 'change availability connection on connection'", msg.SourceID)
 
 					break
 				}
@@ -283,13 +255,9 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				msg.ChanRes <- msgRes
 
 			case "change availability connection on disconnection":
-				fmt.Println("func 'storingMemoryQueueTask', action: 'change availability connection on disconnection'")
-
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'change availability connection on disconnection'", msg.SourceID)
 					msg.ChanRes <- msgRes
-
-					fmt.Printf("func 'storingMemoryQueueTask', error: problem with ID %v not found, not correct sourceID or taskID, 'change availability connection on disconnection'", msg.SourceID)
 
 					break
 				}
@@ -299,32 +267,21 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				msg.ChanRes <- msgRes
 
 			case "change availability files download":
-				fmt.Println("func 'storingMemoryQueueTask', action: 'change availability files download'")
-
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'change availability files download'", msg.SourceID)
 					msg.ChanRes <- msgRes
-
-					fmt.Printf("func 'storingMemoryQueueTask', error: problem with ID %v not found, not correct sourceID or taskID, 'change availability files download'", msg.SourceID)
 
 					break
 				}
 
 				qts.StorageList[msg.SourceID][msg.TaskID].CheckingStatusItems.AvailabilityFilesDownload = true
 
-				fmt.Printf("func 'storingMemoryQueueTask', sourceID '%v', tackID '%v'\n", msg.SourceID, msg.TaskID)
-				fmt.Printf("func 'storingMemoryQueueTask', AvailabilityFilesDownload: '%v'\n", qts.StorageList[msg.SourceID][msg.TaskID].CheckingStatusItems.AvailabilityFilesDownload)
-
 				msg.ChanRes <- msgRes
 
 			case "change the status of uploaded files":
-				fmt.Println("func 'storingMemoryQueueTask', action: 'change the status of uploaded files'")
-
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'change the status of uploaded files'", msg.SourceID)
 					msg.ChanRes <- msgRes
-
-					fmt.Printf("func 'storingMemoryQueueTask', error: problem with ID %v not found, not correct sourceID or taskID, 'change the status of uploaded files'", msg.SourceID)
 
 					break
 				}
@@ -344,13 +301,9 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				msg.ChanRes <- msgRes
 
 			case "clear all file list":
-				fmt.Println("func 'storingMemoryQueueTask', action: 'clear all file list'")
-
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'clear all file list'", msg.SourceID)
 					msg.ChanRes <- msgRes
-
-					fmt.Printf("func 'storingMemoryQueueTask', error: problem with ID %v not found, not correct sourceID or taskID, 'clear all file list'", msg.SourceID)
 
 					break
 				}
@@ -733,9 +686,6 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 		//если соединение с источником было разорвано очищаем кеш
 		// и переводим задачу в режим ожидания
 		if (taskInfo.TaskStatus == "pause") && (taskInfo.TaskType == "download control") {
-
-			fmt.Println("func 'storingMemoryQueueTask', если соединение с источником было разорвано очищаем кеш и переводим задачу в режим ожидания")
-
 			et.downloadTask = []string{}
 			qts.ChangeTaskStatusQueueTask(sourceID, taskID, "wait")
 		}
@@ -744,8 +694,6 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 		if taskInfo.TaskStatus == "complete" {
 			/*&& (time.Now().Unix() > (taskInfo.TimeUpdate + 30))*/
 			_ = qts.delQueueTaskStorage(sourceID, taskID)
-
-			fmt.Println("func 'storingMemoryQueueTask', если задача помечена как выполненная удаляем ее")
 
 			//удаляем задачу из списка отслеживания кол-ва выполняемых задач
 			if taskInfo.TaskType == "download control" {
@@ -806,8 +754,6 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 					listTask := et.downloadTask
 					listTask = append(listTask, taskID)
 					et.downloadTask = listTask
-
-					fmt.Println("func 'storingMemoryQueueTask', добавляем задачу в массив выполняющихся задач")
 
 					//запускаем выполнение задачи
 					chanMsgInfoQueueTaskStorage <- MessageInformationQueueTaskStorage{

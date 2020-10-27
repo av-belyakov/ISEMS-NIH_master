@@ -25,9 +25,6 @@ func HandlerMsgFromDB(
 	case "Core module":
 		switch res.MsgSection {
 		case "error notification":
-
-			//fmt.Println("func 'HandlerMsgFromDB', MsgRecipient: 'Core module', MsgSection: 'error notification'")
-
 			//если сообщение об ошибке только для ядра приложения
 			if en, ok := res.AdvancedOptions.(configure.ErrorNotification); ok {
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
@@ -55,8 +52,6 @@ func HandlerMsgFromDB(
 		case "information search control":
 			switch res.Instruction {
 			case "short search result":
-				//fmt.Printf("func 'HandlerMsgFromDB', Instruction: 'information search control', Response: '%v'\n", res)
-
 				if err := sendMsgCompliteTaskSearchShortInformationAboutTask(res, hsm.TSSQ, outCoreChans.OutCoreChanAPI); err != nil {
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
@@ -66,8 +61,6 @@ func HandlerMsgFromDB(
 
 			//полная информация по taskID, может быть не полным список файлов (максимальный размер не больше 50)
 			case "information by task ID":
-				//fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'information by task ID', Response: '%v'\n", res)
-
 				if err := sendMsgCompliteTaskSearchInformationByTaskID(res, outCoreChans.OutCoreChanAPI); err != nil {
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
@@ -77,8 +70,6 @@ func HandlerMsgFromDB(
 
 			//дополнительный список файлов по конкретной задаче
 			case "list files by task ID":
-				//fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'list files by task ID', Response: '%v'\n", res)
-
 				if err := sendMsgCompliteTaskListFilesByTaskID(res, outCoreChans.OutCoreChanAPI); err != nil {
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
@@ -88,8 +79,6 @@ func HandlerMsgFromDB(
 
 			//краткая информация по задаче и параметры для перевода задачи в состояние 'обработана'
 			case "mark an task as completed processed":
-				//				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'mark an task as completed', Response: '%v'\n", res)
-
 				resMsg := configure.MarkTaskCompletedResponse{
 					MsgOption: configure.MarkTaskCompletedResponseOption{
 						SuccessStatus: false,
@@ -143,8 +132,6 @@ func HandlerMsgFromDB(
 
 				//задача по переданному ID не найдена
 				if !tgitfmtcp.TaskIsExist {
-					//					fmt.Println("func 'HandlerMsgFromDB', информационное сообщение о том что, задача по переданному ID не найдена")
-
 					notifications.SendNotificationToClientAPI(
 						outCoreChans.OutCoreChanAPI,
 						notifications.NotificationSettingsToClientAPI{
@@ -181,9 +168,6 @@ func HandlerMsgFromDB(
 				//проверяем была ли выполненна задача по фильтрации
 				// и загружался ли хотя бы один файл
 				if !tgitfmtcp.FiltrationTaskStatus || !tgitfmtcp.FilesDownloaded {
-
-					//					fmt.Println("func 'HandlerMsgFromDB', информационное сообщение о том что, невозможно отметить задачу как завершенную")
-
 					//информационное сообщение о том что, невозможно отметить задачу как завершенную
 					notifications.SendNotificationToClientAPI(
 						outCoreChans.OutCoreChanAPI,
@@ -218,8 +202,6 @@ func HandlerMsgFromDB(
 					return
 				}
 
-				//			fmt.Println("func 'HandlerMsgFromDB', отправляем запрос модулю БД для изменения состояния задачи")
-
 				//отправляем запрос модулю БД для изменения состояния задачи
 				outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 					MsgGenerator:    "Core module",
@@ -233,9 +215,6 @@ func HandlerMsgFromDB(
 				}
 
 			case "mark an task as completed":
-
-				//				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'mark an task as completed', Response: '%v'\n", res)
-
 				//информационное сообщение о том что, невозможно отметить задачу как завершенную
 				notifications.SendNotificationToClientAPI(
 					outCoreChans.OutCoreChanAPI,
@@ -260,6 +239,7 @@ func HandlerMsgFromDB(
 				resMsg.MsgSection = "information search control"
 				resMsg.MsgInstruction = "mark an task as completed"
 				resMsg.ClientTaskID = res.TaskIDClientAPI
+
 				msgJSON, err := json.Marshal(resMsg)
 				if err != nil {
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
@@ -278,9 +258,6 @@ func HandlerMsgFromDB(
 				}
 
 			case "delete all information about a task":
-
-				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'delete all information about a task', Response: '%v'\n", res)
-
 				resMsg := configure.DeleteInformationListTaskCompletedResponse{
 					MsgOption: configure.MarkTaskCompletedResponseOption{SuccessStatus: true},
 				}
@@ -288,6 +265,7 @@ func HandlerMsgFromDB(
 				resMsg.MsgSection = "information search control"
 				resMsg.MsgInstruction = "delete all information about a task"
 				resMsg.ClientTaskID = res.TaskIDClientAPI
+
 				msgJSON, err := json.Marshal(resMsg)
 				if err != nil {
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
@@ -306,9 +284,6 @@ func HandlerMsgFromDB(
 				}
 
 			case "get common analytics information about task ID":
-
-				fmt.Printf("func 'HandlerMsgFromDB', Section: 'information search control', Instruction: 'get common analytics information about task ID', Response: '%v'\n", res)
-
 				if err := sendMsgCompliteTaskGetCommonAnalyticsInformationAboutTaskID(res, outCoreChans.OutCoreChanAPI); err != nil {
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),

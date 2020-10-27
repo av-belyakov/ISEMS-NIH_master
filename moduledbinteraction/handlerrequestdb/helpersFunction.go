@@ -2,7 +2,6 @@ package handlerrequestdb
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/mongodb/mongo-go-driver/bson"
 
@@ -39,9 +38,6 @@ func getInfoTaskForID(qp QueryParameters, taskID string) (*[]configure.Informati
 
 //getShortInformation получить краткую информацию об найденных задачах
 func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]*configure.BriefTaskInformation, error) {
-
-	fmt.Println("func 'getShortInformation'")
-
 	getQueryTmpNetParams := func(fcp configure.FiltrationControlParametersNetworkFilters, queryType string) (bson.E, bson.D) {
 		listQueryType := map[string]struct {
 			e string

@@ -171,10 +171,6 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 		ChanToAPI:                             chanToAPI,
 	}
 
-	fmt.Printf("func '%v'\n", funcName)
-	fmt.Println(siatr)
-	fmt.Printf("client ID: %v\n", clientID)
-
 	//проверяем параметры необходимые для поиска общей информации по задачам
 	if msg, ok := CheckParametersSearchCommonInformation(&siatr.MsgOption); !ok {
 		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{

@@ -302,8 +302,6 @@ func sendMsgCompliteTaskGetCommonAnalyticsInformationAboutTaskID(res *configure.
 		return err
 	}
 
-	fmt.Println("func 'sendMsgCompliteTaskGetCommonAnalyticsInformationAboutTaskID' ---> SEND MSG 'processing get common analytics information about task ID' TO client API")
-
 	chanToAPI <- &configure.MsgBetweenCoreAndAPI{
 		MsgGenerator: "Core module",
 		MsgRecipient: "API module",
@@ -317,8 +315,6 @@ func sendMsgCompliteTaskGetCommonAnalyticsInformationAboutTaskID(res *configure.
 //sendMsgCompliteTaskListFilesByTaskID отправляет информацию со списком найденных файлов
 func sendMsgCompliteTaskListFilesByTaskID(res *configure.MsgBetweenCoreAndDB, chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) error {
 	funcName := ", function 'sendMsgCompliteTaskListFilesByTaskID'"
-
-	fmt.Println("func 'sendMsgCompliteTaskListFilesByTaskID', START...")
 
 	lffro, ok := res.AdvancedOptions.(configure.ListFoundFilesResponseOption)
 	if !ok {

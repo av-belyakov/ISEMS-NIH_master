@@ -215,9 +215,6 @@ func RouteCoreRequest(
 
 		//обработка сообщения от ядра
 		case msg := <-chanOutCore:
-
-			fmt.Println("func 'Routing' (moduleNetworkInteraction), received new request")
-
 			go handlers.HandlerMsgFromCore(cwt, isl, msg, smt, qts, saveMessageApp, chanInCore, chanInCRRF)
 		}
 	}
@@ -263,8 +260,6 @@ func RouteWssConnectionResponse(
 				})
 			}
 
-			fmt.Printf("Received message type: '%v'\n", messageType.Type)
-
 			switch messageType.Type {
 			case "pong":
 				chanInCore <- &configure.MsgBetweenCoreAndNI{
@@ -289,9 +284,6 @@ func RouteWssConnectionResponse(
 				}
 
 			case "filtration":
-
-				fmt.Println("func 'RouteWssConnectionResponse', MESSAGE filtration")
-
 				if err := processresponse.ProcessingReceivedMsgTypeFiltering(processresponse.ParametersProcessingReceivedMsgTypeFiltering{
 					SMT:      smt,
 					Message:  message,

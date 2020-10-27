@@ -362,16 +362,8 @@ func HandlerMsgFromAPI(
 					if ti.TaskStatus == "execution" {
 						//проверяем наличие выполняемой задачи
 						if smti, ok := hsm.SMT.GetStoringMemoryTask(dcts.MsgOption.TaskIDApp); ok {
-
-							//							fmt.Println("*-*- func 'handlerMsgFromAPI', task status 'execution' -*-*")
-							//							fmt.Println(smti)
-							//							fmt.Println("*-*-*-*-*-*")
-
 							//проверяем завершена ли задача
 							if smti.TaskStatus {
-
-								//								fmt.Println("*-*- func 'handlerMsgFromAPI', 1111 -*-*")
-
 								errMsg = fmt.Sprintf("Task with ID '%v' for source ID %v rejected. You cannot add a task with the same ID many times in a short period of time.", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
 								emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
 									SourceID:   dcts.MsgOption.ID,
@@ -380,9 +372,6 @@ func HandlerMsgFromAPI(
 									Message:    "нельзя добавлять задачу с одним и тем же идентификатором множество раз в течении небольшого периода времени",
 								})
 							} else {
-
-								//								fmt.Println("*-*- func 'handlerMsgFromAPI', 2222 -*-*")
-
 								errMsg = fmt.Sprintf("You cannot add a task with ID '%v' to a source with ID %v because it is already running", dcts.MsgOption.TaskIDApp, dcts.MsgOption.ID)
 								emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
 									SourceID:   dcts.MsgOption.ID,
@@ -393,9 +382,6 @@ func HandlerMsgFromAPI(
 							}
 						}
 					} else if ti.TaskStatus == "wait" {
-
-						//						fmt.Println("*-*- func 'handlerMsgFromAPI', 3333 -*-*")
-
 						errMsg = fmt.Sprintf("Unable to add task with ID '%v' because it is already pending", dcts.MsgOption.TaskIDApp)
 						emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
 							SourceID:   dcts.MsgOption.ID,
@@ -404,9 +390,6 @@ func HandlerMsgFromAPI(
 							Message:    "невозможно добавить задачу источнику, задача по скачиванию файлов уже выполняется",
 						})
 					} else {
-
-						//						fmt.Println("*-*- func 'handlerMsgFromAPI', 4444 -*-*")
-
 						errMsg = fmt.Sprintf("Unable to add task with ID '%v'. The task has been completed, but has not yet been removed from the pending task list", dcts.MsgOption.ID)
 						emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
 							SourceID:   dcts.MsgOption.ID,
@@ -738,8 +721,6 @@ func HandlerMsgFromAPI(
 			}
 
 			if msgc.MsgInstruction == "mark an task as completed" {
-				//				fmt.Println("func 'handlerMsgFromAPI', Instruction: 'mark an task as completed'")
-
 				var mtcr configure.MarkTaskCompletedRequest
 				if err := json.Unmarshal(msgJSON, &mtcr); err != nil {
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
@@ -750,8 +731,6 @@ func HandlerMsgFromAPI(
 
 					return
 				}
-
-				//				fmt.Printf("---------- \n %v ------------\n", mtcr)
 
 				resMsg := configure.MarkTaskCompletedResponse{
 					MsgOption: configure.MarkTaskCompletedResponseOption{
@@ -949,24 +928,8 @@ func HandlerMsgFromAPI(
 						MsgJSON:      msgJSON,
 					}
 
-					/*					emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
-											TaskType:   "изменение статуса задачи на 'завершена'",
-											TaskAction: "задача отклонена",
-											Message:    "поле 'описание' содержит невалидные символы",
-										})
-
-										//сообщение о том что задача была отклонена
-										if err := ErrorMessage(emt); err != nil {
-											saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-												Description: fmt.Sprint(err),
-												FuncName:    funcName,
-											})
-										}*/
-
 					return
 				}
-
-				//				fmt.Println("func 'handlerMsgFromAPI', check value 'SUCCESS'")
 
 				outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 					MsgGenerator:    "Core module",
@@ -981,13 +944,8 @@ func HandlerMsgFromAPI(
 			}
 
 			if msgc.MsgInstruction == "delete all information about a task" {
-				fmt.Println("func 'handlerMsgFromAPI', Instruction: 'delete all information about a task'")
-
 				var diltc configure.DeleteInformationListTaskCompletedRequest
 				if err := json.Unmarshal(msgJSON, &diltc); err != nil {
-
-					fmt.Println(err)
-
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: "bad cast type JSON messages",
@@ -996,8 +954,6 @@ func HandlerMsgFromAPI(
 
 					return
 				}
-
-				fmt.Printf("---- func 'handlerMsgFromAPI' \n------ \n %v ------------\n", diltc)
 
 				resMsg := configure.DeleteInformationListTaskCompletedResponse{
 					MsgOption: configure.MarkTaskCompletedResponseOption{SuccessStatus: false},
@@ -1061,14 +1017,9 @@ func HandlerMsgFromAPI(
 			}
 
 			if msgc.MsgInstruction == "get common analytics information about task ID" {
-				fmt.Println("func 'handlerMsgFromAPI', Instruction: 'get analytics information about task ID'")
-
 				var caiatr configure.CommonAnalyticsInformationAboutTaskRequest
 
 				if err := json.Unmarshal(msgJSON, &caiatr); err != nil {
-
-					fmt.Println(err)
-
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, "", msg.IDClientAPI)
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: "bad cast type JSON messages",
@@ -1077,8 +1028,6 @@ func HandlerMsgFromAPI(
 
 					return
 				}
-
-				fmt.Printf("---- func 'handlerMsgFromAPI' \n +++++++++++++++ \n %v ------------\n", caiatr)
 
 				//проверяем ID задачи
 				if ok := checkValidtaskID(caiatr.MsgOption.RequestTaskID); !ok {
@@ -1113,8 +1062,6 @@ func HandlerMsgFromAPI(
 
 					return
 				}
-
-				fmt.Println("---- func 'handlerMsgFromAPI' send request to DataBase")
 
 				outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 					MsgGenerator:    "Core module",

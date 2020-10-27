@@ -197,8 +197,6 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 					}
 				}
 
-				//fmt.Printf("func 'NewRepositoryTSSQ', TASKS %v\n", tssq.tasks)
-
 				close(msg.channelRes)
 
 			case "get information about search task":
@@ -268,11 +266,7 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 
 //CreateNewSearchTask создание новой временной записи о поисковой задаче
 func (tssq *TemporaryStorageSearchQueries) CreateNewSearchTask(clientID string, sp *SearchParameters) (string, *SearchTaskDescription, error) {
-	fmt.Println("func 'CreateNewTemporaryStorage', START...")
-
 	taskID := CreateTmpStorageID(clientID, sp)
-
-	fmt.Printf("create NEW Task ID = '%v'\n", taskID)
 
 	chanRes := make(chan SearchChannelResponse)
 
@@ -290,8 +284,6 @@ func (tssq *TemporaryStorageSearchQueries) CreateNewSearchTask(clientID string, 
 
 //GetInformationAboutSearchTask вывод всей найденной информации из кэша
 func (tssq *TemporaryStorageSearchQueries) GetInformationAboutSearchTask(taskID string) (*SearchTaskDescription, error) {
-	//fmt.Println("func 'GetInformationAboutSearchTask', START...")
-
 	chanRes := make(chan SearchChannelResponse)
 
 	tssq.channelReq <- SearchChannelRequest{
@@ -307,8 +299,6 @@ func (tssq *TemporaryStorageSearchQueries) GetInformationAboutSearchTask(taskID 
 
 //AddInformationFoundSearchResult добавление результата поиска в БД к информации о задаче
 func (tssq *TemporaryStorageSearchQueries) AddInformationFoundSearchResult(taskID string, lbti []*BriefTaskInformation) error {
-	//fmt.Println("func 'AddInformationFoundSearchResult', START...")
-
 	chanRes := make(chan SearchChannelResponse)
 
 	tssq.channelReq <- SearchChannelRequest{
@@ -323,8 +313,6 @@ func (tssq *TemporaryStorageSearchQueries) AddInformationFoundSearchResult(taskI
 
 //ChangeStatusTransmissionTask изменение статуса передачи задачи (в данный момент информация по данной задаче передается или нет)
 func (tssq *TemporaryStorageSearchQueries) ChangeStatusTransmissionTask(taskID string, transmissionStatus bool) error {
-	//fmt.Println("func 'ChangeStatusTransmissionTask', START...")
-
 	chanRes := make(chan SearchChannelResponse)
 
 	tssq.channelReq <- SearchChannelRequest{
@@ -339,8 +327,6 @@ func (tssq *TemporaryStorageSearchQueries) ChangeStatusTransmissionTask(taskID s
 
 //ChangingStatusInformationRelevance изменение статуса актуальности задачи
 func (tssq *TemporaryStorageSearchQueries) ChangingStatusInformationRelevance() {
-	//fmt.Println("func 'ChangingStatusInformationRelevance', START...")
-
 	chanRes := make(chan SearchChannelResponse)
 
 	tssq.channelReq <- SearchChannelRequest{
@@ -350,21 +336,10 @@ func (tssq *TemporaryStorageSearchQueries) ChangingStatusInformationRelevance() 
 }
 
 func (tssq *TemporaryStorageSearchQueries) temporaryStorageSearchInfo(taskID string) (*SearchTaskDescription, error) {
-	/*
-		fmt.Println("func 'temporaryStorageSearchInfo' ---- START ----")
-		fmt.Println(tssq.tasks)
-		info, ok := tssq.tasks[taskID]
-		fmt.Println(taskID)
-		fmt.Println(info)
-		fmt.Println("func 'temporaryStorageSearchInfo' ---- END ----")
-	*/
 	info, ok := tssq.tasks[taskID]
 	if !ok {
 		return nil, fmt.Errorf("task with ID %q not found", taskID)
 	}
-
-	//	fmt.Printf("func 'temporaryStorageSearchInfo', taskID:%q INFO: %v\n", taskID, info)
-	//	fmt.Println(tssq.tasks)
 
 	return info, nil
 }
@@ -393,8 +368,6 @@ func (tssq *TemporaryStorageSearchQueries) changingStatusInformationRelevance() 
 
 //delInformationAboutSearchTask удалить информацию о задаче
 func (tssq *TemporaryStorageSearchQueries) delInformationAboutSearchTask(taskID string) {
-	//fmt.Println("func 'delInformationAboutSearchTask', START...")
-
 	chanRes := make(chan SearchChannelResponse)
 
 	tssq.channelReq <- SearchChannelRequest{
@@ -428,8 +401,6 @@ func (lt listTask) Less(i, j int) bool {
 
 //DeleteOldestRecord удалить самую старую запись
 func (tssq *TemporaryStorageSearchQueries) deleteOldestRecord() {
-	//fmt.Println("func 'deleteOldestRecord', START...")
-
 	ls := make(listTask, 0, len(tssq.tasks))
 
 	for key, value := range tssq.tasks {
@@ -448,17 +419,12 @@ func (tssq *TemporaryStorageSearchQueries) deleteOldestRecord() {
 			continue
 		}
 
-		//		fmt.Printf("DELETE the oldest record: %q\n", info.id)
-
 		tssq.delInformationAboutSearchTask(info.id)
 	}
 }
 
 //checkTimeDeleteTemporaryStorageSearchQueries очистка информации о задаче по истечении определенного времени или неактуальности данных
 func checkTimeDeleteTemporaryStorageSearchQueries(tssq *TemporaryStorageSearchQueries) chan string {
-
-	//fmt.Println("func 'CheckTimeDeleteTemporaryStorageSearchQueries', START...")
-
 	testChan := make(chan string)
 
 	go func(tssq *TemporaryStorageSearchQueries, testChan chan<- string) {
@@ -472,13 +438,8 @@ func checkTimeDeleteTemporaryStorageSearchQueries(tssq *TemporaryStorageSearchQu
 			timeNow := time.Now().Unix()
 
 			for id, t := range tssq.tasks {
-
-				//fmt.Printf("func 'CheckTimeDeleteTemporaryStorageSearchQueries', CHECK TASK ID: %q\n", id)
-
 				//если задача не актуальна, информация о задаче не передается
 				if t.NotRelevance && !t.TransmissionStatus {
-
-					fmt.Println("func 'CheckTimeDeleteTemporaryStorageSearchQueries', удалить так как задача не актуальна")
 
 					tssq.delInformationAboutSearchTask(id)
 

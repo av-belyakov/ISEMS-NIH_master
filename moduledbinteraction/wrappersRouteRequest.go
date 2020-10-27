@@ -118,38 +118,24 @@ func (wr *WrappersRouteRequest) WrapperFuncSearch(
 
 	switch msg.Instruction {
 	case "search common information":
-		fmt.Println("func 'WrapperFuncSearch', Instruction: 'search common information'")
-
 		handlerrequestdb.SearchShortInformationAboutTasks(wr.ChanIn, msg, tssq, qp)
 
 	case "search full information by task ID":
-		fmt.Println("func 'WrapperFuncSearch', Instruction: 'search full information'")
-
 		handlerrequestdb.SearchFullInformationAboutTasks(wr.ChanIn, msg, qp)
 
 	case "get part of the list files":
-		fmt.Println("func 'WrapperFuncSearch', Instruction: 'get part of the list files'")
-
 		handlerrequestdb.GetListFoundFiles(wr.ChanIn, msg, qp)
 
 	case "get info from mark an task as completed":
-		fmt.Println("func 'WrapperFuncSearch', Instruction: 'get info from mark an task as completed'")
-
 		handlerrequestdb.GetInfoTaskFromMarkTaskCompleteProcess(wr.ChanIn, msg, qp)
 
 	case "mark an task as completed":
-		fmt.Println("func 'WrapperFuncSearch', Instruction: 'mark an task as completed'")
-
 		handlerrequestdb.MarkTaskCompleteProcess(wr.ChanIn, msg, qp)
 
 	case "delete all information about a task":
-		fmt.Println("func 'WrapperFuncSearch', Instruction: 'delete all information about a task'")
-
 		handlerrequestdb.DeleteInformationAboutTask(wr.ChanIn, msg, qp)
 
 	case "get common analytics information about task ID":
-		fmt.Println("func 'WrapperFuncSearch', Instruction: 'get common analytics information about task ID'")
-
 		handlerrequestdb.CommonAnalyticsInformationAboutTaskID(wr.ChanIn, msg, qp)
 
 	}

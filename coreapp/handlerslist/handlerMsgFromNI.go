@@ -244,9 +244,6 @@ func HandlerMsgFromNI(
 
 		//при завершении скачивания файла
 		case "file download complete":
-
-			fmt.Printf("func 'handlerMsgFromNI', Section: '%v', Command: '%v'\n", msg.Section, msg.Command)
-
 			//записываем информацию в БД
 			// Модуль БД сам определяет когда стоит добавить запись в БД
 			// а когда (основываясь на таймере) добавление записи в БД не происходит
@@ -279,8 +276,6 @@ func HandlerMsgFromNI(
 
 			hdtsct.ResMsgInfo.MsgOption.Status = "complete"
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
-
-			fmt.Printf("func 'handlerMsgFromNI', Section: '%v', Command: '%v'\n", msg.Section, msg.Command)
 
 			if err := handlerDownloadTaskStatusComplete(hdtsct); err != nil {
 				return err

@@ -335,23 +335,13 @@ DONE:
 					switch msgRes.Info.Command {
 					//готовность к передаче файла (slave -> master)
 					case "ready for the transfer":
-
-						fmt.Println("--*-* func 'processingDownloadFile', RECEIVE message 'ready for the transfer'")
-
 						//если задача находится в стадии останова игнорировать ответ slave
 						if ti.IsSlowDown {
-
-							fmt.Println("--*-* func 'processingDownloadFile', задача находится в стадии останова игнорировать ответ slave")
-
 							break
 						}
 
-						fmt.Println("--*-* func 'processingDownloadFile', создаем дескриптор файла для последующей записи в него")
-
 						//создаем дескриптор файла для последующей записи в него
 						lfd.addFileDescription(msgRes.Info.FileOptions.Hex, path.Join(pathDirStorage, msgRes.Info.FileOptions.Name))
-
-						fmt.Println("--*-* func 'processingDownloadFile', обновляем информацию о задаче")
 
 						//обновляем информацию о задаче
 						tpdf.smt.UpdateTaskDownloadAllParameters(tpdf.taskID, configure.DownloadTaskParameters{
@@ -382,9 +372,6 @@ DONE:
 
 							break DONE
 						}
-
-						fmt.Println("--*-* func 'processingDownloadFile', send message 'ready to receive file'")
-						fmt.Println("msgJSON")
 
 						tpdf.channels.cwtRes <- configure.MsgWsTransmission{
 							DestinationHost: tpdf.sourceIP,
@@ -541,9 +528,6 @@ DONE:
 
 	}
 
-	fmt.Println("func 'processingDownloadFile', завершаем передачу файлов и отправляем информацию в ядро")
-	fmt.Println(msgToCore)
-
 	tpdf.channels.chanInCore <- &msgToCore
 	tpdf.channels.chanDone <- struct{}{}
 }
@@ -588,11 +572,6 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes 
 	wp := float64(writeByte) / (float64(fi.FullSizeByte) / 100)
 	writePercent := int(wp)
 	numAcceptedChunk := fi.NumAcceptedChunk + 1
-
-	/*	if numAcceptedChunk == 1 || numAcceptedChunk == 2 {
-		fmt.Printf("\t---*** Full file size: '%v', write byte: '%v', sum write byte: '%v', all count chunks: '%v', accepted chunk: '%v' PERCENT: '%v'\n", fi.FullSizeByte, numWriteByte, writeByte, fi.NumChunk, numAcceptedChunk, writePercent)
-	}*/
-	//Full file size: '277', write byte: '277', sum write byte: '277', all count chunks: '1', accepted chunk: '1' PERCENT: '138'
 
 	msgToCore := configure.MsgBetweenCoreAndNI{
 		TaskID:   pwbf.TaskID,

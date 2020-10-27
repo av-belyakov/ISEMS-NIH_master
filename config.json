@@ -49,7 +49,7 @@
         "object": "/home/ISEMS_NIH_master/ISEMS_NIH_master_OBJECT"
     },
     "directoryLongTermStorageDownloadedFiles_comments": "директория для долговременного хранения скаченных файлов",
-    "maximumTotalSizeFilesDownloadedAutomatically": 50,
+    "maximumTotalSizeFilesDownloadedAutomatically": 500,
     "maximumTotalSizeFilesDownloadedAutomatically_comments": "максимальный, общий размер файлов скачиваемых в автоматическом режиме (в Мб)",
     "pathLogFiles": "/var/log/",
     "pathLogFiles_comments": "место расположение лог-файла приложения"

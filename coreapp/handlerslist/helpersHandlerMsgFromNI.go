@@ -189,8 +189,6 @@ func sendInformationFiltrationTask(
 }
 
 func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteType) error {
-	fmt.Println("func 'handlerDownloadTaskStatusComplete', отправляем информацию в БД")
-
 	//обновление статуса задачи по скачиванию файлов
 	if err := setStatusCompleteDownloadTask(hdtsct.TaskID, hdtsct.SMT); err != nil {
 		return err

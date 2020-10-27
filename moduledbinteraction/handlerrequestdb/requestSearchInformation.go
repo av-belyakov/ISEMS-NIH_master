@@ -43,13 +43,6 @@ func SearchShortInformationAboutTasks(
 		return
 	}
 
-	/*
-		fmt.Println("func 'SearchShortInformationAboutTasks', START...")
-		fmt.Println("take information from module cashe")
-		fmt.Printf("task ID: %v\n", req.TaskID)
-		fmt.Println(info)
-	*/
-
 	listShortTaskInfo, err := getShortInformation(qp, &info.SearchParameters)
 	if err != nil {
 		msgRes.MsgSection = "error notification"
@@ -63,11 +56,6 @@ func SearchShortInformationAboutTasks(
 
 		return
 	}
-
-	/*
-		fmt.Println("func 'requestSearchInformation'")
-		fmt.Println(*(listShortTaskInfo[0]))
-	*/
 
 	//добавляем найденную информацию в TemporaryStorageSearchQueries
 	if err := tssq.AddInformationFoundSearchResult(req.TaskID, listShortTaskInfo); err != nil {
@@ -397,8 +385,6 @@ func GetInfoTaskFromMarkTaskCompleteProcess(
 	req *configure.MsgBetweenCoreAndDB,
 	qp QueryParameters) {
 
-	fmt.Println("func 'GetInfoTaskFromMarkTaskCompleteProcess', START...")
-
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator:    req.MsgRecipient,
 		MsgRecipient:    req.MsgGenerator,
@@ -408,8 +394,6 @@ func GetInfoTaskFromMarkTaskCompleteProcess(
 		TaskID:          req.TaskID,
 		TaskIDClientAPI: req.TaskIDClientAPI,
 	}
-
-	fmt.Println("func 'GetInfoTaskFromMarkTaskCompleteProcess', get information about task ID")
 
 	errMsg := fmt.Sprintf("It is not possible to mark a task with ID %q as successfully completed. Internal application error.", req.TaskIDClientAPI)
 
@@ -438,8 +422,6 @@ func GetInfoTaskFromMarkTaskCompleteProcess(
 
 	ti := (*listTaskInfo)[0]
 
-	fmt.Println(ti)
-
 	mtcro, ok := req.AdvancedOptions.(configure.MarkTaskCompletedRequestOption)
 	if !ok {
 		msgRes.MsgSection = "error notification"
@@ -465,9 +447,6 @@ func GetInfoTaskFromMarkTaskCompleteProcess(
 		FilesDownloaded:      isDownloaded,
 	}
 
-	fmt.Println("func 'GetInfoTaskFromMarkTaskCompleteProcess', send message to Core")
-	fmt.Println(msgRes)
-
 	chanIn <- &msgRes
 
 }
@@ -477,8 +456,6 @@ func MarkTaskCompleteProcess(
 	chanIn chan<- *configure.MsgBetweenCoreAndDB,
 	req *configure.MsgBetweenCoreAndDB,
 	qp QueryParameters) {
-
-	fmt.Println("func 'MarkTaskCompleteProcess', START...")
 
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator:    req.MsgRecipient,
@@ -505,8 +482,6 @@ func MarkTaskCompleteProcess(
 		return
 	}
 
-	fmt.Println("func 'MarkTaskCompleteProcess', отмечаем задачу как завершенную")
-
 	//отмечаем задачу как завершенную
 	if err := qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}},
 		bson.D{
@@ -518,10 +493,6 @@ func MarkTaskCompleteProcess(
 				bson.E{Key: "general_information_about_task.detail_description_general_information_about_task.description_processing_results", Value: tgitfmtcp.Description},
 			}},
 		}); err != nil {
-
-		fmt.Println("func 'MarkTaskCompleteProcess', ERROR")
-		fmt.Println(err)
-
 		msgRes.MsgSection = "error notification"
 		msgRes.AdvancedOptions = configure.ErrorNotification{
 			SourceReport:          "DB module",
@@ -534,8 +505,6 @@ func MarkTaskCompleteProcess(
 		return
 	}
 
-	fmt.Println("func 'MarkTaskCompleteProcess', запись в БД завершена")
-
 	chanIn <- &msgRes
 }
 
@@ -544,8 +513,6 @@ func DeleteInformationAboutTask(
 	chanIn chan<- *configure.MsgBetweenCoreAndDB,
 	req *configure.MsgBetweenCoreAndDB,
 	qp QueryParameters) {
-
-	fmt.Println("func 'DeleteInformationAboutTask', START...")
 
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator:    req.MsgRecipient,
@@ -558,9 +525,6 @@ func DeleteInformationAboutTask(
 
 	l, ok := req.AdvancedOptions.(*configure.DeleteInformationListTaskCompletedRequestOption)
 	if !ok {
-
-		fmt.Println("an incorrect list of issues that should be deleted was accepted")
-
 		errMsg := "an incorrect list of issues that should be deleted was accepted"
 
 		msgRes.MsgRecipient = "Core module"
@@ -576,8 +540,6 @@ func DeleteInformationAboutTask(
 		return
 	}
 
-	fmt.Printf("func 'DeleteInformationAboutTask', ------- delete information about task -------\n %v \n", (*l).ListTaskID)
-
 	for _, id := range (*l).ListTaskID {
 		_ = qp.DeleteOneData(bson.D{bson.E{Key: "task_id", Value: id}})
 	}
@@ -590,8 +552,6 @@ func CommonAnalyticsInformationAboutTaskID(
 	chanIn chan<- *configure.MsgBetweenCoreAndDB,
 	req *configure.MsgBetweenCoreAndDB,
 	qp QueryParameters) {
-
-	fmt.Println("func 'CommonAnalyticsInformationAboutTaskID', START...")
 
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator:    req.MsgRecipient,
