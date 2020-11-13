@@ -234,11 +234,17 @@ func UpdateParametersFiltrationTask(
 	infoMsg.IDClientAPI = taskInfo.ClientID
 	infoMsg.TaskIDClientAPI = taskInfo.ClientTaskID
 
+	fmt.Println("func 'requestFiltartion'")
+
 	//выполнять обновление информации в БД для сообщения типа 'complete' всегда,
 	// для сообщения типа 'execute' только раз 31 секунду
-	if (ti.Status == "execute") && ((time.Now().Unix() - taskInfo.TimeInsertDB) < 30) {
+	if (ti.Status == "execute") && ((time.Now().Unix() - taskInfo.TimeInsertDB) < 180) {
+		fmt.Printf("Status filtartion: '%v' timer LESS 30 sec (%v)\n", ti.Status, ((time.Now().Unix() - taskInfo.TimeInsertDB) < 180))
+
 		return nil
 	}
+
+	fmt.Printf("Status filtartion: '%v' timer MORE 30 sec (%v)\n", ti.Status, ((time.Now().Unix() - taskInfo.TimeInsertDB) < 180))
 
 	//обновление основной информации
 	commonValueUpdate := bson.D{
@@ -260,6 +266,28 @@ func UpdateParametersFiltrationTask(
 	err = qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, commonValueUpdate)
 
 	arr := []interface{}{}
+
+	/*
+			Здесь ошибка которая валит весь процесс!!!
+
+		Похоже проблемма в одновременном доступе к полю FoundFilesInformation пердставляющей
+		собой map[string]FoundFilesInformation. С одной стороны туда идет постоянная запись
+		через smt.UpdateTaskFiltrationAllParameters, а с другой НАПРЯМУЮ через smt.GetStoringMemoryTask(req.TaskID)
+		я пытаюсь получить доступ к FoundFilesInformation, проблемма в том что smt.GetStoringMemoryTask(req.TaskID)
+		хотя и дает последовательный доступ к данным (реализованный через ОБЩИЙ канал в smt, StoryMemoryTask),
+		но для чтения карты, map, представляющей собой map[string]FoundFilesInformation этого явно не достаточно.
+		Таким образом возникает конкурентый доступ, одни пишет в карту, а второй время от времени пытается из
+		нее читать. НУЖНО сделать метод который возвращал бы из map[string]FoundFilesInformation карту аналогичный этому:
+			bson.D{
+			bson.E{Key: "file_name", Value: n},
+			bson.E{Key: "file_size", Value: v.Size},
+			bson.E{Key: "file_hex", Value: v.Hex},
+			bson.E{Key: "file_loaded", Value: false},
+		}
+		можно даже без bson.D
+
+		пока придется временно увеличить ((time.Now().Unix() - taskInfo.TimeInsertDB) < 31 до 180 сек.
+	*/
 
 	for n, v := range ti.FoundFilesInformation {
 		arr = append(arr, bson.D{

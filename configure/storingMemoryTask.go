@@ -176,6 +176,22 @@ func NewRepositorySMT() *StoringMemoryTask {
 
 				close(msg.ChannelRes)
 
+			/*case "get found files information":
+			mr := channelResSettings{
+				IsExist: false,
+				TaskID:  msg.TaskID,
+			}
+
+			task, ok := smt.tasks[msg.TaskID]
+			if ok {
+				mr.IsExist = true
+				mr.Description = (*task).TaskParameter.FiltrationTask.FoundFilesInformation
+			}
+
+			msg.ChannelRes <- mr
+
+			close(msg.ChannelRes)*/
+
 			case "check task is exist":
 				_, ok := smt.tasks[msg.TaskID]
 
@@ -611,7 +627,7 @@ func (smt *StoringMemoryTask) CheckTimeUpdateStoringMemoryTask(sec int) chan Msg
 					continue
 				}
 
-				if (t.TimeUpdate + 241) < timeNow {
+				if (t.TimeUpdate + 481) < timeNow {
 					smt.CompleteStoringMemoryTask(id)
 
 					chanOut <- MsgChanStoringMemoryTask{
