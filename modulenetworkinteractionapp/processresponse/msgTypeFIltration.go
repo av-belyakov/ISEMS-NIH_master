@@ -2,7 +2,6 @@ package processresponse
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"ISEMS-NIH_master/configure"
 )
@@ -38,9 +37,6 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 			Hex:  v.Hex,
 		}
 	}
-
-	fmt.Println("func 'ProcessingReceivedMsgTypeFiltering', processing message")
-	fmt.Println(resMsg)
 
 	ftp := configure.FiltrationTaskParameters{
 		Status:                          resMsg.Info.TaskStatus,

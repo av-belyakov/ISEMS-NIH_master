@@ -649,7 +649,7 @@ func CommonAnalyticsInformationAboutTaskID(
 	   (нет описания самой структуры)
 	*/
 
-	fmt.Printf("func 'CommonAnalyticsInformationAboutTaskID', FOUND INFORMATION: \n ********** %v ********** \n", pcai)
+	//fmt.Printf("func 'CommonAnalyticsInformationAboutTaskID', FOUND INFORMATION: \n ********** %v ********** \n", pcai)
 
 	msgRes.AdvancedOptions = configure.CommonAnalyticsInformationAboutTaskResponsOption{
 		Status:        "complete",

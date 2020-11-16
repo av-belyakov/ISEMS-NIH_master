@@ -146,10 +146,11 @@ type ChanStoringMemoryTask struct {
 
 //ChannelResSettings параметры канала ответа
 type channelResSettings struct {
-	IsExist               bool
-	TaskID                string
-	Description           TaskDescription
-	FoundFilesInformation map[string]*FoundFilesInformation
+	IsExist                  bool
+	TaskID                   string
+	Description              TaskDescription
+	FoundFilesInformation    *map[string]FoundFilesInformation
+	DownloadFilesInformation *map[string]DownloadFilesInformation
 }
 
 //NewRepositorySMT создание нового репозитория для хранения выполняемых задач
@@ -186,12 +187,33 @@ func NewRepositorySMT() *StoringMemoryTask {
 				task, ok := smt.tasks[msg.TaskID]
 				if ok {
 					mr.IsExist = true
-					lffi := make(map[string]*FoundFilesInformation, len((*task).TaskParameter.FiltrationTask.FoundFilesInformation))
+					lffi := make(map[string]FoundFilesInformation, len((*task).TaskParameter.FiltrationTask.FoundFilesInformation))
 					for fn, info := range (*task).TaskParameter.FiltrationTask.FoundFilesInformation {
-						lffi[fn] = info
+						lffi[fn] = (*info)
 					}
 
-					mr.FoundFilesInformation = lffi
+					mr.FoundFilesInformation = &lffi
+				}
+
+				msg.ChannelRes <- mr
+
+				close(msg.ChannelRes)
+
+			case "get download found files information":
+				mr := channelResSettings{
+					IsExist: false,
+					TaskID:  msg.TaskID,
+				}
+
+				task, ok := smt.tasks[msg.TaskID]
+				if ok {
+					mr.IsExist = true
+					lffi := make(map[string]DownloadFilesInformation, len((*task).TaskParameter.DownloadTask.DownloadingFilesInformation))
+					for fn, info := range (*task).TaskParameter.DownloadTask.DownloadingFilesInformation {
+						lffi[fn] = (*info)
+					}
+
+					mr.DownloadFilesInformation = &lffi
 				}
 
 				msg.ChannelRes <- mr
@@ -454,7 +476,7 @@ func (smt *StoringMemoryTask) GetStoringMemoryTask(taskID string) (TaskDescripti
 }
 
 //GetFoundFilesInformation получить информацию со списком найденных в результате фильтрации файлах
-func (smt *StoringMemoryTask) GetFoundFilesInformation(taskID string) (map[string]*FoundFilesInformation, bool) {
+func (smt *StoringMemoryTask) GetFoundFilesInformation(taskID string) (*map[string]FoundFilesInformation, bool) {
 	chanRes := make(chan channelResSettings)
 
 	smt.channelReq <- ChanStoringMemoryTask{
@@ -466,6 +488,21 @@ func (smt *StoringMemoryTask) GetFoundFilesInformation(taskID string) (map[strin
 	info := <-chanRes
 
 	return info.FoundFilesInformation, info.IsExist
+}
+
+//GetDownloadFoundFilesInformation получить информацию со списком найденных в результате фильтрации файлах
+func (smt *StoringMemoryTask) GetDownloadFoundFilesInformation(taskID string) (*map[string]DownloadFilesInformation, bool) {
+	chanRes := make(chan channelResSettings)
+
+	smt.channelReq <- ChanStoringMemoryTask{
+		ActionType: "get download found files information",
+		TaskID:     taskID,
+		ChannelRes: chanRes,
+	}
+
+	info := <-chanRes
+
+	return info.DownloadFilesInformation, info.IsExist
 }
 
 //IncrementNumberFilesDownloaded увеличить кол-во успешно скаченных файлов на 1

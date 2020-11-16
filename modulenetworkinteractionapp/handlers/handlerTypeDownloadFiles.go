@@ -286,8 +286,6 @@ func ControllerReceivingRequestedFiles(
 				go func() {
 					<-chanHandlerStoped
 
-					fmt.Println("func 'ControllerReceivingRequestedFiles', удаляем канал для взаимодействия с обработчиком так как обработчик к этому времени завершил свою работу")
-
 					//удаляем канал для взаимодействия с обработчиком так как
 					// обработчик к этому времени завершил свою работу
 					if err := lhrf.DelHendlerReceivingFile(si.IP, msg.TaskID); err != nil {

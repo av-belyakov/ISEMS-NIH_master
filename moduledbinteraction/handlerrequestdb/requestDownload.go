@@ -51,7 +51,7 @@ func UpdateInformationAboutTask(
 	qp QueryParameters,
 	smt *configure.StoringMemoryTask) error {
 
-	const timeUpdate = 30
+	const timeUpdate = 60
 
 	ti, ok := smt.GetStoringMemoryTask(req.TaskID)
 	if !ok {
@@ -61,7 +61,7 @@ func UpdateInformationAboutTask(
 	taskStatus := ti.TaskParameter.DownloadTask.Status
 
 	//выполнять обновление информации в БД для сообщения типа 'complete' всегда,
-	// для сообщения типа 'execute' только раз 31 секунду
+	// для сообщения типа 'execute' только раз 61 секунду
 	if (taskStatus == "execute") && ((time.Now().Unix() - ti.TimeInsertDB) < timeUpdate) {
 		return nil
 	}
@@ -87,6 +87,16 @@ func UpdateInformationAboutTask(
 		}
 	}
 
+	ldfi, ok := smt.GetDownloadFoundFilesInformation(req.TaskID)
+	if !ok {
+		return nil
+	}
+
+	//очищаем отображение с файлами чтобы предотвратить утечки памяти
+	defer func(ldfi *map[string]configure.DownloadFilesInformation) {
+		ldfi = &(map[string]configure.DownloadFilesInformation{})
+	}(ldfi)
+
 	if isTaskComplete {
 		taskInfo, _ := getInfoTaskForID(qp, req.TaskID)
 
@@ -103,17 +113,29 @@ func UpdateInformationAboutTask(
 
 		}
 
-		for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
+		for fn, fi := range *ldfi {
 			if fi.IsLoaded {
 				arrayFiles = append(arrayFiles, bson.D{bson.E{Key: "elem.file_name", Value: fn}})
 			}
 		}
+
+		/*for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
+			if fi.IsLoaded {
+				arrayFiles = append(arrayFiles, bson.D{bson.E{Key: "elem.file_name", Value: fn}})
+			}
+		}*/
 	} else {
-		for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
+		for fn, fi := range *ldfi {
 			if fi.IsLoaded && (fi.TimeDownload > time.Now().Unix()-(timeUpdate*2)) {
 				arrayFiles = append(arrayFiles, bson.D{bson.E{Key: "elem.file_name", Value: fn}})
 			}
 		}
+
+		/*for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
+			if fi.IsLoaded && (fi.TimeDownload > time.Now().Unix()-(timeUpdate*2)) {
+				arrayFiles = append(arrayFiles, bson.D{bson.E{Key: "elem.file_name", Value: fn}})
+			}
+		}*/
 	}
 
 	//обновляем детальную информацию о ходе скачивания файлов

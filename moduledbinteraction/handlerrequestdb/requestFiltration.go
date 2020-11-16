@@ -235,8 +235,8 @@ func UpdateParametersFiltrationTask(
 	infoMsg.TaskIDClientAPI = taskInfo.ClientTaskID
 
 	//выполнять обновление информации в БД для сообщения типа 'complete' всегда,
-	// для сообщения типа 'execute' только раз 31 секунду
-	if (ti.Status == "execute") && ((time.Now().Unix() - taskInfo.TimeInsertDB) < 31) {
+	// для сообщения типа 'execute' только раз 61 секунду
+	if (ti.Status == "execute") && ((time.Now().Unix() - taskInfo.TimeInsertDB) < 61) {
 		return nil
 	}
 
@@ -264,8 +264,13 @@ func UpdateParametersFiltrationTask(
 		return nil
 	}
 
+	//очищаем отображение с файлами чтобы предотвратить утечки памяти
+	defer func(lffi *map[string]configure.FoundFilesInformation) {
+		lffi = &(map[string]configure.FoundFilesInformation{})
+	}(lffi)
+
 	arr := []interface{}{}
-	for n, v := range lffi {
+	for n, v := range *lffi {
 		arr = append(arr, bson.D{
 			bson.E{Key: "file_name", Value: n},
 			bson.E{Key: "file_size", Value: v.Size},
