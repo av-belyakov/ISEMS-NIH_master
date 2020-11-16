@@ -146,9 +146,10 @@ type ChanStoringMemoryTask struct {
 
 //ChannelResSettings параметры канала ответа
 type channelResSettings struct {
-	IsExist     bool
-	TaskID      string
-	Description TaskDescription
+	IsExist               bool
+	TaskID                string
+	Description           TaskDescription
+	FoundFilesInformation map[string]*FoundFilesInformation
 }
 
 //NewRepositorySMT создание нового репозитория для хранения выполняемых задач
@@ -176,21 +177,26 @@ func NewRepositorySMT() *StoringMemoryTask {
 
 				close(msg.ChannelRes)
 
-			/*case "get found files information":
-			mr := channelResSettings{
-				IsExist: false,
-				TaskID:  msg.TaskID,
-			}
+			case "get found files information":
+				mr := channelResSettings{
+					IsExist: false,
+					TaskID:  msg.TaskID,
+				}
 
-			task, ok := smt.tasks[msg.TaskID]
-			if ok {
-				mr.IsExist = true
-				mr.Description = (*task).TaskParameter.FiltrationTask.FoundFilesInformation
-			}
+				task, ok := smt.tasks[msg.TaskID]
+				if ok {
+					mr.IsExist = true
+					lffi := make(map[string]*FoundFilesInformation, len((*task).TaskParameter.FiltrationTask.FoundFilesInformation))
+					for fn, info := range (*task).TaskParameter.FiltrationTask.FoundFilesInformation {
+						lffi[fn] = info
+					}
 
-			msg.ChannelRes <- mr
+					mr.FoundFilesInformation = lffi
+				}
 
-			close(msg.ChannelRes)*/
+				msg.ChannelRes <- mr
+
+				close(msg.ChannelRes)
 
 			case "check task is exist":
 				_, ok := smt.tasks[msg.TaskID]
@@ -445,6 +451,21 @@ func (smt *StoringMemoryTask) GetStoringMemoryTask(taskID string) (TaskDescripti
 	info := <-chanRes
 
 	return info.Description, info.IsExist
+}
+
+//GetFoundFilesInformation получить информацию со списком найденных в результате фильтрации файлах
+func (smt *StoringMemoryTask) GetFoundFilesInformation(taskID string) (map[string]*FoundFilesInformation, bool) {
+	chanRes := make(chan channelResSettings)
+
+	smt.channelReq <- ChanStoringMemoryTask{
+		ActionType: "get found files information",
+		TaskID:     taskID,
+		ChannelRes: chanRes,
+	}
+
+	info := <-chanRes
+
+	return info.FoundFilesInformation, info.IsExist
 }
 
 //IncrementNumberFilesDownloaded увеличить кол-во успешно скаченных файлов на 1
