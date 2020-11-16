@@ -113,7 +113,7 @@ func sendChanStatusSourceForAPI(chanToAPI chan<- *configure.MsgBetweenCoreAndAPI
 //sendInformationFiltrationTask отправляет информационное сообщение о ходе фильтрации
 func sendInformationFiltrationTask(
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
-	taskInfo configure.TaskDescription,
+	taskInfo *configure.TaskDescription,
 	tfmffiats *configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus,
 	sourceID int,
 	taskID string) error {

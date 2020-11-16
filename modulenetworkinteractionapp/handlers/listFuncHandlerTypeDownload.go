@@ -25,7 +25,7 @@ type typeProcessingDownloadFile struct {
 	sourceID       int
 	sourceIP       string
 	taskID         string
-	taskInfo       configure.TaskDescription
+	taskInfo       *configure.TaskDescription
 	smt            *configure.StoringMemoryTask
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles
 	channels       listChannels

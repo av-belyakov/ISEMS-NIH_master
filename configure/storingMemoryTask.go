@@ -148,7 +148,7 @@ type ChanStoringMemoryTask struct {
 type channelResSettings struct {
 	IsExist                  bool
 	TaskID                   string
-	Description              TaskDescription
+	Description              *TaskDescription
 	FoundFilesInformation    *map[string]FoundFilesInformation
 	DownloadFilesInformation *map[string]DownloadFilesInformation
 }
@@ -171,7 +171,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 				task, ok := smt.tasks[msg.TaskID]
 				if ok {
 					mr.IsExist = true
-					mr.Description = (*task)
+					mr.Description = task
 				}
 
 				msg.ChannelRes <- mr
@@ -461,7 +461,7 @@ func (smt *StoringMemoryTask) TimerUpdateTaskInsertDB(taskID string) {
 }
 
 //GetStoringMemoryTask получить информацию о задаче по ее ID
-func (smt *StoringMemoryTask) GetStoringMemoryTask(taskID string) (TaskDescription, bool) {
+func (smt *StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescription, bool) {
 	chanRes := make(chan channelResSettings)
 
 	smt.channelReq <- ChanStoringMemoryTask{
