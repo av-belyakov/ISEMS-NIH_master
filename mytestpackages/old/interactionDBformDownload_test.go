@@ -282,7 +282,7 @@ var _ = Describe("InteractionDataBaseFromDownloadFiles", func() {
 				End:   time.Now().Unix(),
 			},
 			TaskParameter: configure.DescriptionTaskParameters{
-				DownloadTask: configure.DownloadTaskParameters{
+				DownloadTask: &configure.DownloadTaskParameters{
 					ID:                                  1221,
 					Status:                              "executed",
 					NumberFilesTotal:                    3,
@@ -328,7 +328,7 @@ var _ = Describe("InteractionDataBaseFromDownloadFiles", func() {
 		smt.AddStoringMemoryTask(taskID, taskDescription)
 
 		//обновляем информацию о файлах
-		smt.UpdateTaskDownloadFileIsLoaded(taskID, configure.DownloadTaskParameters{
+		smt.UpdateTaskDownloadFileIsLoaded(taskID, &configure.DownloadTaskParameters{
 			DownloadingFilesInformation: map[string]*configure.DownloadFilesInformation{
 				tf1: &configure.DownloadFilesInformation{IsLoaded: true},
 				tf2: &configure.DownloadFilesInformation{IsLoaded: true},

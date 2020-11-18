@@ -234,7 +234,8 @@ func HandlerMsgFromNI(
 			}
 
 			//отправляем информацию клиенту API
-			msgJSONInfo, err := json.Marshal(resMsgInfo)
+			msgJSONInfo, err := json.Marshal(&resMsgInfo)
+			resMsgInfo = configure.DownloadControlTypeInfo{}
 			if err != nil {
 				return err
 			}
@@ -257,7 +258,8 @@ func HandlerMsgFromNI(
 			}
 
 			//отправляем информацию клиенту API
-			msgJSONInfo, err := json.Marshal(resMsgInfo)
+			msgJSONInfo, err := json.Marshal(&resMsgInfo)
+			resMsgInfo = configure.DownloadControlTypeInfo{}
 			if err != nil {
 				return err
 			}
@@ -338,7 +340,7 @@ func HandlerMsgFromNI(
 			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
 
 			//отправляем информацию по задаче клиенту API
-			msgJSONInfo, err := json.Marshal(hdtsct.ResMsgInfo)
+			msgJSONInfo, err := json.Marshal(&hdtsct.ResMsgInfo)
 			if err != nil {
 				return err
 			}

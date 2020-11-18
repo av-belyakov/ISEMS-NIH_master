@@ -53,6 +53,11 @@ func UpdateInformationAboutTask(
 
 	const timeUpdate = 60
 
+	var ti *configure.TaskDescription
+	defer func(ti *configure.TaskDescription) {
+		ti = &configure.TaskDescription{}
+	}(ti)
+
 	ti, ok := smt.GetStoringMemoryTask(req.TaskID)
 	if !ok {
 		return fmt.Errorf("task with ID '%v' not found (DB module)", req.TaskID)

@@ -92,6 +92,10 @@ func NewListFileDescription() *ListFileDescription {
 				close(msg.channelRes)
 
 			case "del":
+				if fd, ok := lfd.list[msg.fileHex]; !ok {
+					fd.Close()
+				}
+
 				delete(lfd.list, msg.fileHex)
 
 				msg.channelRes <- channelResSettings{}
@@ -223,6 +227,9 @@ func processingDownloadFile(tpdf typeProcessingDownloadFile) {
 			PathDirStorage: tpdf.taskInfo.TaskParameter.FiltrationTask.PathStorageSource,
 		},
 	}
+	defer func(mtd configure.MsgTypeDownload) {
+		mtd = configure.MsgTypeDownload{}
+	}(mtd)
 
 	pathDirStorage := tpdf.taskInfo.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles
 
@@ -237,7 +244,7 @@ DONE:
 			Hex:  fi.Hex,
 		}
 
-		msgJSON, err := json.Marshal(mtd)
+		msgJSON, err := json.Marshal(&mtd)
 		if err != nil {
 			tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				Description: fmt.Sprint(err),
@@ -343,8 +350,7 @@ DONE:
 						//создаем дескриптор файла для последующей записи в него
 						lfd.addFileDescription(msgRes.Info.FileOptions.Hex, path.Join(pathDirStorage, msgRes.Info.FileOptions.Name))
 
-						//обновляем информацию о задаче
-						tpdf.smt.UpdateTaskDownloadAllParameters(tpdf.taskID, configure.DownloadTaskParameters{
+						dtp := configure.DownloadTaskParameters{
 							Status:                              "wait",
 							NumberFilesTotal:                    ti.TaskParameter.DownloadTask.NumberFilesTotal,
 							NumberFilesDownloaded:               ti.TaskParameter.DownloadTask.NumberFilesDownloaded,
@@ -357,7 +363,10 @@ DONE:
 								NumChunk:     msgRes.Info.FileOptions.NumChunk,
 								ChunkSize:    msgRes.Info.FileOptions.ChunkSize,
 							},
-						})
+						}
+						//обновляем информацию о задаче
+						tpdf.smt.UpdateTaskDownloadAllParameters(tpdf.taskID, &dtp)
+						dtp = configure.DownloadTaskParameters{}
 
 						msgReq.Info.Command = "ready to receive file"
 						msgJSON, err := json.Marshal(msgReq)
@@ -431,7 +440,6 @@ DONE:
 
 			/* бинарный тип сообщения */
 			if msg.MessageType == 2 {
-				//fileIsLoaded, fileLoadedError, err
 				writeBinaryFileResult := writingBinaryFile(parametersWritingBinaryFile{
 					SourceID:   tpdf.sourceID,
 					TaskID:     tpdf.taskID,
@@ -484,7 +492,7 @@ DONE:
 						})
 					}
 
-					msgJSON, err := json.Marshal(msgRes)
+					msgJSON, err := json.Marshal(&msgRes)
 					if err != nil {
 						tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 							Description: fmt.Sprint(err),
@@ -538,17 +546,26 @@ type typeWriteBinaryFileRes struct {
 }
 
 //writingBinaryFile осуществляет запись бинарного файла
-func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes {
+func writingBinaryFile(pwbf parametersWritingBinaryFile) *typeWriteBinaryFileRes {
 	twbfr := typeWriteBinaryFileRes{}
 
+	/*  очищаем для отладки  */
+	var fileHex string
+	var fi configure.DetailedFileInformation
+
+	func(fileHex *string, fi *configure.DetailedFileInformation) {
+		(*fileHex) = ""
+		(*fi) = configure.DetailedFileInformation{}
+	}(&fileHex, &fi)
+
 	//получаем хеш принимаемого файла
-	fileHex := string((*pwbf.Data)[35:67])
+	fileHex = string((*pwbf.Data)[35:67])
 
 	w, err := pwbf.LFD.getFileDescription(fileHex)
 	if err != nil {
 		twbfr.err = err
 
-		return twbfr
+		return &twbfr
 	}
 
 	//запись принятых байт
@@ -556,16 +573,16 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes 
 	if err != nil {
 		twbfr.err = err
 
-		return twbfr
+		return &twbfr
 	}
 
 	ti, ok := pwbf.SMT.GetStoringMemoryTask(pwbf.TaskID)
 	if !ok {
 		twbfr.err = fmt.Errorf("task with ID %v not found", pwbf.TaskID)
-		return twbfr
+		return &twbfr
 	}
 
-	fi := ti.TaskParameter.DownloadTask.FileInformation
+	fi = ti.TaskParameter.DownloadTask.FileInformation
 
 	writeByte := fi.AcceptedSizeByte + int64(numWriteByte)
 
@@ -591,8 +608,7 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes 
 		pwbf.ChanInCore <- &msgToCore
 	}
 
-	//обновляем информацию о принимаемом файле
-	pwbf.SMT.UpdateTaskDownloadAllParameters(pwbf.TaskID, configure.DownloadTaskParameters{
+	dtp := configure.DownloadTaskParameters{
 		Status:                              "execute",
 		NumberFilesTotal:                    ti.TaskParameter.DownloadTask.NumberFilesTotal,
 		NumberFilesDownloaded:               ti.TaskParameter.DownloadTask.NumberFilesDownloaded,
@@ -607,14 +623,14 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes 
 			NumChunk:            fi.NumChunk,
 			NumAcceptedChunk:    numAcceptedChunk,
 		},
-	})
+	}
+	//обновляем информацию о принимаемом файле
+	pwbf.SMT.UpdateTaskDownloadAllParameters(pwbf.TaskID, &dtp)
+	dtp = configure.DownloadTaskParameters{}
 
 	//если все кусочки были переданы (то есть файл считается полностью загруженым)
 	if fi.NumChunk == numAcceptedChunk {
-		//закрываем дескриптор файла
-		w.Close()
-
-		//удаляем дескриптор файла
+		//закрываем и удаляем дескриптор файла
 		pwbf.LFD.delFileDescription(fi.Hex)
 
 		//увеличиваем количество принятых файлов на 1
@@ -639,12 +655,12 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes 
 
 			twbfr.fileLoadedError = true
 
-			return twbfr
+			return &twbfr
 		}
 
 		//отмечаем файл как успешно принятый
 		newFileInfo.IsLoaded = true
-		pwbf.SMT.UpdateTaskDownloadFileIsLoaded(pwbf.TaskID, configure.DownloadTaskParameters{
+		pwbf.SMT.UpdateTaskDownloadFileIsLoaded(pwbf.TaskID, &configure.DownloadTaskParameters{
 			DownloadingFilesInformation: map[string]*configure.DownloadFilesInformation{
 				fi.Name: &newFileInfo,
 			},
@@ -653,10 +669,10 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) typeWriteBinaryFileRes 
 		pwbf.ChanInCore <- &msgToCore
 
 		twbfr.fileIsLoaded = true
-		return twbfr
+		return &twbfr
 	}
 
-	return twbfr
+	return &twbfr
 }
 
 func checkDownloadedFile(pathFile, fileHex string, fileSize int64) bool {

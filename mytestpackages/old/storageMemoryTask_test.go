@@ -33,7 +33,7 @@ var _ = Describe("StorageMemoryTask", func() {
 			End:   time.Now().Unix(),
 		},
 		TaskParameter: configure.DescriptionTaskParameters{
-			FiltrationTask: configure.FiltrationTaskParameters{
+			FiltrationTask: &configure.FiltrationTaskParameters{
 				ID:     190,
 				Status: "wait",
 			},
@@ -53,7 +53,7 @@ var _ = Describe("StorageMemoryTask", func() {
 	Context("Тест 2: Делаем ПЕРВЫЙ update параметров и проверяем их наличие", func() {
 		It("Должны существовать некоторые параметры заданные пользователем", func() {
 			//делаем update параметров фильтрации
-			smt.UpdateTaskFiltrationAllParameters(taskID, configure.FiltrationTaskParameters{
+			smt.UpdateTaskFiltrationAllParameters(taskID, &configure.FiltrationTaskParameters{
 				ID:                              190,
 				Status:                          "execute",
 				NumberFilesMeetFilterParameters: 231,
@@ -81,7 +81,7 @@ var _ = Describe("StorageMemoryTask", func() {
 	Context("Тест 3: Формируем список файлов найденных по результатам фильтрации и проверяем их наличие", func() {
 		It("Должнен быть сформирован список файлов найденных по результатам фильтрации", func() {
 			//делаем update параметров фильтрации
-			smt.UpdateTaskFiltrationAllParameters(taskID, configure.FiltrationTaskParameters{
+			smt.UpdateTaskFiltrationAllParameters(taskID, &configure.FiltrationTaskParameters{
 				ID:                              190,
 				Status:                          "execute",
 				NumberFilesMeetFilterParameters: 231,
@@ -100,7 +100,7 @@ var _ = Describe("StorageMemoryTask", func() {
 				},
 			})
 
-			smt.UpdateTaskFiltrationAllParameters(taskID, configure.FiltrationTaskParameters{
+			smt.UpdateTaskFiltrationAllParameters(taskID, &configure.FiltrationTaskParameters{
 				ID:                              190,
 				Status:                          "execute",
 				NumberFilesMeetFilterParameters: 231,
@@ -119,7 +119,7 @@ var _ = Describe("StorageMemoryTask", func() {
 				},
 			})
 
-			smt.UpdateTaskFiltrationAllParameters(taskID, configure.FiltrationTaskParameters{
+			smt.UpdateTaskFiltrationAllParameters(taskID, &configure.FiltrationTaskParameters{
 				ID:                              190,
 				Status:                          "execute",
 				NumberFilesMeetFilterParameters: 231,
@@ -165,7 +165,7 @@ var _ = Describe("StorageMemoryTask", func() {
 				},
 			}
 
-			smt.UpdateTaskFiltrationAllParameters(taskID, configure.FiltrationTaskParameters{
+			smt.UpdateTaskFiltrationAllParameters(taskID, &configure.FiltrationTaskParameters{
 				ID:                              190,
 				Status:                          "execute",
 				NumberFilesMeetFilterParameters: 231,
@@ -221,7 +221,7 @@ var _ = Describe("StorageMemoryTask", func() {
 					End:   time.Now().Unix(),
 				},
 				TaskParameter: configure.DescriptionTaskParameters{
-					DownloadTask: configure.DownloadTaskParameters{
+					DownloadTask: &configure.DownloadTaskParameters{
 						ID:                                  3031,
 						Status:                              "wait",
 						NumberFilesTotal:                    len(dfl),
@@ -241,7 +241,7 @@ var _ = Describe("StorageMemoryTask", func() {
 
 	Context("Тест 6: Проверка изменеия информации по задаче скачивания файлов", func() {
 		It("Должна быть изменена информация по скачиванию файлов", func() {
-			smt.UpdateTaskDownloadAllParameters(tasID, configure.DownloadTaskParameters{
+			smt.UpdateTaskDownloadAllParameters(tasID, &configure.DownloadTaskParameters{
 				Status:                              "execute",
 				NumberFilesTotal:                    len(dfl),
 				NumberFilesDownloaded:               1,
@@ -269,7 +269,7 @@ var _ = Describe("StorageMemoryTask", func() {
 
 	Context("Тест 7: Проверка изменеия информации по задаче скачивания файлов", func() {
 		It("Файл должен быть отмечен как скаченный", func() {
-			smt.UpdateTaskDownloadAllParameters(tasID, configure.DownloadTaskParameters{
+			smt.UpdateTaskDownloadAllParameters(tasID, &configure.DownloadTaskParameters{
 				Status:                              "execute",
 				NumberFilesTotal:                    len(dfl),
 				NumberFilesDownloaded:               1,
@@ -298,7 +298,7 @@ var _ = Describe("StorageMemoryTask", func() {
 		It("Статус файла с заданными именами должны быть изменены на true", func() {
 			//"1438535410_2015_08_02____20_10_13_23267.tdp" "1438535410_2015_08_02____20_10_14_724263.tdp"
 
-			smt.UpdateTaskDownloadFileIsLoaded(tasID, configure.DownloadTaskParameters{
+			smt.UpdateTaskDownloadFileIsLoaded(tasID, &configure.DownloadTaskParameters{
 				DownloadingFilesInformation: map[string]*configure.DownloadFilesInformation{
 					"File_name_3": &configure.DownloadFilesInformation{},
 					"File_name_5": &configure.DownloadFilesInformation{},

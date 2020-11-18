@@ -132,7 +132,7 @@ func Routing(trc TypeRoutingCore) {
 						End:   time.Now().Unix(),
 					},
 					TaskParameter: configure.DescriptionTaskParameters{
-						FiltrationTask: configure.FiltrationTaskParameters{
+						FiltrationTask: &configure.FiltrationTaskParameters{
 							ID:     msg.SourceID,
 							Status: "wait",
 						},
@@ -217,10 +217,10 @@ func Routing(trc TypeRoutingCore) {
 						End:   time.Now().Unix(),
 					},
 					TaskParameter: configure.DescriptionTaskParameters{
-						FiltrationTask: configure.FiltrationTaskParameters{
+						FiltrationTask: &configure.FiltrationTaskParameters{
 							PathStorageSource: qti.TaskParameters.PathDirectoryForFilteredFiles,
 						},
-						DownloadTask: configure.DownloadTaskParameters{
+						DownloadTask: &configure.DownloadTaskParameters{
 							ID:                                  msg.SourceID,
 							Status:                              "wait",
 							NumberFilesTotal:                    len(qti.TaskParameters.ConfirmedListFiles),

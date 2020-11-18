@@ -24,20 +24,19 @@ import (
 type SettingsHTTPServer struct {
 	Host, Port, Token string
 	SourceList        *configure.InformationSourcesList
+	saveMessageApp    *savemessageapp.PathDirLocationLogFiles
 }
 
 //SettingsWssServer параметры для взаимодействия с wssServer
 type SettingsWssServer struct {
-	SourceList *configure.InformationSourcesList
-	COut       chan<- [2]string
-	CwtReq     chan<- configure.MsgWsTransmission
+	SourceList     *configure.InformationSourcesList
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles
+	COut           chan<- [2]string
+	CwtReq         chan<- configure.MsgWsTransmission
 }
 
 //HandlerRequest обработчик HTTPS запросов
 func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWriter, req *http.Request) {
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
-
 	bodyHTTPResponseError := []byte(`<!DOCTYPE html>
 		<html lang="en"
 		<head><meta charset="utf-8"><title>Server Nginx</title></head>
@@ -72,7 +71,7 @@ func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWrit
 		w.WriteHeader(400)
 		w.Write(bodyHTTPResponseError)
 
-		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		settingsHTTPServer.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: fmt.Sprintf("missing or incorrect identification token (сlient ipaddress %v), module 'wssServerNetworkInteraction'", req.RemoteAddr),
 			FuncName:    "HandlerRequest",
 		})
@@ -89,9 +88,6 @@ func (settingsHTTPServer *SettingsHTTPServer) HandlerRequest(w http.ResponseWrit
 
 //ServerWss webSocket запросов
 func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request) {
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
-
 	funcName := "ServerWss"
 	remoteIP := strings.Split(req.RemoteAddr, ":")[0]
 
@@ -99,7 +95,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	errMsg := fmt.Sprintf("access for the user with ipaddress %v is prohibited", remoteIP)
 	if !idIsExist {
 		w.WriteHeader(401)
-		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		sws.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: errMsg,
 			FuncName:    funcName,
 		})
@@ -110,7 +106,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 	//проверяем разрешено ли данному ip соединение с сервером wss
 	if !sws.SourceList.GetAccessIsAllowed(remoteIP) {
 		w.WriteHeader(401)
-		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		sws.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: errMsg,
 			FuncName:    funcName,
 		})
@@ -137,7 +133,8 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 		if c != nil {
 			c.Close()
 		}
-		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+
+		sws.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: fmt.Sprint(err),
 			FuncName:    funcName,
 		})
@@ -163,7 +160,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 
 		msgType, message, err := c.ReadMessage()
 		if err != nil {
-			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			sws.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				Description: fmt.Sprint(err),
 				FuncName:    funcName,
 			})
@@ -184,23 +181,23 @@ func WssServerNetworkInteraction(
 	cOut chan<- [2]string,
 	appConf *configure.AppConfig,
 	isl *configure.InformationSourcesList,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	cwtReq chan<- configure.MsgWsTransmission) {
-
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
 
 	port := strconv.Itoa(appConf.ServerHTTPS.Port)
 
 	settingsHTTPServer := SettingsHTTPServer{
-		Host:       appConf.ServerHTTPS.Host,
-		Port:       port,
-		SourceList: isl,
+		Host:           appConf.ServerHTTPS.Host,
+		Port:           port,
+		SourceList:     isl,
+		saveMessageApp: saveMessageApp,
 	}
 
 	settingsWssServer := SettingsWssServer{
-		CwtReq:     cwtReq,
-		SourceList: isl,
-		COut:       cOut,
+		CwtReq:         cwtReq,
+		SourceList:     isl,
+		saveMessageApp: saveMessageApp,
+		COut:           cOut,
 	}
 
 	/* инициализируем HTTPS сервер */

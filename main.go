@@ -24,6 +24,7 @@ import (
 )
 
 var appConfig configure.AppConfig
+var saveMessageApp *savemessageapp.PathDirLocationLogFiles
 var mongoDBConnect configure.MongoDBConnect
 
 //ReadConfig читает конфигурационный файл и сохраняет данные в appConfig
@@ -101,10 +102,14 @@ func connectToDB(ctx context.Context, appc *configure.AppConfig) (*mongo.Client,
 }
 
 func init() {
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
-
 	var err error
+
+	//инициализируем функцию конструктор для записи лог-файлов
+	saveMessageApp, err = savemessageapp.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 1000*time.Second)
 	defer cancel()
 
@@ -168,7 +173,6 @@ func init() {
 func main() {
 	defer func() {
 		if err := recover(); err != nil {
-			saveMessageApp := savemessageapp.New()
 			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				TypeMessage: "error",
 				Description: fmt.Sprintf("STOP 'main' function, Error:'%v'", err),
@@ -178,8 +182,6 @@ func main() {
 	}()
 
 	log.Printf("START application ISEMS-NIH_master version %q\n", appConfig.VersionApp)
-
-	saveMessageApp := savemessageapp.New()
 
 	//запуск ядра приложения
 	coreapp.CoreApp(&appConfig, &mongoDBConnect, saveMessageApp)

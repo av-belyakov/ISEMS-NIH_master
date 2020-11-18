@@ -50,9 +50,10 @@ type handlerRecivingParameters struct {
 
 //NewListHandlerReceivingFile создание нового репозитория для хранения каналов взаимодействия с обработчиками записи файлов
 func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
-	thrf := TypeHandlerReceivingFile{}
-	thrf.ListHandler = listHandlerReceivingFile{}
-	thrf.ChannelCommunicationReq = make(chan typeChannelCommunication)
+	thrf := TypeHandlerReceivingFile{
+		ListHandler:             listHandlerReceivingFile{},
+		ChannelCommunicationReq: make(chan typeChannelCommunication),
+	}
 
 	go func() {
 		for msg := range thrf.ChannelCommunicationReq {
@@ -177,7 +178,7 @@ func ControllerReceivingRequestedFiles(
 	handlerTaskWarning := func(taskID string, msg configure.MsgBetweenCoreAndNI) {
 		chanInCore <- &msg
 
-		smt.UpdateTaskDownloadAllParameters(taskID, configure.DownloadTaskParameters{Status: "refused"})
+		smt.UpdateTaskDownloadAllParameters(taskID, &configure.DownloadTaskParameters{Status: "refused"})
 
 		//снимаем отслеживание выполнения задачи
 		chanInCore <- &configure.MsgBetweenCoreAndNI{
@@ -265,6 +266,7 @@ func ControllerReceivingRequestedFiles(
 			switch msg.Command {
 			//начало выполнения задачи (запрос из Ядра)
 			case "give my the files":
+
 				//запуск обработчика задачи по скачиванию файлов
 				channel, chanHandlerStoped, err := processorReceivingFiles(chanInCore, si.IP, msg.TaskID, smt, saveMessageApp, cwtRes)
 				if err != nil {

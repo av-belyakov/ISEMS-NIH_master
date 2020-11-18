@@ -52,7 +52,8 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 	}
 
 	//обновляем информацию о выполняемой задаче в памяти приложения
-	pprmtf.SMT.UpdateTaskFiltrationAllParameters(resMsg.Info.TaskID, ftp)
+	pprmtf.SMT.UpdateTaskFiltrationAllParameters(resMsg.Info.TaskID, &ftp)
+	ftp = configure.FiltrationTaskParameters{}
 
 	msgCompleteTask := configure.MsgBetweenCoreAndNI{
 		TaskID:  resMsg.Info.TaskID,

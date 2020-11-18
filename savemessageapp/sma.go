@@ -17,11 +17,21 @@ import (
 
 //PathDirLocationLogFiles место расположения лог-файлов приложения
 type PathDirLocationLogFiles struct {
-	pathLogFiles string
+	pathLogFiles     string
+	fileNameType     map[string]string
+	fileDescriptor   map[string]*os.File
+	logDirName       string
+	logFileSize      int64
+	chanWriteMessage chan chanReqSettings
 }
 
-//mothPathConfig путь до директории с лог-файлами
-type mothPathConfig struct {
+//chanReqSettings канал для записи информационных сообщений в лог файлы
+type chanReqSettings struct {
+	typeLogMessage *TypeLogMessage
+}
+
+//configPathConfig путь до директории с лог-файлами
+type configPath struct {
 	PathLogFiles string `json:"pathLogFiles"`
 }
 
@@ -31,36 +41,150 @@ type TypeLogMessage struct {
 }
 
 //New конструктор для огранизации записи лог-файлов
-func New() *PathDirLocationLogFiles {
+func New() (*PathDirLocationLogFiles, error) {
+	var cp configPath
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var mpc mothPathConfig
-
 	//читаем основной конфигурационный файл в формате JSON
-	err = readMainConfig(path.Join(dir, "config.json"), &mpc)
+	err = readMainConfig(path.Join(dir, "config.json"), &cp)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
-	var pathDirLocationLogFiles PathDirLocationLogFiles
-	pathDirLocationLogFiles.pathLogFiles = mpc.PathLogFiles
+	pdllf := PathDirLocationLogFiles{
+		pathLogFiles: cp.PathLogFiles,
+		fileNameType: map[string]string{
+			"error":    "error_message.log",
+			"info":     "info_message.log",
+			"requests": "api_client_requests.log",
+		},
+		fileDescriptor:   make(map[string]*os.File),
+		logDirName:       "isems-nih_master_logs",
+		logFileSize:      5000000,
+		chanWriteMessage: make(chan chanReqSettings),
+	}
 
-	return &pathDirLocationLogFiles
+	if err = createLogsDirectory(pdllf.pathLogFiles, pdllf.logDirName); err != nil {
+		return &pdllf, err
+	}
+
+	for n := range pdllf.fileNameType {
+		fd, err := os.OpenFile(path.Join(pdllf.pathLogFiles, pdllf.logDirName, pdllf.fileNameType[n]), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			return &pdllf, err
+		}
+		pdllf.fileDescriptor[n] = fd
+	}
+
+	go func() {
+		defer func() {
+			for n := range pdllf.fileDescriptor {
+				pdllf.fileDescriptor[n].Close()
+			}
+		}()
+
+		for msg := range pdllf.chanWriteMessage {
+			pdllf.writeMessgae(msg.typeLogMessage)
+
+			fi, _ := pdllf.fileDescriptor[msg.typeLogMessage.TypeMessage].Stat()
+			if fi.Size() > pdllf.logFileSize {
+				pdllf.compressFile(msg.typeLogMessage.TypeMessage)
+
+				pdllf.fileDescriptor[msg.typeLogMessage.TypeMessage].Close()
+				delete(pdllf.fileDescriptor, msg.typeLogMessage.TypeMessage)
+				_ = os.Remove(path.Join(pdllf.pathLogFiles, pdllf.logDirName, pdllf.fileNameType[msg.typeLogMessage.TypeMessage]))
+
+				fd, _ := os.OpenFile(path.Join(pdllf.pathLogFiles, pdllf.logDirName, pdllf.fileNameType[msg.typeLogMessage.TypeMessage]), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+				pdllf.fileDescriptor[msg.typeLogMessage.TypeMessage] = fd
+			}
+		}
+	}()
+
+	return &pdllf, nil
+}
+
+//LogMessage сохраняет в лог файлах сообщения об ошибках или информационные сообщения
+func (pdllf *PathDirLocationLogFiles) LogMessage(tlm TypeLogMessage) {
+	typeMessage := tlm.TypeMessage
+	if typeMessage == "" && tlm.Description == "" {
+		return
+	}
+
+	if typeMessage == "" {
+		typeMessage = "error"
+	}
+
+	funcName := ""
+	if tlm.FuncName != "" {
+		funcName = fmt.Sprintf(" (function '%s')", tlm.FuncName)
+	}
+
+	pdllf.chanWriteMessage <- chanReqSettings{
+		typeLogMessage: &TypeLogMessage{
+			FuncName:    funcName,
+			TypeMessage: typeMessage,
+			Description: tlm.Description,
+		},
+	}
+}
+
+func (pdllf *PathDirLocationLogFiles) writeMessgae(tlm *TypeLogMessage) {
+	var err error
+
+	timeNowString := time.Now().String()
+	tns := strings.Split(timeNowString, " ")
+	strMsg := fmt.Sprintf("%s %s [%s %s] - %s%s\n", tns[0], tns[1], tns[2], tns[3], tlm.Description, tlm.FuncName)
+
+	fd := pdllf.fileDescriptor[tlm.TypeMessage]
+	writer := bufio.NewWriter(fd)
+	defer func() {
+		if err == nil {
+			err = writer.Flush()
+		}
+	}()
+
+	if _, err = writer.WriteString(strMsg); err != nil {
+		log.Printf("func 'LogMessage' ERROR: '%v'\n", err)
+	}
+}
+
+func (pdllf *PathDirLocationLogFiles) compressFile(tm string) {
+	timeNowUnix := time.Now().Unix()
+	fn := strconv.FormatInt(timeNowUnix, 10) + "_" + strings.Replace(pdllf.fileNameType[tm], ".log", ".gz", -1)
+
+	fileIn, err := os.Create(path.Join(pdllf.pathLogFiles, pdllf.logDirName, fn))
+	if err != nil {
+		return
+	}
+	defer fileIn.Close()
+
+	zw := gzip.NewWriter(fileIn)
+	zw.Name = fn
+
+	fileOut, err := ioutil.ReadFile(path.Join(pdllf.pathLogFiles, pdllf.logDirName, pdllf.fileNameType[tm]))
+	if err != nil {
+		return
+	}
+
+	if _, err := zw.Write(fileOut); err != nil {
+		return
+	}
+
+	_ = zw.Close()
 }
 
 //ReadMainConfig читает основной конфигурационный файл и сохраняет данные
-func readMainConfig(fileName string, mpc *mothPathConfig) error {
+func readMainConfig(fileName string, cp *configPath) error {
 	var err error
 	row, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(row, &mpc)
+	err = json.Unmarshal(row, &cp)
 	if err != nil {
 		return err
 	}
@@ -86,114 +210,4 @@ func createLogsDirectory(pathLogFiles, directoryName string) error {
 	}
 
 	return nil
-}
-
-func compressLogFile(filePath string, fileName string, fileSize int64) error {
-	filePathName := path.Join(filePath, fileName)
-
-	fd, err := os.Open(filePathName)
-	if err != nil {
-		return err
-	}
-	defer fd.Close()
-
-	fileInfo, err := fd.Stat()
-	if err != nil {
-		return err
-	}
-
-	if fileInfo.Size() < fileSize {
-		return nil
-	}
-
-	timeNowUnix := time.Now().Unix()
-	newFileName := strconv.FormatInt(timeNowUnix, 10) + "_" + strings.Replace(fileName, ".log", ".gz", -1)
-
-	fileIn, err := os.Create(filePathName)
-	if err != nil {
-		return err
-	}
-	defer fileIn.Close()
-
-	zw := gzip.NewWriter(fileIn)
-	zw.Name = newFileName
-
-	fileOut, err := ioutil.ReadFile(filePathName)
-	if err != nil {
-		return err
-	}
-
-	if _, err := zw.Write(fileOut); err != nil {
-		return err
-	}
-
-	if err := zw.Close(); err != nil {
-		return err
-	}
-
-	_ = os.Remove(filePathName)
-
-	return nil
-}
-
-//LogMessage сохраняет в лог файлах сообщения об ошибках или информационные сообщения
-func (pdllf *PathDirLocationLogFiles) LogMessage(tlm TypeLogMessage) {
-	var err error
-	const logDirName = "isems-nih_master_logs"
-	const logFileSize = 5000000
-
-	fileNameTypeMessage := map[string]string{
-		"error":    "error_message.log",
-		"info":     "info_message.log",
-		"requests": "api_client_requests.log",
-	}
-
-	if tlm.TypeMessage == "" && tlm.Description == "" {
-		return
-	}
-
-	go func() {
-		typeMessage := tlm.TypeMessage
-		if typeMessage == "" {
-			typeMessage = "error"
-		}
-
-		funcName := ""
-		if tlm.FuncName != "" {
-			funcName = fmt.Sprintf(" (function '%s')", tlm.FuncName)
-		}
-
-		if err = createLogsDirectory(pdllf.pathLogFiles, logDirName); err != nil {
-			log.Printf("func 'LogMessage' ERROR: '%v'\n", err)
-
-			return
-		}
-
-		_ = compressLogFile(path.Join(pdllf.pathLogFiles, logDirName), fileNameTypeMessage[typeMessage], logFileSize)
-
-		var fileOut *os.File
-		fileOut, err = os.OpenFile(path.Join(pdllf.pathLogFiles, logDirName, fileNameTypeMessage[typeMessage]), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-		if err != nil {
-			log.Printf("func 'LogMessage' ERROR: '%v'\n", err)
-
-			return
-		}
-		defer fileOut.Close()
-
-		timeNowString := time.Now().String()
-		tns := strings.Split(timeNowString, " ")
-
-		writer := bufio.NewWriter(fileOut)
-		defer func() {
-			if err == nil {
-				err = writer.Flush()
-			}
-		}()
-
-		strMsg := fmt.Sprintf("%s %s [%s %s] - %s%s\n", tns[0], tns[1], tns[2], tns[3], tlm.Description, funcName)
-
-		if _, err = writer.WriteString(strMsg); err != nil {
-			log.Printf("func 'LogMessage' ERROR: '%v'\n", err)
-		}
-	}()
 }

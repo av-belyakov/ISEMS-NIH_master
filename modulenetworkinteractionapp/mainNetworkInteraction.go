@@ -71,10 +71,10 @@ func MainNetworkInteraction(
 	go RouteWssConnectionResponse(cwtRes, chanInCore, chanInCRRF, isl, smt, saveMessageApp, cwtReq)
 
 	//запуск модуля wssServerNI
-	go WssServerNetworkInteraction(chansStatSource["outWssModuleServer"], appConf, isl, cwtReq)
+	go WssServerNetworkInteraction(chansStatSource["outWssModuleServer"], appConf, isl, saveMessageApp, cwtReq)
 
 	//запуск модуля wssClientNI
-	go WssClientNetworkInteraction(chansStatSource["outWssModuleClient"], appConf, isl, cwtReq)
+	go WssClientNetworkInteraction(chansStatSource["outWssModuleClient"], appConf, isl, saveMessageApp, cwtReq)
 
 	go func() {
 		for msg := range cwtRes {

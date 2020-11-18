@@ -51,8 +51,8 @@ type TimeIntervalTaskExecution struct {
 
 //DescriptionTaskParameters описание параметров задачи
 type DescriptionTaskParameters struct {
-	FiltrationTask FiltrationTaskParameters
-	DownloadTask   DownloadTaskParameters
+	FiltrationTask *FiltrationTaskParameters
+	DownloadTask   *DownloadTaskParameters
 }
 
 //DownloadTaskParameters параметры задачи по скачиванию файлов
@@ -155,9 +155,23 @@ type channelResSettings struct {
 
 //NewRepositorySMT создание нового репозитория для хранения выполняемых задач
 func NewRepositorySMT() *StoringMemoryTask {
-	smt := StoringMemoryTask{}
-	smt.tasks = map[string]*TaskDescription{}
-	smt.channelReq = make(chan ChanStoringMemoryTask)
+	smt := StoringMemoryTask{
+		tasks:      map[string]*TaskDescription{},
+		channelReq: make(chan ChanStoringMemoryTask),
+	}
+
+	/*
+		//------------ Memory Dump (START) ---------------
+		const logFileName = "memdumpfile"
+
+		fl, err := os.Create(logFileName)
+		if err != nil {
+			fmt.Printf("Create file %v, error: %v\n", logFileName, fmt.Sprint(err))
+		}
+		defer fl.Close()
+		pprof.Lookup("heap").WriteTo(fl, 0)
+		//------------ Memory Dump (END) ---------------
+	*/
 
 	go func() {
 		for msg := range smt.channelReq {
@@ -184,8 +198,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 					TaskID:  msg.TaskID,
 				}
 
-				task, ok := smt.tasks[msg.TaskID]
-				if ok {
+				if task, ok := smt.tasks[msg.TaskID]; ok {
 					mr.IsExist = true
 					lffi := make(map[string]FoundFilesInformation, len((*task).TaskParameter.FiltrationTask.FoundFilesInformation))
 					for fn, info := range (*task).TaskParameter.FiltrationTask.FoundFilesInformation {
@@ -205,8 +218,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 					TaskID:  msg.TaskID,
 				}
 
-				task, ok := smt.tasks[msg.TaskID]
-				if ok {
+				if task, ok := smt.tasks[msg.TaskID]; ok {
 					mr.IsExist = true
 					lffi := make(map[string]DownloadFilesInformation, len((*task).TaskParameter.DownloadTask.DownloadingFilesInformation))
 					for fn, info := range (*task).TaskParameter.DownloadTask.DownloadingFilesInformation {
@@ -236,7 +248,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 				smt.tasks[msg.TaskID].TaskParameter.FiltrationTask.FoundFilesInformation = map[string]*FoundFilesInformation{}
 
 				if msg.Description.TaskParameter.DownloadTask.ID == 0 {
-					smt.tasks[msg.TaskID].TaskParameter.DownloadTask = DownloadTaskParameters{
+					smt.tasks[msg.TaskID].TaskParameter.DownloadTask = &DownloadTaskParameters{
 						Status: "not executed",
 					}
 				} else {
@@ -252,7 +264,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 			case "recover":
 				smt.tasks[msg.TaskID] = msg.Description
 				smt.tasks[msg.TaskID].TaskParameter.FiltrationTask.FoundFilesInformation = map[string]*FoundFilesInformation{}
-				smt.tasks[msg.TaskID].TaskParameter.DownloadTask = DownloadTaskParameters{
+				smt.tasks[msg.TaskID].TaskParameter.DownloadTask = &DownloadTaskParameters{
 					Status: "not executed",
 				}
 
@@ -289,9 +301,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 					smt.tasks[msg.TaskID].TimeUpdate = time.Now().Unix()
 				}
 
-				msg.ChannelRes <- channelResSettings{
-					TaskID: msg.TaskID,
-				}
+				msg.ChannelRes <- channelResSettings{}
 
 				close(msg.ChannelRes)
 
@@ -300,9 +310,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 					smt.tasks[msg.TaskID].TimeInsertDB = time.Now().Unix()
 				}
 
-				msg.ChannelRes <- channelResSettings{
-					TaskID: msg.TaskID,
-				}
+				msg.ChannelRes <- channelResSettings{}
 
 				close(msg.ChannelRes)
 
@@ -312,27 +320,21 @@ func NewRepositorySMT() *StoringMemoryTask {
 			case "update task filtration all parameters":
 				smt.updateTaskFiltrationAllParameters(msg.TaskID, msg.Description)
 
-				msg.ChannelRes <- channelResSettings{
-					TaskID: msg.TaskID,
-				}
+				msg.ChannelRes <- channelResSettings{}
 
 				close(msg.ChannelRes)
 
 			case "update task download all parameters":
 				smt.updateTaskDownloadAllParameters(msg.TaskID, msg.Description)
 
-				msg.ChannelRes <- channelResSettings{
-					TaskID: msg.TaskID,
-				}
+				msg.ChannelRes <- channelResSettings{}
 
 				close(msg.ChannelRes)
 
 			case "update task download file is loaded":
 				smt.updateTaskDownloadFileIsLoaded(msg.TaskID, msg.Description)
 
-				msg.ChannelRes <- channelResSettings{
-					TaskID: msg.TaskID,
-				}
+				msg.ChannelRes <- channelResSettings{}
 
 				close(msg.ChannelRes)
 
@@ -341,9 +343,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 					smt.tasks[msg.TaskID].TaskParameter.DownloadTask.NumberFilesDownloaded = ti.TaskParameter.DownloadTask.NumberFilesDownloaded + 1
 				}
 
-				msg.ChannelRes <- channelResSettings{
-					TaskID: msg.TaskID,
-				}
+				msg.ChannelRes <- channelResSettings{}
 
 				close(msg.ChannelRes)
 
@@ -352,9 +352,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 					smt.tasks[msg.TaskID].TaskParameter.DownloadTask.NumberFilesDownloadedError = ti.TaskParameter.DownloadTask.NumberFilesDownloadedError + 1
 				}
 
-				msg.ChannelRes <- channelResSettings{
-					TaskID: msg.TaskID,
-				}
+				msg.ChannelRes <- channelResSettings{}
 
 				close(msg.ChannelRes)
 
@@ -532,7 +530,7 @@ func (smt *StoringMemoryTask) IncrementNumberFilesDownloadedError(taskID string)
 }
 
 //UpdateTaskFiltrationAllParameters обновление параметров выполнения задачи по фильтрации
-func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, ftp FiltrationTaskParameters) {
+func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, ftp *FiltrationTaskParameters) {
 	chanRes := make(chan channelResSettings)
 
 	smt.channelReq <- ChanStoringMemoryTask{
@@ -550,7 +548,7 @@ func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, f
 }
 
 //UpdateTaskDownloadAllParameters обновление параметров скачивания файлов
-func (smt *StoringMemoryTask) UpdateTaskDownloadAllParameters(taskID string, dtp DownloadTaskParameters) {
+func (smt *StoringMemoryTask) UpdateTaskDownloadAllParameters(taskID string, dtp *DownloadTaskParameters) {
 	chanRes := make(chan channelResSettings)
 
 	smt.channelReq <- ChanStoringMemoryTask{
@@ -568,7 +566,7 @@ func (smt *StoringMemoryTask) UpdateTaskDownloadAllParameters(taskID string, dtp
 }
 
 //UpdateTaskDownloadFileIsLoaded обновление параметра - файл загружен
-func (smt *StoringMemoryTask) UpdateTaskDownloadFileIsLoaded(taskID string, dtp DownloadTaskParameters) {
+func (smt *StoringMemoryTask) UpdateTaskDownloadFileIsLoaded(taskID string, dtp *DownloadTaskParameters) {
 	chanRes := make(chan channelResSettings)
 
 	smt.channelReq <- ChanStoringMemoryTask{

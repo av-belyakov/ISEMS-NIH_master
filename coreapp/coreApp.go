@@ -10,10 +10,39 @@ import (
 	"ISEMS-NIH_master/moduledbinteraction"
 	"ISEMS-NIH_master/modulenetworkinteractionapp"
 	"ISEMS-NIH_master/savemessageapp"
+	"fmt"
+	"os"
+	"runtime/pprof"
+	"strconv"
+	"time"
 )
 
 //CoreApp запускает все обработчики уровня ядра
 func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConnect, saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
+
+	//------------------------------------------------------
+	ticker := time.NewTicker(time.Duration(4) * time.Second)
+
+	num := 0
+	go func() {
+		for range ticker.C {
+			s := strconv.Itoa(num)
+			logFileName := fmt.Sprintf("memdumpfile_%v.memdump", s)
+
+			fmt.Printf("Write memdump to file %v\n", logFileName)
+
+			fl, err := os.Create(logFileName)
+			if err != nil {
+				fmt.Printf("Create file %v, error: %v\n", logFileName, fmt.Sprint(err))
+			}
+
+			pprof.Lookup("heap").WriteTo(fl, 0)
+
+			fl.Close()
+		}
+	}()
+	//------------------------------------------------------
+
 	//инициализация репозитория для учета выполняемых задач
 	smt := configure.NewRepositorySMT()
 

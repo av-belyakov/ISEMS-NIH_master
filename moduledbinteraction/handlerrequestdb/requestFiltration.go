@@ -197,7 +197,7 @@ func UpdateParametersFiltrationTask(
 				End:   itd.DetailedInformationOnFiltering.TimeIntervalTaskExecution.End,
 			},
 			TaskParameter: configure.DescriptionTaskParameters{
-				FiltrationTask: configure.FiltrationTaskParameters{
+				FiltrationTask: &configure.FiltrationTaskParameters{
 					ID:                              itd.SourceID,
 					Status:                          taskStatusRecovery,
 					UseIndex:                        itd.DetailedInformationOnFiltering.WasIndexUsed,

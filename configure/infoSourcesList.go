@@ -60,7 +60,7 @@ type chanReqSetting struct {
 type chanResSetting struct {
 	err     error
 	id      int
-	setting SourceSetting
+	setting *SourceSetting
 }
 
 //sourcesListConnection дескрипторы соединения с источниками по протоколу websocket
@@ -74,10 +74,11 @@ type WssConnection struct {
 
 //NewRepositoryISL инициализация хранилища
 func NewRepositoryISL() *InformationSourcesList {
-	isl := InformationSourcesList{}
-	isl.sourcesListSetting = sourcesListSetting{}
-	isl.sourcesListConnection = sourcesListConnection{}
-	isl.chanReq = make(chan chanReqSetting)
+	isl := InformationSourcesList{
+		sourcesListSetting:    sourcesListSetting{},
+		sourcesListConnection: sourcesListConnection{},
+		chanReq:               make(chan chanReqSetting),
+	}
 
 	go func() {
 		for msg := range isl.chanReq {
@@ -120,7 +121,7 @@ func NewRepositoryISL() *InformationSourcesList {
 				si, ok := isl.sourcesListSetting[msg.id]
 				if ok {
 					msg.chanRes <- chanResSetting{
-						setting: si,
+						setting: &si,
 					}
 				} else {
 					msg.chanRes <- chanResSetting{
@@ -161,7 +162,7 @@ func NewRepositoryISL() *InformationSourcesList {
 					break
 				}
 
-				msg.chanRes <- chanResSetting{setting: SourceSetting{ConnectionStatus: s.ConnectionStatus}}
+				msg.chanRes <- chanResSetting{setting: &SourceSetting{ConnectionStatus: s.ConnectionStatus}}
 				close(msg.chanRes)
 
 			case "change source connection status":
@@ -195,7 +196,7 @@ func NewRepositoryISL() *InformationSourcesList {
 					}
 				}
 
-				msg.chanRes <- chanResSetting{setting: SourceSetting{AccessIsAllowed: aia}}
+				msg.chanRes <- chanResSetting{setting: &SourceSetting{AccessIsAllowed: aia}}
 				close(msg.chanRes)
 
 			case "set access is allowed":
@@ -277,7 +278,7 @@ func (isl *InformationSourcesList) GetSourceSetting(id int) (*SourceSetting, boo
 		return nil, false
 	}
 
-	return &resMsg.setting, true
+	return resMsg.setting, true
 }
 
 //GetSourceIDOnIP возвращает ID источника по его IP

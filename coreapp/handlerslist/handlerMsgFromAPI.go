@@ -308,6 +308,7 @@ func HandlerMsgFromAPI(
 				//ищем источник по указанному идентификатору
 				sourceInfo, ok := hsm.ISL.GetSourceSetting(dcts.MsgOption.ID)
 				if !ok {
+
 					emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
 						SourceID:   dcts.MsgOption.ID,
 						TaskType:   "скачивание файлов",

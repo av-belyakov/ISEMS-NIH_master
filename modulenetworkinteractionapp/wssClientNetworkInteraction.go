@@ -26,15 +26,12 @@ type clientSetting struct {
 	ID             int
 	IP, Port       string
 	InfoSourceList *configure.InformationSourcesList
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles
 	COut           chan<- [2]string
 	CwtReq         chan<- configure.MsgWsTransmission
 }
 
 func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request) error {
-
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
-
 	funcName := "redirectPolicyFunc"
 
 	go func() {
@@ -53,7 +50,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 
 		c, res, err := d.Dial("wss://"+cs.IP+":"+cs.Port+"/wss", header)
 		if err != nil {
-			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			cs.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				Description: fmt.Sprint(err),
 				FuncName:    funcName,
 			})
@@ -76,7 +73,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 			for {
 				msgType, message, err := c.ReadMessage()
 				if err != nil {
-					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					cs.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
 					})
@@ -102,13 +99,11 @@ func WssClientNetworkInteraction(
 	cOut chan<- [2]string,
 	appc *configure.AppConfig,
 	isl *configure.InformationSourcesList,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	cwt chan<- configure.MsgWsTransmission) {
 
 	/* инициализируем HTTPS клиента */
 	fmt.Println("\tThe HTTPS client Network Integration is running")
-
-	//инициализируем функцию конструктор для записи лог-файлов
-	saveMessageApp := savemessageapp.New()
 
 	funcName := "WssClientNetworkInteraction"
 
@@ -138,7 +133,7 @@ func WssClientNetworkInteraction(
 
 	client := &http.Client{
 		Transport: &http.Transport{
-			MaxIdleConns:       10,
+			MaxIdleConns:       0,
 			IdleConnTimeout:    30 * time.Second,
 			DisableCompression: true,
 			TLSClientConfig:    conf,
@@ -163,6 +158,7 @@ func WssClientNetworkInteraction(
 					IP:             s.IP,
 					Port:           port,
 					InfoSourceList: isl,
+					saveMessageApp: saveMessageApp,
 					COut:           cOut,
 					CwtReq:         cwt,
 				}

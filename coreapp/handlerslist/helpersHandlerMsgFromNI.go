@@ -151,7 +151,7 @@ func sendInformationFiltrationTask(
 	}
 	resMsg.MsgOption.FoundFilesInformation = nffi
 
-	msgJSON, err := json.Marshal(resMsg)
+	msgJSON, err := json.Marshal(&resMsg)
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func handlerDownloadTaskStatusComplete(hdtsct handlerDownloadTaskStatusCompleteT
 	}
 
 	//отправляем информацию по задаче клиенту API
-	msgJSONInfo, err := json.Marshal(hdtsct.ResMsgInfo)
+	msgJSONInfo, err := json.Marshal(&hdtsct.ResMsgInfo)
 	if err != nil {
 		return err
 	}
