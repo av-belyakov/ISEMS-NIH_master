@@ -45,7 +45,7 @@ type DescriptionParametersReceivedFromUser struct {
 	FilterationParameters         FilteringOption
 	PathDirectoryForFilteredFiles string
 	DownloadList                  []string
-	ConfirmedListFiles            map[string]*DownloadFilesInformation
+	ConfirmedListFiles            map[string]*DetailedFilesInformation
 }
 
 //StatusItems пункты состояния задачи или источника
@@ -107,9 +107,10 @@ func checkTaskID(qts *QueueTaskStorage, sourceID int, taskID string) bool {
 
 //NewRepositoryQTS создание нового репозитория для хранения очередей задач
 func NewRepositoryQTS() *QueueTaskStorage {
-	qts := QueueTaskStorage{}
-	qts.StorageList = map[int]map[string]*QueueTaskInformation{}
-	qts.ChannelReq = make(chan chanRequest)
+	qts := QueueTaskStorage{
+		StorageList: map[int]map[string]*QueueTaskInformation{},
+		ChannelReq:  make(chan chanRequest),
+	}
 
 	go func() {
 		for msg := range qts.ChannelReq {
@@ -278,27 +279,27 @@ func NewRepositoryQTS() *QueueTaskStorage {
 
 				msg.ChanRes <- msgRes
 
-			case "change the status of uploaded files":
-				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
-					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'change the status of uploaded files'", msg.SourceID)
-					msg.ChanRes <- msgRes
-
-					break
-				}
-
-				qts.StorageList[msg.SourceID][msg.TaskID].TimeUpdate = time.Now().Unix()
-
-				for fn := range msg.AdditionalOption.ConfirmedListFiles {
-					_, ok := qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles[fn]
-					if ok {
-						fi := qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles[fn]
-						fi.IsLoaded = true
-
-						qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles[fn] = fi
-					}
-				}
-
+			/*case "change the status of uploaded files":
+			if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
+				msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'change the status of uploaded files'", msg.SourceID)
 				msg.ChanRes <- msgRes
+
+				break
+			}
+
+			qts.StorageList[msg.SourceID][msg.TaskID].TimeUpdate = time.Now().Unix()
+
+			for fn := range msg.AdditionalOption.ConfirmedListFiles {
+				_, ok := qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles[fn]
+				if ok {
+					fi := qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles[fn]
+					fi.IsLoaded = true
+
+					qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles[fn] = fi
+				}
+			}
+
+			msg.ChanRes <- msgRes*/
 
 			case "clear all file list":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
@@ -309,7 +310,7 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				}
 
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.DownloadList = []string{}
-				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles = map[string]*DownloadFilesInformation{}
+				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles = map[string]*DetailedFilesInformation{}
 
 				msg.ChanRes <- msgRes
 			}
@@ -598,7 +599,7 @@ func (qts *QueueTaskStorage) ChangeAvailabilityFilesDownload(sourceID int, taskI
 }
 
 //AddConfirmedListFiles добавляет проверенный список файлов предназначенных для скачивания и удаляет список переданный клиентом API (если есть)
-func (qts *QueueTaskStorage) AddConfirmedListFiles(sourceID int, taskID string, clf map[string]*DownloadFilesInformation) error {
+func (qts *QueueTaskStorage) AddConfirmedListFiles(sourceID int, taskID string, clf map[string]*DetailedFilesInformation) error {
 	chanRes := make(chan chanResponse)
 	defer close(chanRes)
 
@@ -616,7 +617,7 @@ func (qts *QueueTaskStorage) AddConfirmedListFiles(sourceID int, taskID string, 
 }
 
 //ChangeIsLoadedFiles изменяет статус файлов
-func (qts *QueueTaskStorage) ChangeIsLoadedFiles(sourceID int, taskID string, clf map[string]*DownloadFilesInformation) error {
+/*func (qts *QueueTaskStorage) ChangeIsLoadedFiles(sourceID int, taskID string, clf map[string]*DetailedFilesInformation) error {
 	chanRes := make(chan chanResponse)
 	defer close(chanRes)
 
@@ -631,7 +632,7 @@ func (qts *QueueTaskStorage) ChangeIsLoadedFiles(sourceID int, taskID string, cl
 	}
 
 	return (<-chanRes).ErrorDescription
-}
+}*/
 
 //ClearAllListFiles очищает все списки файлов
 func (qts *QueueTaskStorage) ClearAllListFiles(sourceID int, taskID string) error {

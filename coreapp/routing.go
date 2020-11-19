@@ -136,6 +136,8 @@ func Routing(trc TypeRoutingCore) {
 							ID:     msg.SourceID,
 							Status: "wait",
 						},
+						DownloadTask:                 &configure.DownloadTaskParameters{},
+						ListFilesDetailedInformation: map[string]*configure.DetailedFilesInformation{},
 					},
 				})
 
@@ -225,10 +227,13 @@ func Routing(trc TypeRoutingCore) {
 							Status:                              "wait",
 							NumberFilesTotal:                    len(qti.TaskParameters.ConfirmedListFiles),
 							PathDirectoryStorageDownloadedFiles: pathStorage,
-							DownloadingFilesInformation:         qti.TaskParameters.ConfirmedListFiles,
 						},
 					},
 				})
+
+				//добавляем список файлов которые необходимо выгрузить
+				trc.SMT.UpdateListFilesDetailedInformation(msg.TaskID, qti.TaskParameters.ConfirmedListFiles)
+
 				/*
 				   Параметр TaskDescription.TaskParameter.DownloadTask.NumberFilesTotal
 				   содержит общее кол-во файлов запрашиваемых пользователем или их

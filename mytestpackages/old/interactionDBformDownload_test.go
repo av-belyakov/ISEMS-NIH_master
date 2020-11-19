@@ -173,7 +173,7 @@ func UpdateFinishedInformationAboutTask(
 	}
 
 	var arrayFiles []interface{}
-	for fn, fi := range ti.TaskParameter.DownloadTask.DownloadingFilesInformation {
+	for fn, fi := range ti.TaskParameter.ListFilesDetailedInformation {
 		t := time.Now().Unix() - (timeUpdate * 2)
 
 		fmt.Printf("Time download:%v, time now:%v, equal: %v\n", fi.TimeDownload, t, fi.TimeDownload >= t)
@@ -298,44 +298,43 @@ var _ = Describe("InteractionDataBaseFromDownloadFiles", func() {
 						ChunkSize:           4096,
 						NumAcceptedChunk:    3123,
 					},
-					DownloadingFilesInformation: map[string]*configure.DownloadFilesInformation{
-						tf1: &configure.DownloadFilesInformation{IsLoaded: true},
-						tf2: &configure.DownloadFilesInformation{IsLoaded: true},
-						tf3: &configure.DownloadFilesInformation{},
-						tf4: &configure.DownloadFilesInformation{IsLoaded: true},
-						tf5: &configure.DownloadFilesInformation{IsLoaded: true},
-					},
+					/*					DownloadingFilesInformation: map[string]*configure.DownloadFilesInformation{
+										tf1: &configure.DownloadFilesInformation{IsLoaded: true},
+										tf2: &configure.DownloadFilesInformation{IsLoaded: true},
+										tf3: &configure.DownloadFilesInformation{},
+										tf4: &configure.DownloadFilesInformation{IsLoaded: true},
+										tf5: &configure.DownloadFilesInformation{IsLoaded: true},
+									},*/
 				},
 			},
 		}
 
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf1].Size = 3081429
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf1].Hex = "a86b143391a1eeae4078786f624b5257"
+		/*
+			taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf1].Size = 3081429
+			taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf1].Hex = "a86b143391a1eeae4078786f624b5257"
 
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf2].Size = 3137245
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf2].Hex = "3ab19032a4a3d990a5a0b92042a93ef4"
+			taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf2].Size = 3137245
+			taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf2].Hex = "3ab19032a4a3d990a5a0b92042a93ef4"
 
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf3].Size = 70951216
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf3].Hex = "8b95f4e9454e5fe755bc7d6cfbe1f4a1"
+			taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf3].Size = 70951216
+			taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf3].Hex = "8b95f4e9454e5fe755bc7d6cfbe1f4a1"
 
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf4].Size = 2948350
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf4].Hex = "ead26b5d302e53961b75a7e92c080187"
+			taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf4].Size = 2948350
+			taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf4].Hex = "ead26b5d302e53961b75a7e92c080187"
 
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf5].Size = 3421341
-		taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf5].Hex = "6654b432096dab1f4f0818a42143e341"
+			taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf5].Size = 3421341
+			taskDescription.TaskParameter.DownloadTask.DownloadingFilesInformation[tf5].Hex = "6654b432096dab1f4f0818a42143e341"
+		*/
 
 		//добавляем новую задачу
 		smt.AddStoringMemoryTask(taskID, taskDescription)
 
-		//обновляем информацию о файлах
-		smt.UpdateTaskDownloadFileIsLoaded(taskID, &configure.DownloadTaskParameters{
-			DownloadingFilesInformation: map[string]*configure.DownloadFilesInformation{
-				tf1: &configure.DownloadFilesInformation{IsLoaded: true},
-				tf2: &configure.DownloadFilesInformation{IsLoaded: true},
-				tf3: &configure.DownloadFilesInformation{},
-				tf4: &configure.DownloadFilesInformation{IsLoaded: true},
-				tf5: &configure.DownloadFilesInformation{IsLoaded: true},
-			},
+		smt.UpdateListFilesDetailedInformation(taskID, map[string]*configure.DetailedFilesInformation{
+			tf1: (&configure.DetailedFilesInformation{IsLoaded: true}),
+			tf2: (&configure.DetailedFilesInformation{IsLoaded: true}),
+			tf3: (&configure.DetailedFilesInformation{}),
+			tf4: (&configure.DetailedFilesInformation{IsLoaded: true}),
+			tf5: (&configure.DetailedFilesInformation{IsLoaded: true}),
 		})
 
 		ti, ok := smt.GetStoringMemoryTask(taskID)

@@ -82,6 +82,12 @@ func HandlerMsgFromAPI(
 					ModuleThatSetTask:               "API module",
 					ModuleResponsibleImplementation: "NI module",
 					TimeUpdate:                      time.Now().Unix(),
+					TimeInterval:                    configure.TimeIntervalTaskExecution{},
+					TaskParameter: configure.DescriptionTaskParameters{
+						FiltrationTask:               &configure.FiltrationTaskParameters{},
+						DownloadTask:                 &configure.DownloadTaskParameters{},
+						ListFilesDetailedInformation: map[string]*configure.DetailedFilesInformation{},
+					},
 				})
 
 				outCoreChans.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{
@@ -130,6 +136,12 @@ func HandlerMsgFromAPI(
 					ModuleThatSetTask:               "API module",
 					ModuleResponsibleImplementation: "NI module",
 					TimeUpdate:                      time.Now().Unix(),
+					TimeInterval:                    configure.TimeIntervalTaskExecution{},
+					TaskParameter: configure.DescriptionTaskParameters{
+						FiltrationTask:               &configure.FiltrationTaskParameters{},
+						DownloadTask:                 &configure.DownloadTaskParameters{},
+						ListFilesDetailedInformation: map[string]*configure.DetailedFilesInformation{},
+					},
 				})
 
 				outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
@@ -166,6 +178,12 @@ func HandlerMsgFromAPI(
 					ModuleThatSetTask:               "API module",
 					ModuleResponsibleImplementation: "NI module",
 					TimeUpdate:                      time.Now().Unix(),
+					TimeInterval:                    configure.TimeIntervalTaskExecution{},
+					TaskParameter: configure.DescriptionTaskParameters{
+						FiltrationTask:               &configure.FiltrationTaskParameters{},
+						DownloadTask:                 &configure.DownloadTaskParameters{},
+						ListFilesDetailedInformation: map[string]*configure.DetailedFilesInformation{},
+					},
 				})
 
 				outCoreChans.OutCoreChanNI <- &configure.MsgBetweenCoreAndNI{

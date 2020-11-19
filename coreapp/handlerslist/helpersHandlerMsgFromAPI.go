@@ -271,21 +271,21 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 	}
 
 	filterParameters := map[string]map[string]*[]string{
-		"IP": map[string]*[]string{
+		"IP": (map[string]*[]string{
 			"Any": &fccpf.Filters.IP.Any,
 			"Src": &fccpf.Filters.IP.Src,
 			"Dst": &fccpf.Filters.IP.Dst,
-		},
-		"Port": map[string]*[]string{
+		}),
+		"Port": (map[string]*[]string{
 			"Any": &fccpf.Filters.Port.Any,
 			"Src": &fccpf.Filters.Port.Src,
 			"Dst": &fccpf.Filters.Port.Dst,
-		},
-		"Network": map[string]*[]string{
+		}),
+		"Network": (map[string]*[]string{
 			"Any": &fccpf.Filters.Network.Any,
 			"Src": &fccpf.Filters.Network.Src,
 			"Dst": &fccpf.Filters.Network.Dst,
-		},
+		}),
 	}
 
 	if !checkNetworkParametersIsNotEmpty(filterParameters) {
@@ -364,21 +364,21 @@ func CheckParametersSearchCommonInformation(siatro *configure.SearchInformationA
 	}
 
 	filterParameters := map[string]map[string]*[]string{
-		"IP": map[string]*[]string{
+		"IP": (map[string]*[]string{
 			"Any": &siatro.InstalledFilteringOption.NetworkFilters.IP.Any,
 			"Src": &siatro.InstalledFilteringOption.NetworkFilters.IP.Src,
 			"Dst": &siatro.InstalledFilteringOption.NetworkFilters.IP.Dst,
-		},
-		"Port": map[string]*[]string{
+		}),
+		"Port": (map[string]*[]string{
 			"Any": &siatro.InstalledFilteringOption.NetworkFilters.Port.Any,
 			"Src": &siatro.InstalledFilteringOption.NetworkFilters.Port.Src,
 			"Dst": &siatro.InstalledFilteringOption.NetworkFilters.Port.Dst,
-		},
-		"Network": map[string]*[]string{
+		}),
+		"Network": (map[string]*[]string{
 			"Any": &siatro.InstalledFilteringOption.NetworkFilters.Network.Any,
 			"Src": &siatro.InstalledFilteringOption.NetworkFilters.Network.Src,
 			"Dst": &siatro.InstalledFilteringOption.NetworkFilters.Network.Dst,
-		},
+		}),
 	}
 
 	//проверяем параметры сетевых фильтров

@@ -13,14 +13,14 @@ import (
 	//. "ISEMS-NIH_master/mytestpackages"
 )
 
-func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) (map[string]*configure.DownloadFilesInformation, error) {
+func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) (map[string]*configure.DetailedFilesInformation, error) {
 	type fileInfo struct {
 		hex      string
 		size     int64
 		isLoaded bool
 	}
 
-	nlf := make(map[string]*configure.DownloadFilesInformation, len(lfqst))
+	nlf := make(map[string]*configure.DetailedFilesInformation, len(lfqst))
 
 	if len(lfdb) == 0 {
 		return nlf, errors.New("an empty list with files was obtained from the database")
@@ -40,7 +40,7 @@ func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) (m
 		if info, ok := tmpList[f]; ok {
 			//только если файл не загружался
 			if !info.isLoaded {
-				nlf[f] = &configure.DownloadFilesInformation{}
+				nlf[f] = &configure.DetailedFilesInformation{}
 				nlf[f].Size = info.size
 				nlf[f].Hex = info.hex
 			}

@@ -30,14 +30,6 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 		return err
 	}
 
-	ffi := make(map[string]*configure.FoundFilesInformation, len(resMsg.Info.FoundFilesInformation))
-	for n, v := range resMsg.Info.FoundFilesInformation {
-		ffi[n] = &configure.FoundFilesInformation{
-			Size: v.Size,
-			Hex:  v.Hex,
-		}
-	}
-
 	ftp := configure.FiltrationTaskParameters{
 		Status:                          resMsg.Info.TaskStatus,
 		NumberFilesMeetFilterParameters: resMsg.Info.NumberFilesMeetFilterParameters,
@@ -48,12 +40,21 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 		SizeFilesMeetFilterParameters:   resMsg.Info.SizeFilesMeetFilterParameters,
 		SizeFilesFoundResultFiltering:   resMsg.Info.SizeFilesFoundResultFiltering,
 		PathStorageSource:               resMsg.Info.PathStorageSource,
-		FoundFilesInformation:           ffi,
 	}
 
 	//обновляем информацию о выполняемой задаче в памяти приложения
 	pprmtf.SMT.UpdateTaskFiltrationAllParameters(resMsg.Info.TaskID, &ftp)
 	ftp = configure.FiltrationTaskParameters{}
+
+	lfdi := make(map[string]*configure.DetailedFilesInformation, len(resMsg.Info.FoundFilesInformation))
+	for n, v := range resMsg.Info.FoundFilesInformation {
+		lfdi[n] = &configure.DetailedFilesInformation{
+			Size: v.Size,
+			Hex:  v.Hex,
+		}
+	}
+
+	pprmtf.SMT.UpdateListFilesDetailedInformation(resMsg.Info.TaskID, lfdi)
 
 	msgCompleteTask := configure.MsgBetweenCoreAndNI{
 		TaskID:  resMsg.Info.TaskID,
@@ -68,7 +69,7 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 		SourceID: pprmtf.SourceID,
 		AdvancedOptions: configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus{
 			TaskStatus:    resMsg.Info.TaskStatus,
-			ListFoundFile: ffi,
+			ListFoundFile: lfdi,
 		},
 	}
 

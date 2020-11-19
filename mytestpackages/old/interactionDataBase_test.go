@@ -192,14 +192,14 @@ func updateFiltrationTaskParameters(
 
 	arr := []interface{}{}
 
-	for fileName, v := range ftp.FoundFilesInformation {
+	/*for fileName, v := range ftp.FoundFilesInformation {
 		arr = append(arr, bson.D{
 			bson.E{Key: "file_name", Value: fileName},
 			bson.E{Key: "file_size", Value: v.Size},
 			bson.E{Key: "file_hex", Value: v.Hex},
 			bson.E{Key: "file_loaded", Value: false},
 		})
-	}
+	}*/
 
 	arrayValueUpdate := bson.D{
 		bson.E{
@@ -363,7 +363,7 @@ var _ = Describe("InteractionDataBase", func() {
 				NumberErrorProcessedFiles:       0,
 				SizeFilesFoundResultFiltering:   32455311111,
 				PathStorageSource:               "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
-				FoundFilesInformation: map[string]*configure.FoundFilesInformation{
+				/*FoundFilesInformation: map[string]*configure.FoundFilesInformation{
 					"1438535410_2015_08_02____20_10_10_644263.tdp": &configure.FoundFilesInformation{
 						Size: 456577876,
 						Hex:  "fj933r9fff99g9gd32",
@@ -380,7 +380,7 @@ var _ = Describe("InteractionDataBase", func() {
 						Size: 56239090546,
 						Hex:  "afg74y777dff7",
 					},
-				},
+				},*/
 			}
 
 			err := updateFiltrationTaskParameters(conn, taskID, &parameters)
@@ -402,12 +402,12 @@ var _ = Describe("InteractionDataBase", func() {
 				NumberErrorProcessedFiles:       0,
 				SizeFilesFoundResultFiltering:   32455311111,
 				PathStorageSource:               "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
-				FoundFilesInformation: map[string]*configure.FoundFilesInformation{
+				/*FoundFilesInformation: map[string]*configure.FoundFilesInformation{
 					"1438535555_2015_08_02____20_10_11_644263.tdp": &configure.FoundFilesInformation{
 						Size: 98765432100,
 						Hex:  "ffffffff9339993",
 					},
-				},
+				},*/
 			}
 
 			err := updateFiltrationTaskParameters(conn, "ea9e9a0d2e9706bce846171379cbe020", &parameters)

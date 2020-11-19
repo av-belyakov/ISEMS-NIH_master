@@ -210,6 +210,8 @@ func UpdateParametersFiltrationTask(
 					SizeFilesFoundResultFiltering:   itd.DetailedInformationOnFiltering.SizeFilesFoundResultFiltering,
 					PathStorageSource:               itd.DetailedInformationOnFiltering.PathDirectoryForFilteredFiles,
 				},
+				DownloadTask:                 &configure.DownloadTaskParameters{},
+				ListFilesDetailedInformation: map[string]*configure.DetailedFilesInformation{},
 			},
 		}, req.TaskID)
 
@@ -259,18 +261,18 @@ func UpdateParametersFiltrationTask(
 	//обновляем детальную информацию о ходе фильтрации
 	err = qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, commonValueUpdate)
 
-	lffi, ok := smt.GetFoundFilesInformation(req.TaskID)
+	lfdi, ok := smt.GetListFilesDetailedInformation(req.TaskID)
 	if !ok {
 		return nil
 	}
 
 	//очищаем отображение с файлами чтобы предотвратить утечки памяти
-	defer func(lffi *map[string]configure.FoundFilesInformation) {
-		lffi = &(map[string]configure.FoundFilesInformation{})
-	}(lffi)
+	defer func(lfdi map[string]*configure.DetailedFilesInformation) {
+		lfdi = make(map[string]*configure.DetailedFilesInformation)
+	}(lfdi)
 
 	arr := []interface{}{}
-	for n, v := range *lffi {
+	for n, v := range lfdi {
 		arr = append(arr, bson.D{
 			bson.E{Key: "file_name", Value: n},
 			bson.E{Key: "file_size", Value: v.Size},

@@ -367,16 +367,6 @@ func HandlerMsgFromDB(
 				return
 			}
 
-			listFoundFiles := taskInfo.TaskParameter.FiltrationTask.FoundFilesInformation
-
-			//готовим список файлов предназначенный для загрузки
-			listDownloadFiles := make(map[string]*configure.DownloadFilesInformation, len(listFoundFiles))
-			for fn, v := range listFoundFiles {
-				listDownloadFiles[fn] = &configure.DownloadFilesInformation{}
-				listDownloadFiles[fn].Size = v.Size
-				listDownloadFiles[fn].Hex = v.Hex
-			}
-
 			sourceID := taskInfo.TaskParameter.FiltrationTask.ID
 
 			//получаем параметры фильтрации
@@ -384,6 +374,17 @@ func HandlerMsgFromDB(
 			if err != nil {
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+				return
+			}
+
+			//получаем список проверенных файлов
+			listDetailedFilesInformation, ok := hsm.SMT.GetListFilesDetailedInformation(res.TaskID)
+			if !ok {
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: "the list of files intended for uploading was not found",
 					FuncName:    funcName,
 				})
 
@@ -415,16 +416,16 @@ func HandlerMsgFromDB(
 				res.TaskIDClientAPI,
 				res.IDClientAPI)
 
-			//добавляем подтвержденный список файлов для скачивания
-			if err := hsm.QTS.AddConfirmedListFiles(sourceID, res.TaskID, listDownloadFiles); err != nil {
+			//устанавливаем проверочный статус источника для данной задачи как подключен
+			if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(sourceID, res.TaskID); err != nil {
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
 					FuncName:    funcName,
 				})
 			}
 
-			//устанавливаем проверочный статус источника для данной задачи как подключен
-			if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(sourceID, res.TaskID); err != nil {
+			//добавляем подтвержденный список файлов для скачивания
+			if err := hsm.QTS.AddConfirmedListFiles(sourceID, res.TaskID, listDetailedFilesInformation); err != nil {
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
 					FuncName:    funcName,

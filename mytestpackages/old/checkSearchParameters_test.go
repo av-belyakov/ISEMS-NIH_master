@@ -93,7 +93,7 @@ var _ = Describe("CheckSearchParameters", func() {
 					SourceID: 1003,
 					TaskType: "поиск информации",
 				},
-				map[string]map[string]*[]string{
+				(map[string]map[string]*[]string{
 					"IP": map[string]*[]string{
 						"Any": &[]string{"12.36.55.1", "59.100.33.6"},
 						"Src": &[]string{"95.102.36.5"},
@@ -109,7 +109,7 @@ var _ = Describe("CheckSearchParameters", func() {
 						"Src": &[]string{"89.1.36.8/25"},
 						"Dst": &[]string{},
 					},
-				},
+				}),
 				handlerslist.CheckIPPortNetwork,
 			})
 

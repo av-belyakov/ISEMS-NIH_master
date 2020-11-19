@@ -21,7 +21,7 @@ type TypeFiltrationMsgFoundIndex struct {
 //TypeFiltrationMsgFoundFileInformationAndTaskStatus тип 'фильтрация', информация о найденных файлах и статусе задачи
 type TypeFiltrationMsgFoundFileInformationAndTaskStatus struct {
 	TaskStatus    string
-	ListFoundFile map[string]*FoundFilesInformation
+	ListFoundFile map[string]*DetailedFilesInformation //FoundFilesInformation
 }
 
 //TypeGetInfoTaskFromMarkTaskCompleteProcess описание типа при обработке задачи по маркированию задачи как завершенная

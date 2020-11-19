@@ -127,32 +127,32 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 	}
 
 	queryTemplate := map[string]bson.E{
-		"sourceID":             bson.E{Key: "source_id", Value: bson.D{{Key: "$eq", Value: sp.ID}}},
-		"filesIsFound":         bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: bson.D{{Key: "$gt", Value: 0}}},
-		"taskProcessed":        bson.E{Key: "general_information_about_task.task_processed", Value: bson.D{{Key: "$eq", Value: sp.TaskProcessed}}},
-		"filesIsDownloaded":    bson.E{Key: "detailed_information_on_downloading.number_files_downloaded", Value: bson.D{{Key: "$gt", Value: 0}}},
-		"filesIsNotDownloaded": bson.E{Key: "detailed_information_on_downloading.number_files_downloaded", Value: bson.D{{Key: "$eq", Value: 0}}},
-		"allFilesIsDownloaded": bson.E{Key: "$expr", Value: bson.D{
-			{Key: "$eq", Value: bson.A{"$detailed_information_on_downloading.number_files_total", "$detailed_information_on_downloading.number_files_downloaded"}}}},
-		"allFilesIsNotDownloaded": bson.E{Key: "$expr", Value: bson.D{
-			{Key: "$ne", Value: bson.A{"$detailed_information_on_downloading.number_files_total", "$detailed_information_on_downloading.number_files_downloaded"}}}},
-		"sizeAllFiles": bson.E{Key: "detailed_information_on_filtering.size_files_found_result_filtering", Value: bson.D{
+		"sourceID":             (bson.E{Key: "source_id", Value: bson.D{{Key: "$eq", Value: sp.ID}}}),
+		"filesIsFound":         (bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: bson.D{{Key: "$gt", Value: 0}}}),
+		"taskProcessed":        (bson.E{Key: "general_information_about_task.task_processed", Value: bson.D{{Key: "$eq", Value: sp.TaskProcessed}}}),
+		"filesIsDownloaded":    (bson.E{Key: "detailed_information_on_downloading.number_files_downloaded", Value: bson.D{{Key: "$gt", Value: 0}}}),
+		"filesIsNotDownloaded": (bson.E{Key: "detailed_information_on_downloading.number_files_downloaded", Value: bson.D{{Key: "$eq", Value: 0}}}),
+		"allFilesIsDownloaded": (bson.E{Key: "$expr", Value: bson.D{
+			{Key: "$eq", Value: bson.A{"$detailed_information_on_downloading.number_files_total", "$detailed_information_on_downloading.number_files_downloaded"}}}}),
+		"allFilesIsNotDownloaded": (bson.E{Key: "$expr", Value: bson.D{
+			{Key: "$ne", Value: bson.A{"$detailed_information_on_downloading.number_files_total", "$detailed_information_on_downloading.number_files_downloaded"}}}}),
+		"sizeAllFiles": (bson.E{Key: "detailed_information_on_filtering.size_files_found_result_filtering", Value: bson.D{
 			{Key: "$gte", Value: sp.InformationAboutFiltering.SizeAllFilesMin},
 			{Key: "$lte", Value: sp.InformationAboutFiltering.SizeAllFilesMax},
-		}},
-		"countAllFiles": bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: bson.D{
+		}}),
+		"countAllFiles": (bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: bson.D{
 			{Key: "$gte", Value: sp.InformationAboutFiltering.CountAllFilesMin},
 			{Key: "$lte", Value: sp.InformationAboutFiltering.CountAllFilesMax},
-		}},
-		"dateTimeParameters": bson.E{Key: "$and", Value: bson.A{
+		}}),
+		"dateTimeParameters": (bson.E{Key: "$and", Value: bson.A{
 			bson.D{{Key: "filtering_option.date_time_interval.start", Value: bson.D{
 				{Key: "$gte", Value: sp.InstalledFilteringOption.DateTime.Start}}}},
 			bson.D{{Key: "filtering_option.date_time_interval.end", Value: bson.D{
 				{Key: "$lte", Value: sp.InstalledFilteringOption.DateTime.End}}}},
-		}},
-		"transportProtocol":      bson.E{Key: "filtering_option.protocol", Value: sp.InstalledFilteringOption.Protocol},
-		"statusFilteringTask":    bson.E{Key: "detailed_information_on_filtering.task_status", Value: sp.StatusFilteringTask},
-		"statusFileDownloadTask": bson.E{Key: "detailed_information_on_downloading.task_status", Value: sp.StatusFileDownloadTask},
+		}}),
+		"transportProtocol":      (bson.E{Key: "filtering_option.protocol", Value: sp.InstalledFilteringOption.Protocol}),
+		"statusFilteringTask":    (bson.E{Key: "detailed_information_on_filtering.task_status", Value: sp.StatusFilteringTask}),
+		"statusFileDownloadTask": (bson.E{Key: "detailed_information_on_downloading.task_status", Value: sp.StatusFileDownloadTask}),
 	}
 
 	var (

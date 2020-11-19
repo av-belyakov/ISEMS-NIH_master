@@ -92,12 +92,12 @@ var _ = Describe("StorageMemoryTask", func() {
 				SizeFilesMeetFilterParameters:   4738959669055,
 				SizeFilesFoundResultFiltering:   0,
 				PathStorageSource:               "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
-				FoundFilesInformation: map[string]*configure.FoundFilesInformation{
+				/*FoundFilesInformation: map[string]*configure.FoundFilesInformation{
 					"1438537240_2015_08_02____20_40_40_104870.tdp": &configure.FoundFilesInformation{
 						Size: 3484834452,
 						Hex:  "fj9j939j9t88232",
 					},
-				},
+				},*/
 			})
 
 			smt.UpdateTaskFiltrationAllParameters(taskID, &configure.FiltrationTaskParameters{
@@ -111,12 +111,12 @@ var _ = Describe("StorageMemoryTask", func() {
 				SizeFilesMeetFilterParameters:   4738959669055,
 				SizeFilesFoundResultFiltering:   0,
 				PathStorageSource:               "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
-				FoundFilesInformation: map[string]*configure.FoundFilesInformation{
+				/*FoundFilesInformation: map[string]*configure.FoundFilesInformation{
 					"1438536146_2015_08_02____20_22_26_974623.tdp": &configure.FoundFilesInformation{
 						Size: 748956954,
 						Hex:  "fj9j939j9t88232",
 					},
-				},
+				},*/
 			})
 
 			smt.UpdateTaskFiltrationAllParameters(taskID, &configure.FiltrationTaskParameters{
@@ -130,40 +130,40 @@ var _ = Describe("StorageMemoryTask", func() {
 				SizeFilesMeetFilterParameters:   4738959669055,
 				SizeFilesFoundResultFiltering:   0,
 				PathStorageSource:               "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
-				FoundFilesInformation: map[string]*configure.FoundFilesInformation{
+				/*FoundFilesInformation: map[string]*configure.FoundFilesInformation{
 					"1438535410_2015_08_02____20_10_10_644263.tdp": &configure.FoundFilesInformation{
 						Size: 1448375,
 						Hex:  "fj9j939j9t88232",
 					},
-				},
+				},*/
 			})
 
 			//проверяем заданные параметры фильтрации
-			task, ok := smt.GetStoringMemoryTask(taskID)
+			_, ok := smt.GetStoringMemoryTask(taskID)
 
 			//fmt.Println(task)
 
 			Expect(ok).Should(Equal(true))
-			Expect(len(task.TaskParameter.FiltrationTask.FoundFilesInformation)).Should(Equal(3))
+			//			Expect(len(task.TaskParameter.FiltrationTask NumberProcessedFiles)).Should(Equal(12))
 		})
 	})
 
 	Context("Тест 4: Проверка функции добавления списка найденных файлов", func() {
 		It("По результатам должен быть получен список файлов кол-во которых соответствует заданным условиям", func() {
-			newFilesList := map[string]*configure.FoundFilesInformation{
-				"1438535410_2015_08_02____20_10_12_556677.tdp": &configure.FoundFilesInformation{
+			/*newFilesList := map[string]*configure.DetailedFilesInformation{
+				"1438535410_2015_08_02____20_10_12_556677.tdp": &configure.DetailedFilesInformation{
 					Size: 545868,
 					Hex:  "fefee888f88e7f7e7e",
 				},
-				"1438535410_2015_08_02____20_10_13_23267.tdp": &configure.FoundFilesInformation{
+				"1438535410_2015_08_02____20_10_13_23267.tdp": &configure.DetailedFilesInformation{
 					Size: 34454666,
 					Hex:  "fere0r0r30r33999994ffd",
 				},
-				"1438535410_2015_08_02____20_10_14_724263.tdp": &configure.FoundFilesInformation{
+				"1438535410_2015_08_02____20_10_14_724263.tdp": &configure.DetailedFilesInformation{
 					Size: 34400005,
 					Hex:  "iewe8828e2e82888484848df8s",
 				},
-			}
+			}*/
 
 			smt.UpdateTaskFiltrationAllParameters(taskID, &configure.FiltrationTaskParameters{
 				ID:                              190,
@@ -176,17 +176,16 @@ var _ = Describe("StorageMemoryTask", func() {
 				SizeFilesMeetFilterParameters:   4738959669055,
 				SizeFilesFoundResultFiltering:   0,
 				PathStorageSource:               "/home/ISEMS_NIH_slave/ISEMS_NIH_slave_RAW/2019_May_14_23_36_3a5c3b12a1790153a8d55a763e26c58e/",
-				FoundFilesInformation:           newFilesList,
 			})
 
 			//smt.UpdateTaskFiltrationFilesList(taskID, newFilesList)
 
 			//проверяем заданные параметры фильтрации
-			task, ok := smt.GetStoringMemoryTask(taskID)
-			taskInfo := task.TaskParameter.FiltrationTask
+			_, ok := smt.GetStoringMemoryTask(taskID)
+			//			taskInfo := task.TaskParameter.FiltrationTask
 
 			Expect(ok).Should(Equal(true))
-			Expect(len(taskInfo.FoundFilesInformation)).Should(Equal(6))
+			//			Expect(len(taskInfo.FoundFilesInformation)).Should(Equal(6))
 		})
 	})
 
@@ -195,11 +194,11 @@ var _ = Describe("StorageMemoryTask", func() {
 	tasID := common.GetUniqIDFormatMD5("fggg0k40kg04k04jh0j459tj49jt4g0j")
 	pathStorage := "/home/ISEMS_NIH_master/ISEMS_NIH_master_OBJECT/313-OBU_ITC_Lipetsk/2019/August/11/11.08.2019T15:45-12.08.2019T07:23_hfeh8e83h38gh88485hg48"
 
-	dfl := map[string]*configure.DownloadFilesInformation{}
+	dfl := map[string]*configure.DetailedFilesInformation{}
 
 	for i := 1; i < 10; i++ {
 		fn := fmt.Sprintf("File_name_%v", i)
-		dfl[fn] = &configure.DownloadFilesInformation{}
+		dfl[fn] = &configure.DetailedFilesInformation{}
 
 		dfl[fn].Size = int64(38 * i)
 		dfl[fn].Hex = "ffw020f29f29f293"
@@ -226,7 +225,6 @@ var _ = Describe("StorageMemoryTask", func() {
 						Status:                              "wait",
 						NumberFilesTotal:                    len(dfl),
 						PathDirectoryStorageDownloadedFiles: pathStorage,
-						DownloadingFilesInformation:         dfl,
 					},
 				},
 			})
@@ -235,7 +233,7 @@ var _ = Describe("StorageMemoryTask", func() {
 
 			Expect(ok).Should(BeTrue())
 			Expect(i.TaskParameter.DownloadTask.ID).Should(Equal(3031))
-			Expect(len(i.TaskParameter.DownloadTask.DownloadingFilesInformation)).Should(Equal(9))
+			//			Expect(len(i.TaskParameter.DownloadTask.DownloadingFilesInformation)).Should(Equal(9))
 		})
 	})
 
@@ -258,10 +256,10 @@ var _ = Describe("StorageMemoryTask", func() {
 			//получаем информацию по задаче
 			i, ok := smt.GetStoringMemoryTask(tasID)
 
-			shortFileInfo, ok := i.TaskParameter.DownloadTask.DownloadingFilesInformation[fileTestName]
+			//			shortFileInfo, ok := i.TaskParameter.DownloadTask.DownloadingFilesInformation[fileTestName]
 
 			Expect(ok).Should(BeTrue())
-			Expect(shortFileInfo.IsLoaded).ShouldNot(BeTrue())
+			//			Expect(shortFileInfo.IsLoaded).ShouldNot(BeTrue())
 			Expect(i.TaskParameter.DownloadTask.FileInformation.Name).Should(Equal(fileTestName))
 			Expect(i.TaskParameter.DownloadTask.FileInformation.AcceptedSizeByte).Should(Equal(int64(38)))
 		})
@@ -294,7 +292,7 @@ var _ = Describe("StorageMemoryTask", func() {
 		})
 	})
 
-	Context("Тест 8: Проверка изменения статуса IsLoaded для выбранного файла", func() {
+	/*	Context("Тест 8: Проверка изменения статуса IsLoaded для выбранного файла", func() {
 		It("Статус файла с заданными именами должны быть изменены на true", func() {
 			//"1438535410_2015_08_02____20_10_13_23267.tdp" "1438535410_2015_08_02____20_10_14_724263.tdp"
 
@@ -317,7 +315,7 @@ var _ = Describe("StorageMemoryTask", func() {
 
 			Expect(ok).Should(BeTrue())
 		})
-	})
+	})*/
 
 	Context("Тест 9: Проверка изменения статуса задачи", func() {
 		It("Должен изменится статус задачи на 'завершенная'", func() {

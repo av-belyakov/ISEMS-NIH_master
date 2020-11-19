@@ -76,12 +76,12 @@ func sendChanStatusSourceForAPI(chanToAPI chan<- *configure.MsgBetweenCoreAndAPI
 	}
 
 	sl := []configure.ActionTypeListSources{
-		configure.ActionTypeListSources{
+		(configure.ActionTypeListSources{
 			ID:         s.ID,
 			Status:     s.Status,
 			ActionType: "none",
 			IsSuccess:  true,
-		},
+		}),
 	}
 
 	msg := configure.SourceControlActionsTakenSources{

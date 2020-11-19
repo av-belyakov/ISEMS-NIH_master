@@ -496,21 +496,22 @@ func checkParametersDownloadTask(
 		return fmt.Errorf("as a result of the previous filtering, no files were found (task ID %v)%v", res.TaskID, funcName)
 	}
 
-	var confirmedListFiles map[string]*configure.DownloadFilesInformation
+	var confirmedListFiles map[string]*configure.DetailedFilesInformation
 
 	numUserDownloadList := len(tisqt.TaskParameters.DownloadList)
 
 	//совпадают ли файлы переданные пользователем (если передовались) с файлами полученными из БД
 	if numUserDownloadList == 0 {
-		confirmedListFiles = make(map[string]*configure.DownloadFilesInformation, len(tidb.ListFilesResultTaskExecution))
+		confirmedListFiles = make(map[string]*configure.DetailedFilesInformation, len(tidb.ListFilesResultTaskExecution))
 
 		//формируем новый список не выгружавшихся файлов
 		for _, f := range tidb.ListFilesResultTaskExecution {
 			//только если файл не загружался
 			if !f.FileLoaded {
-				confirmedListFiles[f.FileName] = &configure.DownloadFilesInformation{}
-				confirmedListFiles[f.FileName].Size = f.FileSize
-				confirmedListFiles[f.FileName].Hex = f.FileHex
+				confirmedListFiles[f.FileName] = &configure.DetailedFilesInformation{
+					Size: f.FileSize,
+					Hex:  f.FileHex,
+				}
 			}
 		}
 
@@ -654,14 +655,14 @@ func checkParametersDownloadTask(
 }
 
 //checkFileNameMatches проверяет на совпадение файлов переданных пользователем с файлами полученными из БД
-func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) (map[string]*configure.DownloadFilesInformation, error) {
+func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) (map[string]*configure.DetailedFilesInformation, error) {
 	type fileInfo struct {
 		hex      string
 		size     int64
 		isLoaded bool
 	}
 
-	nlf := make(map[string]*configure.DownloadFilesInformation, len(lfqst))
+	nlf := make(map[string]*configure.DetailedFilesInformation, len(lfqst))
 
 	if len(lfdb) == 0 {
 		return nlf, errors.New("an empty list with files was obtained from the database")
@@ -681,9 +682,10 @@ func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) (m
 		if info, ok := tmpList[f]; ok {
 			//только если файл не загружался
 			if !info.isLoaded {
-				nlf[f] = &configure.DownloadFilesInformation{}
-				nlf[f].Size = info.size
-				nlf[f].Hex = info.hex
+				nlf[f] = &configure.DetailedFilesInformation{
+					Size: info.size,
+					Hex:  info.hex,
+				}
 			}
 		}
 	}

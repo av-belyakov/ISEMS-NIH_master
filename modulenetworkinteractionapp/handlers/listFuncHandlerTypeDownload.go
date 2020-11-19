@@ -32,10 +32,10 @@ type typeProcessingDownloadFile struct {
 }
 
 type listChannels struct {
-	chanInCore  chan<- *configure.MsgBetweenCoreAndNI
-	chanOutCore <-chan MsgChannelProcessorReceivingFiles
-	cwtRes      chan<- configure.MsgWsTransmission
-	chanDone    chan<- struct{}
+	chanInCore chan<- *configure.MsgBetweenCoreAndNI
+	chanOut    <-chan MsgChannelProcessorReceivingFiles
+	cwtRes     chan<- configure.MsgWsTransmission
+	chanDone   chan<- struct{}
 }
 
 //ListFileDescription хранит список файловых дескрипторов и канал для доступа к ним
@@ -192,7 +192,7 @@ func processorReceivingFiles(
 	}
 
 	//проверяем наличие файлов для скачивания
-	if len(ti.TaskParameter.DownloadTask.DownloadingFilesInformation) == 0 {
+	if len(ti.TaskParameter.ListFilesDetailedInformation) == 0 {
 		return chanOut, chanDone, fmt.Errorf("the list of files suitable for downloading from the source is empty")
 	}
 
@@ -204,10 +204,10 @@ func processorReceivingFiles(
 		smt:            smt,
 		saveMessageApp: saveMessageApp,
 		channels: listChannels{
-			chanInCore:  chanInCore,
-			chanOutCore: chanOut,
-			cwtRes:      cwtRes,
-			chanDone:    chanDone,
+			chanInCore: chanInCore,
+			chanOut:    chanOut,
+			cwtRes:     cwtRes,
+			chanDone:   chanDone,
 		},
 	})
 
@@ -235,7 +235,7 @@ func processingDownloadFile(tpdf typeProcessingDownloadFile) {
 
 DONE:
 	//читаем список файлов
-	for fn, fi := range tpdf.taskInfo.TaskParameter.DownloadTask.DownloadingFilesInformation {
+	for fn, fi := range tpdf.taskInfo.TaskParameter.ListFilesDetailedInformation {
 		//делаем первый запрос на скачивание файла
 		mtd.Info.Command = "give me the file"
 		mtd.Info.FileOptions = configure.DownloadFileOptions{
@@ -260,7 +260,7 @@ DONE:
 		}
 
 	NEWFILE:
-		for msg := range tpdf.channels.chanOutCore {
+		for msg := range tpdf.channels.chanOut {
 			//обновляем значение таймера (что бы задача не была удалена по таймауту)
 			tpdf.smt.TimerUpdateStoringMemoryTask(tpdf.taskID)
 
@@ -448,7 +448,7 @@ DONE:
 					SMT:        tpdf.smt,
 					ChanInCore: tpdf.channels.chanInCore,
 				})
-				if err != nil {
+				if writeBinaryFileResult.err != nil {
 					tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
@@ -460,20 +460,7 @@ DONE:
 					break DONE
 				}
 
-				ti, ok := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
-				if !ok {
-					tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						Description: fmt.Sprintf("task with ID %v not found", tpdf.taskID),
-						FuncName:    funcName,
-					})
-
-					sdf.Status = "error"
-					sdf.ErrMsg = err
-
-					break DONE
-				}
-
-				if (writeBinaryFileResult.fileIsLoaded || writeBinaryFileResult.fileLoadedError) && !ti.IsSlowDown {
+				if (writeBinaryFileResult.fileIsLoaded || writeBinaryFileResult.fileLoadedError) && !writeBinaryFileResult.fileIsSlowDown {
 					msgRes := configure.MsgTypeDownload{
 						MsgType: "download files",
 						Info: configure.DetailInfoMsgDownload{
@@ -487,7 +474,7 @@ DONE:
 						msgRes.Info.Command = "file received with error"
 
 						tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-							Description: fmt.Sprintf("the checksum value for the downloaded file '%v' is incorrect (task ID %v)", ti.TaskParameter.DownloadTask.FileInformation.Name, tpdf.taskID),
+							Description: fmt.Sprintf("the checksum value for the downloaded file '%v' is incorrect (task ID %v)", writeBinaryFileResult.fileName, tpdf.taskID),
 							FuncName:    funcName,
 						})
 					}
@@ -541,8 +528,9 @@ DONE:
 }
 
 type typeWriteBinaryFileRes struct {
-	fileIsLoaded, fileLoadedError bool
-	err                           error
+	fileName                                      string
+	fileIsLoaded, fileLoadedError, fileIsSlowDown bool
+	err                                           error
 }
 
 //writingBinaryFile осуществляет запись бинарного файла
@@ -581,6 +569,9 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) *typeWriteBinaryFileRes
 		twbfr.err = fmt.Errorf("task with ID %v not found", pwbf.TaskID)
 		return &twbfr
 	}
+
+	twbfr.fileName = ti.TaskParameter.DownloadTask.FileInformation.Name
+	twbfr.fileIsSlowDown = ti.IsSlowDown
 
 	fi = ti.TaskParameter.DownloadTask.FileInformation
 
@@ -638,12 +629,6 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) *typeWriteBinaryFileRes
 
 		filePath := path.Join(ti.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles, fi.Name)
 
-		newFileInfo := configure.DownloadFilesInformation{
-			TimeDownload: time.Now().Unix(),
-		}
-		newFileInfo.Size = fi.FullSizeByte
-		newFileInfo.Hex = fi.Hex
-
 		msgToCore.Command = "file download complete"
 
 		//проверяем хеш-сумму файла
@@ -658,12 +643,16 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) *typeWriteBinaryFileRes
 			return &twbfr
 		}
 
+		ndfi := configure.DetailedFilesInformation{
+			Hex:          fi.Hex,
+			Size:         fi.FullSizeByte,
+			IsLoaded:     true,
+			TimeDownload: time.Now().Unix(),
+		}
+
 		//отмечаем файл как успешно принятый
-		newFileInfo.IsLoaded = true
-		pwbf.SMT.UpdateTaskDownloadFileIsLoaded(pwbf.TaskID, &configure.DownloadTaskParameters{
-			DownloadingFilesInformation: map[string]*configure.DownloadFilesInformation{
-				fi.Name: &newFileInfo,
-			},
+		pwbf.SMT.UpdateListFilesDetailedInformationFileIsLoaded(pwbf.TaskID, map[string]*configure.DetailedFilesInformation{
+			fi.Name: &ndfi,
 		})
 
 		pwbf.ChanInCore <- &msgToCore
