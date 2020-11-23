@@ -144,8 +144,8 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 		tr.TickerSec = 5
 	}
 
-	if tr.TimeExpiration > 360 {
-		tr.TimeExpiration = 360
+	if tr.TimeExpiration > 180 {
+		tr.TimeExpiration = 180
 	}
 
 	tssq := TemporaryStorageSearchQueries{
