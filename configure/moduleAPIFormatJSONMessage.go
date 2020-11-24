@@ -371,6 +371,7 @@ type SearchInformationAboutTasksRequest struct {
 
 //SearchInformationAboutTasksRequestOption дополнительные опции для поиска информации по задаче
 // SearchRequestIsGeneratedAutomatically — был ли запрос на поиск сгенерирован автоматически (TRUE — да, FALSE - нет)
+// JustCountNumber - только подсчет количества, подходящих под условие, задач
 // ID - уникальный цифровой идентификатор источника
 // ConsiderParameterTaskProcessed - учитывать параметр TaskProcessed
 // TaskProcessed - была ли задача отмечена клиентом API как завершенная
@@ -384,6 +385,7 @@ type SearchInformationAboutTasksRequest struct {
 // InstalledFilteringOption - установленные опции фильтрации
 type SearchInformationAboutTasksRequestOption struct {
 	SearchRequestIsGeneratedAutomatically bool                             `json:"sriga"`
+	JustCountNumber                       bool                             `json:"jcn"`
 	ID                                    int                              `json:"id"`
 	ConsiderParameterTaskProcessed        bool                             `json:"cptp"`
 	TaskProcessed                         bool                             `json:"tp"`
@@ -438,9 +440,11 @@ type RequestInformationByTaskID struct {
 
 //ParametersGetInformationByTaskID содержит параметры для поиска информации о задаче по ее ID
 // SearchRequestIsGeneratedAutomatically — был ли запрос на поиск сгенерирован автоматически (TRUE — да, FALSE - нет)
+// JustCountNumber - только подсчет количества, подходящих под условие, задач
 // ReguestTaskID - запрашиваемый уникальный цифровой идентификатор задачи  по фильтрации и скачиванию, выполняемой или выполненной
 type ParametersGetInformationByTaskID struct {
 	SearchRequestIsGeneratedAutomatically bool   `json:"sriga"`
+	JustCountNumber                       bool   `json:"jcn"`
 	RequestTaskID                         string `json:"rtid"`
 }
 
@@ -573,7 +577,7 @@ type SearchInformationResponseCommanInfo struct {
 type SearchInformationResponseOptionCommanInfo struct {
 	TaskIDApp             string                  `json:"tidapp"`
 	Status                string                  `json:"s"`
-	TotalNumberTasksFound int                     `json:"tntf"`
+	TotalNumberTasksFound int64                   `json:"tntf"`
 	PaginationOptions     PaginationOption        `json:"p"`
 	ShortListFoundTasks   []*BriefTaskInformation `json:"slft"`
 }

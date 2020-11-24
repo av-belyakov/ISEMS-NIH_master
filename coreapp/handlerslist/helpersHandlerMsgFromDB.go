@@ -135,8 +135,9 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 	}
 
 	numTaskFound := len(info.ListFoundInformation.List)
+	countDocumentFound := info.SummarySearchQueryProcessingResults.NumFoundTasks
 
-	if (numTaskFound == 0) && (!(*info).SearchParameters.SearchRequestIsGeneratedAutomatically) {
+	if (numTaskFound == 0) && (countDocumentFound == 0) && (!(*info).SearchParameters.SearchRequestIsGeneratedAutomatically) {
 		//информационное сообщение о том что искомая задача не найдена
 		notifications.SendNotificationToClientAPI(
 			chanToAPI,
@@ -152,11 +153,16 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 
 	}
 
+	numFound := countDocumentFound
+	if countDocumentFound == 0 {
+		numFound = int64(numTaskFound)
+	}
+
 	resMsg := configure.SearchInformationResponseCommanInfo{
 		MsgOption: configure.SearchInformationResponseOptionCommanInfo{
 			TaskIDApp:             res.TaskID,
 			Status:                "complete",
-			TotalNumberTasksFound: numTaskFound,
+			TotalNumberTasksFound: numFound,
 			PaginationOptions: configure.PaginationOption{
 				ChunkSize:          chunkSize,
 				ChunkNumber:        1,
@@ -170,11 +176,13 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 	resMsg.MsgInstruction = "processing information search task"
 	resMsg.ClientTaskID = res.TaskIDClientAPI
 
+	ltid := []string{res.TaskID}
+
 	//отправляем всю информацию целиком
 	if numTaskFound < chunkSize {
 		resMsg.MsgOption.ShortListFoundTasks = info.ListFoundInformation.List
 
-		msgJSON, err := json.Marshal(resMsg)
+		msgJSON, err := json.Marshal(&resMsg)
 		if err != nil {
 			return err
 		}
@@ -185,6 +193,9 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 			IDClientAPI:  res.IDClientAPI,
 			MsgJSON:      msgJSON,
 		}
+
+		//изменяем статус актуальности задачи на 'не актуальна'
+		tssq.ChangingStatusInformationRelevance(ltid)
 
 		return nil
 	}
@@ -202,7 +213,7 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 		}
 
 		resMsg.MsgOption.PaginationOptions.ChunkCurrentNumber = i + 1
-		msgJSON, err := json.Marshal(resMsg)
+		msgJSON, err := json.Marshal(&resMsg)
 		if err != nil {
 			return err
 		}
@@ -214,6 +225,9 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 			MsgJSON:      msgJSON,
 		}
 	}
+
+	//изменяем статус актуальности задачи на 'не актуальна'
+	tssq.ChangingStatusInformationRelevance(ltid)
 
 	return nil
 }

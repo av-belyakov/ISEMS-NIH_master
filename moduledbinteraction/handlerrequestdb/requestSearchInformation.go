@@ -43,6 +43,40 @@ func SearchShortInformationAboutTasks(
 		return
 	}
 
+	//если необходимо получить только количество
+	if info.SearchParameters.JustCountNumber {
+		countDocument, err := getSummarySearchQueryProcessingResults(qp, &info.SearchParameters)
+		if err != nil {
+			msgRes.MsgSection = "error notification"
+			msgRes.AdvancedOptions = configure.ErrorNotification{
+				SourceReport:          "DB module",
+				HumanDescriptionError: "search for information in the database is not possible, error processing the request to the database",
+				ErrorBody:             err,
+			}
+
+			chanIn <- &msgRes
+
+			return
+		}
+
+		if err := tssq.AddCountDocumentFoundSearchResult(req.TaskID, countDocument); err != nil {
+			msgRes.MsgSection = "error notification"
+			msgRes.AdvancedOptions = configure.ErrorNotification{
+				SourceReport:          "DB module",
+				HumanDescriptionError: "search for information in the database is not possible, error processing the request to the database",
+				ErrorBody:             err,
+			}
+
+			chanIn <- &msgRes
+
+			return
+		}
+
+		chanIn <- &msgRes
+
+		return
+	}
+
 	listShortTaskInfo, err := getShortInformation(qp, &info.SearchParameters)
 	if err != nil {
 		msgRes.MsgSection = "error notification"

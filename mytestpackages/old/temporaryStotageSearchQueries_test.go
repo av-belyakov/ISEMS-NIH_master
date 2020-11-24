@@ -179,7 +179,7 @@ var _ = Describe("Mytestpackages/TemporaryStotageSearchQueries", func() {
 
 	Context("Тест №8.1. Проверяем актуальность информации о задаче (не было ли изменения в БД)", func() {
 		It("Информация о задаче должна быть актуальна, так как по данной задачи ЕЩЕ идет поиск. Параметр должен быть FALSE", func() {
-			tssq.ChangingStatusInformationRelevance()
+			tssq.ChangingStatusInformationRelevance([]string{oneTaskID})
 			taskInfo, err := tssq.GetInformationAboutSearchTask(oneTaskID)
 
 			Expect(err).ShouldNot(HaveOccurred())
@@ -216,7 +216,7 @@ var _ = Describe("Mytestpackages/TemporaryStotageSearchQueries", func() {
 
 	Context("Тест №8.2. Проверяем актуальность информации о задаче (не было ли изменения в БД)", func() {
 		It("Информация о задаче должна быть не актуальна, то есть проверяемый параметр должен быть TRUE", func() {
-			tssq.ChangingStatusInformationRelevance()
+			tssq.ChangingStatusInformationRelevance([]string{oneTaskID})
 			taskInfo, err := tssq.GetInformationAboutSearchTask(oneTaskID)
 
 			Expect(err).ShouldNot(HaveOccurred())

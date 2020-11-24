@@ -88,9 +88,16 @@ func (qp *QueryParameters) UpdateOneArrayFilters(filter, update interface{}, uo 
 func (qp QueryParameters) Find(elem interface{}) (*mongo.Cursor, error) {
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
 	options := options.Find().SetSort(bson.D{{Key: "detailed_information_on_filtering.time_interval_task_execution.start", Value: -1}})
-	//options := options.Find()
 
 	return collection.Find(context.TODO(), elem, options)
+}
+
+//FindOne найти информацию по заданному элементу
+func (qp QueryParameters) FindOne(elem interface{}) *mongo.SingleResult {
+	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
+	options := options.FindOne().SetSort(bson.D{{Key: "detailed_information_on_filtering.time_interval_task_execution.start", Value: -1}})
+
+	return collection.FindOne(context.TODO(), elem, options)
 }
 
 //FindAlltoCollection найти всю информацию в коллекции

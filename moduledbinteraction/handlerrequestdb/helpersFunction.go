@@ -2,6 +2,7 @@ package handlerrequestdb
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/mongodb/mongo-go-driver/bson"
 
@@ -12,104 +13,173 @@ import (
 func getInfoTaskForID(qp QueryParameters, taskID string) (*[]configure.InformationAboutTask, error) {
 	itf := []configure.InformationAboutTask{}
 
-	cur, err := qp.Find(bson.D{bson.E{Key: "task_id", Value: taskID}})
+	var result configure.InformationAboutTask
+	err := qp.FindOne(bson.D{bson.E{Key: "task_id", Value: taskID}}).Decode(&result)
 	if err != nil {
 		return &itf, err
 	}
 
-	for cur.Next(context.TODO()) {
-		var model configure.InformationAboutTask
-		err := cur.Decode(&model)
-		if err != nil {
-			return &itf, err
-		}
-
-		itf = append(itf, model)
-	}
-
-	if err := cur.Err(); err != nil {
-		return &itf, err
-	}
-
-	cur.Close(context.TODO())
+	itf = append(itf, result)
 
 	return &itf, nil
 }
 
 //getShortInformation получить краткую информацию об найденных задачах
 func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]*configure.BriefTaskInformation, error) {
-	getQueryTmpNetParams := func(fcp configure.FiltrationControlParametersNetworkFilters, queryType string) (bson.E, bson.D) {
-		listQueryType := map[string]struct {
-			e string
-			o configure.FiltrationControlIPorNetorPortParameters
-		}{
-			"ip":      {e: "ip", o: fcp.IP},
-			"port":    {e: "port", o: fcp.Port},
-			"network": {e: "network", o: fcp.Network},
-		}
+	lbti := []*configure.BriefTaskInformation{}
 
-		numAny := len(listQueryType[queryType].o.Any)
-		numSrc := len(listQueryType[queryType].o.Src)
-		numDst := len(listQueryType[queryType].o.Dst)
+	cur, err := qp.Find(createSearchQuery(sp))
+	if err != nil {
+		return lbti, err
+	}
+	defer cur.Close(context.TODO())
 
-		if numAny == 0 && numSrc == 0 && numDst == 0 {
-			return bson.E{}, bson.D{}
-		}
+	if err = cur.Decode(&lbti); err != nil {
 
-		if numAny > 0 && numSrc == 0 && numDst == 0 {
-			be := bson.E{Key: "$or", Value: bson.A{
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
-			}}
+		fmt.Println(err)
 
-			bd := bson.D{{Key: "$or", Value: bson.A{
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
-			}}}
-
-			return be, bd
-		}
-
-		if numSrc > 0 && numAny == 0 && numDst == 0 {
-			be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}
-			bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}}
-
-			return be, bd
-		}
-
-		if numDst > 0 && numAny == 0 && numSrc == 0 {
-			be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}
-			bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}}
-
-			return be, bd
-		}
-
-		if (numSrc > 0 && numDst > 0) && numAny == 0 {
-			be := bson.E{Key: "$and", Value: bson.A{
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
-			}}
-			bd := bson.D{{Key: "$and", Value: bson.A{
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
-			}}}
-
-			return be, bd
-		}
-
-		return bson.E{Key: "$or", Value: bson.A{
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
-			}}, bson.D{{Key: "$or", Value: bson.A{
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
-				bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
-			}}}
+		return lbti, err
 	}
 
+	fmt.Println("func 'getShortInformation'")
+	fmt.Println(len(lbti))
+
+	/*
+		var model configure.InformationAboutTask
+		for cur.Next(context.TODO()) {
+			err := cur.Decode(&model)
+			if err != nil {
+				return lbti, err
+			}
+
+			lbti = append(lbti, &configure.BriefTaskInformation{
+				TaskID:                 model.TaskID,
+				ClientTaskID:           model.ClientTaskID,
+				SourceID:               model.SourceID,
+				StartTimeTaskExecution: model.DetailedInformationOnFiltering.TimeIntervalTaskExecution.Start,
+				ParametersFiltration: configure.ParametersFiltrationOptions{
+					DateTime: configure.DateTimeParameters{
+						Start: model.FilteringOption.DateTime.Start,
+						End:   model.FilteringOption.DateTime.End,
+					},
+					Protocol: model.FilteringOption.Protocol,
+					Filters: configure.FiltrationControlParametersNetworkFilters{
+						IP: configure.FiltrationControlIPorNetorPortParameters{
+							Any: model.FilteringOption.Filters.IP.Any,
+							Src: model.FilteringOption.Filters.IP.Src,
+							Dst: model.FilteringOption.Filters.IP.Dst,
+						},
+						Port: configure.FiltrationControlIPorNetorPortParameters{
+							Any: model.FilteringOption.Filters.Port.Any,
+							Src: model.FilteringOption.Filters.Port.Src,
+							Dst: model.FilteringOption.Filters.Port.Dst,
+						},
+						Network: configure.FiltrationControlIPorNetorPortParameters{
+							Any: model.FilteringOption.Filters.Network.Any,
+							Src: model.FilteringOption.Filters.Network.Src,
+							Dst: model.FilteringOption.Filters.Network.Dst,
+						},
+					},
+				},
+				FilteringTaskStatus:                  model.DetailedInformationOnFiltering.TaskStatus,
+				FileDownloadTaskStatus:               model.DetailedInformationOnDownloading.TaskStatus,
+				NumberFilesFoundAsResultFiltering:    model.DetailedInformationOnFiltering.NumberFilesFoundResultFiltering,
+				TotalSizeFilesFoundAsResultFiltering: model.DetailedInformationOnFiltering.SizeFilesFoundResultFiltering,
+				NumberFilesDownloaded:                model.DetailedInformationOnDownloading.NumberFilesDownloaded,
+			})
+		}
+	*/
+
+	if err := cur.Err(); err != nil {
+		return lbti, err
+	}
+
+	return lbti, nil
+}
+
+//getShortInformation получить краткую информацию об найденных задачах
+func getSummarySearchQueryProcessingResults(qp QueryParameters, sp *configure.SearchParameters) (int64, error) {
+	count, err := qp.CountDocuments(createSearchQuery(sp))
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func getQueryTmpNetParams(fcp configure.FiltrationControlParametersNetworkFilters, queryType string) (bson.E, bson.D) {
+	listQueryType := map[string]struct {
+		e string
+		o configure.FiltrationControlIPorNetorPortParameters
+	}{
+		"ip":      {e: "ip", o: fcp.IP},
+		"port":    {e: "port", o: fcp.Port},
+		"network": {e: "network", o: fcp.Network},
+	}
+
+	numAny := len(listQueryType[queryType].o.Any)
+	numSrc := len(listQueryType[queryType].o.Src)
+	numDst := len(listQueryType[queryType].o.Dst)
+
+	if numAny == 0 && numSrc == 0 && numDst == 0 {
+		return bson.E{}, bson.D{}
+	}
+
+	if numAny > 0 && numSrc == 0 && numDst == 0 {
+		be := bson.E{Key: "$or", Value: bson.A{
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+		}}
+
+		bd := bson.D{{Key: "$or", Value: bson.A{
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+		}}}
+
+		return be, bd
+	}
+
+	if numSrc > 0 && numAny == 0 && numDst == 0 {
+		be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}
+		bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}}
+
+		return be, bd
+	}
+
+	if numDst > 0 && numAny == 0 && numSrc == 0 {
+		be := bson.E{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}
+		bd := bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}}
+
+		return be, bd
+	}
+
+	if (numSrc > 0 && numDst > 0) && numAny == 0 {
+		be := bson.E{Key: "$and", Value: bson.A{
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+		}}
+		bd := bson.D{{Key: "$and", Value: bson.A{
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+		}}}
+
+		return be, bd
+	}
+
+	return bson.E{Key: "$or", Value: bson.A{
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+		}}, bson.D{{Key: "$or", Value: bson.A{
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".any", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Any}}}},
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".src", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Src}}}},
+			bson.D{{Key: "filtering_option.filters." + listQueryType[queryType].e + ".dst", Value: bson.D{{Key: "$in", Value: listQueryType[queryType].o.Dst}}}},
+		}}}
+}
+
+func createSearchQuery(sp *configure.SearchParameters) bson.D {
 	checkParameterContainsValues := func(fcinpp configure.FiltrationControlIPorNetorPortParameters) bool {
 		if len(fcinpp.Any) > 0 {
 			return true
@@ -264,9 +334,7 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 		queryNetworkParametersIPNet = bson.E{Key: "$or", Value: bson.A{bdIP, bdNetwork}}
 	}
 
-	lbti := []*configure.BriefTaskInformation{}
-
-	cur, err := qp.Find(bson.D{
+	return bson.D{
 		querySourceID,
 		queryTaskProcessed,
 		queryFilesIsDownloaded,
@@ -279,62 +347,6 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 		queryStatusFilteringTask,
 		queryStatusFileDownloadTask,
 		queryNetworkParametersPort,
-		queryNetworkParametersIPNet})
-	if err != nil {
-		return lbti, err
+		queryNetworkParametersIPNet,
 	}
-
-	for cur.Next(context.Background()) {
-		var model configure.InformationAboutTask
-		err := cur.Decode(&model)
-		if err != nil {
-			return lbti, err
-		}
-
-		bti := configure.BriefTaskInformation{
-			TaskID:                 model.TaskID,
-			ClientTaskID:           model.ClientTaskID,
-			SourceID:               model.SourceID,
-			StartTimeTaskExecution: model.DetailedInformationOnFiltering.TimeIntervalTaskExecution.Start,
-			ParametersFiltration: configure.ParametersFiltrationOptions{
-				DateTime: configure.DateTimeParameters{
-					Start: model.FilteringOption.DateTime.Start,
-					End:   model.FilteringOption.DateTime.End,
-				},
-				Protocol: model.FilteringOption.Protocol,
-				Filters: configure.FiltrationControlParametersNetworkFilters{
-					IP: configure.FiltrationControlIPorNetorPortParameters{
-						Any: model.FilteringOption.Filters.IP.Any,
-						Src: model.FilteringOption.Filters.IP.Src,
-						Dst: model.FilteringOption.Filters.IP.Dst,
-					},
-					Port: configure.FiltrationControlIPorNetorPortParameters{
-						Any: model.FilteringOption.Filters.Port.Any,
-						Src: model.FilteringOption.Filters.Port.Src,
-						Dst: model.FilteringOption.Filters.Port.Dst,
-					},
-					Network: configure.FiltrationControlIPorNetorPortParameters{
-						Any: model.FilteringOption.Filters.Network.Any,
-						Src: model.FilteringOption.Filters.Network.Src,
-						Dst: model.FilteringOption.Filters.Network.Dst,
-					},
-				},
-			},
-			FilteringTaskStatus:                  model.DetailedInformationOnFiltering.TaskStatus,
-			FileDownloadTaskStatus:               model.DetailedInformationOnDownloading.TaskStatus,
-			NumberFilesFoundAsResultFiltering:    model.DetailedInformationOnFiltering.NumberFilesFoundResultFiltering,
-			TotalSizeFilesFoundAsResultFiltering: model.DetailedInformationOnFiltering.SizeFilesFoundResultFiltering,
-			NumberFilesDownloaded:                model.DetailedInformationOnDownloading.NumberFilesDownloaded,
-		}
-
-		lbti = append(lbti, &bti)
-	}
-
-	if err := cur.Err(); err != nil {
-		return lbti, err
-	}
-
-	cur.Close(context.Background())
-
-	return lbti, nil
 }

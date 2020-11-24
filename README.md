@@ -1,4 +1,4 @@
-Application ISEMS-NIH master, v1.6.3
+Application ISEMS-NIH master, v1.6.4
 Information Security Event Management System Network Interaction Handler (ISEMS-NIH)
 
 Сервер сетевого взаимодействия с территориально удаленными источниками ISEMS-NIH slave.
