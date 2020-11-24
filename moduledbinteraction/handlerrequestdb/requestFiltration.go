@@ -7,7 +7,7 @@ import (
 
 	"ISEMS-NIH_master/configure"
 
-	"github.com/mongodb/mongo-go-driver/bson"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 //CreateNewFiltrationTask запись информации о новой фильтрации

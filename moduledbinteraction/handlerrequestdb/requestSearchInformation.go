@@ -8,7 +8,7 @@ import (
 
 	"ISEMS-NIH_master/configure"
 
-	"github.com/mongodb/mongo-go-driver/bson"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 //SearchShortInformationAboutTasks поиск ОБЩЕЙ информации по задачам

@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mongodb/mongo-go-driver/mongo"
-	"github.com/mongodb/mongo-go-driver/mongo/options"
-	"github.com/mongodb/mongo-go-driver/mongo/readpref"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/coreapp"
@@ -77,17 +77,16 @@ func connectToDB(ctx context.Context, appc *configure.AppConfig) (*mongo.Client,
 	host := appc.ConnectionDB.Host
 	port := appc.ConnectionDB.Port
 
-	optAuth := options.Credential{
+	opts := options.Client()
+	opts.SetAuth(options.Credential{
 		AuthMechanism: "SCRAM-SHA-256",
 		AuthSource:    appc.ConnectionDB.NameDB,
 		Username:      appc.ConnectionDB.User,
 		Password:      appc.ConnectionDB.Password,
-	}
+	})
 
-	opts := options.Client()
-	opts.SetAuth(optAuth)
-
-	client, err := mongo.NewClientWithOptions("mongodb://"+host+":"+strconv.Itoa(port)+"/"+appc.ConnectionDB.NameDB, opts)
+	//client, err := mongo.NewClientWithOptions("mongodb://"+host+":"+strconv.Itoa(port)+"/"+appc.ConnectionDB.NameDB, opts)
+	client, err := mongo.NewClient(opts.ApplyURI("mongodb://" + host + ":" + strconv.Itoa(port) + "/" + appc.ConnectionDB.NameDB))
 	if err != nil {
 		return nil, err
 	}

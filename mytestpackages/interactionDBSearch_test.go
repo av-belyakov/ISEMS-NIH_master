@@ -10,10 +10,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/mongodb/mongo-go-driver/bson"
-	"github.com/mongodb/mongo-go-driver/mongo"
-	"github.com/mongodb/mongo-go-driver/mongo/options"
-	"github.com/mongodb/mongo-go-driver/mongo/readpref"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 
 	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
@@ -67,7 +67,7 @@ func connectToDB(ctx context.Context, conf configureDB) (*mongo.Client, error) {
 	opts := options.Client()
 	opts.SetAuth(optAuth)
 
-	client, err := mongo.NewClientWithOptions("mongodb://"+conf.Host+":"+strconv.Itoa(conf.Port)+"/"+conf.NameDB, opts)
+	client, err := mongo.NewClient(opts.ApplyURI("mongodb://" + conf.Host + ":" + strconv.Itoa(conf.Port) + "/" + conf.NameDB))
 	if err != nil {
 		return nil, err
 	}

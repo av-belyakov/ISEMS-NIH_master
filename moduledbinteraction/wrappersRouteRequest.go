@@ -7,7 +7,7 @@ import (
 	"ISEMS-NIH_master/moduledbinteraction/handlerrequestdb"
 	"ISEMS-NIH_master/savemessageapp"
 
-	"github.com/mongodb/mongo-go-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 //WrappersRouteRequest обертки для запросов

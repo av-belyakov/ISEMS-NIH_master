@@ -2,9 +2,8 @@ package handlerrequestdb
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/mongodb/mongo-go-driver/bson"
+	"go.mongodb.org/mongo-driver/bson"
 
 	"ISEMS-NIH_master/configure"
 )
@@ -34,7 +33,7 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 	}
 	defer cur.Close(context.TODO())
 
-	if err = cur.Decode(&lbti); err != nil {
+	/*if err = cur.Decode(&lbti); err != nil {
 
 		fmt.Println(err)
 
@@ -43,52 +42,51 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 
 	fmt.Println("func 'getShortInformation'")
 	fmt.Println(len(lbti))
+	*/
 
-	/*
-		var model configure.InformationAboutTask
-		for cur.Next(context.TODO()) {
-			err := cur.Decode(&model)
-			if err != nil {
-				return lbti, err
-			}
+	var model configure.InformationAboutTask
+	for cur.Next(context.TODO()) {
+		err := cur.Decode(&model)
+		if err != nil {
+			return lbti, err
+		}
 
-			lbti = append(lbti, &configure.BriefTaskInformation{
-				TaskID:                 model.TaskID,
-				ClientTaskID:           model.ClientTaskID,
-				SourceID:               model.SourceID,
-				StartTimeTaskExecution: model.DetailedInformationOnFiltering.TimeIntervalTaskExecution.Start,
-				ParametersFiltration: configure.ParametersFiltrationOptions{
-					DateTime: configure.DateTimeParameters{
-						Start: model.FilteringOption.DateTime.Start,
-						End:   model.FilteringOption.DateTime.End,
+		lbti = append(lbti, &configure.BriefTaskInformation{
+			TaskID:                 model.TaskID,
+			ClientTaskID:           model.ClientTaskID,
+			SourceID:               model.SourceID,
+			StartTimeTaskExecution: model.DetailedInformationOnFiltering.TimeIntervalTaskExecution.Start,
+			ParametersFiltration: configure.ParametersFiltrationOptions{
+				DateTime: configure.DateTimeParameters{
+					Start: model.FilteringOption.DateTime.Start,
+					End:   model.FilteringOption.DateTime.End,
+				},
+				Protocol: model.FilteringOption.Protocol,
+				Filters: configure.FiltrationControlParametersNetworkFilters{
+					IP: configure.FiltrationControlIPorNetorPortParameters{
+						Any: model.FilteringOption.Filters.IP.Any,
+						Src: model.FilteringOption.Filters.IP.Src,
+						Dst: model.FilteringOption.Filters.IP.Dst,
 					},
-					Protocol: model.FilteringOption.Protocol,
-					Filters: configure.FiltrationControlParametersNetworkFilters{
-						IP: configure.FiltrationControlIPorNetorPortParameters{
-							Any: model.FilteringOption.Filters.IP.Any,
-							Src: model.FilteringOption.Filters.IP.Src,
-							Dst: model.FilteringOption.Filters.IP.Dst,
-						},
-						Port: configure.FiltrationControlIPorNetorPortParameters{
-							Any: model.FilteringOption.Filters.Port.Any,
-							Src: model.FilteringOption.Filters.Port.Src,
-							Dst: model.FilteringOption.Filters.Port.Dst,
-						},
-						Network: configure.FiltrationControlIPorNetorPortParameters{
-							Any: model.FilteringOption.Filters.Network.Any,
-							Src: model.FilteringOption.Filters.Network.Src,
-							Dst: model.FilteringOption.Filters.Network.Dst,
-						},
+					Port: configure.FiltrationControlIPorNetorPortParameters{
+						Any: model.FilteringOption.Filters.Port.Any,
+						Src: model.FilteringOption.Filters.Port.Src,
+						Dst: model.FilteringOption.Filters.Port.Dst,
+					},
+					Network: configure.FiltrationControlIPorNetorPortParameters{
+						Any: model.FilteringOption.Filters.Network.Any,
+						Src: model.FilteringOption.Filters.Network.Src,
+						Dst: model.FilteringOption.Filters.Network.Dst,
 					},
 				},
-				FilteringTaskStatus:                  model.DetailedInformationOnFiltering.TaskStatus,
-				FileDownloadTaskStatus:               model.DetailedInformationOnDownloading.TaskStatus,
-				NumberFilesFoundAsResultFiltering:    model.DetailedInformationOnFiltering.NumberFilesFoundResultFiltering,
-				TotalSizeFilesFoundAsResultFiltering: model.DetailedInformationOnFiltering.SizeFilesFoundResultFiltering,
-				NumberFilesDownloaded:                model.DetailedInformationOnDownloading.NumberFilesDownloaded,
-			})
-		}
-	*/
+			},
+			FilteringTaskStatus:                  model.DetailedInformationOnFiltering.TaskStatus,
+			FileDownloadTaskStatus:               model.DetailedInformationOnDownloading.TaskStatus,
+			NumberFilesFoundAsResultFiltering:    model.DetailedInformationOnFiltering.NumberFilesFoundResultFiltering,
+			TotalSizeFilesFoundAsResultFiltering: model.DetailedInformationOnFiltering.SizeFilesFoundResultFiltering,
+			NumberFilesDownloaded:                model.DetailedInformationOnDownloading.NumberFilesDownloaded,
+		})
+	}
 
 	if err := cur.Err(); err != nil {
 		return lbti, err
