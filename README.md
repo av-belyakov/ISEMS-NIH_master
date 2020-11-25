@@ -16,3 +16,13 @@ db.createUser({
 	    serverAddress:[""]
 	}]
 })
+
+    "connectionDB": {
+        "socket": false,
+        "host": "127.0.0.1",
+        "port": 37017,
+        "user": "module-isems-nih",
+        "password": "tkovomfh&ff93",
+        "nameDB": "isems-nih",
+        "unixSocketPath": "../../../../tmp/mongodb.sock"
+    },
