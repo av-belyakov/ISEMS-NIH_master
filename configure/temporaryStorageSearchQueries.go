@@ -158,15 +158,10 @@ func CreateTmpStorageID(clientID string, sp *SearchParameters) string {
 type TypeRepositoryTSSQ struct {
 	TickerSec      int
 	TimeExpiration int
-	MaxCacheSize   int
 }
 
 //NewRepositoryTSSQ создание нового репозитория для хранения информации о задачах поиска
 func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
-	if tr.MaxCacheSize <= 10 || tr.MaxCacheSize > 1000 {
-		tr.MaxCacheSize = 100
-	}
-
 	if tr.TickerSec <= 1 || tr.TickerSec > 10 {
 		tr.TickerSec = 5
 	}
@@ -177,7 +172,6 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 
 	tssq := TemporaryStorageSearchQueries{
 		tickerSec:      tr.TickerSec,
-		maxCacheSize:   tr.MaxCacheSize,
 		timeExpiration: tr.TimeExpiration,
 		tasks:          map[string]*SearchTaskDescription{},
 		channelReq:     make(chan SearchChannelRequest),
@@ -187,14 +181,8 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 		for msg := range tssq.channelReq {
 			switch msg.actionType {
 			case "create new search task":
-
-				fmt.Println("NewRepositoryTSSQ, action type: 'create new search task', start")
-
 				searchParameters, ok := msg.information.(SearchParameters)
 				if !ok {
-
-					fmt.Println("NewRepositoryTSSQ, action type: 'create new search task', error 1")
-
 					msg.channelRes <- SearchChannelResponse{
 						errMsg: fmt.Errorf("ActionType: %q, ERROR: type conversion error", msg.actionType),
 					}
@@ -204,70 +192,16 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 					break
 				}
 
-				fmt.Println("NewRepositoryTSSQ, action type: 'create new search task', 2222")
-
-				fmt.Printf("count tasks: '%v', count max cache size: '%v'\n", len(tssq.tasks), tssq.maxCacheSize)
-
-				//проверяем количество записей в кэше
-				/*if len(tssq.tasks) > tssq.maxCacheSize-5 {
-
-					fmt.Println("NewRepositoryTSSQ, action type: 'create new search task', delete")
-
-					//tssq.deleteOldestRecord()
-					ls := make(listTask, 0, len(tssq.tasks))
-
-					fmt.Println(ls)
-
-					for key, value := range tssq.tasks {
-
-						fmt.Printf("update time information: '%v'\n", value.UpdateTimeInformation)
-
-						ls = append(ls, listTaskInfo{
-							id:           key,
-							time:         value.UpdateTimeInformation,
-							transmission: value.TransmissionStatus,
-						})
-					}
-
-					sort.Sort(ls)
-
-					fmt.Println(ls)
-
-					//удаляем самую старую запись (если информация по задаче не передается)
-					for _, info := range ls {
-						if info.transmission {
-							continue
-						}
-
-						fmt.Println(info)
-
-						delete(tssq.tasks, msg.searchTaskID)
-					}
-				}*/
-
-				fmt.Println("NewRepositoryTSSQ, action type: 'create new search task', 3333")
-
 				if info, err := tssq.temporaryStorageSearchInfo(msg.searchTaskID); err != nil {
-
-					fmt.Println("NewRepositoryTSSQ, action type: 'create new search task', err 4444")
-
 					//добавляем информацию
 					tssq.tasks[msg.searchTaskID] = &SearchTaskDescription{
 						UpdateTimeInformation: 0, //time.Now().Unix(),
 						SearchParameters:      searchParameters,
 					}
 				} else {
-
-					fmt.Println("NewRepositoryTSSQ, action type: 'create new search task', 5555")
-
 					//проверяем задачу на актуальность
 					if info.NotRelevance {
-
-						fmt.Println("NewRepositoryTSSQ, action type: 'create new search task', 6666")
-
 						tssq.delInformationAboutSearchTask(msg.searchTaskID)
-
-						fmt.Println("NewRepositoryTSSQ, action type: 'create new search task', 7777")
 
 						tssq.tasks[msg.searchTaskID] = &SearchTaskDescription{
 							UpdateTimeInformation: 0, //time.Now().Unix(),
@@ -275,15 +209,11 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 						}
 					}
 
-					fmt.Println("NewRepositoryTSSQ, action type: 'create new search task', 8888")
-
 					msg.channelRes <- SearchChannelResponse{
 						errMsg:          nil,
 						findInformation: info,
 					}
 				}
-
-				fmt.Println("NewRepositoryTSSQ, action type: 'create new search task', close channel")
 
 				close(msg.channelRes)
 
@@ -298,14 +228,8 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 				close(msg.channelRes)
 
 			case "add information found search result":
-
-				fmt.Println("-----=== 'add information found search result' START ===------")
-
 				lbti, ok := msg.information.([]*BriefTaskInformation)
 				if !ok {
-
-					fmt.Println("-----=== 'add information found search result' ERROR 111 ===------")
-
 					msg.channelRes <- SearchChannelResponse{
 						errMsg: fmt.Errorf("ActionType: %q, ERROR: type conversion error", msg.actionType),
 					}
@@ -316,21 +240,11 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 				}
 
 				if _, err := tssq.temporaryStorageSearchInfo(msg.searchTaskID); err != nil {
-
-					fmt.Println("-----=== 'add information found search result' ERROR 222 ===------")
-
 					msg.channelRes <- SearchChannelResponse{errMsg: err}
 				} else {
-
-					fmt.Println("-----=== 'add information found search result' 333 ===------")
-
 					tssq.tasks[msg.searchTaskID].ListFoundInformation.List = lbti
 					tssq.tasks[msg.searchTaskID].UpdateTimeInformation = time.Now().Unix()
 				}
-
-				fmt.Println("func 'NewRepositoryTSSQ', action type 'add information found search result'")
-
-				fmt.Println("-----=== 'add information found search result' END ===------")
 
 				close(msg.channelRes)
 
@@ -549,38 +463,6 @@ func (tssq *TemporaryStorageSearchQueries) delInformationAboutSearchTask(taskID 
 
 	<-chanRes
 }
-
-//DeleteOldestRecord удалить самую старую запись
-/*func (tssq *TemporaryStorageSearchQueries) deleteOldestRecord() {
-	fmt.Println("func 'deleteOldestRecord', START...")
-
-	ls := make(listTask, 0, len(tssq.tasks))
-
-	fmt.Println(ls)
-
-	for key, value := range tssq.tasks {
-		ls = append(ls, listTaskInfo{
-			id:           key,
-			time:         value.UpdateTimeInformation,
-			transmission: value.TransmissionStatus,
-		})
-	}
-
-	sort.Sort(ls)
-
-	fmt.Println(ls)
-
-	//удаляем самую старую запись (если информация по задаче не передается)
-	for _, info := range ls {
-		if info.transmission {
-			continue
-		}
-
-		fmt.Println(info)
-
-		//tssq.delInformationAboutSearchTask(info.id)
-	}
-}*/
 
 //checkTimeDeleteTemporaryStorageSearchQueries очистка информации о задаче по истечении определенного времени или неактуальности данных
 func checkTimeDeleteTemporaryStorageSearchQueries(tssq *TemporaryStorageSearchQueries) {

@@ -59,7 +59,7 @@ var _ = Describe("Mytestpackages/TemporaryStotageSearchQueries", func() {
 	tssq := configure.NewRepositoryTSSQ(configure.TypeRepositoryTSSQ{
 		TickerSec:      3,
 		TimeExpiration: 4,
-		MaxCacheSize:   10,
+		//MaxCacheSize:   10,
 	})
 	oneTaskID, _, _ := tssq.CreateNewSearchTask(clientID, &sp)
 	//oneTaskID := configure.CreateTmpStorageID(clientID, &sp)

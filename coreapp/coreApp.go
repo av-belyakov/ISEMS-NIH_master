@@ -54,7 +54,6 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	tssq := configure.NewRepositoryTSSQ(configure.TypeRepositoryTSSQ{
 		TickerSec:      3,
 		TimeExpiration: 30,
-		MaxCacheSize:   11,
 	})
 
 	//инициализация отслеживания выполнения задач

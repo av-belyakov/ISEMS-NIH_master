@@ -33,17 +33,6 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 	}
 	defer cur.Close(context.TODO())
 
-	/*if err = cur.Decode(&lbti); err != nil {
-
-		fmt.Println(err)
-
-		return lbti, err
-	}
-
-	fmt.Println("func 'getShortInformation'")
-	fmt.Println(len(lbti))
-	*/
-
 	var model configure.InformationAboutTask
 	for cur.Next(context.TODO()) {
 		err := cur.Decode(&model)
