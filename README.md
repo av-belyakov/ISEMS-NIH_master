@@ -1,4 +1,4 @@
-Application ISEMS-NIH master, v1.6.6
+Application ISEMS-NIH master, v1.6.7
 Information Security Event Management System Network Interaction Handler (ISEMS-NIH)
 
 Сервер сетевого взаимодействия с территориально удаленными источниками ISEMS-NIH slave.
@@ -27,3 +27,13 @@ db.createUser({
         "unixSocketPath": "../../../../tmp/mongodb.sock"
     },
     
+
+    "connectionDB": {
+        "socket": false,
+        "host": "192.168.13.200",
+        "port": 27017,
+        "user": "module-isems-nih",
+        "password": "tkovomfh&ff93",
+        "nameDB": "isems-nih",
+        "unixSocketPath": "../../../../tmp/mongodb.sock"
+    },

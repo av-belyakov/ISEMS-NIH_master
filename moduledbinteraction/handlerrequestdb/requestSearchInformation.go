@@ -84,8 +84,6 @@ func SearchShortInformationAboutTasks(
 		return
 	}
 
-	//	fmt.Println("func 'SearchShortInformationAboutTasks', get information about task ALL INFO")
-
 	listShortTaskInfo, err := getShortInformation(qp, &info.SearchParameters)
 	if err != nil {
 		msgRes.MsgSection = "error notification"

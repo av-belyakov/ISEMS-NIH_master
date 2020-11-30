@@ -26,15 +26,15 @@ func getInfoTaskForID(qp QueryParameters, taskID string) (*[]configure.Informati
 //getShortInformation получить краткую информацию об найденных задачах
 func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]*configure.BriefTaskInformation, error) {
 	lbti := []*configure.BriefTaskInformation{}
-
 	cur, err := qp.Find(createSearchQuery(sp))
 	if err != nil {
 		return lbti, err
 	}
 	defer cur.Close(context.TODO())
 
-	var model configure.InformationAboutTask
 	for cur.Next(context.TODO()) {
+		var model configure.InformationAboutTask
+
 		err := cur.Decode(&model)
 		if err != nil {
 			return lbti, err
@@ -75,6 +75,8 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 			TotalSizeFilesFoundAsResultFiltering: model.DetailedInformationOnFiltering.SizeFilesFoundResultFiltering,
 			NumberFilesDownloaded:                model.DetailedInformationOnDownloading.NumberFilesDownloaded,
 		})
+
+		model = configure.InformationAboutTask{}
 	}
 
 	if err := cur.Err(); err != nil {

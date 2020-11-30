@@ -54,6 +54,7 @@ type chanReqSetting struct {
 	actionType string
 	id         int
 	setting    SourceSetting
+	link       *websocket.Conn
 	chanRes    chan chanResSetting
 }
 
@@ -89,8 +90,20 @@ func NewRepositoryISL() *InformationSourcesList {
 				msg.chanRes <- chanResSetting{}
 				close(msg.chanRes)
 
+			case "add link ws connection":
+				isl.sourcesListConnection[msg.setting.IP] = WssConnection{Link: msg.link}
+
+				msg.chanRes <- chanResSetting{}
+				close(msg.chanRes)
+
 			case "del info about source":
 				delete(isl.sourcesListSetting, msg.id)
+
+				msg.chanRes <- chanResSetting{}
+				close(msg.chanRes)
+
+			case "del link ws connection":
+				delete(isl.sourcesListConnection, msg.setting.IP)
 
 				msg.chanRes <- chanResSetting{}
 				close(msg.chanRes)
@@ -157,6 +170,7 @@ func NewRepositoryISL() *InformationSourcesList {
 					msg.chanRes <- chanResSetting{
 						err: fmt.Errorf("source with ID %v not found", msg.id),
 					}
+
 					close(msg.chanRes)
 
 					break
@@ -171,6 +185,7 @@ func NewRepositoryISL() *InformationSourcesList {
 					msg.chanRes <- chanResSetting{
 						err: fmt.Errorf("source with ID %v not found", msg.id),
 					}
+
 					close(msg.chanRes)
 
 					break
@@ -185,7 +200,6 @@ func NewRepositoryISL() *InformationSourcesList {
 
 				isl.sourcesListSetting[msg.id] = s
 
-				msg.chanRes <- chanResSetting{}
 				close(msg.chanRes)
 
 			case "get access is allowed":
@@ -206,6 +220,7 @@ func NewRepositoryISL() *InformationSourcesList {
 				}
 
 				msg.chanRes <- chanResSetting{}
+				close(msg.chanRes)
 			}
 		}
 	}()
@@ -287,10 +302,8 @@ func (isl *InformationSourcesList) GetSourceIDOnIP(ip string) (int, bool) {
 
 	isl.chanReq <- chanReqSetting{
 		actionType: "get source id by ip",
-		setting: SourceSetting{
-			IP: ip,
-		},
-		chanRes: chanRes,
+		setting:    SourceSetting{IP: ip},
+		chanRes:    chanRes,
 	}
 
 	resMsg := <-chanRes
@@ -336,10 +349,8 @@ func (isl *InformationSourcesList) ChangeSourceConnectionStatus(id int, status b
 	isl.chanReq <- chanReqSetting{
 		actionType: "change source connection status",
 		id:         id,
-		setting: SourceSetting{
-			ConnectionStatus: status,
-		},
-		chanRes: chanRes,
+		setting:    SourceSetting{ConnectionStatus: status},
+		chanRes:    chanRes,
 	}
 
 	if (<-chanRes).err != nil {
@@ -368,10 +379,8 @@ func (isl *InformationSourcesList) SetAccessIsAllowed(id int) {
 
 	isl.chanReq <- chanReqSetting{
 		actionType: "set access is allowed",
-		setting: SourceSetting{
-			AccessIsAllowed: true,
-		},
-		chanRes: chanRes,
+		setting:    SourceSetting{AccessIsAllowed: true},
+		chanRes:    chanRes,
 	}
 
 	<-chanRes
@@ -397,7 +406,7 @@ func (isl InformationSourcesList) GetListsConnectedAndDisconnectedSources() (lis
 	return listConnected, listDisconnected
 }
 
-//SendWsMessage используется для отправки сообщений через протокол websocket (применяется Mutex)
+//SendWsMessage используется для отправки сообщений через протокол websocket
 func (wssc *WssConnection) SendWsMessage(t int, v []byte) error {
 	/*wssc.mu.Lock()
 	defer wssc.mu.Unlock()*/
@@ -412,14 +421,29 @@ func (isl *InformationSourcesList) GetSourcesListConnection() map[string]WssConn
 
 //AddLinkWebsocketConnect добавляет линк соединения по websocket
 func (isl *InformationSourcesList) AddLinkWebsocketConnect(ip string, lwsc *websocket.Conn) {
-	isl.sourcesListConnection[ip] = WssConnection{
-		Link: lwsc,
+	chanRes := make(chan chanResSetting)
+
+	isl.chanReq <- chanReqSetting{
+		actionType: "add link ws connection",
+		link:       lwsc,
+		setting:    SourceSetting{IP: ip},
+		chanRes:    chanRes,
 	}
+
+	<-chanRes
 }
 
 //DelLinkWebsocketConnection удаляет дескриптор соединения при отключении источника
 func (isl *InformationSourcesList) DelLinkWebsocketConnection(ip string) {
-	delete(isl.sourcesListConnection, ip)
+	chanRes := make(chan chanResSetting)
+
+	isl.chanReq <- chanReqSetting{
+		actionType: "del link ws connection",
+		setting:    SourceSetting{IP: ip},
+		chanRes:    chanRes,
+	}
+
+	<-chanRes
 }
 
 //GetLinkWebsocketConnect возвращает линк соединения по websocket
