@@ -284,7 +284,7 @@ func RouteWssConnectionResponse(
 				}
 
 			case "filtration":
-				if err := processresponse.ProcessingReceivedMsgTypeFiltering(processresponse.ParametersProcessingReceivedMsgTypeFiltering{
+				go processresponse.ProcessingReceivedMsgTypeFiltering(processresponse.ParametersProcessingReceivedMsgTypeFiltering{
 					SMT:      smt,
 					Message:  message,
 					SourceID: sourceID,
@@ -294,12 +294,7 @@ func RouteWssConnectionResponse(
 						ChanInCore: chanInCore,
 						CwtReq:     cwtReq,
 					},
-				}); err != nil {
-					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						Description: fmt.Sprint(err),
-						FuncName:    fn,
-					})
-				}
+				}, saveMessageApp)
 
 			case "download files":
 				var mtd configure.MsgTypeDownload
@@ -320,6 +315,8 @@ func RouteWssConnectionResponse(
 					MsgType:  msg.MsgType,
 					Message:  message,
 				}
+
+				mtd = configure.MsgTypeDownload{}
 
 			case "notification":
 				var notify configure.MsgTypeNotification

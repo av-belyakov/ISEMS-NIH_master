@@ -184,8 +184,6 @@ func NewRepositorySMT() *StoringMemoryTask {
 
 				msg.ChannelRes <- mr
 
-				close(msg.ChannelRes)
-
 			case "get list files detailed information":
 				mr := channelResSettings{
 					IsExist: false,
@@ -204,8 +202,6 @@ func NewRepositorySMT() *StoringMemoryTask {
 
 				msg.ChannelRes <- mr
 
-				close(msg.ChannelRes)
-
 			case "check task is exist":
 				_, ok := smt.tasks[msg.TaskID]
 
@@ -213,8 +209,6 @@ func NewRepositorySMT() *StoringMemoryTask {
 					IsExist: ok,
 					TaskID:  msg.TaskID,
 				}
-
-				close(msg.ChannelRes)
 
 			case "add":
 				smt.tasks[msg.TaskID] = msg.Description
@@ -233,8 +227,6 @@ func NewRepositorySMT() *StoringMemoryTask {
 					TaskID: msg.TaskID,
 				}
 
-				close(msg.ChannelRes)
-
 			case "recover":
 				smt.tasks[msg.TaskID] = msg.Description
 				smt.tasks[msg.TaskID].TaskParameter.ListFilesDetailedInformation = map[string]*DetailedFilesInformation{}
@@ -247,8 +239,6 @@ func NewRepositorySMT() *StoringMemoryTask {
 					TaskID: msg.TaskID,
 				}
 
-				close(msg.ChannelRes)
-
 			case "complete":
 				if _, ok := smt.tasks[msg.TaskID]; ok {
 					smt.tasks[msg.TaskID].TaskStatus = true
@@ -257,8 +247,6 @@ func NewRepositorySMT() *StoringMemoryTask {
 				msg.ChannelRes <- channelResSettings{
 					TaskID: msg.TaskID,
 				}
-
-				close(msg.ChannelRes)
 
 			case "is slow down":
 				if _, ok := smt.tasks[msg.TaskID]; ok {
@@ -269,16 +257,12 @@ func NewRepositorySMT() *StoringMemoryTask {
 					TaskID: msg.TaskID,
 				}
 
-				close(msg.ChannelRes)
-
 			case "timer update":
 				if _, ok := smt.tasks[msg.TaskID]; ok {
 					smt.tasks[msg.TaskID].TimeUpdate = time.Now().Unix()
 				}
 
 				msg.ChannelRes <- channelResSettings{}
-
-				close(msg.ChannelRes)
 
 			case "timer insert DB":
 				if _, ok := smt.tasks[msg.TaskID]; ok {
@@ -287,38 +271,30 @@ func NewRepositorySMT() *StoringMemoryTask {
 
 				msg.ChannelRes <- channelResSettings{}
 
-				close(msg.ChannelRes)
-
 			case "delete":
 				delete(smt.tasks, msg.TaskID)
+
+				msg.ChannelRes <- channelResSettings{}
 
 			case "update list files detailed information":
 				smt.updateListFilesDetailedInformation(msg.TaskID, msg.DetailedFilesInformation)
 
 				msg.ChannelRes <- channelResSettings{}
 
-				close(msg.ChannelRes)
-
 			case "update task filtration all parameters":
 				smt.updateTaskFiltrationAllParameters(msg.TaskID, msg.Description)
 
 				msg.ChannelRes <- channelResSettings{}
-
-				close(msg.ChannelRes)
 
 			case "update task download all parameters":
 				smt.updateTaskDownloadAllParameters(msg.TaskID, msg.Description)
 
 				msg.ChannelRes <- channelResSettings{}
 
-				close(msg.ChannelRes)
-
 			case "update list files detailed information file is loaded":
 				smt.updateListFilesDetailedInformationFileIsLoaded(msg.TaskID, msg.DetailedFilesInformation)
 
 				msg.ChannelRes <- channelResSettings{}
-
-				close(msg.ChannelRes)
 
 			case "increment number files downloaded":
 				if ti, ok := smt.tasks[msg.TaskID]; ok {
@@ -327,16 +303,12 @@ func NewRepositorySMT() *StoringMemoryTask {
 
 				msg.ChannelRes <- channelResSettings{}
 
-				close(msg.ChannelRes)
-
 			case "increment number files downloaded error":
 				if ti, ok := smt.tasks[msg.TaskID]; ok {
 					smt.tasks[msg.TaskID].TaskParameter.DownloadTask.NumberFilesDownloadedError = ti.TaskParameter.DownloadTask.NumberFilesDownloadedError + 1
 				}
 
 				msg.ChannelRes <- channelResSettings{}
-
-				close(msg.ChannelRes)
 
 			}
 		}
@@ -348,6 +320,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 //AddStoringMemoryTask добавить задачу
 func (smt *StoringMemoryTask) AddStoringMemoryTask(taskID string, td TaskDescription) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType:  "add",
@@ -362,6 +335,7 @@ func (smt *StoringMemoryTask) AddStoringMemoryTask(taskID string, td TaskDescrip
 //CheckIsExistMemoryTask проверяет наличие задачи по ее ID
 func (smt *StoringMemoryTask) CheckIsExistMemoryTask(taskID string) bool {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "check task is exist",
@@ -377,6 +351,7 @@ func (smt *StoringMemoryTask) CheckIsExistMemoryTask(taskID string) bool {
 //RecoverStoringMemoryTask восстанавливает всю информацию о выполяемой задаче
 func (smt *StoringMemoryTask) RecoverStoringMemoryTask(td TaskDescription, taskID string) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType:  "recover",
@@ -391,6 +366,7 @@ func (smt *StoringMemoryTask) RecoverStoringMemoryTask(td TaskDescription, taskI
 //CompleteStoringMemoryTask установить статус 'выполненно' для задачи
 func (smt *StoringMemoryTask) CompleteStoringMemoryTask(taskID string) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "complete",
@@ -404,6 +380,7 @@ func (smt *StoringMemoryTask) CompleteStoringMemoryTask(taskID string) {
 //IsSlowDownStoringMemoryTask отмечает задачу как находящуюся в процессе останова
 func (smt *StoringMemoryTask) IsSlowDownStoringMemoryTask(taskID string) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "is slow down",
@@ -417,6 +394,7 @@ func (smt *StoringMemoryTask) IsSlowDownStoringMemoryTask(taskID string) {
 //TimerUpdateStoringMemoryTask обновить значение таймера для задачи
 func (smt *StoringMemoryTask) TimerUpdateStoringMemoryTask(taskID string) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "timer update",
@@ -430,6 +408,7 @@ func (smt *StoringMemoryTask) TimerUpdateStoringMemoryTask(taskID string) {
 //TimerUpdateTaskInsertDB обновить значение таймера для задачи выполняемой в БД
 func (smt *StoringMemoryTask) TimerUpdateTaskInsertDB(taskID string) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "timer insert DB",
@@ -443,6 +422,7 @@ func (smt *StoringMemoryTask) TimerUpdateTaskInsertDB(taskID string) {
 //GetStoringMemoryTask получить информацию о задаче по ее ID
 func (smt *StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescription, bool) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "get task info",
@@ -458,6 +438,7 @@ func (smt *StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescript
 //GetListFilesDetailedInformation получить информацию со списком найденных в результате фильтрации файлах
 func (smt *StoringMemoryTask) GetListFilesDetailedInformation(taskID string) (map[string]*DetailedFilesInformation, bool) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "get list files detailed information",
@@ -473,6 +454,7 @@ func (smt *StoringMemoryTask) GetListFilesDetailedInformation(taskID string) (ma
 //IncrementNumberFilesDownloaded увеличить кол-во успешно скаченных файлов на 1
 func (smt *StoringMemoryTask) IncrementNumberFilesDownloaded(taskID string) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "increment number files downloaded",
@@ -486,6 +468,7 @@ func (smt *StoringMemoryTask) IncrementNumberFilesDownloaded(taskID string) {
 //IncrementNumberFilesDownloadedError увеличить кол-во успешно скаченных файлов на 1
 func (smt *StoringMemoryTask) IncrementNumberFilesDownloadedError(taskID string) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "increment number files downloaded error",
@@ -499,6 +482,7 @@ func (smt *StoringMemoryTask) IncrementNumberFilesDownloadedError(taskID string)
 //UpdateListFilesDetailedInformation обновление информации о файлах
 func (smt *StoringMemoryTask) UpdateListFilesDetailedInformation(taskID string, lfdi map[string]*DetailedFilesInformation) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType:               "update list files detailed information",
@@ -513,6 +497,7 @@ func (smt *StoringMemoryTask) UpdateListFilesDetailedInformation(taskID string, 
 //UpdateTaskFiltrationAllParameters обновление параметров выполнения задачи по фильтрации
 func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, ftp *FiltrationTaskParameters) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "update task filtration all parameters",
@@ -531,6 +516,7 @@ func (smt *StoringMemoryTask) UpdateTaskFiltrationAllParameters(taskID string, f
 //UpdateTaskDownloadAllParameters обновление параметров скачивания файлов
 func (smt *StoringMemoryTask) UpdateTaskDownloadAllParameters(taskID string, dtp *DownloadTaskParameters) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "update task download all parameters",
@@ -549,6 +535,7 @@ func (smt *StoringMemoryTask) UpdateTaskDownloadAllParameters(taskID string, dtp
 //UpdateListFilesDetailedInformationFileIsLoaded обновление информации о файлах
 func (smt *StoringMemoryTask) UpdateListFilesDetailedInformationFileIsLoaded(taskID string, lfdi map[string]*DetailedFilesInformation) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType:               "update list files detailed information file is loaded",
@@ -562,10 +549,16 @@ func (smt *StoringMemoryTask) UpdateListFilesDetailedInformationFileIsLoaded(tas
 
 //delStoringMemoryTask удалить задачу
 func (smt StoringMemoryTask) delStoringMemoryTask(taskID string) {
+	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
+
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType: "delete",
 		TaskID:     taskID,
+		ChannelRes: chanRes,
 	}
+
+	<-chanRes
 }
 
 //updateListFilesDetailedInformation обновляем информацию о файлах (при фильтрации)

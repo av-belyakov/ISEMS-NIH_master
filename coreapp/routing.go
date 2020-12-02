@@ -289,13 +289,13 @@ func Routing(trc TypeRoutingCore) {
 
 		//CHANNEL FROM NETWORK INTERACTION
 		case data := <-trc.ChanColl.InCoreChanNI:
-			//go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, saveMessageApp)
-			if err := handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm); err != nil {
+			go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, trc.SaveMessageApp)
+			/*if err := handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm); err != nil {
 				trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
 					FuncName:    funcName,
 				})
-			}
+			}*/
 
 		//сообщение клиенту API о том что задача с указанным ID долго выполняется
 		case infoHungTask := <-trc.ChanCheckTask:

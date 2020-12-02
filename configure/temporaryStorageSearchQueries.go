@@ -104,6 +104,9 @@ func (lt listTask) Less(i, j int) bool {
 
 //CreateTmpStorageID генерирует идентификатор задачи поиска в БД по заданным параметрам
 func CreateTmpStorageID(clientID string, sp *SearchParameters) string {
+
+	fmt.Println("func 'CreateTmpStorageID', START...")
+
 	boolStr := func(b bool) string {
 		if b {
 			return "true"
@@ -183,39 +186,45 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 			case "create new search task":
 				searchParameters, ok := msg.information.(SearchParameters)
 				if !ok {
+
+					fmt.Println("SSDD ERROR 1111")
+
 					msg.channelRes <- SearchChannelResponse{
 						errMsg: fmt.Errorf("ActionType: %q, ERROR: type conversion error", msg.actionType),
 					}
-
-					close(msg.channelRes)
-
-					break
-				}
-
-				if info, err := tssq.temporaryStorageSearchInfo(msg.searchTaskID); err != nil {
-					//добавляем информацию
-					tssq.tasks[msg.searchTaskID] = &SearchTaskDescription{
-						UpdateTimeInformation: 0, //time.Now().Unix(),
-						SearchParameters:      searchParameters,
-					}
 				} else {
-					//проверяем задачу на актуальность
-					if info.NotRelevance {
-						tssq.delInformationAboutSearchTask(msg.searchTaskID)
+					info, err := tssq.temporaryStorageSearchInfo(msg.searchTaskID)
+					if err != nil {
 
+						fmt.Println("SSDD ERROR 2222")
+
+						//добавляем информацию
 						tssq.tasks[msg.searchTaskID] = &SearchTaskDescription{
 							UpdateTimeInformation: 0, //time.Now().Unix(),
 							SearchParameters:      searchParameters,
 						}
-					}
 
-					msg.channelRes <- SearchChannelResponse{
-						errMsg:          nil,
-						findInformation: info,
+						msg.channelRes <- SearchChannelResponse{}
+					} else {
+						//проверяем задачу на актуальность
+						if info.NotRelevance {
+
+							fmt.Println("SSDD 3333")
+
+							delete(tssq.tasks, msg.searchTaskID)
+
+							tssq.tasks[msg.searchTaskID] = &SearchTaskDescription{
+								UpdateTimeInformation: 0, //time.Now().Unix(),
+								SearchParameters:      searchParameters,
+							}
+						}
+
+						msg.channelRes <- SearchChannelResponse{
+							errMsg:          nil,
+							findInformation: info,
+						}
 					}
 				}
-
-				close(msg.channelRes)
 
 			case "get information about search task":
 				info, err := tssq.temporaryStorageSearchInfo(msg.searchTaskID)
@@ -225,28 +234,22 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 					findInformation: info,
 				}
 
-				close(msg.channelRes)
-
 			case "add information found search result":
 				lbti, ok := msg.information.([]*BriefTaskInformation)
 				if !ok {
 					msg.channelRes <- SearchChannelResponse{
 						errMsg: fmt.Errorf("ActionType: %q, ERROR: type conversion error", msg.actionType),
 					}
-
-					close(msg.channelRes)
-
-					break
-				}
-
-				if _, err := tssq.temporaryStorageSearchInfo(msg.searchTaskID); err != nil {
-					msg.channelRes <- SearchChannelResponse{errMsg: err}
 				} else {
-					tssq.tasks[msg.searchTaskID].ListFoundInformation.List = lbti
-					tssq.tasks[msg.searchTaskID].UpdateTimeInformation = time.Now().Unix()
-				}
+					if _, err := tssq.temporaryStorageSearchInfo(msg.searchTaskID); err != nil {
+						msg.channelRes <- SearchChannelResponse{errMsg: err}
+					} else {
+						tssq.tasks[msg.searchTaskID].ListFoundInformation.List = lbti
+						tssq.tasks[msg.searchTaskID].UpdateTimeInformation = time.Now().Unix()
 
-				close(msg.channelRes)
+						msg.channelRes <- SearchChannelResponse{}
+					}
+				}
 
 			case "add count document found search result":
 				cd, ok := msg.information.(int64)
@@ -255,28 +258,24 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 						errMsg: fmt.Errorf("ActionType: %q, ERROR: type conversion error", msg.actionType),
 					}
 
-					close(msg.channelRes)
-
-					break
-				}
-
-				if _, err := tssq.temporaryStorageSearchInfo(msg.searchTaskID); err != nil {
-					msg.channelRes <- SearchChannelResponse{errMsg: err}
 				} else {
-					tssq.tasks[msg.searchTaskID].UpdateTimeInformation = time.Now().Unix()
-					tssq.tasks[msg.searchTaskID].SummarySearchQueryProcessingResults.NumFoundTasks = cd
-				}
+					if _, err := tssq.temporaryStorageSearchInfo(msg.searchTaskID); err != nil {
+						msg.channelRes <- SearchChannelResponse{errMsg: err}
+					} else {
+						tssq.tasks[msg.searchTaskID].UpdateTimeInformation = time.Now().Unix()
+						tssq.tasks[msg.searchTaskID].SummarySearchQueryProcessingResults.NumFoundTasks = cd
 
-				close(msg.channelRes)
+						msg.channelRes <- SearchChannelResponse{}
+					}
+				}
 
 			case "del information about search task":
 				delete(tssq.tasks, msg.searchTaskID)
 
-				close(msg.channelRes)
+				msg.channelRes <- SearchChannelResponse{}
 
 			case "change status transmission task":
-				status, ok := msg.information.(bool)
-				if !ok {
+				if status, ok := msg.information.(bool); !ok {
 					msg.channelRes <- SearchChannelResponse{
 						errMsg: fmt.Errorf("ActionType: %q, ERROR: type conversion error", msg.actionType),
 					}
@@ -286,28 +285,26 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 					}
 				}
 
-				close(msg.channelRes)
-
 			case "change status information relevance":
 				ltid, ok := msg.information.([]string)
 				if !ok {
 					msg.channelRes <- SearchChannelResponse{
 						errMsg: fmt.Errorf("ActionType: %q, ERROR: type conversion error", msg.actionType),
 					}
+				} else {
+					tssq.changingStatusInformationRelevance(ltid)
+
+					msg.channelRes <- SearchChannelResponse{}
 				}
-
-				tssq.changingStatusInformationRelevance(ltid)
-
-				close(msg.channelRes)
 
 			case "change update time information":
 				if _, err := tssq.temporaryStorageSearchInfo(msg.searchTaskID); err != nil {
 					msg.channelRes <- SearchChannelResponse{errMsg: err}
 				} else {
 					tssq.tasks[msg.searchTaskID].UpdateTimeInformation = time.Now().Unix()
-				}
 
-				close(msg.channelRes)
+					msg.channelRes <- SearchChannelResponse{}
+				}
 			}
 		}
 	}()
@@ -319,9 +316,19 @@ func NewRepositoryTSSQ(tr TypeRepositoryTSSQ) *TemporaryStorageSearchQueries {
 
 //CreateNewSearchTask создание новой временной записи о поисковой задаче
 func (tssq *TemporaryStorageSearchQueries) CreateNewSearchTask(clientID string, sp *SearchParameters) (string, *SearchTaskDescription, error) {
+	fmt.Println("func 'CreateNewSearchTask', START...")
+
 	taskID := CreateTmpStorageID(clientID, sp)
 
+	fmt.Printf("func 'CreateNewSearchTask', CreateTmpStorageID: '%v'\n", taskID)
+
 	chanRes := make(chan SearchChannelResponse)
+	defer func() {
+
+		fmt.Printf("func 'CreateNewSearchTask', close chan for task ID %v\n", taskID)
+
+		close(chanRes)
+	}()
 
 	tssq.channelReq <- SearchChannelRequest{
 		actionType:   "create new search task",
@@ -330,7 +337,11 @@ func (tssq *TemporaryStorageSearchQueries) CreateNewSearchTask(clientID string, 
 		channelRes:   chanRes,
 	}
 
+	fmt.Println("func 'CreateNewSearchTask', AFTER Wait message from chan")
+
 	info := <-chanRes
+
+	fmt.Printf("func 'CreateNewSearchTask', RESULT INFO: '%v'\n", info)
 
 	return taskID, info.findInformation, info.errMsg
 }
@@ -338,6 +349,7 @@ func (tssq *TemporaryStorageSearchQueries) CreateNewSearchTask(clientID string, 
 //GetInformationAboutSearchTask вывод всей найденной информации из кэша
 func (tssq *TemporaryStorageSearchQueries) GetInformationAboutSearchTask(taskID string) (*SearchTaskDescription, error) {
 	chanRes := make(chan SearchChannelResponse)
+	defer close(chanRes)
 
 	tssq.channelReq <- SearchChannelRequest{
 		actionType:   "get information about search task",
@@ -353,6 +365,7 @@ func (tssq *TemporaryStorageSearchQueries) GetInformationAboutSearchTask(taskID 
 //AddInformationFoundSearchResult добавление результата поиска в БД к информации о задаче
 func (tssq *TemporaryStorageSearchQueries) AddInformationFoundSearchResult(taskID string, lbti []*BriefTaskInformation) error {
 	chanRes := make(chan SearchChannelResponse)
+	defer close(chanRes)
 
 	tssq.channelReq <- SearchChannelRequest{
 		actionType:   "add information found search result",
@@ -367,6 +380,7 @@ func (tssq *TemporaryStorageSearchQueries) AddInformationFoundSearchResult(taskI
 //AddCountDocumentFoundSearchResult добавление информации о количестве найденных, в результате поиска, документов
 func (tssq *TemporaryStorageSearchQueries) AddCountDocumentFoundSearchResult(taskID string, cd int64) error {
 	chanRes := make(chan SearchChannelResponse)
+	defer close(chanRes)
 
 	tssq.channelReq <- SearchChannelRequest{
 		actionType:   "add count document found search result",
@@ -381,6 +395,7 @@ func (tssq *TemporaryStorageSearchQueries) AddCountDocumentFoundSearchResult(tas
 //ChangeStatusTransmissionTask изменение статуса передачи задачи (в данный момент информация по данной задаче передается или нет)
 func (tssq *TemporaryStorageSearchQueries) ChangeStatusTransmissionTask(taskID string, transmissionStatus bool) error {
 	chanRes := make(chan SearchChannelResponse)
+	defer close(chanRes)
 
 	tssq.channelReq <- SearchChannelRequest{
 		actionType:   "change status transmission task",
@@ -395,17 +410,21 @@ func (tssq *TemporaryStorageSearchQueries) ChangeStatusTransmissionTask(taskID s
 //ChangingStatusInformationRelevance изменение статуса актуальности задачи
 func (tssq *TemporaryStorageSearchQueries) ChangingStatusInformationRelevance(listTaskID []string) {
 	chanRes := make(chan SearchChannelResponse)
+	defer close(chanRes)
 
 	tssq.channelReq <- SearchChannelRequest{
 		actionType:  "change status information relevance",
 		information: listTaskID,
 		channelRes:  chanRes,
 	}
+
+	<-chanRes
 }
 
 //ChangeUpdateTimeInformation изменение времени обновления информации
 func (tssq *TemporaryStorageSearchQueries) ChangeUpdateTimeInformation(taskID string) error {
 	chanRes := make(chan SearchChannelResponse)
+	defer close(chanRes)
 
 	tssq.channelReq <- SearchChannelRequest{
 		actionType:   "change update time information",
@@ -417,6 +436,9 @@ func (tssq *TemporaryStorageSearchQueries) ChangeUpdateTimeInformation(taskID st
 }
 
 func (tssq *TemporaryStorageSearchQueries) temporaryStorageSearchInfo(taskID string) (*SearchTaskDescription, error) {
+
+	fmt.Println("func 'temporaryStorageSearchInfo', START...")
+
 	info, ok := tssq.tasks[taskID]
 	if !ok {
 		return nil, fmt.Errorf("task with ID %q not found", taskID)
@@ -453,7 +475,12 @@ func (tssq *TemporaryStorageSearchQueries) changingStatusInformationRelevance(lt
 
 //delInformationAboutSearchTask удалить информацию о задаче
 func (tssq *TemporaryStorageSearchQueries) delInformationAboutSearchTask(taskID string) {
+
+	fmt.Println("func 'delInformationAboutSearchTask', START...")
+	fmt.Printf("func 'delInformationAboutSearchTask', delete task id: %v\n", taskID)
+
 	chanRes := make(chan SearchChannelResponse)
+	defer close(chanRes)
 
 	tssq.channelReq <- SearchChannelRequest{
 		actionType:   "del information about search task",
@@ -479,6 +506,8 @@ func checkTimeDeleteTemporaryStorageSearchQueries(tssq *TemporaryStorageSearchQu
 			//если задача не актуальна и информация о задаче не передается
 			if t.NotRelevance && !t.TransmissionStatus {
 				tssq.delInformationAboutSearchTask(id)
+
+				continue
 			}
 
 			//если параметр t.UpdateTimeInformation равен 0, значит поиск в БД по данной задаче ещё не выполнялся

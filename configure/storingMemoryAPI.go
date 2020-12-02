@@ -89,62 +89,52 @@ func NewRepositorySMAPI() *StoringMemoryAPI {
 					msg.chanRes <- typeChanResSetting{
 						msgErr: err,
 					}
+				} else {
+					res := typeChanResSetting{}
+					res.clientSetting = smapi.clientSettings[msg.clientID]
 
-					break
+					msg.chanRes <- res
 				}
-
-				res := typeChanResSetting{}
-				res.clientSetting = smapi.clientSettings[msg.clientID]
-
-				msg.chanRes <- res
 
 			case "search client for ip":
 				if len(smapi.clientSettings) == 0 {
 					msg.chanRes <- typeChanResSetting{
 						msgErr: fmt.Errorf("the client list is empty"),
 					}
-
-					break
-				}
-
-				res := typeChanResSetting{}
-				for clientID, setting := range smapi.clientSettings {
-					if (msg.clientIP == setting.IP) && (msg.token == setting.Token) {
-						res.clientID = clientID
-						res.clientSetting = setting
-
-						break
+				} else {
+					res := typeChanResSetting{}
+					for clientID, setting := range smapi.clientSettings {
+						if (msg.clientIP == setting.IP) && (msg.token == setting.Token) {
+							res.clientID = clientID
+							res.clientSetting = setting
+						}
 					}
-				}
 
-				msg.chanRes <- res
+					msg.chanRes <- res
+				}
 
 			case "save client connection":
 				if err := smapi.searchID(msg.clientID); err != nil {
 					msg.chanRes <- typeChanResSetting{
 						msgErr: err,
 					}
+				} else {
+					smapi.clientSettings[msg.clientID].Connection = msg.connect
 
-					break
+					msg.chanRes <- typeChanResSetting{}
 				}
-
-				smapi.clientSettings[msg.clientID].Connection = msg.connect
-
-				msg.chanRes <- typeChanResSetting{}
 
 			case "get client connection":
 				if err := smapi.searchID(msg.clientID); err != nil {
 					msg.chanRes <- typeChanResSetting{
 						msgErr: err,
 					}
+				} else {
+					res := typeChanResSetting{}
+					res.connect = smapi.clientSettings[msg.clientID].Connection
 
-					break
+					msg.chanRes <- res
 				}
-
-				res := typeChanResSetting{}
-				res.connect = smapi.clientSettings[msg.clientID].Connection
-
-				msg.chanRes <- res
 
 			case "del client":
 				delete(smapi.clientSettings, msg.clientID)
@@ -152,8 +142,6 @@ func NewRepositorySMAPI() *StoringMemoryAPI {
 				msg.chanRes <- typeChanResSetting{}
 
 			}
-
-			close(msg.chanRes)
 		}
 	}()
 
@@ -173,6 +161,7 @@ func (smapi *StoringMemoryAPI) AddNewClient(clientIP, port, clientName, token st
 	hsum := common.GetUniqIDFormatMD5(clientIP + "_" + port + "_client API")
 
 	cr := make(chan typeChanResSetting)
+	defer close(cr)
 
 	smapi.chanReqSetting <- typeChanReqSetting{
 		actionType: "add new client",
@@ -191,6 +180,7 @@ func (smapi *StoringMemoryAPI) AddNewClient(clientIP, port, clientName, token st
 //SearchClientForIP поиск информации о клиенте по его ip адресу
 func (smapi *StoringMemoryAPI) SearchClientForIP(clientIP, token string) (string, *ClientSettings, bool) {
 	cr := make(chan typeChanResSetting)
+	defer close(cr)
 
 	smapi.chanReqSetting <- typeChanReqSetting{
 		actionType: "search client for ip",
@@ -211,6 +201,7 @@ func (smapi *StoringMemoryAPI) SearchClientForIP(clientIP, token string) (string
 //GetClientSettings получить все настройки клиента
 func (smapi *StoringMemoryAPI) GetClientSettings(clientID string) (*ClientSettings, error) {
 	cr := make(chan typeChanResSetting)
+	defer close(cr)
 
 	smapi.chanReqSetting <- typeChanReqSetting{
 		actionType: "get client setting",
@@ -226,6 +217,7 @@ func (smapi *StoringMemoryAPI) GetClientSettings(clientID string) (*ClientSettin
 //GetClientList получить весь список клиентов
 func (smapi *StoringMemoryAPI) GetClientList() map[string]*ClientSettings {
 	cr := make(chan typeChanResSetting)
+	defer close(cr)
 
 	smapi.chanReqSetting <- typeChanReqSetting{
 		actionType: "get client list",
@@ -238,6 +230,7 @@ func (smapi *StoringMemoryAPI) GetClientList() map[string]*ClientSettings {
 //SaveWssClientConnection сохранить линк соединения с клиентом
 func (smapi *StoringMemoryAPI) SaveWssClientConnection(clientID string, conn *websocket.Conn) error {
 	cr := make(chan typeChanResSetting)
+	defer close(cr)
 
 	req := typeChanReqSetting{
 		actionType: "save client connection",
@@ -254,6 +247,7 @@ func (smapi *StoringMemoryAPI) SaveWssClientConnection(clientID string, conn *we
 //GetWssClientConnection получить линк wss соединения
 func (smapi *StoringMemoryAPI) GetWssClientConnection(clientID string) (*websocket.Conn, error) {
 	cr := make(chan typeChanResSetting)
+	defer close(cr)
 
 	smapi.chanReqSetting <- typeChanReqSetting{
 		actionType: "get client connection",
@@ -269,6 +263,7 @@ func (smapi *StoringMemoryAPI) GetWssClientConnection(clientID string) (*websock
 //DelClientAPI удалить всю информацию о клиенте
 func (smapi *StoringMemoryAPI) DelClientAPI(clientID string) {
 	cr := make(chan typeChanResSetting)
+	defer close(cr)
 
 	smapi.chanReqSetting <- typeChanReqSetting{
 		actionType: "del client",

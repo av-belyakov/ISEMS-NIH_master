@@ -16,26 +16,26 @@ import (
 func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConnect, saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 
 	//------------------------------------------------------
-	/*ticker := time.NewTicker(time.Duration(3) * time.Second)
+	/*	ticker := time.NewTicker(time.Duration(3) * time.Second)
 
-	num := 0
-	go func() {
-		for range ticker.C {
-			s := strconv.Itoa(num)
-			logFileName := fmt.Sprintf("memdumpfile_%v.memdump", s)
+		num := 0
+		go func() {
+			for range ticker.C {
+				s := strconv.Itoa(num)
+				logFileName := fmt.Sprintf("memdumpfile_%v.memdump", s)
 
-			fmt.Printf("Write memdump to file %v\n", logFileName)
+				fmt.Printf("Write memdump to file %v\n", logFileName)
 
-			fl, err := os.Create(logFileName)
-			if err != nil {
-				fmt.Printf("Create file %v, error: %v\n", logFileName, fmt.Sprint(err))
+				fl, err := os.Create(logFileName)
+				if err != nil {
+					fmt.Printf("Create file %v, error: %v\n", logFileName, fmt.Sprint(err))
+				}
+
+				pprof.Lookup("heap").WriteTo(fl, 0)
+
+				fl.Close()
 			}
-
-			pprof.Lookup("heap").WriteTo(fl, 0)
-
-			fl.Close()
-		}
-	}()*/
+		}()*/
 	//------------------------------------------------------
 
 	//инициализация репозитория для учета выполняемых задач
@@ -53,7 +53,7 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	// MaxCacheSize - кол-во записей в кэше
 	tssq := configure.NewRepositoryTSSQ(configure.TypeRepositoryTSSQ{
 		TickerSec:      3,
-		TimeExpiration: 30,
+		TimeExpiration: 15,
 	})
 
 	//инициализация отслеживания выполнения задач

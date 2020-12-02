@@ -59,9 +59,14 @@ type chanReqSetting struct {
 }
 
 type chanResSetting struct {
-	err     error
-	id      int
-	setting *SourceSetting
+	err                   error
+	id                    int
+	setting               *SourceSetting
+	additionalInformation interface{}
+}
+
+type sourceConnectDisconnectLists struct {
+	listConnected, listDisconnected map[int]string
 }
 
 //sourcesListConnection дескрипторы соединения с источниками по протоколу websocket
@@ -130,6 +135,16 @@ func NewRepositoryISL() *InformationSourcesList {
 				msg.chanRes <- msgRes
 				close(msg.chanRes)
 
+			case "get source list":
+				sl := make(map[int]SourceSetting, len(isl.sourcesListSetting))
+
+				for id, ss := range isl.sourcesListSetting {
+					sl[id] = ss
+				}
+
+				msg.chanRes <- chanResSetting{additionalInformation: sl}
+				close(msg.chanRes)
+
 			case "get source setting by id":
 				si, ok := isl.sourcesListSetting[msg.id]
 				if ok {
@@ -177,6 +192,23 @@ func NewRepositoryISL() *InformationSourcesList {
 				}
 
 				msg.chanRes <- chanResSetting{setting: &SourceSetting{ConnectionStatus: s.ConnectionStatus}}
+				close(msg.chanRes)
+
+			case "get lists connected and disconnected sources":
+				listConnected, listDisconnected := map[int]string{}, map[int]string{}
+
+				for id, source := range isl.sourcesListSetting {
+					if source.ConnectionStatus {
+						listConnected[id] = source.IP
+					} else {
+						listDisconnected[id] = source.IP
+					}
+				}
+
+				msg.chanRes <- chanResSetting{additionalInformation: sourceConnectDisconnectLists{
+					listConnected:    listConnected,
+					listDisconnected: listDisconnected,
+				}}
 				close(msg.chanRes)
 
 			case "change source connection status":
@@ -318,13 +350,18 @@ func (isl *InformationSourcesList) GetSourceIDOnIP(ip string) (int, bool) {
 
 //GetSourceList возвращает список источников
 func (isl *InformationSourcesList) GetSourceList() *map[int]SourceSetting {
-	sl := map[int]SourceSetting{}
+	chanRes := make(chan chanResSetting)
 
-	for id, ss := range isl.sourcesListSetting {
-		sl[id] = ss
+	isl.chanReq <- chanReqSetting{
+		actionType: "get source list",
+		chanRes:    chanRes,
 	}
 
-	return &sl
+	if sl, ok := (<-chanRes).additionalInformation.(map[int]SourceSetting); ok {
+		return &sl
+	}
+
+	return &map[int]SourceSetting{}
 }
 
 //GetSourceConnectionStatus возвращает состояние соединения с источником
@@ -393,17 +430,19 @@ func (isl InformationSourcesList) GetCountSources() int {
 
 //GetListsConnectedAndDisconnectedSources возвращает списки источников подключенных и не подключенных
 func (isl InformationSourcesList) GetListsConnectedAndDisconnectedSources() (listConnected, listDisconnected map[int]string) {
-	listConnected, listDisconnected = map[int]string{}, map[int]string{}
+	chanRes := make(chan chanResSetting)
 
-	for id, source := range isl.sourcesListSetting {
-		if source.ConnectionStatus {
-			listConnected[id] = source.IP
-		} else {
-			listDisconnected[id] = source.IP
-		}
+	isl.chanReq <- chanReqSetting{
+		actionType: "get lists connected and disconnected sources",
+		setting:    SourceSetting{AccessIsAllowed: true},
+		chanRes:    chanRes,
 	}
 
-	return listConnected, listDisconnected
+	if lists, ok := (<-chanRes).additionalInformation.(sourceConnectDisconnectLists); ok {
+		return lists.listConnected, lists.listDisconnected
+	}
+
+	return map[int]string{}, map[int]string{}
 }
 
 //SendWsMessage используется для отправки сообщений через протокол websocket

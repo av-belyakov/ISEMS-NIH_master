@@ -18,7 +18,7 @@ func SearchShortInformationAboutTasks(
 	tssq *configure.TemporaryStorageSearchQueries,
 	qp QueryParameters) {
 
-	//	fmt.Println("func 'SearchShortInformationAboutTasks', START...")
+	fmt.Println("func 'SearchShortInformationAboutTasks', START...")
 
 	msgRes := configure.MsgBetweenCoreAndDB{
 		MsgGenerator:    req.MsgRecipient,
@@ -45,7 +45,8 @@ func SearchShortInformationAboutTasks(
 		return
 	}
 
-	//	fmt.Println("func 'SearchShortInformationAboutTasks', get information about task")
+	fmt.Println("func 'SearchShortInformationAboutTasks', get information about task")
+	fmt.Printf("func 'SearchShortInformationAboutTasks'. Found count '%v' tasks\n", len(info.ListFoundInformation.List))
 
 	//если необходимо получить только количество
 	if info.SearchParameters.JustCountNumber {
@@ -74,10 +75,14 @@ func SearchShortInformationAboutTasks(
 				ErrorBody:             err,
 			}
 
+			fmt.Println("func 'SearchShortInformationAboutTasks', SEND COUNT RESULT --> to Core module")
+
 			chanIn <- &msgRes
 
 			return
 		}
+
+		fmt.Println("func 'SearchShortInformationAboutTasks', SEND RESULT --> to Core module")
 
 		chanIn <- &msgRes
 

@@ -161,7 +161,8 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 
 	funcName := "handlerInformationSearchControlTypeSearchCommanInformation"
 
-	//	fmt.Println("func 'handlerInformationSearchControlTypeSearchCommanInformation', START...")
+	fmt.Println("func 'handlerInformationSearchControlTypeSearchCommanInformation', START...")
+	fmt.Printf("find request: %v\n", siatr.MsgOption)
 
 	emt := ErrorMessageType{
 		TaskIDClientAPI:                       siatr.MsgCommon.ClientTaskID,
@@ -176,8 +177,8 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 	//проверяем параметры необходимые для поиска общей информации по задачам
 	if msg, ok := CheckParametersSearchCommonInformation(&siatr.MsgOption); !ok {
 
-		//		fmt.Println("func 'handlerInformationSearchControlTypeSearchCommanInformation', CheckParametersSearchCommonInformation ERROR BEFORE")
-		//		fmt.Println(msg)
+		fmt.Println("func 'handlerInformationSearchControlTypeSearchCommanInformation', CheckParametersSearchCommonInformation ERROR BEFORE")
+		fmt.Println(msg)
 
 		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: "incorrect search parameters are set",
@@ -194,7 +195,7 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 			})
 		}
 
-		//		fmt.Println("func 'handlerInformationSearchControlTypeSearchCommanInformation', CheckParametersSearchCommonInformation ERROR AFTER")
+		fmt.Println("func 'handlerInformationSearchControlTypeSearchCommanInformation', CheckParametersSearchCommonInformation ERROR AFTER")
 
 		return
 	}
@@ -202,9 +203,9 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 	siatr.MsgOption.InstalledFilteringOption.DateTime.Start = siatr.MsgOption.InstalledFilteringOption.DateTime.Start / 1000
 	siatr.MsgOption.InstalledFilteringOption.DateTime.End = siatr.MsgOption.InstalledFilteringOption.DateTime.End / 1000
 
-	//	fmt.Println("func 'handlerInformationSearchControlTypeSearchCommanInformation', hsm.TSSQ.CreateNewSearchTask BEFORE")
+	fmt.Println("func 'handlerInformationSearchControlTypeSearchCommanInformation', hsm.TSSQ.CreateNewSearchTask BEFORE")
 
-	//добавляем информацию о задаче в кеширующий модуль
+	//добавляем информацию о задаче в кеширующем модуле
 	taskID, _, err := hsm.TSSQ.CreateNewSearchTask(clientID, &configure.SearchParameters{
 		SearchRequestIsGeneratedAutomatically: siatr.MsgOption.SearchRequestIsGeneratedAutomatically,
 		JustCountNumber:                       siatr.MsgOption.JustCountNumber,
@@ -221,8 +222,8 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 		StatusFileDownloadTask:                siatr.MsgOption.StatusFileDownloadTask,
 	})
 	if err != nil {
-		//		fmt.Println("func 'handlerInformationSearchControlTypeSearchCommanInformation', hsm.TSSQ.CreateNewSearchTask ERROR")
-		//		fmt.Println(err)
+		fmt.Println("func 'handlerInformationSearchControlTypeSearchCommanInformation', hsm.TSSQ.CreateNewSearchTask ERROR")
+		fmt.Println(err)
 
 		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 			Description: fmt.Sprint(err),
@@ -246,9 +247,9 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 		return
 	}
 
-	//	fmt.Println("func 'handlerInformationSearchControlTypeSearchCommanInformation', hsm.TSSQ.CreateNewSearchTask AFTER")
+	fmt.Println("func 'handlerInformationSearchControlTypeSearchCommanInformation', hsm.TSSQ.CreateNewSearchTask AFTER")
 
-	//	fmt.Println("func 'handlerInformationSearchControlTypeSearchCommanInformation', send request 'search common information' --> to database")
+	fmt.Println("func 'handlerInformationSearchControlTypeSearchCommanInformation', send request 'search common information' --> to database")
 
 	chanToDB <- &configure.MsgBetweenCoreAndDB{
 		MsgGenerator:    "Core module",
@@ -332,6 +333,9 @@ func сheckParametersFiltration(fccpf *configure.FiltrationControlCommonParamete
 
 //CheckParametersSearchCommonInformation проверяет параметры запроса для поиска общей информации
 func CheckParametersSearchCommonInformation(siatro *configure.SearchInformationAboutTasksRequestOption) (string, bool) {
+
+	fmt.Println("func 'CheckParametersSearchCommonInformation', START...")
+
 	checkDateTimeFiltering := func(dtp configure.DateTimeParameters) (string, bool) {
 		if dtp.Start == 0 && dtp.End != 0 {
 			return common.PatternUserMessage(&common.TypePatternUserMessage{

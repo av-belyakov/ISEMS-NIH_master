@@ -2,8 +2,10 @@ package processresponse
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"ISEMS-NIH_master/configure"
+	"ISEMS-NIH_master/savemessageapp"
 )
 
 //ParametersProcessingReceivedMsgTypeFiltering набор параметров для функции ProcessingReceivedMsgTypeFiltering
@@ -23,14 +25,25 @@ type ChansMsgTypeFiltering struct {
 }
 
 //ProcessingReceivedMsgTypeFiltering обработка сообщений связанных с фильтрацией файлов
-func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTypeFiltering) error {
-	resMsg := configure.MsgTypeFiltration{}
+func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTypeFiltering, saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
+	fn := "ProcessingReceivedMsgTypeFiltering"
+
+	var resMsg configure.MsgTypeFiltration
+	defer func() {
+		resMsg = configure.MsgTypeFiltration{}
+	}()
 
 	if err := json.Unmarshal(*pprmtf.Message, &resMsg); err != nil {
-		return err
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprint(err),
+			FuncName:    fn,
+		})
+
+		return
 	}
 
-	ftp := configure.FiltrationTaskParameters{
+	//обновляем информацию о выполняемой задаче в памяти приложения
+	pprmtf.SMT.UpdateTaskFiltrationAllParameters(resMsg.Info.TaskID, &configure.FiltrationTaskParameters{
 		Status:                          resMsg.Info.TaskStatus,
 		NumberFilesMeetFilterParameters: resMsg.Info.NumberFilesMeetFilterParameters,
 		NumberProcessedFiles:            resMsg.Info.NumberProcessedFiles,
@@ -40,11 +53,7 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 		SizeFilesMeetFilterParameters:   resMsg.Info.SizeFilesMeetFilterParameters,
 		SizeFilesFoundResultFiltering:   resMsg.Info.SizeFilesFoundResultFiltering,
 		PathStorageSource:               resMsg.Info.PathStorageSource,
-	}
-
-	//обновляем информацию о выполняемой задаче в памяти приложения
-	pprmtf.SMT.UpdateTaskFiltrationAllParameters(resMsg.Info.TaskID, &ftp)
-	ftp = configure.FiltrationTaskParameters{}
+	})
 
 	lfdi := make(map[string]*configure.DetailedFilesInformation, len(resMsg.Info.FoundFilesInformation))
 	for n, v := range resMsg.Info.FoundFilesInformation {
@@ -77,7 +86,7 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 		//отправляем в ядро, а от туда в БД и клиенту API
 		pprmtf.Chans.ChanInCore <- msg
 
-		return nil
+		return
 	}
 
 	if resMsg.Info.TaskStatus == "refused" {
@@ -87,7 +96,7 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 		//отправляем сообщение о снятии контроля за выполнением задачи
 		pprmtf.Chans.ChanInCore <- &msgCompleteTask
 
-		return nil
+		return
 	}
 
 	//если тип сообщения "stop" или "complete"
@@ -104,7 +113,12 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 			},
 		})
 		if err != nil {
-			return err
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(err),
+				FuncName:    fn,
+			})
+
+			return
 		}
 
 		//отправляем источнику сообщение типа 'confirm complete' для того что бы подтвердить останов задачи
@@ -113,6 +127,4 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 			Data:            &msgJSON,
 		}
 	}
-
-	return nil
 }

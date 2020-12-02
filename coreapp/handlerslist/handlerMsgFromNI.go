@@ -7,17 +7,18 @@ import (
 	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/notifications"
+	"ISEMS-NIH_master/savemessageapp"
 )
 
 //HandlerMsgFromNI обработчик запросов поступающих от модуля сетевого взаимодействия
 func HandlerMsgFromNI(
 	outCoreChans HandlerOutChans,
 	msg *configure.MsgBetweenCoreAndNI,
-	hsm HandlersStoringMemory) error {
+	hsm HandlersStoringMemory,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 
 	funcName := ", function 'HandlerMsgFromNI'"
 
-	var err error
 	taskInfo, taskInfoIsExist := hsm.SMT.GetStoringMemoryTask(msg.TaskID)
 	if taskInfoIsExist {
 		hsm.SMT.TimerUpdateStoringMemoryTask(msg.TaskID)
@@ -62,26 +63,46 @@ func HandlerMsgFromNI(
 		case "confirm the action":
 			//клиенту API
 			if err := getConfirmActionSourceListForAPI(outCoreChans.OutCoreChanAPI, msg, taskInfo.ClientID, taskInfo.ClientTaskID); err != nil {
-				return err
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 		case "change connection status source":
 			//клиенту API
 			if err := sendChanStatusSourceForAPI(outCoreChans.OutCoreChanAPI, msg); err != nil {
-				return err
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 		case "telemetry":
 			//клиенту API
 			jsonIn, ok := msg.AdvancedOptions.(*[]byte)
 			if !ok {
-				return fmt.Errorf("type conversion error%v", funcName)
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprintf("type conversion error%v", funcName),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 			var st configure.SourceTelemetry
 			err := json.Unmarshal(*jsonIn, &st)
 			if err != nil {
-				return err
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 			msg := configure.Telemetry{
@@ -97,7 +118,12 @@ func HandlerMsgFromNI(
 
 			jsonOut, err := json.Marshal(msg)
 			if err != nil {
-				return err
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 			outCoreChans.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
@@ -110,13 +136,23 @@ func HandlerMsgFromNI(
 			//клиенту API
 			jsonIn, ok := msg.AdvancedOptions.(*[]byte)
 			if !ok {
-				return fmt.Errorf("type conversion error%v", funcName)
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprintf("type conversion error%v", funcName),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 			var mtp configure.MsgTypePong
 			err := json.Unmarshal(*jsonIn, &mtp)
 			if err != nil {
-				return err
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 			msg := configure.SourceVersionApp{
@@ -133,7 +169,12 @@ func HandlerMsgFromNI(
 
 			jsonOut, err := json.Marshal(msg)
 			if err != nil {
-				return err
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 			outCoreChans.OutCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
@@ -161,19 +202,35 @@ func HandlerMsgFromNI(
 			//упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
 			// при чем если статус 'execute', то отправляем еще и содержимое поля 'FoundFilesInformation',
 			// а если статус фильтрации 'stop' или 'complete' то данное поле не заполняем
-			err = sendInformationFiltrationTask(outCoreChans.OutCoreChanAPI, taskInfo, &ao, msg.SourceID, msg.TaskID)
+			if err := sendInformationFiltrationTask(outCoreChans.OutCoreChanAPI, taskInfo, &ao, msg.SourceID, msg.TaskID); err != nil {
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+			}
 
 			if (ao.TaskStatus == "complete") || (ao.TaskStatus == "stop") {
 				//для удаления задачи и из storingMemoryTask и storingMemoryQueueTask
 				hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
 
-				err = hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, msg.TaskID, "complete")
+				if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, msg.TaskID, "complete"); err != nil {
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
+				}
 			}
 		}
 
 	case "download control":
 		if !taskInfoIsExist {
-			return fmt.Errorf("there is no task with the specified ID %v", msg.TaskID)
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprintf("there is no task with the specified ID %v %v", msg.TaskID, funcName),
+				FuncName:    funcName,
+			})
+
+			return
 		}
 
 		sourceID := taskInfo.TaskParameter.DownloadTask.ID
@@ -237,7 +294,12 @@ func HandlerMsgFromNI(
 			msgJSONInfo, err := json.Marshal(&resMsgInfo)
 			resMsgInfo = configure.DownloadControlTypeInfo{}
 			if err != nil {
-				return err
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 			msgToAPI.MsgJSON = msgJSONInfo
@@ -261,7 +323,12 @@ func HandlerMsgFromNI(
 			msgJSONInfo, err := json.Marshal(&resMsgInfo)
 			resMsgInfo = configure.DownloadControlTypeInfo{}
 			if err != nil {
-				return err
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 			msgToAPI.MsgJSON = msgJSONInfo
@@ -280,7 +347,12 @@ func HandlerMsgFromNI(
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
 
 			if err := handlerDownloadTaskStatusComplete(hdtsct); err != nil {
-				return err
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 		//останов задачи пользователем
@@ -296,14 +368,24 @@ func HandlerMsgFromNI(
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
 
 			if err := handlerDownloadTaskStatusComplete(hdtsct); err != nil {
-				return err
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 		//останов задачи в связи с разрывом соединения с источником
 		case "task stoped disconnect":
 			//обновление статуса задачи
 			if err := setStatusCompleteDownloadTask(hdtsct.TaskID, hdtsct.SMT); err != nil {
-				return err
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 			//записываем информацию в БД
@@ -342,7 +424,12 @@ func HandlerMsgFromNI(
 			//отправляем информацию по задаче клиенту API
 			msgJSONInfo, err := json.Marshal(&hdtsct.ResMsgInfo)
 			if err != nil {
-				return err
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 			msgToAPI.MsgJSON = msgJSONInfo
@@ -360,18 +447,33 @@ func HandlerMsgFromNI(
 			hdtsct.ResMsgInfo.MsgOption.Status = "stop"
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
 
-			err = handlerDownloadTaskStatusComplete(hdtsct)
+			if err := handlerDownloadTaskStatusComplete(hdtsct); err != nil {
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+			}
 
 		}
 
 	case "error notification":
 		if !taskInfoIsExist {
-			return fmt.Errorf("task with %v not found", msg.TaskID)
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprintf("task with %v not found %v", msg.TaskID, funcName),
+				FuncName:    funcName,
+			})
+
+			return
 		}
 
 		ao, ok := msg.AdvancedOptions.(configure.ErrorNotification)
 		if !ok {
-			return fmt.Errorf("type conversion error%v", funcName)
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprintf("type conversion error%v %v", msg.TaskID, funcName),
+				FuncName:    funcName,
+			})
+
+			return
 		}
 
 		//стандартное информационное сообщение пользователю
@@ -388,13 +490,23 @@ func HandlerMsgFromNI(
 		//останавливаем выполнение задачи
 		hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
 
-		err = fmt.Errorf(ao.HumanDescriptionError)
+		if err := fmt.Errorf(ao.HumanDescriptionError); err != nil {
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(err),
+				FuncName:    funcName,
+			})
+		}
 
 	case "message notification":
 		if msg.Command == "send client API" {
 			ao, ok := msg.AdvancedOptions.(configure.MessageNotification)
 			if !ok {
-				return fmt.Errorf("type conversion error%v", funcName)
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprintf("type conversion error%v %v", msg.TaskID, funcName),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 			taskActionPattern := map[string]string{
@@ -425,12 +537,22 @@ func HandlerMsgFromNI(
 			if !taskInfoIsExist {
 				_, qti, err := hsm.QTS.SearchTaskForIDQueueTaskStorage(msg.TaskID)
 				if err != nil {
-					return err
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
+
+					return
 				}
 
 				notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, qti.TaskIDClientAPI, qti.IDClientAPI)
 
-				return fmt.Errorf("task with %v not found", msg.TaskID)
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprintf("task with %v not found %v", msg.TaskID, funcName),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
 			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, ns, taskInfo.ClientTaskID, taskInfo.ClientID)
@@ -441,12 +563,20 @@ func HandlerMsgFromNI(
 			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
 
 			if !taskInfoIsExist {
-				return fmt.Errorf("Section: 'monitoring task performance', task with %v not found", msg.TaskID)
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprintf("Section: 'monitoring task performance', task with %v not found %v", msg.TaskID, funcName),
+					FuncName:    funcName,
+				})
+
+				return
 			}
 
-			err = hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, msg.TaskID, "complete")
+			if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, msg.TaskID, "complete"); err != nil {
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+			}
 		}
 	}
-
-	return err
 }

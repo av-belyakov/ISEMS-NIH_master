@@ -121,27 +121,26 @@ func NewRepositoryQTS() *QueueTaskStorage {
 			case "get information for task":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'get information for task'", msg.SourceID)
+
 					msg.ChanRes <- msgRes
+				} else {
+					settings, _ := qts.StorageList[msg.SourceID][msg.TaskID]
 
-					break
+					msgRes.TaskType = settings.TaskType
+					msgRes.TaskStatus = settings.TaskStatus
+					msgRes.IDClientAPI = settings.IDClientAPI
+					msgRes.TaskIDClientAPI = settings.TaskIDClientAPI
+					msgRes.UserName = settings.UserName
+
+					msgRes.CheckingStatusItems = StatusItems{
+						AvailabilityConnection:    settings.CheckingStatusItems.AvailabilityConnection,
+						AvailabilityFilesDownload: settings.CheckingStatusItems.AvailabilityFilesDownload,
+					}
+
+					msgRes.Settings = &settings.TaskParameters
+
+					msg.ChanRes <- msgRes
 				}
-
-				settings, _ := qts.StorageList[msg.SourceID][msg.TaskID]
-
-				msgRes.TaskType = settings.TaskType
-				msgRes.TaskStatus = settings.TaskStatus
-				msgRes.IDClientAPI = settings.IDClientAPI
-				msgRes.TaskIDClientAPI = settings.TaskIDClientAPI
-				msgRes.UserName = settings.UserName
-
-				msgRes.CheckingStatusItems = StatusItems{
-					AvailabilityConnection:    settings.CheckingStatusItems.AvailabilityConnection,
-					AvailabilityFilesDownload: settings.CheckingStatusItems.AvailabilityFilesDownload,
-				}
-
-				msgRes.Settings = &settings.TaskParameters
-
-				msg.ChanRes <- msgRes
 
 			case "add task":
 				ts := "wait"
@@ -165,154 +164,120 @@ func NewRepositoryQTS() *QueueTaskStorage {
 
 				if msg.TaskType == "filtration control" {
 					msg.ChanRes <- msgRes
+				} else {
+					qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.DownloadList = msg.AdditionalOption.DownloadList
 
-					break
+					msg.ChanRes <- msgRes
 				}
-
-				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.DownloadList = msg.AdditionalOption.DownloadList
-
-				msg.ChanRes <- msgRes
 
 			case "add confirmed list of files":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'add confirmed list of files'", msg.SourceID)
+
 					msg.ChanRes <- msgRes
+				} else {
+					qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles = msg.AdditionalOption.ConfirmedListFiles
+					qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.DownloadList = []string{}
 
-					break
+					msg.ChanRes <- msgRes
 				}
-
-				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles = msg.AdditionalOption.ConfirmedListFiles
-				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.DownloadList = []string{}
-
-				msg.ChanRes <- msgRes
 
 			case "add information on the filter":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'add information on the filter'", msg.SourceID)
+
 					msg.ChanRes <- msgRes
+				} else {
+					qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.FilterationParameters = msg.AdditionalOption.FilterationParameters
 
-					break
+					msg.ChanRes <- msgRes
 				}
-
-				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.FilterationParameters = msg.AdditionalOption.FilterationParameters
-
-				msg.ChanRes <- msgRes
 
 			case "add path directory for filtered files":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'add path directory for filtered files'", msg.SourceID)
+
 					msg.ChanRes <- msgRes
+				} else {
+					qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.PathDirectoryForFilteredFiles = msg.AdditionalOption.PathDirectoryForFilteredFiles
 
-					break
+					msg.ChanRes <- msgRes
 				}
-
-				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.PathDirectoryForFilteredFiles = msg.AdditionalOption.PathDirectoryForFilteredFiles
-
-				msg.ChanRes <- msgRes
 
 			case "delete task":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'delete task'", msg.SourceID)
+
 					msg.ChanRes <- msgRes
+				} else {
+					//удаляеть можно только в том случае если задача в состоянии 'wait' или 'complete'
+					if qts.StorageList[msg.SourceID][msg.TaskID].TaskStatus == "execution" {
+						msgRes.ErrorDescription = fmt.Errorf("deleting is not possible, the task with ID %v is in progress", msg.SourceID)
 
-					break
+						msg.ChanRes <- msgRes
+					} else {
+						delete(qts.StorageList[msg.SourceID], msg.TaskID)
+
+						msg.ChanRes <- msgRes
+					}
 				}
-
-				//удаляеть можно только в том случае если задача в состоянии 'wait' или 'complete'
-				if qts.StorageList[msg.SourceID][msg.TaskID].TaskStatus == "execution" {
-					msgRes.ErrorDescription = fmt.Errorf("deleting is not possible, the task with ID %v is in progress", msg.SourceID)
-					msg.ChanRes <- msgRes
-
-					break
-				}
-
-				delete(qts.StorageList[msg.SourceID], msg.TaskID)
-
-				msg.ChanRes <- msgRes
 
 			case "change task status":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'change task status'", msg.SourceID)
+
 					msg.ChanRes <- msgRes
+				} else {
+					qts.StorageList[msg.SourceID][msg.TaskID].TaskStatus = msg.NewStatus
+					qts.StorageList[msg.SourceID][msg.TaskID].TimeUpdate = time.Now().Unix()
 
-					break
+					msg.ChanRes <- msgRes
 				}
-
-				qts.StorageList[msg.SourceID][msg.TaskID].TaskStatus = msg.NewStatus
-				qts.StorageList[msg.SourceID][msg.TaskID].TimeUpdate = time.Now().Unix()
-
-				msg.ChanRes <- msgRes
 
 			case "change availability connection on connection":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'change availability connection on connection'", msg.SourceID)
+
 					msg.ChanRes <- msgRes
+				} else {
+					qts.StorageList[msg.SourceID][msg.TaskID].CheckingStatusItems.AvailabilityConnection = true
 
-					break
+					msg.ChanRes <- msgRes
 				}
-
-				qts.StorageList[msg.SourceID][msg.TaskID].CheckingStatusItems.AvailabilityConnection = true
-
-				msg.ChanRes <- msgRes
 
 			case "change availability connection on disconnection":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'change availability connection on disconnection'", msg.SourceID)
+
 					msg.ChanRes <- msgRes
+				} else {
+					qts.StorageList[msg.SourceID][msg.TaskID].CheckingStatusItems.AvailabilityConnection = false
 
-					break
+					msg.ChanRes <- msgRes
 				}
-
-				qts.StorageList[msg.SourceID][msg.TaskID].CheckingStatusItems.AvailabilityConnection = false
-
-				msg.ChanRes <- msgRes
 
 			case "change availability files download":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'change availability files download'", msg.SourceID)
+
 					msg.ChanRes <- msgRes
+				} else {
+					qts.StorageList[msg.SourceID][msg.TaskID].CheckingStatusItems.AvailabilityFilesDownload = true
 
-					break
+					msg.ChanRes <- msgRes
 				}
-
-				qts.StorageList[msg.SourceID][msg.TaskID].CheckingStatusItems.AvailabilityFilesDownload = true
-
-				msg.ChanRes <- msgRes
-
-			/*case "change the status of uploaded files":
-			if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
-				msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'change the status of uploaded files'", msg.SourceID)
-				msg.ChanRes <- msgRes
-
-				break
-			}
-
-			qts.StorageList[msg.SourceID][msg.TaskID].TimeUpdate = time.Now().Unix()
-
-			for fn := range msg.AdditionalOption.ConfirmedListFiles {
-				_, ok := qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles[fn]
-				if ok {
-					fi := qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles[fn]
-					fi.IsLoaded = true
-
-					qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles[fn] = fi
-				}
-			}
-
-			msg.ChanRes <- msgRes*/
 
 			case "clear all file list":
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'clear all file list'", msg.SourceID)
+
 					msg.ChanRes <- msgRes
+				} else {
+					qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.DownloadList = []string{}
+					qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles = map[string]*DetailedFilesInformation{}
 
-					break
+					msg.ChanRes <- msgRes
 				}
-
-				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.DownloadList = []string{}
-				qts.StorageList[msg.SourceID][msg.TaskID].TaskParameters.ConfirmedListFiles = map[string]*DetailedFilesInformation{}
-
-				msg.ChanRes <- msgRes
 			}
 		}
 	}()
@@ -615,24 +580,6 @@ func (qts *QueueTaskStorage) AddConfirmedListFiles(sourceID int, taskID string, 
 
 	return (<-chanRes).ErrorDescription
 }
-
-//ChangeIsLoadedFiles изменяет статус файлов
-/*func (qts *QueueTaskStorage) ChangeIsLoadedFiles(sourceID int, taskID string, clf map[string]*DetailedFilesInformation) error {
-	chanRes := make(chan chanResponse)
-	defer close(chanRes)
-
-	options := &DescriptionParametersReceivedFromUser{ConfirmedListFiles: clf}
-
-	qts.ChannelReq <- chanRequest{
-		Action:           "change the status of uploaded files",
-		SourceID:         sourceID,
-		TaskID:           taskID,
-		AdditionalOption: options,
-		ChanRes:          chanRes,
-	}
-
-	return (<-chanRes).ErrorDescription
-}*/
 
 //ClearAllListFiles очищает все списки файлов
 func (qts *QueueTaskStorage) ClearAllListFiles(sourceID int, taskID string) error {
