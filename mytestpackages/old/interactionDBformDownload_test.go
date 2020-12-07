@@ -8,7 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,6 +15,7 @@ import (
 	"ISEMS-NIH_master/configure"
 )
 
+/*
 type configureDB struct {
 	Host, Port, NameDB, User, Password string
 }
@@ -25,6 +25,7 @@ type QueryParameters struct {
 	NameDB, CollectionName string
 	ConnectDB              *mongo.Client
 }
+
 
 //Find найти всю информацию по заданному элементу
 func (qp QueryParameters) Find(elem interface{}) (*mongo.Cursor, error) {
@@ -37,7 +38,7 @@ func (qp QueryParameters) Find(elem interface{}) (*mongo.Cursor, error) {
 	return collection.Find(context.TODO(), elem, options)
 }
 
-func connectToDB(ctx context.Context, conf configureDB) (*mongo.Client, error) {
+/*func connectToDB(ctx context.Context, conf configureDB) (*mongo.Client, error) {
 	optAuth := options.Credential{
 		AuthMechanism: "SCRAM-SHA-256",
 		AuthSource:    conf.NameDB,
@@ -60,7 +61,7 @@ func connectToDB(ctx context.Context, conf configureDB) (*mongo.Client, error) {
 	}
 
 	return client, nil
-}
+}*/
 
 func getInfoFiltrationTaskForClientTaskID(connectDB *mongo.Client, taskID string) ([]configure.InformationAboutTask, error) {
 	qp := QueryParameters{
@@ -220,7 +221,7 @@ var _ = Describe("InteractionDataBaseFromDownloadFiles", func() {
 	defer cancel()
 	conn, err := connectToDB(ctx, configureDB{
 		Host:     "127.0.0.1",
-		Port:     "37017",
+		Port:     37017,
 		User:     "module_ISEMS-NIH",
 		Password: "tkovomfh&ff93",
 		NameDB:   "isems-nih",

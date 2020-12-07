@@ -76,8 +76,6 @@ func NewListFileDescription() *ListFileDescription {
 
 				msg.channelRes <- crs
 
-				close(msg.channelRes)
-
 			case "get":
 				crs := channelResSettings{}
 				fd, ok := lfd.list[msg.fileHex]
@@ -89,8 +87,6 @@ func NewListFileDescription() *ListFileDescription {
 
 				msg.channelRes <- crs
 
-				close(msg.channelRes)
-
 			case "del":
 				if fd, ok := lfd.list[msg.fileHex]; !ok {
 					fd.Close()
@@ -99,8 +95,6 @@ func NewListFileDescription() *ListFileDescription {
 				delete(lfd.list, msg.fileHex)
 
 				msg.channelRes <- channelResSettings{}
-
-				close(msg.channelRes)
 			}
 		}
 	}()
@@ -110,6 +104,7 @@ func NewListFileDescription() *ListFileDescription {
 
 func (lfd *ListFileDescription) addFileDescription(fh, fp string) error {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	lfd.chanReq <- channelReqSettings{
 		command:    "add",
@@ -123,6 +118,7 @@ func (lfd *ListFileDescription) addFileDescription(fh, fp string) error {
 
 func (lfd *ListFileDescription) getFileDescription(fh string) (*os.File, error) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	lfd.chanReq <- channelReqSettings{
 		command:    "get",
@@ -137,6 +133,7 @@ func (lfd *ListFileDescription) getFileDescription(fh string) (*os.File, error) 
 
 func (lfd *ListFileDescription) delFileDescription(fh string) {
 	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
 
 	lfd.chanReq <- channelReqSettings{
 		command:    "del",
@@ -215,9 +212,10 @@ func processorReceivingFiles(
 }
 
 func processingDownloadFile(tpdf typeProcessingDownloadFile) {
+	funcName := "processingDownloadFile"
+
 	sdf := statusDownloadFile{Status: "success"}
 	lfd := NewListFileDescription()
-	funcName := "processingDownloadFile"
 
 	//начальный запрос на передачу файла
 	mtd := configure.MsgTypeDownload{
@@ -329,7 +327,7 @@ DONE:
 					ti, ok := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
 					if !ok {
 						tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-							Description: fmt.Sprintf("task with ID %v not found", tpdf.taskID),
+							Description: fmt.Sprintf("task with ID '%v' not found", tpdf.taskID),
 							FuncName:    funcName,
 						})
 
@@ -448,6 +446,7 @@ DONE:
 					SMT:        tpdf.smt,
 					ChanInCore: tpdf.channels.chanInCore,
 				})
+
 				if writeBinaryFileResult.err != nil {
 					tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
@@ -457,7 +456,11 @@ DONE:
 					sdf.Status = "error"
 					sdf.ErrMsg = err
 
-					break DONE
+					/*
+
+					 */
+					//break DONE
+					break NEWFILE
 				}
 
 				if (writeBinaryFileResult.fileIsLoaded || writeBinaryFileResult.fileLoadedError) && !writeBinaryFileResult.fileIsSlowDown {
@@ -474,7 +477,7 @@ DONE:
 						msgRes.Info.Command = "file received with error"
 
 						tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-							Description: fmt.Sprintf("the checksum value for the downloaded file '%v' is incorrect (task ID %v)", writeBinaryFileResult.fileName, tpdf.taskID),
+							Description: fmt.Sprintf("the checksum value for the downloaded file '%v' is incorrect (task ID '%v')", writeBinaryFileResult.fileName, tpdf.taskID),
 							FuncName:    funcName,
 						})
 					}
@@ -535,16 +538,16 @@ type typeWriteBinaryFileRes struct {
 
 //writingBinaryFile осуществляет запись бинарного файла
 func writingBinaryFile(pwbf parametersWritingBinaryFile) *typeWriteBinaryFileRes {
-	twbfr := typeWriteBinaryFileRes{}
-
 	/*  очищаем для отладки  */
 	var fileHex string
 	var fi configure.DetailedFileInformation
+	var twbfr typeWriteBinaryFileRes
 
-	func(fileHex *string, fi *configure.DetailedFileInformation) {
+	/*defer func(fileHex *string, fi *configure.DetailedFileInformation, twbfr *typeWriteBinaryFileRes) {
 		(*fileHex) = ""
 		(*fi) = configure.DetailedFileInformation{}
-	}(&fileHex, &fi)
+		(*twbfr) = typeWriteBinaryFileRes{}
+	}(&fileHex, &fi, &twbfr)*/
 
 	//получаем хеш принимаемого файла
 	fileHex = string((*pwbf.Data)[35:67])
@@ -566,7 +569,8 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) *typeWriteBinaryFileRes
 
 	ti, ok := pwbf.SMT.GetStoringMemoryTask(pwbf.TaskID)
 	if !ok {
-		twbfr.err = fmt.Errorf("task with ID %v not found", pwbf.TaskID)
+		twbfr.err = fmt.Errorf("task with ID '%v' not found", pwbf.TaskID)
+
 		return &twbfr
 	}
 
@@ -639,6 +643,7 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) *typeWriteBinaryFileRes
 			pwbf.ChanInCore <- &msgToCore
 
 			twbfr.fileLoadedError = true
+			twbfr.err = fmt.Errorf("the hash amount for the '%v' file does not match", fi.Name)
 
 			return &twbfr
 		}
@@ -656,8 +661,8 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) *typeWriteBinaryFileRes
 		})
 
 		pwbf.ChanInCore <- &msgToCore
-
 		twbfr.fileIsLoaded = true
+
 		return &twbfr
 	}
 

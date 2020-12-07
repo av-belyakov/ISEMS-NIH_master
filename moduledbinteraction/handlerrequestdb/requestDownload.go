@@ -76,11 +76,6 @@ func UpdateInformationAboutTask(
 		return nil
 	}
 
-	/*
-		fmt.Println("func 'UpdateInformationAboutTask' write to DB")
-		fmt.Printf("task status: '%v', time: %v < timeUpdate: %v \n", taskStatus, (time.Now().Unix() - ti.TimeInsertDB), (time.Now().Unix() + timeUpdate))
-	*/
-
 	//обновление основной информации
 	commonValueUpdate := bson.D{
 		bson.E{Key: "$set", Value: bson.D{

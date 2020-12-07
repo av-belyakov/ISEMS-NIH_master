@@ -89,52 +89,59 @@ func NewRepositorySMAPI() *StoringMemoryAPI {
 					msg.chanRes <- typeChanResSetting{
 						msgErr: err,
 					}
-				} else {
-					res := typeChanResSetting{}
-					res.clientSetting = smapi.clientSettings[msg.clientID]
 
-					msg.chanRes <- res
+					continue
 				}
+
+				res := typeChanResSetting{}
+				res.clientSetting = smapi.clientSettings[msg.clientID]
+
+				msg.chanRes <- res
 
 			case "search client for ip":
 				if len(smapi.clientSettings) == 0 {
 					msg.chanRes <- typeChanResSetting{
 						msgErr: fmt.Errorf("the client list is empty"),
 					}
-				} else {
-					res := typeChanResSetting{}
-					for clientID, setting := range smapi.clientSettings {
-						if (msg.clientIP == setting.IP) && (msg.token == setting.Token) {
-							res.clientID = clientID
-							res.clientSetting = setting
-						}
-					}
 
-					msg.chanRes <- res
+					continue
 				}
+
+				res := typeChanResSetting{}
+				for clientID, setting := range smapi.clientSettings {
+					if (msg.clientIP == setting.IP) && (msg.token == setting.Token) {
+						res.clientID = clientID
+						res.clientSetting = setting
+					}
+				}
+
+				msg.chanRes <- res
 
 			case "save client connection":
 				if err := smapi.searchID(msg.clientID); err != nil {
 					msg.chanRes <- typeChanResSetting{
 						msgErr: err,
 					}
-				} else {
-					smapi.clientSettings[msg.clientID].Connection = msg.connect
 
-					msg.chanRes <- typeChanResSetting{}
+					continue
 				}
+
+				smapi.clientSettings[msg.clientID].Connection = msg.connect
+
+				msg.chanRes <- typeChanResSetting{}
 
 			case "get client connection":
 				if err := smapi.searchID(msg.clientID); err != nil {
 					msg.chanRes <- typeChanResSetting{
 						msgErr: err,
 					}
-				} else {
-					res := typeChanResSetting{}
-					res.connect = smapi.clientSettings[msg.clientID].Connection
 
-					msg.chanRes <- res
+					continue
 				}
+				res := typeChanResSetting{}
+				res.connect = smapi.clientSettings[msg.clientID].Connection
+
+				msg.chanRes <- res
 
 			case "del client":
 				delete(smapi.clientSettings, msg.clientID)

@@ -193,6 +193,7 @@ func NewRepositorySMT() *StoringMemoryTask {
 				if task, ok := smt.tasks[msg.TaskID]; ok {
 					mr.IsExist = true
 					lfdi := make(map[string]*DetailedFilesInformation, len((*task).TaskParameter.ListFilesDetailedInformation))
+
 					for fn, info := range task.TaskParameter.ListFilesDetailedInformation {
 						lfdi[fn] = info
 					}
@@ -563,8 +564,6 @@ func (smt StoringMemoryTask) delStoringMemoryTask(taskID string) {
 
 //updateListFilesDetailedInformation обновляем информацию о файлах (при фильтрации)
 func (smt *StoringMemoryTask) updateListFilesDetailedInformation(taskID string, dfi map[string]*DetailedFilesInformation) {
-	//	fmt.Println("StoringMemoryTask - func 'updateListFilesDetailedInformation', START...")
-
 	if _, ok := smt.tasks[taskID]; !ok {
 		return
 	}

@@ -17,7 +17,7 @@ func HandlerMsgFromNI(
 	hsm HandlersStoringMemory,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 
-	funcName := ", function 'HandlerMsgFromNI'"
+	funcName := "HandlerMsgFromNI"
 
 	taskInfo, taskInfoIsExist := hsm.SMT.GetStoringMemoryTask(msg.TaskID)
 	if taskInfoIsExist {
@@ -416,7 +416,12 @@ func HandlerMsgFromNI(
 			// теперь задача будет ожидать соединения с источником в течении сутое
 			// если соединения не произойдет то будет удалена или продолжит выполнятся
 			// если соединение будет установлено
-			_ = hsm.QTS.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "pause")
+			if err := hsm.QTS.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "pause"); err != nil {
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+			}
 
 			//отмечаем задачу как завершенную для ее последующего удаления
 			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)

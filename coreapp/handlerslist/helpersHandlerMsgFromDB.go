@@ -126,8 +126,6 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 	tssq *configure.TemporaryStorageSearchQueries,
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) error {
 
-	fmt.Println("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', START...")
-
 	const chunkSize = 100
 
 	//получаем информацию о задаче
@@ -136,15 +134,10 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 		return err
 	}
 
-	fmt.Printf("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', AFTER tssq.GetInformationAboutSearchTask(res.TaskID), TaskID: '%v'\n", res.TaskID)
-
 	numTaskFound := len(info.ListFoundInformation.List)
 	countDocumentFound := info.SummarySearchQueryProcessingResults.NumFoundTasks
 
 	if (numTaskFound == 0) && (countDocumentFound == 0) && (!(*info).SearchParameters.SearchRequestIsGeneratedAutomatically) {
-
-		fmt.Println("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', информационное сообщение о том что искомая задача не найдена")
-
 		//информационное сообщение о том что искомая задача не найдена
 		notifications.SendNotificationToClientAPI(
 			chanToAPI,
@@ -200,12 +193,8 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 			MsgJSON:      msgJSON,
 		}
 
-		fmt.Println("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', send message to client API part 1")
-
 		//изменяем статус актуальности задачи на 'не актуальна'
 		tssq.ChangingStatusInformationRelevance(ltid)
-
-		fmt.Println("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', send message to client API part 1.1")
 
 		return nil
 	}
@@ -235,8 +224,6 @@ func sendMsgCompliteTaskSearchShortInformationAboutTask(
 			MsgJSON:      msgJSON,
 		}
 	}
-
-	fmt.Println("func 'sendMsgCompliteTaskSearchShortInformationAboutTask', send message to client API part 2")
 
 	//изменяем статус актуальности задачи на 'не актуальна'
 	tssq.ChangingStatusInformationRelevance(ltid)

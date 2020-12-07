@@ -57,7 +57,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 
 			return
 		}
-		defer connClose(cs.COut, c, cs.InfoSourceList, cs.ID, cs.IP)
+		defer connClose(cs.COut, c, cs.InfoSourceList, cs.ID, cs.IP, cs.saveMessageApp)
 
 		if res.StatusCode == 101 {
 			//изменяем статус подключения клиента
@@ -167,6 +167,7 @@ func WssClientNetworkInteraction(
 				req, err := http.NewRequest("GET", "https://"+cs.IP+":"+cs.Port+"/", nil)
 				if err != nil {
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						TypeMessage: "info",
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
 					})
@@ -184,6 +185,7 @@ func WssClientNetworkInteraction(
 					strErr := fmt.Sprint(err)
 					if !strings.Contains(strErr, "stop redirect") {
 						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							TypeMessage: "info",
 							Description: strErr,
 							FuncName:    funcName,
 						})

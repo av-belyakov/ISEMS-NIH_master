@@ -139,7 +139,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 			FuncName:    funcName,
 		})
 	}
-	defer connClose(sws.COut, c, sws.SourceList, clientID, remoteIP)
+	defer connClose(sws.COut, c, sws.SourceList, clientID, remoteIP, sws.saveMessageApp)
 
 	fmt.Printf("CONNECTION with source ID '%v'\n", clientID)
 
@@ -208,6 +208,7 @@ func WssServerNetworkInteraction(
 
 	if err := http.ListenAndServeTLS(appConf.ServerHTTPS.Host+":"+port, appConf.ServerHTTPS.PathCertFile, appConf.ServerHTTPS.PathPrivateKeyFile, nil); err != nil {
 		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			TypeMessage: "info",
 			Description: fmt.Sprint(err),
 			FuncName:    "WssServerNetworkInteraction",
 		})

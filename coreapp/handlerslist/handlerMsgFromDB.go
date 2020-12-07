@@ -350,10 +350,17 @@ func HandlerMsgFromDB(
 			//пока заглушка
 
 		case "filtration control":
+			taskTypeNotFiltr := taskInfo.TaskType != "filtration control"
 			isNotComplete := taskInfo.TaskParameter.FiltrationTask.Status != "complete"
 			moreThanMax := taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering > mtsfda
 			sizeFilesFoundIsZero := taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering == 0
-			taskTypeNotFiltr := taskInfo.TaskType != "filtration control"
+
+			/*
+			   Автоматическая загрузка файлов не всегда сробатывает. В этом месте
+			   проверяется ряд параметров для её срабатывании. Однако при большом количестве
+			   мелких файлов иногда путается порядок статуса, например execute -> execute -> complete -> execute.
+			   Из-за этого не всегда срабатывает автозагрузка.
+			*/
 
 			if taskTypeNotFiltr || isNotComplete || moreThanMax || sizeFilesFoundIsZero {
 				//отмечаем задачу как завершенную в списке очередей

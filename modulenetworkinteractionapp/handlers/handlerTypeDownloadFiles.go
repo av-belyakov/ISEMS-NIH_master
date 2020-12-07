@@ -73,13 +73,13 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
 					msg.channelErrMsg <- fmt.Errorf("client IP not found")
 
-					break
+					continue
 				}
 				hrp, ok := thrf.ListHandler[msg.handlerIP][msg.handlerID]
 				if !ok {
-					msg.channelErrMsg <- fmt.Errorf("task ID not found")
+					msg.channelErrMsg <- fmt.Errorf("not action 'send data', task ID not found")
 
-					break
+					continue
 				}
 
 				hrp.chanToHandler <- msg.msgForChunnelProcessor
@@ -89,13 +89,13 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
 					msg.channelErrMsg <- fmt.Errorf("client IP not found")
 
-					break
+					continue
 				}
 				_, ok := thrf.ListHandler[msg.handlerIP][msg.handlerID]
 				if !ok {
-					msg.channelErrMsg <- fmt.Errorf("task ID not found")
+					msg.channelErrMsg <- fmt.Errorf("not action 'delete', task ID not found")
 
-					break
+					continue
 				}
 
 				delete(thrf.ListHandler[msg.handlerIP], msg.handlerID)
@@ -111,6 +111,7 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 //SetHendlerReceivingFile добавляет новый канал взаимодействия
 func (thrf *TypeHandlerReceivingFile) SetHendlerReceivingFile(ip, id string, channel chan MsgChannelProcessorReceivingFiles) error {
 	chanResErr := make(chan error)
+	defer close(chanResErr)
 
 	thrf.ChannelCommunicationReq <- typeChannelCommunication{
 		actionType:           "set",
@@ -126,6 +127,7 @@ func (thrf *TypeHandlerReceivingFile) SetHendlerReceivingFile(ip, id string, cha
 //SendChunkReceivingData отправляет через канал яасти принятого файла или информации
 func (thrf *TypeHandlerReceivingFile) SendChunkReceivingData(ip, id string, msgSend MsgChannelProcessorReceivingFiles) error {
 	chanResErr := make(chan error)
+	defer close(chanResErr)
 
 	thrf.ChannelCommunicationReq <- typeChannelCommunication{
 		actionType:             "send data",
@@ -141,6 +143,7 @@ func (thrf *TypeHandlerReceivingFile) SendChunkReceivingData(ip, id string, msgS
 //DelHendlerReceivingFile закрывает и удаляет канал
 func (thrf *TypeHandlerReceivingFile) DelHendlerReceivingFile(ip, id string) error {
 	chanResErr := make(chan error)
+	defer close(chanResErr)
 
 	thrf.ChannelCommunicationReq <- typeChannelCommunication{
 		actionType:    "del",
@@ -168,11 +171,12 @@ func ControllerReceivingRequestedFiles(
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
 	cwtRes chan<- configure.MsgWsTransmission) chan *configure.MsgChannelReceivingFiles {
 
+	funcName := "ControllerReceivingRequestedFiles"
+
 	clientNotify := configure.MsgBetweenCoreAndNI{
 		Section: "message notification",
 		Command: "send client API",
 	}
-	funcName := "ControllerReceivingRequestedFiles"
 
 	//обработка ошибки
 	handlerTaskWarning := func(taskID string, msg configure.MsgBetweenCoreAndNI) {
@@ -280,7 +284,7 @@ func ControllerReceivingRequestedFiles(
 
 					handlerTaskWarning(msg.TaskID, clientNotify)
 
-					break
+					continue
 				}
 
 				lhrf.SetHendlerReceivingFile(si.IP, msg.TaskID, channel)
@@ -325,7 +329,6 @@ func ControllerReceivingRequestedFiles(
 						MsgGenerator: "NI module",
 						Message:      msg.Message,
 					}); err != nil {
-
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,

@@ -24,7 +24,8 @@ func connClose(
 	c *websocket.Conn,
 	isl *configure.InformationSourcesList,
 	clientID int,
-	ip string) {
+	ip string,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 
 	c.Close()
 
@@ -32,6 +33,11 @@ func connClose(
 	_ = isl.ChangeSourceConnectionStatus(clientID, false)
 	//удаляем дескриптор соединения
 	isl.DelLinkWebsocketConnection(ip)
+
+	saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+		Description: fmt.Sprintf("disconnect source with ip address '%v'\n", ip),
+		FuncName:    "connClose",
+	})
 
 	fmt.Printf("SOURCE with ___ %v ___, DISCONNECT\n", ip)
 
