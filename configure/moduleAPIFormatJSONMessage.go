@@ -192,6 +192,17 @@ type SourceSettings struct {
 
 /*--- ИНФОРМАЦИЯ ПО ТЕЛЕМЕТРИИ ---*/
 
+//TelemetryRequest запрос на получения информации о телеметрии источника
+type TelemetryRequest struct {
+	MsgCommon
+	MsgOptions TelemetryOptionsRequest `json:"o"`
+}
+
+//TelemetryOptionsRequest дополнительные опции для запроса информации о телеметрии источника
+type TelemetryOptionsRequest struct {
+	SourceID int `json:"sid"`
+}
+
 //Telemetry телеметрия
 type Telemetry struct {
 	MsgCommon

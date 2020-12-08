@@ -54,6 +54,11 @@ type channelResSettings struct {
 	err error
 }
 
+type typeWriteBinaryFileRes struct {
+	fileName                                      string
+	fileIsLoaded, fileLoadedError, fileIsSlowDown bool
+}
+
 //NewListFileDescription создание нового репозитория со списком дескрипторов файлов
 func NewListFileDescription() *ListFileDescription {
 	lfd := ListFileDescription{}
@@ -281,7 +286,7 @@ DONE:
 
 						msgReq.Info.Command = "stop receiving files"
 
-						msgJSON, err := json.Marshal(msgReq)
+						msgJSON, err := json.Marshal(&msgReq)
 						if err != nil {
 							tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 								Description: fmt.Sprint(err),
@@ -306,6 +311,11 @@ DONE:
 						//закрываем дескриптор файла и удаляем файл
 						lfd.delFileDescription(fi.Hex)
 						_ = os.Remove(path.Join(pathDirStorage, fn))
+
+						tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprintf("the task with ID '%v' was stopped, because the network connection was broken", tpdf.taskID),
+							FuncName:    funcName,
+						})
 
 						sdf.Status = "task stoped disconnect"
 
@@ -342,7 +352,7 @@ DONE:
 					case "ready for the transfer":
 						//если задача находится в стадии останова игнорировать ответ slave
 						if ti.IsSlowDown {
-							break
+							continue
 						}
 
 						//создаем дескриптор файла для последующей записи в него
@@ -362,12 +372,13 @@ DONE:
 								ChunkSize:    msgRes.Info.FileOptions.ChunkSize,
 							},
 						}
+
 						//обновляем информацию о задаче
 						tpdf.smt.UpdateTaskDownloadAllParameters(tpdf.taskID, &dtp)
 						dtp = configure.DownloadTaskParameters{}
 
 						msgReq.Info.Command = "ready to receive file"
-						msgJSON, err := json.Marshal(msgReq)
+						msgJSON, err := json.Marshal(&msgReq)
 						if err != nil {
 							tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 								Description: fmt.Sprint(err),
@@ -438,16 +449,17 @@ DONE:
 
 			/* бинарный тип сообщения */
 			if msg.MessageType == 2 {
-				writeBinaryFileResult := writingBinaryFile(parametersWritingBinaryFile{
+				writeBinaryFileResult, err := writingBinaryFile(parametersWritingBinaryFile{
 					SourceID:   tpdf.sourceID,
 					TaskID:     tpdf.taskID,
 					Data:       msg.Message,
 					LFD:        lfd,
 					SMT:        tpdf.smt,
 					ChanInCore: tpdf.channels.chanInCore,
-				})
+				}) /*,
+				tpdf.saveMessageApp)*/
 
-				if writeBinaryFileResult.err != nil {
+				if err != nil {
 					tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
@@ -456,11 +468,7 @@ DONE:
 					sdf.Status = "error"
 					sdf.ErrMsg = err
 
-					/*
-
-					 */
-					//break DONE
-					break NEWFILE
+					break DONE
 				}
 
 				if (writeBinaryFileResult.fileIsLoaded || writeBinaryFileResult.fileLoadedError) && !writeBinaryFileResult.fileIsSlowDown {
@@ -530,15 +538,10 @@ DONE:
 	tpdf.channels.chanDone <- struct{}{}
 }
 
-type typeWriteBinaryFileRes struct {
-	fileName                                      string
-	fileIsLoaded, fileLoadedError, fileIsSlowDown bool
-	err                                           error
-}
-
 //writingBinaryFile осуществляет запись бинарного файла
-func writingBinaryFile(pwbf parametersWritingBinaryFile) *typeWriteBinaryFileRes {
-	/*  очищаем для отладки  */
+func writingBinaryFile(pwbf parametersWritingBinaryFile /*, saveMessageApp *savemessageapp.PathDirLocationLogFiles*/) (*typeWriteBinaryFileRes, error) {
+	//funcName := "writingBinaryFile"
+
 	var fileHex string
 	var fi configure.DetailedFileInformation
 	var twbfr typeWriteBinaryFileRes
@@ -554,24 +557,48 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) *typeWriteBinaryFileRes
 
 	w, err := pwbf.LFD.getFileDescription(fileHex)
 	if err != nil {
-		twbfr.err = err
 
-		return &twbfr
+		/*
+				Это только на время отладки, после удалить так как запись в
+				лог файл осуществляется в функции 'processingDownloadFile'
+
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(err),
+				FuncName:    funcName,
+			})*/
+
+		return &twbfr, err
 	}
 
 	//запись принятых байт
 	numWriteByte, err := w.Write((*pwbf.Data)[67:])
 	if err != nil {
-		twbfr.err = err
 
-		return &twbfr
+		/*
+				Это только на время отладки, после удалить так как запись в
+				лог файл осуществляется в функции 'processingDownloadFile'
+
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(err),
+				FuncName:    funcName,
+			})*/
+
+		return &twbfr, err
 	}
 
 	ti, ok := pwbf.SMT.GetStoringMemoryTask(pwbf.TaskID)
 	if !ok {
-		twbfr.err = fmt.Errorf("task with ID '%v' not found", pwbf.TaskID)
 
-		return &twbfr
+		/*
+				Это только на время отладки, после удалить так как запись в
+				лог файл осуществляется в функции 'processingDownloadFile'
+
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(err),
+				FuncName:    funcName,
+			})*/
+
+		return &twbfr, fmt.Errorf("task with ID '%v' not found", pwbf.TaskID)
 	}
 
 	twbfr.fileName = ti.TaskParameter.DownloadTask.FileInformation.Name
@@ -643,9 +670,8 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) *typeWriteBinaryFileRes
 			pwbf.ChanInCore <- &msgToCore
 
 			twbfr.fileLoadedError = true
-			twbfr.err = fmt.Errorf("the hash amount for the '%v' file does not match", fi.Name)
 
-			return &twbfr
+			return &twbfr, fmt.Errorf("the hash amount for the '%v' file does not match", fi.Name)
 		}
 
 		ndfi := configure.DetailedFilesInformation{
@@ -663,10 +689,10 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile) *typeWriteBinaryFileRes
 		pwbf.ChanInCore <- &msgToCore
 		twbfr.fileIsLoaded = true
 
-		return &twbfr
+		return &twbfr, nil
 	}
 
-	return &twbfr
+	return &twbfr, nil
 }
 
 func checkDownloadedFile(pathFile, fileHex string, fileSize int64) bool {

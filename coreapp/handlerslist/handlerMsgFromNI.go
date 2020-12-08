@@ -413,7 +413,7 @@ func HandlerMsgFromNI(
 			hdtsct.ResMsgInfo.MsgOption.DetailedFileInformation = configure.MoreFileInformation{}
 
 			//изменяем статус задачи на 'pause'
-			// теперь задача будет ожидать соединения с источником в течении сутое
+			// теперь задача будет ожидать соединения с источником в течении суток
 			// если соединения не произойдет то будет удалена или продолжит выполнятся
 			// если соединение будет установлено
 			if err := hsm.QTS.ChangeTaskStatusQueueTask(msg.SourceID, msg.TaskID, "pause"); err != nil {

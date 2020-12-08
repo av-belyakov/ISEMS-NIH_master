@@ -197,6 +197,24 @@ func HandlerMsgFromAPI(
 				return
 			}
 
+			//запросить у источника телеметрию
+			if msgc.MsgInstruction == "give information about state of source" {
+
+				fmt.Printf("received section: '%v', instraction: '%v'\n", msgc.MsgSection, msgc.MsgInstruction)
+
+				var tor configure.TelemetryOptionsRequest
+				if err := json.Unmarshal(msgJSON, &tor); err != nil {
+					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: "bad cast type JSON messages",
+						FuncName:    funcName,
+					})
+
+					return
+				}
+
+			}
+
 			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
 			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				Description: "in the json message is not found the right option for 'MsgInstruction'",

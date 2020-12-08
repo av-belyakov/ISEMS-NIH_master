@@ -71,13 +71,13 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 
 			case "send data":
 				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
-					msg.channelErrMsg <- fmt.Errorf("client IP not found")
+					msg.channelErrMsg <- fmt.Errorf("client IP '%v' not found", msg.handlerIP)
 
 					continue
 				}
 				hrp, ok := thrf.ListHandler[msg.handlerIP][msg.handlerID]
 				if !ok {
-					msg.channelErrMsg <- fmt.Errorf("not action 'send data', task ID not found")
+					msg.channelErrMsg <- fmt.Errorf("not action 'send data', task ID '%v' not found", msg.handlerID)
 
 					continue
 				}
@@ -87,13 +87,13 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 
 			case "del":
 				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
-					msg.channelErrMsg <- fmt.Errorf("client IP not found")
+					msg.channelErrMsg <- fmt.Errorf("client IP '%v' not found", msg.handlerIP)
 
 					continue
 				}
 				_, ok := thrf.ListHandler[msg.handlerIP][msg.handlerID]
 				if !ok {
-					msg.channelErrMsg <- fmt.Errorf("not action 'delete', task ID not found")
+					msg.channelErrMsg <- fmt.Errorf("not action 'delete', task ID '%v' not found", msg.handlerID)
 
 					continue
 				}
