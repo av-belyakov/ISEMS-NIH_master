@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -27,6 +28,7 @@ type clientSetting struct {
 	IP, Port       string
 	InfoSourceList *configure.InformationSourcesList
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles
+	TLSConf        *tls.Config
 	COut           chan<- [2]string
 	CwtReq         chan<- configure.MsgWsTransmission
 }
@@ -43,15 +45,15 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 		d := websocket.Dialer{
 			HandshakeTimeout:  (time.Duration(1) * time.Second),
 			EnableCompression: false,
-			TLSClientConfig: &tls.Config{
+			TLSClientConfig:   cs.TLSConf, /*&tls.Config{
 				InsecureSkipVerify: true,
-			},
+			},*/
 		}
 
 		c, res, err := d.Dial("wss://"+cs.IP+":"+cs.Port+"/wss", header)
 		if err != nil {
 			cs.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-				Description: fmt.Sprint(err),
+				Description: fmt.Sprintf("Error: '%v' (ip %v)", err, cs.Port),
 				FuncName:    funcName,
 			})
 
@@ -74,7 +76,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 				msgType, message, err := c.ReadMessage()
 				if err != nil {
 					cs.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						Description: fmt.Sprint(err),
+						Description: fmt.Sprintf("Error: '%v' (ip %v)", err, cs.Port),
 						FuncName:    funcName,
 					})
 
@@ -158,11 +160,14 @@ func WssClientNetworkInteraction(
 					IP:             s.IP,
 					Port:           port,
 					InfoSourceList: isl,
+					TLSConf:        conf,
 					saveMessageApp: saveMessageApp,
 					COut:           cOut,
 					CwtReq:         cwt,
 				}
 				client.CheckRedirect = cs.redirectPolicyFunc
+
+				log.Printf("---=== connection attempt to source ID: '%v', IP %v:%v ===---\n", id, cs.IP, cs.Port)
 
 				req, err := http.NewRequest("GET", "https://"+cs.IP+":"+cs.Port+"/", nil)
 				if err != nil {

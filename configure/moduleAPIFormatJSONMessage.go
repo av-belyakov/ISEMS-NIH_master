@@ -200,7 +200,7 @@ type TelemetryRequest struct {
 
 //TelemetryOptionsRequest дополнительные опции для запроса информации о телеметрии источника
 type TelemetryOptionsRequest struct {
-	SourceID int `json:"sid"`
+	ListSourceID []int `json:"lsid"`
 }
 
 //Telemetry телеметрия

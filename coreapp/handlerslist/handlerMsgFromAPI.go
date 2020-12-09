@@ -197,7 +197,7 @@ func HandlerMsgFromAPI(
 				return
 			}
 
-			//запросить у источника телеметрию
+			//запросить у источников телеметрию
 			if msgc.MsgInstruction == "give information about state of source" {
 
 				fmt.Printf("received section: '%v', instraction: '%v'\n", msgc.MsgSection, msgc.MsgInstruction)
@@ -212,6 +212,9 @@ func HandlerMsgFromAPI(
 
 					return
 				}
+
+				fmt.Println("---------- list source for information state  -----------")
+				fmt.Println(tor)
 
 			}
 

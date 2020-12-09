@@ -30,10 +30,10 @@
         "pathPrivateKeyFile": "keys/device.key",
         "pathPrivateKeyFile_comments": "ОТНОСИТЕЛЬНЫЙ путь до файла с приватным ключем"
     },
-    "serverHTTPS_comments": "параметры для запуска сервера к которому подключаются сенсора",
+    "serverHTTPS_comments": "параметры для запуска сервера к которому подключаются модули ISEMS-NIH_slave",
     "pathRootCA": "keys/rootCA.pem",
     "timeReconnectClient": 10,
-    "timeReconnectClient_comments": "актуально только в режиме isServer = false, тогда с заданным интервалом времени будут попытки соединения с адресами slave",
+    "timeReconnectClient_comments": "интервал времени для выполнения попыток соединения с модулями ISEMS-NIH_slave",
     "connectionDB": {
         "socket": false,
         "host": "127.0.0.1",

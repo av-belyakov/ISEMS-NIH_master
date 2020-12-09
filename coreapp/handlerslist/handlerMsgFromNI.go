@@ -576,6 +576,11 @@ func HandlerMsgFromNI(
 				return
 			}
 
+			//если выполнение задачи связано с управлением источниками где не применяется очереди задач
+			if taskInfo.TaskType == "source control" {
+				return
+			}
+
 			if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, msg.TaskID, "complete"); err != nil {
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
