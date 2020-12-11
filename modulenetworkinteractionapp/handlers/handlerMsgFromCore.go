@@ -288,6 +288,61 @@ func HandlerMsgFromCore(
 			}
 		}
 
+		if msg.Command == "get telemetry" {
+			fmt.Printf("func 'handlerMsgFromCore', section: '%v', command: '%v'\n", msg.Section, msg.Command)
+
+			csl, ok := msg.AdvancedOptions.(map[int]*configure.DetailedSourceInformation)
+			if !ok {
+
+				fmt.Println("func 'handlerMsgFromCore', ERROR: convertion type")
+
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: "type conversion error",
+					FuncName:    funcName,
+				})
+
+				return
+			}
+
+			reqTelemetry := configure.MsgTypeTelemetryControl{
+				MsgType: "telemetry",
+				Info: configure.SettingsTelemetryControlRequest{
+					TaskID:  msg.TaskID,
+					Command: "give me telemetry",
+				},
+			}
+
+			msgJSON, err := json.Marshal(reqTelemetry)
+			if err != nil {
+
+				fmt.Println("func 'handlerMsgFromCore', ERROR convert to JSON")
+				fmt.Println(err)
+
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+				return
+			}
+
+			for sourceID := range csl {
+
+				fmt.Printf("func 'handlerMsgFromCore', sourceID: '%v'\n", sourceID)
+
+				//проверяем наличие подключения для заданного источника
+				if si, ok := isl.GetSourceSetting(sourceID); ok {
+					fmt.Printf("func 'handlerMsgFromCore', send message to sourceID: '%v'\n", sourceID)
+
+					//передаем задачу источнику
+					cwt <- configure.MsgWsTransmission{
+						DestinationHost: si.IP,
+						Data:            &msgJSON,
+					}
+				}
+			}
+		}
+
 	case "filtration control":
 		//проверяем наличие подключения для заданного источника
 		si, ok := isl.GetSourceSetting(msg.SourceID)

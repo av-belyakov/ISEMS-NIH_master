@@ -202,8 +202,8 @@ func HandlerMsgFromAPI(
 
 				fmt.Printf("received section: '%v', instraction: '%v'\n", msgc.MsgSection, msgc.MsgInstruction)
 
-				var tor configure.TelemetryOptionsRequest
-				if err := json.Unmarshal(msgJSON, &tor); err != nil {
+				var tr configure.TelemetryRequest
+				if err := json.Unmarshal(msgJSON, &tr); err != nil {
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: "bad cast type JSON messages",
@@ -214,8 +214,11 @@ func HandlerMsgFromAPI(
 				}
 
 				fmt.Println("---------- list source for information state  -----------")
-				fmt.Println(tor)
+				fmt.Println(tr)
 
+				go handlerSourceControlTaskTelemetry(outCoreChans.OutCoreChanNI, outCoreChans.OutCoreChanAPI, msg.IDClientAPI, msgc.ClientTaskID, &tr, hsm, saveMessageApp)
+
+				return
 			}
 
 			notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
@@ -241,7 +244,7 @@ func HandlerMsgFromAPI(
 					return
 				}
 
-				go handlerFiltrationControlTypeStart(&fcts, hsm, msg.IDClientAPI, saveMessageApp, outCoreChans.OutCoreChanAPI)
+				go handlerFiltrationControlTypeStart(outCoreChans.OutCoreChanAPI, &fcts, hsm, msg.IDClientAPI, saveMessageApp)
 
 				return
 			}
@@ -347,7 +350,6 @@ func HandlerMsgFromAPI(
 				//ищем источник по указанному идентификатору
 				sourceInfo, ok := hsm.ISL.GetSourceSetting(dcts.MsgOption.ID)
 				if !ok {
-
 					emt.MsgHuman = common.PatternUserMessage(&common.TypePatternUserMessage{
 						SourceID:   dcts.MsgOption.ID,
 						TaskType:   "скачивание файлов",
@@ -635,7 +637,7 @@ func HandlerMsgFromAPI(
 					return
 				}
 
-				go handlerInformationSearchControlTypeSearchCommanInformation(&siatr, hsm, msg.IDClientAPI, saveMessageApp, outCoreChans.OutCoreChanAPI, outCoreChans.OutCoreChanDB)
+				go handlerInformationSearchControlTypeSearchCommanInformation(outCoreChans.OutCoreChanAPI, outCoreChans.OutCoreChanDB, &siatr, hsm, msg.IDClientAPI, saveMessageApp)
 
 				return
 			}

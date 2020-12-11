@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -76,7 +75,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 				msgType, message, err := c.ReadMessage()
 				if err != nil {
 					cs.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						Description: fmt.Sprintf("Error: '%v' (ip %v)", err, cs.Port),
+						Description: fmt.Sprintf("Error: '%v' (ip %v)", err, cs.IP),
 						FuncName:    funcName,
 					})
 
@@ -166,8 +165,6 @@ func WssClientNetworkInteraction(
 					CwtReq:         cwt,
 				}
 				client.CheckRedirect = cs.redirectPolicyFunc
-
-				log.Printf("---=== connection attempt to source ID: '%v', IP %v:%v ===---\n", id, cs.IP, cs.Port)
 
 				req, err := http.NewRequest("GET", "https://"+cs.IP+":"+cs.Port+"/", nil)
 				if err != nil {

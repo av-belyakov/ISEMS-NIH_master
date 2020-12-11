@@ -17,7 +17,7 @@ type StoringMemoryTask struct {
 // ClientTaskID - идентификатор задачи полученный от клиента
 // UserName - имя пользователя инициировавшего задачу (если поле пустое, то
 //  считается что выполнение задачи было инициировано автоматически)
-// TaskType - тип выполняемой задачи ("filtration control", "download control")
+// TaskType - тип выполняемой задачи ("filtration control", "download control", "sources control" или "telemetry")
 // TaskStatus - статус задачи, false выполняется, true завершена
 // IsSlowDown - останавливается ли задача
 // ModuleThatSetTask - модуль от которого поступила задача
@@ -50,10 +50,15 @@ type TimeIntervalTaskExecution struct {
 }
 
 //DescriptionTaskParameters описание параметров задачи
+// FiltrationTask - параметры задачи по фильтрации
+// DownloadTask - параметры задачи по скачиванию файлов
+// ListFilesDetailedInformation - список файлов с детальной информацией о них
+// ListSourceDetailedTnformation - список источников с детальной информацией о них
 type DescriptionTaskParameters struct {
-	FiltrationTask               *FiltrationTaskParameters
-	DownloadTask                 *DownloadTaskParameters
-	ListFilesDetailedInformation map[string]*DetailedFilesInformation
+	FiltrationTask                *FiltrationTaskParameters
+	DownloadTask                  *DownloadTaskParameters
+	ListFilesDetailedInformation  map[string]*DetailedFilesInformation
+	ListSourceDetailedTnformation map[int]*DetailedSourceInformation
 }
 
 //DownloadTaskParameters параметры задачи по скачиванию файлов
@@ -77,11 +82,23 @@ type DownloadTaskParameters struct {
 }
 
 //DetailedFilesInformation подробная информация о файлах
+// Hex - хеш сумма файла
+// Size - размер файла в байтах
+// IsLoaded - загружен ли файл
+// TimeDownload - время загрузки файла
 type DetailedFilesInformation struct {
 	Hex          string
 	Size         int64
 	IsLoaded     bool
 	TimeDownload int64
+}
+
+//DetailedSourceInformation подробная информация об источниках с которыми нужно выполнить какое либо действие
+// ConnectionStatus - статус соединения источника
+// WhetherTaskWasProcessed - обработана ли задача
+type DetailedSourceInformation struct {
+	ConnectionStatus        bool
+	WhetherTaskWasProcessed bool
 }
 
 //FiltrationTaskParameters параметры задачи по фильтрации файлов

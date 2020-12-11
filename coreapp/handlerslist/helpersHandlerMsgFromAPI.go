@@ -1,10 +1,12 @@
 package handlerslist
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
+	"time"
 
 	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
@@ -14,11 +16,11 @@ import (
 
 //handlerFiltrationControlTypeStart обработчик запроса на фильтрацию
 func handlerFiltrationControlTypeStart(
+	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
 	fcts *configure.FiltrationControlTypeStart,
 	hsm HandlersStoringMemory,
 	clientID string,
-	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
-	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI) {
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 
 	funcName := "handlerFiltrationControlTypeStart"
 
@@ -152,12 +154,12 @@ func handlerFiltrationControlTypeStart(
 
 //handlerInformationSearchControlTypeSearchCommanInformation обработчик запроса по поиску общей информации о задачах
 func handlerInformationSearchControlTypeSearchCommanInformation(
+	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
+	chanToDB chan<- *configure.MsgBetweenCoreAndDB,
 	siatr *configure.SearchInformationAboutTasksRequest,
 	hsm HandlersStoringMemory,
 	clientID string,
-	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
-	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
-	chanToDB chan<- *configure.MsgBetweenCoreAndDB) {
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 
 	funcName := "handlerInformationSearchControlTypeSearchCommanInformation"
 
@@ -241,6 +243,125 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 		IDClientAPI:     clientID,
 		TaskID:          taskID,
 		TaskIDClientAPI: siatr.ClientTaskID,
+	}
+}
+
+func handlerSourceControlTaskTelemetry(
+	outCoreChanNI chan<- *configure.MsgBetweenCoreAndNI,
+	outCoreChanAPI chan<- *configure.MsgBetweenCoreAndAPI,
+	idClientAPI string,
+	clientTaskID string,
+	tr *configure.TelemetryRequest,
+	hsm HandlersStoringMemory,
+	saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
+
+	funcName := "handlerSourceControlTaskTelemetry"
+
+	getActionTypeListSources := func(list []int) []configure.ActionTypeListSources {
+		atls := make([]configure.ActionTypeListSources, 0, len(list))
+
+		for _, s := range list {
+			atls = append(atls, configure.ActionTypeListSources{
+				ID:             s,
+				Status:         "disconnect",
+				ActionType:     "telemetry",
+				IsSuccess:      false,
+				MessageFailure: fmt.Sprintf("источник с id:'%v' не подключен или указанный id не был найден в перечне доступных источников", s),
+			})
+		}
+
+		return atls
+	}
+
+	taskID := common.GetUniqIDFormatMD5(idClientAPI + "_" + clientTaskID)
+	connectSourceList, disconnectSourceList := checkConnectionStatusSources(tr.MsgOptions.ListSourceID, hsm.ISL)
+
+	fmt.Printf("func '%v'\n connectionSourceList:'%v'\n, disconnectionSourceList:'%v' \n", funcName, connectSourceList, disconnectSourceList)
+
+	emt := ErrorMessageType{
+		TaskID:          taskID,
+		TaskIDClientAPI: clientTaskID,
+		IDClientAPI:     idClientAPI,
+		Section:         "source control",
+		Instruction:     "task processing",
+		MsgType:         "danger",
+		ChanToAPI:       outCoreChanAPI,
+		MsgHuman: common.PatternUserMessage(&common.TypePatternUserMessage{
+			TaskType:   "запрос телеметрии",
+			TaskAction: "задача отклонена",
+			Message:    "ни один из перечисленных пользователем источников не подключен",
+		}),
+		SearchRequestIsGeneratedAutomatically: tr.MsgOptions.GeneratedAutomatically,
+	}
+
+	msg := configure.SourceControlActionsTakenSources{
+		MsgOptions: configure.SourceControlMsgTypeToAPI{
+			SourceList: getActionTypeListSources(disconnectSourceList),
+		},
+	}
+	msg.MsgType = "information"
+	msg.MsgSection = "source control"
+	msg.MsgInstruction = "reject give information about state of source"
+
+	msgJSON, err := json.Marshal(&msg)
+	if err != nil {
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprint(err),
+			FuncName:    funcName,
+		})
+	}
+
+	if len(connectSourceList) == 0 {
+		if !tr.MsgOptions.GeneratedAutomatically {
+			if err := ErrorMessage(emt); err != nil {
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+			}
+		}
+
+		outCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
+			MsgGenerator: "Core module",
+			MsgRecipient: "API module",
+			IDClientAPI:  idClientAPI,
+			MsgJSON:      msgJSON,
+		}
+
+		return
+	}
+
+	if len(disconnectSourceList) != 0 {
+		outCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
+			MsgGenerator: "Core module",
+			MsgRecipient: "API module",
+			IDClientAPI:  idClientAPI,
+			MsgJSON:      msgJSON,
+		}
+	}
+
+	//добавляем новую задачу
+	hsm.SMT.AddStoringMemoryTask(taskID, configure.TaskDescription{
+		ClientID:                        idClientAPI,
+		ClientTaskID:                    clientTaskID,
+		TaskType:                        "telemetry",
+		ModuleThatSetTask:               "API module",
+		ModuleResponsibleImplementation: "NI module",
+		TimeUpdate:                      time.Now().Unix(),
+		TimeInterval:                    configure.TimeIntervalTaskExecution{},
+		TaskParameter: configure.DescriptionTaskParameters{
+			FiltrationTask:                &configure.FiltrationTaskParameters{},
+			DownloadTask:                  &configure.DownloadTaskParameters{},
+			ListFilesDetailedInformation:  map[string]*configure.DetailedFilesInformation{},
+			ListSourceDetailedTnformation: connectSourceList,
+		},
+	})
+
+	outCoreChanNI <- &configure.MsgBetweenCoreAndNI{
+		TaskID:          taskID,
+		Section:         "source control",
+		Command:         "get telemetry",
+		AdvancedOptions: connectSourceList,
 	}
 }
 
@@ -395,6 +516,33 @@ func CheckParametersSearchCommonInformation(siatro *configure.SearchInformationA
 	}
 
 	return "", true
+}
+
+//checkConnectionStatusSources функция проверяет список источников на наличие сетевого подключения
+func checkConnectionStatusSources(sourceList []int, isl *configure.InformationSourcesList) (map[int]*configure.DetailedSourceInformation, []int) {
+	connectionSourceList := map[int]*configure.DetailedSourceInformation{}
+	var disconnectionSourceList []int
+
+	for _, s := range sourceList {
+		//ищем источник по указанному идентификатору
+		sourceInfo, ok := isl.GetSourceSetting(s)
+		if !ok {
+			disconnectionSourceList = append(disconnectionSourceList, s)
+
+			continue
+		}
+
+		//проверяем подключение источника
+		if !sourceInfo.ConnectionStatus {
+			disconnectionSourceList = append(disconnectionSourceList, s)
+
+			continue
+		}
+
+		connectionSourceList[s] = &configure.DetailedSourceInformation{}
+	}
+
+	return connectionSourceList, disconnectionSourceList
 }
 
 //OptionsCheckFilterParameters общие опции

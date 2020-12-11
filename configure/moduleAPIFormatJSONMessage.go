@@ -199,8 +199,11 @@ type TelemetryRequest struct {
 }
 
 //TelemetryOptionsRequest дополнительные опции для запроса информации о телеметрии источника
+// ListSourceID - список идентификаторов источников
+// GeneratedAutomatically - была ли данная задача сгенерирована автоматически
 type TelemetryOptionsRequest struct {
-	ListSourceID []int `json:"lsid"`
+	ListSourceID           []int `json:"lsid"`
+	GeneratedAutomatically bool  `json:"ga"`
 }
 
 //Telemetry телеметрия
@@ -211,8 +214,9 @@ type Telemetry struct {
 
 //TelemetryOptions дополнительные опции
 type TelemetryOptions struct {
-	SourceID    int                  `json:"id"`
-	Information TelemetryInformation `json:"i"`
+	SourceID     int                  `json:"id"`
+	SourceStatus bool                 `json:"ss"`
+	Information  TelemetryInformation `json:"i"`
 }
 
 /*--- ИНФОРМАЦИЯ О ВЕРСИИ УСТАНОВЛЕННОГО НА ИСТОЧНИКЕ ПРОГРАММНОГО ОБЕСПЕЧЕНИЯ И ДАТЕ ЕГО РЕЛИЗА ---*/

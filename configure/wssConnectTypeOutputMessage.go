@@ -44,3 +44,17 @@ type SettingsFiltrationControl struct {
 	NumberMessagesFrom     [2]int                                      `json:"nmf"`
 	ListFilesReceivedIndex map[string][]string                         `json:"lfri"`
 }
+
+/* ЗАПРОС НА ПОЛУЧЕНИЕ ТЕЛЕМЕТРИИ */
+
+//MsgTypeTelemetryControl сообщение для получения телеметрии
+type MsgTypeTelemetryControl struct {
+	MsgType string                          `json:"messageType"`
+	Info    SettingsTelemetryControlRequest `json:"info"`
+}
+
+//SettingsTelemetryControlRequest параметры запроса телеметрии
+type SettingsTelemetryControlRequest struct {
+	TaskID  string `json:"id"`
+	Command string `json:"c"`
+}
