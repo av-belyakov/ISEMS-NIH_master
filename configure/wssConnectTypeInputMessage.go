@@ -21,6 +21,7 @@ type DetailInfoMsgPong struct {
 //SourceTelemetry полная системная информация подготовленная к отправке
 type SourceTelemetry struct {
 	MessageType string               `json:"messageType"`
+	TaskID      string               `json:"taskID"`
 	Info        TelemetryInformation `json:"info"`
 }
 

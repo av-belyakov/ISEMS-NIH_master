@@ -105,18 +105,30 @@ func HandlerMsgFromNI(
 				return
 			}
 
-			msg := configure.Telemetry{
-				MsgOptions: configure.TelemetryOptions{
-					SourceID:    msg.SourceID,
-					Information: st.Info,
+			fmt.Printf("func '%v', section: '%v', command: '%v', response: '%v' \n", funcName, msg.Section, msg.Command, st)
+
+			res := configure.TelemetryResponse{
+				MsgOptions: configure.TelemetryResponseOptions{
+					SourceID:     msg.SourceID,
+					SourceStatus: true,
+					Information:  st.Info,
 				},
 			}
 
-			msg.MsgType = "information"
-			msg.MsgSection = "source control"
-			msg.MsgInstruction = "send telemetry"
+			res.MsgType = "information"
+			res.MsgSection = "source control"
+			res.MsgInstruction = "send telemetry"
 
-			jsonOut, err := json.Marshal(msg)
+			if len(st.TaskID) > 0 {
+				if smti, ok := hsm.SMT.GetStoringMemoryTask(st.TaskID); ok {
+					res.ClientTaskID = smti.ClientTaskID
+
+					hsm.SMT.RemoveSourceFromListSourceGroupTaskExecution(st.TaskID, msg.SourceID)
+					res.MsgInstruction = "give information about state of source"
+				}
+			}
+
+			jsonOut, err := json.Marshal(res)
 			if err != nil {
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),

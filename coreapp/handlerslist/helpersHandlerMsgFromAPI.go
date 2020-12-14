@@ -302,6 +302,9 @@ func handlerSourceControlTaskTelemetry(
 	msg.MsgType = "information"
 	msg.MsgSection = "source control"
 	msg.MsgInstruction = "reject give information about state of source"
+	msg.ClientTaskID = clientTaskID
+
+	fmt.Printf("func '%v', msg:%v \n", funcName, msg)
 
 	msgJSON, err := json.Marshal(&msg)
 	if err != nil {
@@ -350,10 +353,10 @@ func handlerSourceControlTaskTelemetry(
 		TimeUpdate:                      time.Now().Unix(),
 		TimeInterval:                    configure.TimeIntervalTaskExecution{},
 		TaskParameter: configure.DescriptionTaskParameters{
-			FiltrationTask:                &configure.FiltrationTaskParameters{},
-			DownloadTask:                  &configure.DownloadTaskParameters{},
-			ListFilesDetailedInformation:  map[string]*configure.DetailedFilesInformation{},
-			ListSourceDetailedTnformation: connectSourceList,
+			FiltrationTask:               &configure.FiltrationTaskParameters{},
+			DownloadTask:                 &configure.DownloadTaskParameters{},
+			ListFilesDetailedInformation: map[string]*configure.DetailedFilesInformation{},
+			ListSourceGroupTaskExecution: connectSourceList,
 		},
 	})
 

@@ -206,14 +206,14 @@ type TelemetryOptionsRequest struct {
 	GeneratedAutomatically bool  `json:"ga"`
 }
 
-//Telemetry телеметрия
-type Telemetry struct {
+//TelemetryResponse ответ от источника с информацией о телеметрии
+type TelemetryResponse struct {
 	MsgCommon
-	MsgOptions TelemetryOptions `json:"o"`
+	MsgOptions TelemetryResponseOptions `json:"o"`
 }
 
-//TelemetryOptions дополнительные опции
-type TelemetryOptions struct {
+//TelemetryResponseOptions дополнительные опции
+type TelemetryResponseOptions struct {
 	SourceID     int                  `json:"id"`
 	SourceStatus bool                 `json:"ss"`
 	Information  TelemetryInformation `json:"i"`

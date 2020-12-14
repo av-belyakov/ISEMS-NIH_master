@@ -53,12 +53,12 @@ type TimeIntervalTaskExecution struct {
 // FiltrationTask - параметры задачи по фильтрации
 // DownloadTask - параметры задачи по скачиванию файлов
 // ListFilesDetailedInformation - список файлов с детальной информацией о них
-// ListSourceDetailedTnformation - список источников с детальной информацией о них
+// ListSourceGroupTaskExecution - список источников над которыми нужно выполнить групповую задачу
 type DescriptionTaskParameters struct {
-	FiltrationTask                *FiltrationTaskParameters
-	DownloadTask                  *DownloadTaskParameters
-	ListFilesDetailedInformation  map[string]*DetailedFilesInformation
-	ListSourceDetailedTnformation map[int]*DetailedSourceInformation
+	FiltrationTask               *FiltrationTaskParameters
+	DownloadTask                 *DownloadTaskParameters
+	ListFilesDetailedInformation map[string]*DetailedFilesInformation
+	ListSourceGroupTaskExecution map[int]*DetailedSourceInformation
 }
 
 //DownloadTaskParameters параметры задачи по скачиванию файлов
@@ -153,6 +153,7 @@ type ChanStoringMemoryTask struct {
 	ActionType, TaskID       string
 	Description              *TaskDescription
 	DetailedFilesInformation map[string]*DetailedFilesInformation
+	CommonInformation        interface{}
 	ChannelRes               chan channelResSettings
 }
 
@@ -324,6 +325,13 @@ func NewRepositorySMT() *StoringMemoryTask {
 			case "increment number files downloaded error":
 				if ti, ok := smt.tasks[msg.TaskID]; ok {
 					smt.tasks[msg.TaskID].TaskParameter.DownloadTask.NumberFilesDownloadedError = ti.TaskParameter.DownloadTask.NumberFilesDownloadedError + 1
+				}
+
+				msg.ChannelRes <- channelResSettings{}
+
+			case "remove source from list source group task execution":
+				if sourceID, ok := msg.CommonInformation.(int); ok {
+					smt.removeSourceFromListSourceGroupTaskExecution(msg.TaskID, sourceID)
 				}
 
 				msg.ChannelRes <- channelResSettings{}
@@ -565,6 +573,21 @@ func (smt *StoringMemoryTask) UpdateListFilesDetailedInformationFileIsLoaded(tas
 	<-chanRes
 }
 
+//RemoveSourceFromListSourceGroupTaskExecution удаление ID источника из списка ListSourceDetailedInformation
+func (smt *StoringMemoryTask) RemoveSourceFromListSourceGroupTaskExecution(taskID string, sourceID int) {
+	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
+
+	smt.channelReq <- ChanStoringMemoryTask{
+		ActionType:        "remove source from list source group task execution",
+		TaskID:            taskID,
+		CommonInformation: sourceID,
+		ChannelRes:        chanRes,
+	}
+
+	<-chanRes
+}
+
 //delStoringMemoryTask удалить задачу
 func (smt StoringMemoryTask) delStoringMemoryTask(taskID string) {
 	chanRes := make(chan channelResSettings)
@@ -649,6 +672,18 @@ func (smt *StoringMemoryTask) updateTaskDownloadAllParameters(taskID string, td 
 	dt.FileInformation = ndt.FileInformation
 
 	smt.tasks[taskID].TaskParameter.DownloadTask = dt
+}
+
+func (smt *StoringMemoryTask) removeSourceFromListSourceGroupTaskExecution(taskID string, sourceID int) {
+	if _, ok := smt.tasks[taskID]; !ok {
+		return
+	}
+
+	delete(smt.tasks[taskID].TaskParameter.ListSourceGroupTaskExecution, sourceID)
+
+	if len(smt.tasks[taskID].TaskParameter.ListSourceGroupTaskExecution) == 0 {
+		smt.tasks[taskID].TaskStatus = true
+	}
 }
 
 //MsgChanStoringMemoryTask информация о подвисшей задачи
