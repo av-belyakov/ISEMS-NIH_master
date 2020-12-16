@@ -2,6 +2,7 @@ package handlerslist
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/notifications"
@@ -36,6 +37,9 @@ type ErrorMessageType struct {
 func ErrorMessage(emt ErrorMessageType) error {
 	//если запрос не был сгенерирован автоматически
 	if !emt.SearchRequestIsGeneratedAutomatically {
+
+		fmt.Printf("func 'ErrorMessage', REGUESt renerated is not automatically")
+
 		//отправляем информационное сообщение
 		notifications.SendNotificationToClientAPI(
 			emt.ChanToAPI,

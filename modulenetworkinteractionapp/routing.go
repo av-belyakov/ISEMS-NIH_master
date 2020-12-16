@@ -7,7 +7,6 @@ import (
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/modulenetworkinteractionapp/handlers"
 	"ISEMS-NIH_master/modulenetworkinteractionapp/processrequest"
-	"ISEMS-NIH_master/modulenetworkinteractionapp/processresponse"
 	"ISEMS-NIH_master/savemessageapp"
 )
 
@@ -225,6 +224,7 @@ func RouteWssConnectionResponse(
 	cwtRes chan<- configure.MsgWsTransmission,
 	chanInCore chan<- *configure.MsgBetweenCoreAndNI,
 	chanInCRRF chan<- *configure.MsgChannelReceivingFiles,
+	chanInHMRFF chan<- *handlers.ChanHandlerMessagesReceivedFilesFiltering,
 	isl *configure.InformationSourcesList,
 	smt *configure.StoringMemoryTask,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
@@ -284,17 +284,23 @@ func RouteWssConnectionResponse(
 				}
 
 			case "filtration":
-				go processresponse.ProcessingReceivedMsgTypeFiltering(processresponse.ParametersProcessingReceivedMsgTypeFiltering{
-					SMT:      smt,
-					Message:  message,
+				chanInHMRFF <- &handlers.ChanHandlerMessagesReceivedFilesFiltering{
 					SourceID: sourceID,
 					SourceIP: sourceIP,
-					Chans: processresponse.ChansMsgTypeFiltering{
-						CwtRes:     cwtRes,
-						ChanInCore: chanInCore,
-						CwtReq:     cwtReq,
-					},
-				}, saveMessageApp)
+					Message:  message,
+				}
+
+				/*				go processresponse.ProcessingReceivedMsgTypeFiltering(processresponse.ParametersProcessingReceivedMsgTypeFiltering{
+								SMT:      smt,
+								Message:  message,
+								SourceID: sourceID,
+								SourceIP: sourceIP,
+								Chans: processresponse.ChansMsgTypeFiltering{
+									CwtRes:     cwtRes,
+									ChanInCore: chanInCore,
+									CwtReq:     cwtReq,
+								},
+							}, saveMessageApp)*/
 
 			case "download files":
 				var mtd configure.MsgTypeDownload

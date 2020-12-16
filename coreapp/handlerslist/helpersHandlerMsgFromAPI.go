@@ -278,22 +278,6 @@ func handlerSourceControlTaskTelemetry(
 
 	fmt.Printf("func '%v'\n connectionSourceList:'%v'\n, disconnectionSourceList:'%v' \n", funcName, connectSourceList, disconnectSourceList)
 
-	emt := ErrorMessageType{
-		TaskID:          taskID,
-		TaskIDClientAPI: clientTaskID,
-		IDClientAPI:     idClientAPI,
-		Section:         "source control",
-		Instruction:     "task processing",
-		MsgType:         "danger",
-		ChanToAPI:       outCoreChanAPI,
-		MsgHuman: common.PatternUserMessage(&common.TypePatternUserMessage{
-			TaskType:   "запрос телеметрии",
-			TaskAction: "задача отклонена",
-			Message:    "ни один из перечисленных пользователем источников не подключен",
-		}),
-		SearchRequestIsGeneratedAutomatically: tr.MsgOptions.GeneratedAutomatically,
-	}
-
 	msg := configure.SourceControlActionsTakenSources{
 		MsgOptions: configure.SourceControlMsgTypeToAPI{
 			SourceList: getActionTypeListSources(disconnectSourceList),
@@ -312,26 +296,6 @@ func handlerSourceControlTaskTelemetry(
 			Description: fmt.Sprint(err),
 			FuncName:    funcName,
 		})
-	}
-
-	if len(connectSourceList) == 0 {
-		if !tr.MsgOptions.GeneratedAutomatically {
-			if err := ErrorMessage(emt); err != nil {
-				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-					Description: fmt.Sprint(err),
-					FuncName:    funcName,
-				})
-			}
-		}
-
-		outCoreChanAPI <- &configure.MsgBetweenCoreAndAPI{
-			MsgGenerator: "Core module",
-			MsgRecipient: "API module",
-			IDClientAPI:  idClientAPI,
-			MsgJSON:      msgJSON,
-		}
-
-		return
 	}
 
 	if len(disconnectSourceList) != 0 {

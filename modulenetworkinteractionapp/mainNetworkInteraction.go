@@ -71,10 +71,13 @@ func MainNetworkInteraction(
 	//обработчик процессов по скачиванию запрошенных файлов
 	chanInCRRF := handlers.ControllerReceivingRequestedFiles(smt, qts, isl, saveMessageApp, chanInCore, cwtRes)
 
+	//обработчик сообщений получаемых при фильтрации файлов
+	chanInHMRFF := handlers.HandlerMessagesReceivedFilesFiltering(smt, saveMessageApp, chanInCore, cwtRes)
+
 	//маршрутизатор запросов получаемых от CoreApp
 	go RouteCoreRequest(cwtRes, chanInCore, chanInCRRF, isl, smt, qts, saveMessageApp, chansStatSource, chanOutCore)
 	//маршрутизатор запросов получаемых Wss
-	go RouteWssConnectionResponse(cwtRes, chanInCore, chanInCRRF, isl, smt, saveMessageApp, cwtReq)
+	go RouteWssConnectionResponse(cwtRes, chanInCore, chanInCRRF, chanInHMRFF, isl, smt, saveMessageApp, cwtReq)
 
 	//запуск модуля wssServerNI
 	go WssServerNetworkInteraction(chansStatSource["outWssModuleServer"], appConf, isl, saveMessageApp, cwtReq)

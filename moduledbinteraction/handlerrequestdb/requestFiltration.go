@@ -154,9 +154,9 @@ func UpdateParametersFiltrationTask(
 
 	var err error
 
-	infoMsg := configure.MsgBetweenCoreAndDB{
+	msg := configure.MsgBetweenCoreAndDB{
 		MsgGenerator: "DB module",
-		MsgRecipient: "API module",
+		MsgRecipient: "Core module",
 		MsgSection:   "filtration control",
 		Instruction:  "filtration complete",
 		TaskID:       req.TaskID,
@@ -165,6 +165,8 @@ func UpdateParametersFiltrationTask(
 	//получаем всю информацию по выполняемой задаче
 	taskInfo, ok := smt.GetStoringMemoryTask(req.TaskID)
 	if !ok {
+		fmt.Println("func 'UpdateParametersFiltrationTask', GET all missing information")
+
 		//восстанавливаем задачу по ее ID
 		taskInfoFromDB, err := getInfoTaskForID(qp, req.TaskID)
 		if err != nil {
@@ -176,7 +178,7 @@ func UpdateParametersFiltrationTask(
 		}
 
 		itd := (*taskInfoFromDB)[0]
-		infoMsg.TaskIDClientAPI = itd.ClientTaskID
+		msg.TaskIDClientAPI = itd.ClientTaskID
 
 		taskStatusRecovery := itd.DetailedInformationOnFiltering.TaskStatus
 
@@ -217,6 +219,9 @@ func UpdateParametersFiltrationTask(
 
 		//если статус задачи "stop" или "complete" через ядро останавливаем задачу и оповещаем пользователя
 		if taskStatusRecovery == "complete" || taskStatusRecovery == "stop" {
+
+			fmt.Println("func 'UpdateParametersFiltrationTask', task status 'complete' or 'stop' and to API send message")
+
 			//обновление статуса задачи
 			commonValueUpdate := bson.D{
 				bson.E{Key: "$set", Value: bson.D{
@@ -225,16 +230,34 @@ func UpdateParametersFiltrationTask(
 
 			err = qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, commonValueUpdate)
 
-			chanIn <- &infoMsg
+			fmt.Println("func 'UpdateParametersFiltrationTask', send request CORE to auto start download files")
+
+			//отправляем запрос на автоматическую выгрузку найденных файлов
+			chanIn <- &msg
+
+			fmt.Println("func 'UpdateParametersFiltrationTask', send MESSAGE to client API info task status 'complete' or 'stop'")
+
+			//отправляем запрос на генерацию сообщения клиенту API
+			chanIn <- &configure.MsgBetweenCoreAndDB{
+				MsgGenerator: "DB module",
+				MsgRecipient: "API module",
+				MsgSection:   "filtration control",
+				Instruction:  "filtration complete",
+				TaskID:       req.TaskID,
+				AdvancedOptions: configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus{
+					TaskStatus:    taskStatusRecovery,
+					ListFoundFile: map[string]*configure.DetailedFilesInformation{},
+				},
+			}
 		}
 
-		return fmt.Errorf("task with ID '%v' not found (DB module)", req.TaskID)
+		return fmt.Errorf("task with ID '%v' not found, restoring information about the task (DB module)", req.TaskID)
 	}
 
 	ti := taskInfo.TaskParameter.FiltrationTask
 
-	infoMsg.IDClientAPI = taskInfo.ClientID
-	infoMsg.TaskIDClientAPI = taskInfo.ClientTaskID
+	msg.IDClientAPI = taskInfo.ClientID
+	msg.TaskIDClientAPI = taskInfo.ClientTaskID
 
 	//выполнять обновление информации в БД для сообщения типа 'complete' всегда,
 	// для сообщения типа 'execute' только раз 61 секунду
@@ -303,9 +326,11 @@ func UpdateParametersFiltrationTask(
 	//обновление таймера вставки информации в БД
 	smt.TimerUpdateTaskInsertDB(req.TaskID)
 
+	fmt.Printf("func 'UpdateParametersFiltrationTask', Status: '%v', send Core to comlete filtering task --->\n", ti.Status)
+
 	//если статус задачи "stop" или "complete" через ядро останавливаем задачу и оповещаем пользователя
 	if ti.Status == "stop" || ti.Status == "complete" {
-		chanIn <- &infoMsg
+		chanIn <- &msg
 	}
 
 	return err

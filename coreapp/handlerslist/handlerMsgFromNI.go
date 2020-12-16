@@ -198,6 +198,9 @@ func HandlerMsgFromNI(
 		}
 
 	case "filtration control":
+
+		fmt.Printf("func '%v', Section: %v, Command: %v, send to DB\n", funcName, msg.Section, msg.Command)
+
 		//отправляем иформацию о ходе фильтрации в БД
 		outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
 			MsgGenerator:    "NI module",
@@ -208,7 +211,9 @@ func HandlerMsgFromNI(
 			AdvancedOptions: msg.AdvancedOptions,
 		}
 
-		//клиенту API
+		//передается клиенту API но только если информация о задаче присутствует в StoringMemoryTask
+		// если задачи нет в StoringMemoryTask например, после перезагрузки приложения
+		// то ее нужно встановить через БД
 		ao, ok := msg.AdvancedOptions.(configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus)
 		if ok && taskInfoIsExist {
 			//упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
@@ -222,9 +227,14 @@ func HandlerMsgFromNI(
 
 			}
 
-			if (ao.TaskStatus == "complete") || (ao.TaskStatus == "stop") {
+			fmt.Printf("func '%v', Section: %v, Command: %v, send to client API\n", funcName, msg.Section, msg.Command)
+
+			/*if (ao.TaskStatus == "complete") || (ao.TaskStatus == "stop") {
 				//для удаления задачи и из storingMemoryTask и storingMemoryQueueTask
+				// изменяем статус задачи на завершенную есть 180 сек. до удаления
 				hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
+
+				fmt.Printf("func '%v', Section: %v, Command: %v, delete task from StoreMemoryTask\n", funcName, msg.Section, msg.Command)
 
 				if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, msg.TaskID, "complete"); err != nil {
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
@@ -232,7 +242,9 @@ func HandlerMsgFromNI(
 						FuncName:    funcName,
 					})
 				}
-			}
+
+				fmt.Printf("func '%v', Section: %v, Command: %v, change task status from QueryTaskStorage\n", funcName, msg.Section, msg.Command)
+			}*/
 		}
 
 	case "download control":
@@ -578,6 +590,8 @@ func HandlerMsgFromNI(
 	case "monitoring task performance":
 		if msg.Command == "complete task" {
 			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
+
+			fmt.Printf("func '%v', Section: %v, Command: %v, change CompleteStoringMemoryTask\n", funcName, msg.Section, msg.Command)
 
 			if !taskInfoIsExist {
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
