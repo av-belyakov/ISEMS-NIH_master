@@ -82,7 +82,7 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 		},
 	}
 
-	fmt.Printf("func '%v', task status: '%v' ---------\n", fn, resMsg.Info.TaskStatus)
+	//fmt.Printf("func '%v', task status: '%v' ---------\n", fn, resMsg.Info.TaskStatus)
 
 	if resMsg.Info.TaskStatus == "execute" {
 		//отправляем в ядро, а от туда в БД и клиенту API
@@ -101,7 +101,7 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 		return
 	}
 
-	fmt.Printf("func '%v', task status: '%v', send to DB\n", fn, resMsg.Info.TaskStatus)
+	//fmt.Printf("func '%v', task status: '%v', send to DB\n", fn, resMsg.Info.TaskStatus)
 
 	//если тип сообщения "stop" или "complete"
 	// отправка информации только после получения всех частей
@@ -125,7 +125,7 @@ func ProcessingReceivedMsgTypeFiltering(pprmtf ParametersProcessingReceivedMsgTy
 			return
 		}
 
-		fmt.Printf("func '%v', task status: '%v', send to ISEMS-NIH_slave message 'confirm complete'\n", fn, resMsg.Info.TaskStatus)
+		//fmt.Printf("func '%v', task status: '%v', send to ISEMS-NIH_slave message 'confirm complete'\n", fn, resMsg.Info.TaskStatus)
 
 		//отправляем источнику сообщение типа 'confirm complete' для того что бы подтвердить останов задачи
 		pprmtf.Chans.CwtRes <- configure.MsgWsTransmission{

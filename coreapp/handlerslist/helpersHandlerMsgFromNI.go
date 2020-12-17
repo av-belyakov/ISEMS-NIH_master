@@ -113,17 +113,25 @@ func sendChanStatusSourceForAPI(chanToAPI chan<- *configure.MsgBetweenCoreAndAPI
 //sendInformationFiltrationTask отправляет информационное сообщение о ходе фильтрации
 func sendInformationFiltrationTask(
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
+	smt *configure.StoringMemoryTask,
 	taskInfo *configure.TaskDescription,
-	tfmffiats *configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus,
+	ldfi map[string]*configure.DetailedFilesInformation,
 	sourceID int,
 	taskID string) error {
+
+	//fmt.Println("func 'sendInformationFiltrationTask', send to client API ---> --->")
+
+	st, ok := smt.GetTaskStatusStoringMemoryTask(taskID, "filtration")
+	if !ok {
+		return fmt.Errorf("func 'sendInformationFiltrationTask', task with ID '%v' not found", taskID)
+	}
 
 	ti := taskInfo.TaskParameter.FiltrationTask
 	resMsg := configure.FiltrationControlTypeInfo{
 		MsgOption: configure.FiltrationControlMsgTypeInfo{
 			ID:                              sourceID,
 			TaskIDApp:                       taskID,
-			Status:                          tfmffiats.TaskStatus,
+			Status:                          st.Status,
 			NumberFilesMeetFilterParameters: ti.NumberFilesMeetFilterParameters,
 			NumberProcessedFiles:            ti.NumberProcessedFiles,
 			NumberFilesFoundResultFiltering: ti.NumberFilesFoundResultFiltering,
@@ -140,9 +148,10 @@ func sendInformationFiltrationTask(
 	resMsg.MsgInstruction = "task processing"
 	resMsg.ClientTaskID = taskInfo.ClientTaskID
 
-	nffi := make(map[string]*configure.InputFilesInformation, len(tfmffiats.ListFoundFile))
-	if tfmffiats.TaskStatus == "execute" {
-		for n, v := range tfmffiats.ListFoundFile {
+	nffi := make(map[string]*configure.InputFilesInformation, len(ldfi))
+
+	if st.Status == "execute" {
+		for n, v := range ldfi {
 			nffi[n] = &configure.InputFilesInformation{
 				Size: v.Size,
 				Hex:  v.Hex,
@@ -163,7 +172,7 @@ func sendInformationFiltrationTask(
 		MsgJSON:      msgJSON,
 	}
 
-	if (tfmffiats.TaskStatus == "complete") || (tfmffiats.TaskStatus == "stop") {
+	if (st.Status == "complete") || (st.Status == "stop") {
 		ns := notifications.NotificationSettingsToClientAPI{
 			MsgType: "success",
 			MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
@@ -174,7 +183,7 @@ func sendInformationFiltrationTask(
 			Sources: []int{ti.ID},
 		}
 
-		if tfmffiats.TaskStatus == "stop" {
+		if st.Status == "stop" {
 			ns.MsgDescription = common.PatternUserMessage(&common.TypePatternUserMessage{
 				SourceID:   ti.ID,
 				TaskType:   "фильтрация",

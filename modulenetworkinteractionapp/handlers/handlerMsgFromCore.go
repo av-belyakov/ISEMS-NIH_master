@@ -289,13 +289,8 @@ func HandlerMsgFromCore(
 		}
 
 		if msg.Command == "get telemetry" {
-			fmt.Printf("func 'handlerMsgFromCore', section: '%v', command: '%v'\n", msg.Section, msg.Command)
-
 			csl, ok := msg.AdvancedOptions.(map[int]*configure.DetailedSourceInformation)
 			if !ok {
-
-				fmt.Println("func 'handlerMsgFromCore', ERROR: convertion type")
-
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: "type conversion error",
 					FuncName:    funcName,
@@ -314,10 +309,6 @@ func HandlerMsgFromCore(
 
 			msgJSON, err := json.Marshal(reqTelemetry)
 			if err != nil {
-
-				fmt.Println("func 'handlerMsgFromCore', ERROR convert to JSON")
-				fmt.Println(err)
-
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
 					FuncName:    funcName,
@@ -327,13 +318,8 @@ func HandlerMsgFromCore(
 			}
 
 			for sourceID := range csl {
-
-				fmt.Printf("func 'handlerMsgFromCore', sourceID: '%v'\n", sourceID)
-
 				//проверяем наличие подключения для заданного источника
 				if si, ok := isl.GetSourceSetting(sourceID); ok {
-					fmt.Printf("func 'handlerMsgFromCore', send message to sourceID: '%v'\n", sourceID)
-
 					//передаем задачу источнику
 					cwt <- configure.MsgWsTransmission{
 						DestinationHost: si.IP,

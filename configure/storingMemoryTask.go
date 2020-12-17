@@ -148,6 +148,14 @@ type DetailedFileInformation struct {
 	NumAcceptedChunk    int
 }
 
+//GetTaskStatusStoringMemoryTaskResult информация о статусе и времени последнего обновления задачи
+// Status - статус задачи
+// TimeLastUpdate - время последнего обновления задачи
+type GetTaskStatusStoringMemoryTaskResult struct {
+	Status         string
+	TimeLastUpdate int64
+}
+
 //ChanStoringMemoryTask описание информации передаваемой через канал
 type ChanStoringMemoryTask struct {
 	ActionType, TaskID       string
@@ -162,6 +170,7 @@ type channelResSettings struct {
 	IsExist                  bool
 	TaskID                   string
 	Description              *TaskDescription
+	CommonInformation        interface{}
 	DetailedFilesInformation map[string]*DetailedFilesInformation
 }
 
@@ -218,6 +227,43 @@ func NewRepositorySMT() *StoringMemoryTask {
 
 					mr.DetailedFilesInformation = lfdi
 				}
+
+				msg.ChannelRes <- mr
+
+			case "get task status":
+				var gtssmtr GetTaskStatusStoringMemoryTaskResult
+				mr := channelResSettings{
+					IsExist: false,
+					TaskID:  msg.TaskID,
+				}
+
+				taskType, ok := msg.CommonInformation.(string)
+				if !ok {
+
+					//					fmt.Println("func 'NewRepositorySMT', action type: 'get task status' convert error")
+					//					fmt.Printf("task type '%v'\n", taskType)
+
+					msg.ChannelRes <- mr
+
+					continue
+				}
+
+				if task, ok := smt.tasks[msg.TaskID]; ok {
+					mr.IsExist = true
+					gtssmtr.TimeLastUpdate = task.TimeUpdate
+
+					if taskType == "filtration" {
+						gtssmtr.Status = task.TaskParameter.FiltrationTask.Status
+					}
+
+					if taskType == "download" {
+						gtssmtr.Status = task.TaskParameter.DownloadTask.Status
+					}
+				}
+
+				//				fmt.Printf("func 'NewRepositorySMT', action type: 'get task status' RESULT: '%v'\n", gtssmtr)
+
+				mr.CommonInformation = gtssmtr
 
 				msg.ChannelRes <- mr
 
@@ -459,6 +505,31 @@ func (smt *StoringMemoryTask) GetStoringMemoryTask(taskID string) (*TaskDescript
 	info := <-chanRes
 
 	return info.Description, info.IsExist
+}
+
+//GetTaskStatusStoringMemoryTask получить статус задачи и время ее последнего обновления taskType равен "filtration" или "download"
+func (smt *StoringMemoryTask) GetTaskStatusStoringMemoryTask(taskID, taskType string) (GetTaskStatusStoringMemoryTaskResult, bool) {
+	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
+
+	smt.channelReq <- ChanStoringMemoryTask{
+		ActionType:        "get task status",
+		TaskID:            taskID,
+		CommonInformation: taskType,
+		ChannelRes:        chanRes,
+	}
+
+	info := <-chanRes
+	isExist := info.IsExist
+
+	gtssmtr, ok := info.CommonInformation.(GetTaskStatusStoringMemoryTaskResult)
+	if !ok {
+		isExist = false
+	}
+
+	//	fmt.Printf("func 'GetTaskStatusStoringMemoryTask', task status '%v', is exist: '%v'\n", gtssmtr, isExist)
+
+	return gtssmtr, isExist
 }
 
 //GetListFilesDetailedInformation получить информацию со списком найденных в результате фильтрации файлах

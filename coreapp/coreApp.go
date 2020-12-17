@@ -20,7 +20,7 @@ import (
 //CoreApp запускает все обработчики уровня ядра
 func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConnect, saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 
-	//------------------------------------------------------
+	//------------- ДЕЛАЕМ ДАМП ПАМЯТИ ---------------------
 	ticker := time.NewTicker(time.Duration(3) * time.Second)
 
 	num := 0

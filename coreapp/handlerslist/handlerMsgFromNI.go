@@ -15,6 +15,7 @@ func HandlerMsgFromNI(
 	outCoreChans HandlerOutChans,
 	msg *configure.MsgBetweenCoreAndNI,
 	hsm HandlersStoringMemory,
+	maxTotalSizeDownloadFiles int64,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 
 	funcName := "HandlerMsgFromNI"
@@ -62,6 +63,10 @@ func HandlerMsgFromNI(
 
 		case "confirm the action":
 			//клиенту API
+			if !taskInfoIsExist {
+				return
+			}
+
 			if err := getConfirmActionSourceListForAPI(outCoreChans.OutCoreChanAPI, msg, taskInfo.ClientID, taskInfo.ClientTaskID); err != nil {
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
@@ -105,7 +110,7 @@ func HandlerMsgFromNI(
 				return
 			}
 
-			fmt.Printf("func '%v', section: '%v', command: '%v', response: '%v' \n", funcName, msg.Section, msg.Command, st)
+			//fmt.Printf("func '%v', section: '%v', command: '%v', response: '%v' \n", funcName, msg.Section, msg.Command, st)
 
 			res := configure.TelemetryResponse{
 				MsgOptions: configure.TelemetryResponseOptions{
@@ -199,7 +204,7 @@ func HandlerMsgFromNI(
 
 	case "filtration control":
 
-		fmt.Printf("func '%v', Section: %v, Command: %v, send to DB\n", funcName, msg.Section, msg.Command)
+		//fmt.Printf("func '%v', Section: %v, Command: %v, send to DB\n", funcName, msg.Section, msg.Command)
 
 		//отправляем иформацию о ходе фильтрации в БД
 		outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
@@ -211,15 +216,36 @@ func HandlerMsgFromNI(
 			AdvancedOptions: msg.AdvancedOptions,
 		}
 
+		//проверяем наличие задачи с таким ID
+		_, ok := hsm.SMT.GetTaskStatusStoringMemoryTask(msg.TaskID, "filtration")
+		if !ok {
+
+			//fmt.Printf("func '%v', send to DB from restore task\n", funcName)
+
+			//отправляем запрос на востановление задачи в StoringMemoryTask
+			outCoreChans.OutCoreChanDB <- &configure.MsgBetweenCoreAndDB{
+				MsgGenerator:    "NI module",
+				MsgRecipient:    "DB module",
+				MsgSection:      "filtration control",
+				Instruction:     "restore",
+				TaskID:          msg.TaskID,
+				AdvancedOptions: msg.AdvancedOptions,
+			}
+
+			return
+		}
+
+		//fmt.Printf("func '%v', Section: %v, Command: %v, send to client API (BEFORE)\n", funcName, msg.Section, msg.Command)
+
 		//передается клиенту API но только если информация о задаче присутствует в StoringMemoryTask
 		// если задачи нет в StoringMemoryTask например, после перезагрузки приложения
 		// то ее нужно встановить через БД
 		ao, ok := msg.AdvancedOptions.(configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus)
-		if ok && taskInfoIsExist {
+		if ok {
 			//упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
 			// при чем если статус 'execute', то отправляем еще и содержимое поля 'FoundFilesInformation',
 			// а если статус фильтрации 'stop' или 'complete' то данное поле не заполняем
-			if err := sendInformationFiltrationTask(outCoreChans.OutCoreChanAPI, taskInfo, &ao, msg.SourceID, msg.TaskID); err != nil {
+			if err := sendInformationFiltrationTask(outCoreChans.OutCoreChanAPI, hsm.SMT, taskInfo, ao.ListFoundFile, msg.SourceID, msg.TaskID); err != nil {
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),
 					FuncName:    funcName,
@@ -227,24 +253,16 @@ func HandlerMsgFromNI(
 
 			}
 
-			fmt.Printf("func '%v', Section: %v, Command: %v, send to client API\n", funcName, msg.Section, msg.Command)
+			//fmt.Printf("func '%v', Section: %v, Command: %v, send to client API (AFTER)\n", funcName, msg.Section, msg.Command)
 
-			/*if (ao.TaskStatus == "complete") || (ao.TaskStatus == "stop") {
-				//для удаления задачи и из storingMemoryTask и storingMemoryQueueTask
-				// изменяем статус задачи на завершенную есть 180 сек. до удаления
-				hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
+			//запуск автоматической передачи файлов
+			if err := HandlerAutomaticDownloadFiles(msg.TaskID, hsm.SMT, hsm.QTS, maxTotalSizeDownloadFiles, outCoreChans.OutCoreChanAPI); err != nil {
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+			}
 
-				fmt.Printf("func '%v', Section: %v, Command: %v, delete task from StoreMemoryTask\n", funcName, msg.Section, msg.Command)
-
-				if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, msg.TaskID, "complete"); err != nil {
-					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						Description: fmt.Sprint(err),
-						FuncName:    funcName,
-					})
-				}
-
-				fmt.Printf("func '%v', Section: %v, Command: %v, change task status from QueryTaskStorage\n", funcName, msg.Section, msg.Command)
-			}*/
 		}
 
 	case "download control":
@@ -591,7 +609,7 @@ func HandlerMsgFromNI(
 		if msg.Command == "complete task" {
 			hsm.SMT.CompleteStoringMemoryTask(msg.TaskID)
 
-			fmt.Printf("func '%v', Section: %v, Command: %v, change CompleteStoringMemoryTask\n", funcName, msg.Section, msg.Command)
+			//fmt.Printf("func '%v', Section: %v, Command: %v, change CompleteStoringMemoryTask\n", funcName, msg.Section, msg.Command)
 
 			if !taskInfoIsExist {
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{

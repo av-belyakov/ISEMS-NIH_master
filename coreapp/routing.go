@@ -276,6 +276,8 @@ func Routing(trc TypeRoutingCore) {
 		OutCoreChanNI:  trc.ChanColl.OutCoreChanNI,
 	}
 
+	maxTotalSizeDownloadFiles := trc.AppConf.MaximumTotalSizeFilesDownloadedAutomatically
+
 	//обработчик запросов от модулей приложения
 	for {
 		select {
@@ -285,11 +287,11 @@ func Routing(trc TypeRoutingCore) {
 
 		//CHANNEL FROM DATABASE
 		case data := <-trc.ChanColl.InCoreChanDB:
-			go handlerslist.HandlerMsgFromDB(OutCoreChans, data, hsm, trc.AppConf.MaximumTotalSizeFilesDownloadedAutomatically, trc.SaveMessageApp, trc.ChanColl.ChanDropNI)
+			go handlerslist.HandlerMsgFromDB(OutCoreChans, data, hsm, maxTotalSizeDownloadFiles, trc.SaveMessageApp, trc.ChanColl.ChanDropNI)
 
 		//CHANNEL FROM NETWORK INTERACTION
 		case data := <-trc.ChanColl.InCoreChanNI:
-			go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, trc.SaveMessageApp)
+			go handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm, maxTotalSizeDownloadFiles, trc.SaveMessageApp)
 			/*if err := handlerslist.HandlerMsgFromNI(OutCoreChans, data, hsm); err != nil {
 				trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprint(err),

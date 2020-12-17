@@ -200,7 +200,7 @@ func HandlerMsgFromAPI(
 			//запросить у источников телеметрию
 			if msgc.MsgInstruction == "give information about state of source" {
 
-				fmt.Printf("received section: '%v', instraction: '%v'\n", msgc.MsgSection, msgc.MsgInstruction)
+				//fmt.Printf("received section: '%v', instraction: '%v'\n", msgc.MsgSection, msgc.MsgInstruction)
 
 				var tr configure.TelemetryRequest
 				if err := json.Unmarshal(msgJSON, &tr); err != nil {
@@ -213,8 +213,8 @@ func HandlerMsgFromAPI(
 					return
 				}
 
-				fmt.Println("---------- list source for information state  -----------")
-				fmt.Println(tr)
+				//fmt.Println("---------- list source for information state  -----------")
+				//fmt.Println(tr)
 
 				go handlerSourceControlTaskTelemetry(outCoreChans.OutCoreChanNI, outCoreChans.OutCoreChanAPI, msg.IDClientAPI, msgc.ClientTaskID, &tr, hsm, saveMessageApp)
 

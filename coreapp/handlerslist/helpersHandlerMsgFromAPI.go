@@ -276,7 +276,7 @@ func handlerSourceControlTaskTelemetry(
 	taskID := common.GetUniqIDFormatMD5(idClientAPI + "_" + clientTaskID)
 	connectSourceList, disconnectSourceList := checkConnectionStatusSources(tr.MsgOptions.ListSourceID, hsm.ISL)
 
-	fmt.Printf("func '%v'\n connectionSourceList:'%v'\n, disconnectionSourceList:'%v' \n", funcName, connectSourceList, disconnectSourceList)
+	//fmt.Printf("func '%v'\n connectionSourceList:'%v'\n, disconnectionSourceList:'%v' \n", funcName, connectSourceList, disconnectSourceList)
 
 	msg := configure.SourceControlActionsTakenSources{
 		MsgOptions: configure.SourceControlMsgTypeToAPI{
@@ -288,7 +288,7 @@ func handlerSourceControlTaskTelemetry(
 	msg.MsgInstruction = "reject give information about state of source"
 	msg.ClientTaskID = clientTaskID
 
-	fmt.Printf("func '%v', msg:%v \n", funcName, msg)
+	//fmt.Printf("func '%v', msg:%v \n", funcName, msg)
 
 	msgJSON, err := json.Marshal(&msg)
 	if err != nil {

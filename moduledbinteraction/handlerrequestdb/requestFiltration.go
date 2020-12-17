@@ -153,122 +153,48 @@ func UpdateParametersFiltrationTask(
 	smt *configure.StoringMemoryTask) error {
 
 	var err error
+	funcName := "UpdateParametersFiltrationTask"
 
-	msg := configure.MsgBetweenCoreAndDB{
-		MsgGenerator: "DB module",
-		MsgRecipient: "Core module",
-		MsgSection:   "filtration control",
-		Instruction:  "filtration complete",
-		TaskID:       req.TaskID,
+	ts, ok := smt.GetTaskStatusStoringMemoryTask(req.TaskID, "filtration")
+	if !ok {
+		//если задачи с указанным ID не существует
+		ao, ok := req.AdvancedOptions.(configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus)
+		if ok {
+			//обновляем детальную информацию о ходе фильтрации
+			err = qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, bson.D{
+				bson.E{Key: "$set", Value: bson.D{
+					bson.E{Key: "detailed_information_on_filtering.task_status", Value: ao.TaskStatus},
+					bson.E{Key: "detailed_information_on_filtering.time_interval_task_execution.end", Value: time.Now().Unix()},
+					bson.E{Key: "detailed_information_on_filtering.number_files_meet_filter_parameters", Value: ao.NumberFilesMeetFilterParameters},
+					bson.E{Key: "detailed_information_on_filtering.number_processed_files", Value: ao.NumberProcessedFiles},
+					bson.E{Key: "detailed_information_on_filtering.number_files_found_result_filtering", Value: ao.NumberFilesFoundResultFiltering},
+					bson.E{Key: "detailed_information_on_filtering.number_directory_filtartion", Value: ao.NumberDirectoryFiltartion},
+					bson.E{Key: "detailed_information_on_filtering.number_error_processed_files", Value: ao.NumberErrorProcessedFiles},
+					bson.E{Key: "detailed_information_on_filtering.size_files_meet_filter_parameters", Value: ao.SizeFilesMeetFilterParameters},
+					bson.E{Key: "detailed_information_on_filtering.size_files_found_result_filtering", Value: ao.SizeFilesFoundResultFiltering},
+					bson.E{Key: "detailed_information_on_filtering.path_directory_for_filtered_files", Value: ao.PathStorageSource},
+					bson.E{Key: "detailed_information_on_downloading.number_files_total", Value: ao.NumberFilesFoundResultFiltering},
+				}}})
+		}
+
+		return fmt.Errorf("task with ID '%v', (%v)", req.TaskID, funcName)
 	}
 
-	//получаем всю информацию по выполняемой задаче
+	if (ts.Status == "execute") && ((time.Now().Unix() - ts.TimeLastUpdate) < 31) {
+		return nil
+	}
+
 	taskInfo, ok := smt.GetStoringMemoryTask(req.TaskID)
 	if !ok {
-		fmt.Println("func 'UpdateParametersFiltrationTask', GET all missing information")
-
-		//восстанавливаем задачу по ее ID
-		taskInfoFromDB, err := getInfoTaskForID(qp, req.TaskID)
-		if err != nil {
-			return err
-		}
-
-		if len(*taskInfoFromDB) == 0 {
-			return err
-		}
-
-		itd := (*taskInfoFromDB)[0]
-		msg.TaskIDClientAPI = itd.ClientTaskID
-
-		taskStatusRecovery := itd.DetailedInformationOnFiltering.TaskStatus
-
-		tfmffiats, convertAOIsOK := req.AdvancedOptions.(configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus)
-		if convertAOIsOK {
-			taskStatusRecovery = tfmffiats.TaskStatus
-		}
-
-		smt.RecoverStoringMemoryTask(configure.TaskDescription{
-			ClientID:                        itd.ClientID,
-			ClientTaskID:                    itd.ClientTaskID,
-			TaskType:                        "filtration control",
-			ModuleThatSetTask:               "API module",
-			ModuleResponsibleImplementation: "NI module",
-			TimeUpdate:                      time.Now().Unix(),
-			TimeInterval: configure.TimeIntervalTaskExecution{
-				Start: itd.DetailedInformationOnFiltering.TimeIntervalTaskExecution.Start,
-				End:   itd.DetailedInformationOnFiltering.TimeIntervalTaskExecution.End,
-			},
-			TaskParameter: configure.DescriptionTaskParameters{
-				FiltrationTask: &configure.FiltrationTaskParameters{
-					ID:                              itd.SourceID,
-					Status:                          taskStatusRecovery,
-					UseIndex:                        itd.DetailedInformationOnFiltering.WasIndexUsed,
-					NumberFilesMeetFilterParameters: itd.DetailedInformationOnFiltering.NumberFilesMeetFilterParameters,
-					NumberProcessedFiles:            itd.DetailedInformationOnFiltering.NumberProcessedFiles,
-					NumberFilesFoundResultFiltering: itd.DetailedInformationOnFiltering.NumberFilesFoundResultFiltering,
-					NumberDirectoryFiltartion:       itd.DetailedInformationOnFiltering.NumberDirectoryFiltartion,
-					NumberErrorProcessedFiles:       itd.DetailedInformationOnFiltering.NumberErrorProcessedFiles,
-					SizeFilesMeetFilterParameters:   itd.DetailedInformationOnFiltering.SizeFilesMeetFilterParameters,
-					SizeFilesFoundResultFiltering:   itd.DetailedInformationOnFiltering.SizeFilesFoundResultFiltering,
-					PathStorageSource:               itd.DetailedInformationOnFiltering.PathDirectoryForFilteredFiles,
-				},
-				DownloadTask:                 &configure.DownloadTaskParameters{},
-				ListFilesDetailedInformation: map[string]*configure.DetailedFilesInformation{},
-			},
-		}, req.TaskID)
-
-		//если статус задачи "stop" или "complete" через ядро останавливаем задачу и оповещаем пользователя
-		if taskStatusRecovery == "complete" || taskStatusRecovery == "stop" {
-
-			fmt.Println("func 'UpdateParametersFiltrationTask', task status 'complete' or 'stop' and to API send message")
-
-			//обновление статуса задачи
-			commonValueUpdate := bson.D{
-				bson.E{Key: "$set", Value: bson.D{
-					bson.E{Key: "detailed_information_on_filtering.task_status", Value: taskStatusRecovery},
-				}}}
-
-			err = qp.UpdateOne(bson.D{bson.E{Key: "task_id", Value: req.TaskID}}, commonValueUpdate)
-
-			fmt.Println("func 'UpdateParametersFiltrationTask', send request CORE to auto start download files")
-
-			//отправляем запрос на автоматическую выгрузку найденных файлов
-			chanIn <- &msg
-
-			fmt.Println("func 'UpdateParametersFiltrationTask', send MESSAGE to client API info task status 'complete' or 'stop'")
-
-			//отправляем запрос на генерацию сообщения клиенту API
-			chanIn <- &configure.MsgBetweenCoreAndDB{
-				MsgGenerator: "DB module",
-				MsgRecipient: "API module",
-				MsgSection:   "filtration control",
-				Instruction:  "filtration complete",
-				TaskID:       req.TaskID,
-				AdvancedOptions: configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus{
-					TaskStatus:    taskStatusRecovery,
-					ListFoundFile: map[string]*configure.DetailedFilesInformation{},
-				},
-			}
-		}
-
-		return fmt.Errorf("task with ID '%v' not found, restoring information about the task (DB module)", req.TaskID)
+		return fmt.Errorf("task with ID '%v', (%v)", req.TaskID, funcName)
 	}
 
 	ti := taskInfo.TaskParameter.FiltrationTask
 
-	msg.IDClientAPI = taskInfo.ClientID
-	msg.TaskIDClientAPI = taskInfo.ClientTaskID
-
-	//выполнять обновление информации в БД для сообщения типа 'complete' всегда,
-	// для сообщения типа 'execute' только раз 61 секунду
-	if (ti.Status == "execute") && ((time.Now().Unix() - taskInfo.TimeInsertDB) < 61) {
-		return nil
-	}
-
 	//обновление основной информации
 	commonValueUpdate := bson.D{
 		bson.E{Key: "$set", Value: bson.D{
-			bson.E{Key: "detailed_information_on_filtering.task_status", Value: ti.Status},
+			bson.E{Key: "detailed_information_on_filtering.task_status", Value: ts.Status},
 			bson.E{Key: "detailed_information_on_filtering.time_interval_task_execution.end", Value: time.Now().Unix()},
 			bson.E{Key: "detailed_information_on_filtering.number_files_meet_filter_parameters", Value: ti.NumberFilesMeetFilterParameters},
 			bson.E{Key: "detailed_information_on_filtering.number_processed_files", Value: ti.NumberProcessedFiles},
@@ -326,12 +252,92 @@ func UpdateParametersFiltrationTask(
 	//обновление таймера вставки информации в БД
 	smt.TimerUpdateTaskInsertDB(req.TaskID)
 
-	fmt.Printf("func 'UpdateParametersFiltrationTask', Status: '%v', send Core to comlete filtering task --->\n", ti.Status)
+	return err
+}
 
-	//если статус задачи "stop" или "complete" через ядро останавливаем задачу и оповещаем пользователя
-	if ti.Status == "stop" || ti.Status == "complete" {
-		chanIn <- &msg
+//RestoreParametersFiltrationTask восстановление информации о задачи по фильтрации
+func RestoreParametersFiltrationTask(
+	chanIn chan<- *configure.MsgBetweenCoreAndDB,
+	req *configure.MsgBetweenCoreAndDB,
+	qp QueryParameters,
+	smt *configure.StoringMemoryTask) error {
+
+	//fmt.Println("func 'RestoreParametersFiltrationTask', START...")
+
+	//восстанавливаем задачу по ее ID
+	taskInfoFromDB, err := getInfoTaskForID(qp, req.TaskID)
+	if err != nil {
+
+		//fmt.Println("func 'RestoreParametersFiltrationTask', ERROR 111")
+
+		return err
 	}
 
-	return err
+	if len(*taskInfoFromDB) == 0 {
+
+		//fmt.Println("func 'RestoreParametersFiltrationTask', ERROR 222")
+
+		return fmt.Errorf("the task ID information cannot be restored because the ID information was not found")
+	}
+
+	itd := (*taskInfoFromDB)[0]
+
+	taskStatusRecovery := itd.DetailedInformationOnFiltering.TaskStatus
+
+	tfmffiats, ok := req.AdvancedOptions.(configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus)
+	if !ok {
+		return fmt.Errorf("error when converting types")
+	}
+
+	taskStatusRecovery = tfmffiats.TaskStatus
+
+	smt.RecoverStoringMemoryTask(configure.TaskDescription{
+		ClientID:                        itd.ClientID,
+		ClientTaskID:                    itd.ClientTaskID,
+		TaskType:                        "filtration control",
+		ModuleThatSetTask:               "API module",
+		ModuleResponsibleImplementation: "NI module",
+		TimeUpdate:                      time.Now().Unix(),
+		TimeInterval: configure.TimeIntervalTaskExecution{
+			Start: itd.DetailedInformationOnFiltering.TimeIntervalTaskExecution.Start,
+			End:   itd.DetailedInformationOnFiltering.TimeIntervalTaskExecution.End,
+		},
+		TaskParameter: configure.DescriptionTaskParameters{
+			FiltrationTask: &configure.FiltrationTaskParameters{
+				ID:                              itd.SourceID,
+				Status:                          taskStatusRecovery,
+				UseIndex:                        itd.DetailedInformationOnFiltering.WasIndexUsed,
+				NumberFilesMeetFilterParameters: itd.DetailedInformationOnFiltering.NumberFilesMeetFilterParameters,
+				NumberProcessedFiles:            itd.DetailedInformationOnFiltering.NumberProcessedFiles,
+				NumberFilesFoundResultFiltering: itd.DetailedInformationOnFiltering.NumberFilesFoundResultFiltering,
+				NumberDirectoryFiltartion:       itd.DetailedInformationOnFiltering.NumberDirectoryFiltartion,
+				NumberErrorProcessedFiles:       itd.DetailedInformationOnFiltering.NumberErrorProcessedFiles,
+				SizeFilesMeetFilterParameters:   itd.DetailedInformationOnFiltering.SizeFilesMeetFilterParameters,
+				SizeFilesFoundResultFiltering:   itd.DetailedInformationOnFiltering.SizeFilesFoundResultFiltering,
+				PathStorageSource:               itd.DetailedInformationOnFiltering.PathDirectoryForFilteredFiles,
+			},
+			DownloadTask:                 &configure.DownloadTaskParameters{},
+			ListFilesDetailedInformation: map[string]*configure.DetailedFilesInformation{},
+		},
+	}, req.TaskID)
+
+	//fmt.Println("func 'RestoreParametersFiltrationTask', recovered task")
+
+	//если по восстановленной задаче было получено последнее сообщение то нужно проинформировать пользователя
+	if taskStatusRecovery == "complete" || taskStatusRecovery == "stop" {
+		chanIn <- &configure.MsgBetweenCoreAndDB{
+			MsgGenerator:    "DB module",
+			MsgRecipient:    "API module",
+			MsgSection:      "filtration control",
+			Instruction:     "filtration complete",
+			TaskID:          req.TaskID,
+			TaskIDClientAPI: itd.ClientTaskID,
+			AdvancedOptions: configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus{
+				TaskStatus:    taskStatusRecovery,
+				ListFoundFile: map[string]*configure.DetailedFilesInformation{},
+			},
+		}
+	}
+
+	return nil
 }

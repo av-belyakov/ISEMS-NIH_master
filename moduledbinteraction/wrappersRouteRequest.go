@@ -74,6 +74,14 @@ func (wr *WrappersRouteRequest) WrapperFuncFiltration(
 				FuncName:    "WrapperFuncFiltration",
 			})
 		}
+
+	case "restore":
+		if err := handlerrequestdb.RestoreParametersFiltrationTask(wr.ChanIn, msg, qp, smt); err != nil {
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				Description: fmt.Sprint(err),
+				FuncName:    "WrapperFuncFiltration",
+			})
+		}
 	}
 }
 

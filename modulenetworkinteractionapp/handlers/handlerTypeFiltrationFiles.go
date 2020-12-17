@@ -74,12 +74,20 @@ func HandlerMessagesReceivedFilesFiltering(
 				Command:  resMsg.Info.TaskStatus,
 				SourceID: data.SourceID,
 				AdvancedOptions: configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus{
-					TaskStatus:    resMsg.Info.TaskStatus,
-					ListFoundFile: lfdi,
+					TaskStatus:                      resMsg.Info.TaskStatus,
+					ListFoundFile:                   lfdi,
+					NumberFilesMeetFilterParameters: resMsg.Info.NumberFilesMeetFilterParameters,
+					NumberProcessedFiles:            resMsg.Info.NumberProcessedFiles,
+					NumberFilesFoundResultFiltering: resMsg.Info.NumberFilesFoundResultFiltering,
+					NumberDirectoryFiltartion:       resMsg.Info.NumberDirectoryFiltartion,
+					NumberErrorProcessedFiles:       resMsg.Info.NumberErrorProcessedFiles,
+					SizeFilesMeetFilterParameters:   resMsg.Info.SizeFilesMeetFilterParameters,
+					SizeFilesFoundResultFiltering:   resMsg.Info.SizeFilesFoundResultFiltering,
+					PathStorageSource:               resMsg.Info.PathStorageSource,
 				},
 			}
 
-			fmt.Printf("func '%v', task status: '%v' ---------\n", funcName, resMsg.Info.TaskStatus)
+			//fmt.Printf("func '%v', task status: '%v' ---------\n", funcName, resMsg.Info.TaskStatus)
 
 			if resMsg.Info.TaskStatus == "execute" {
 				//отправляем в ядро, а от туда в БД и клиенту API
@@ -98,7 +106,7 @@ func HandlerMessagesReceivedFilesFiltering(
 				continue
 			}
 
-			fmt.Printf("func '%v', task status: '%v', send to DB\n", funcName, resMsg.Info.TaskStatus)
+			//fmt.Printf("func '%v', task status: '%v', send to DB\n", funcName, resMsg.Info.TaskStatus)
 
 			//если тип сообщения "stop" или "complete"
 			// отправка информации только после получения всех частей
@@ -122,7 +130,7 @@ func HandlerMessagesReceivedFilesFiltering(
 					continue
 				}
 
-				fmt.Printf("func '%v', task status: '%v', send to ISEMS-NIH_slave message 'confirm complete'\n", funcName, resMsg.Info.TaskStatus)
+				//fmt.Printf("func '%v', task status: '%v', send to ISEMS-NIH_slave message 'confirm complete'\n", funcName, resMsg.Info.TaskStatus)
 
 				//отправляем источнику сообщение типа 'confirm complete' для того что бы подтвердить останов задачи
 				cwtRes <- configure.MsgWsTransmission{

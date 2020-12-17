@@ -15,7 +15,7 @@ func HandlerMsgFromDB(
 	outCoreChans HandlerOutChans,
 	res *configure.MsgBetweenCoreAndDB,
 	hsm HandlersStoringMemory,
-	mtsfda int64,
+	maxTotalSizeDownloadFiles int64,
 	saveMessageApp *savemessageapp.PathDirLocationLogFiles,
 	chanDropNI <-chan string) {
 
@@ -36,129 +36,7 @@ func HandlerMsgFromDB(
 			}
 
 		case "filtration control":
-			//для автоматической загрузки файлов выполняемой после завершения фильтрации
-
-			fmt.Printf("func '%v', from %v,  for %v, section: %v try start processing auto download file (send API not process) \n", funcName, res.MsgGenerator, res.MsgRecipient, res.MsgSection)
-
-			taskInfo, taskIsExist := hsm.SMT.GetStoringMemoryTask(res.TaskID)
-			if !taskIsExist {
-				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-					Description: fmt.Sprintf("task with %v not found%v", res.TaskID, funcName),
-					FuncName:    funcName,
-				})
-
-				return
-			}
-
-			taskTypeNotFiltr := taskInfo.TaskType != "filtration control"
-			isNotComplete := taskInfo.TaskParameter.FiltrationTask.Status != "complete"
-			moreThanMax := taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering > mtsfda
-			sizeFilesFoundIsZero := taskInfo.TaskParameter.FiltrationTask.SizeFilesFoundResultFiltering == 0
-
-			/*
-									!!!!!
-
-				Где то здесь надо добавить изменение статуса задачи на "complete" с последующем удалением
-				задачи через 3 минуты
-
-				изменяем статус фильтрации в taskInfo.TaskParameter.FiltrationTask.Status на 'COMPLETE'
-				ТОЛЬКО в HandlerMessagesReceivedFilesFiltering так как это не гроутина и синхронизируется
-				через канал
-
-								   !!!!!!
-			*/
-
-			/*
-			   Автоматическая загрузка файлов не всегда сробатывает. В этом месте
-			   проверяется ряд параметров для её срабатывании. Однако при большом количестве
-			   мелких файлов иногда путается порядок статуса, например execute -> execute -> complete -> execute.
-			   Из-за этого не всегда срабатывает автозагрузка.
-			*/
-
-			if taskTypeNotFiltr || isNotComplete || moreThanMax || sizeFilesFoundIsZero {
-				//отмечаем задачу как завершенную в списке очередей
-				if err := hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID, "complete"); err != nil {
-					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						Description: fmt.Sprint(err),
-						FuncName:    funcName,
-					})
-				}
-
-				return
-			}
-
-			sourceID := taskInfo.TaskParameter.FiltrationTask.ID
-
-			//получаем параметры фильтрации
-			qti, err := hsm.QTS.GetQueueTaskStorage(sourceID, res.TaskID)
-			if err != nil {
-				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-					Description: fmt.Sprint(err),
-					FuncName:    funcName,
-				})
-
-				return
-			}
-
-			//получаем список проверенных файлов
-			listDetailedFilesInformation, ok := hsm.SMT.GetListFilesDetailedInformation(res.TaskID)
-			if !ok {
-				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-					Description: "the list of files intended for uploading was not found",
-					FuncName:    funcName,
-				})
-
-				return
-			}
-
-			//добавляем задачу в очередь
-			hsm.QTS.AddQueueTaskStorage(res.TaskID, sourceID, configure.CommonTaskInfo{
-				IDClientAPI:     res.IDClientAPI,
-				TaskIDClientAPI: res.TaskIDClientAPI,
-				TaskType:        "download control",
-			}, &configure.DescriptionParametersReceivedFromUser{
-				FilterationParameters:         qti.TaskParameters.FilterationParameters,
-				PathDirectoryForFilteredFiles: taskInfo.TaskParameter.FiltrationTask.PathStorageSource,
-			})
-
-			//информационное сообщение о том что задача добавлена в очередь
-			notifications.SendNotificationToClientAPI(
-				outCoreChans.OutCoreChanAPI,
-				notifications.NotificationSettingsToClientAPI{
-					MsgType: "success",
-					MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
-						SourceID:   sourceID,
-						TaskType:   "скачивание файлов",
-						TaskAction: "задача автоматически добавлена в очередь",
-					}),
-					Sources: []int{sourceID},
-				},
-				res.TaskIDClientAPI,
-				res.IDClientAPI)
-
-			//устанавливаем проверочный статус источника для данной задачи как подключен
-			if err := hsm.QTS.ChangeAvailabilityConnectionOnConnection(sourceID, res.TaskID); err != nil {
-				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-					Description: fmt.Sprint(err),
-					FuncName:    funcName,
-				})
-			}
-
-			//добавляем подтвержденный список файлов для скачивания
-			if err := hsm.QTS.AddConfirmedListFiles(sourceID, res.TaskID, listDetailedFilesInformation); err != nil {
-				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-					Description: fmt.Sprint(err),
-					FuncName:    funcName,
-				})
-			}
-
-			//изменяем статус наличия файлов для скачивания
-			if err := hsm.QTS.ChangeAvailabilityFilesDownload(sourceID, res.TaskID); err != nil {
-				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-					Description: fmt.Sprint(err),
-					FuncName:    funcName,
-				})
-			}
+			//пока заглушка
 
 		case "download control":
 			switch res.Instruction {
@@ -476,7 +354,7 @@ func HandlerMsgFromDB(
 
 		case "filtration control":
 
-			fmt.Printf("func '%v', from %v,  for %v, section: %v try send API filtration complete \n", funcName, res.MsgGenerator, res.MsgRecipient, res.MsgSection)
+			//fmt.Printf("func '%v', from %v,  for %v, section: %v try send API filtration complete \n", funcName, res.MsgGenerator, res.MsgRecipient, res.MsgSection)
 
 			taskInfo, taskIsExist := hsm.SMT.GetStoringMemoryTask(res.TaskID)
 			if !taskIsExist {
@@ -488,18 +366,18 @@ func HandlerMsgFromDB(
 				return
 			}
 
-			fmt.Printf("func '%v', from %v,  for %v, section: %v information about task is exist (restore task) \n", funcName, res.MsgGenerator, res.MsgRecipient, res.MsgSection)
+			//fmt.Printf("func '%v', from %v,  for %v, section: %v information about task is exist (restore task) \n", funcName, res.MsgGenerator, res.MsgRecipient, res.MsgSection)
 
 			//клиенту API
 			ao, ok := res.AdvancedOptions.(configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus)
 			if ok && taskIsExist {
 
-				fmt.Printf("func '%v', Section: %v, send to client API ---> (restore task) BEFORE\n", funcName, res.MsgSection)
+				//fmt.Printf("func '%v', Section: %v, send to client API ---> (restore task) BEFORE\n", funcName, res.MsgSection)
 
 				//упаковываем в JSON и отправляем информацию о ходе фильтрации клиенту API
 				// при чем если статус 'execute', то отправляем еще и содержимое поля 'FoundFilesInformation',
 				// а если статус фильтрации 'stop' или 'complete' то данное поле не заполняем
-				if err := sendInformationFiltrationTask(outCoreChans.OutCoreChanAPI, taskInfo, &ao, taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID); err != nil {
+				if err := sendInformationFiltrationTask(outCoreChans.OutCoreChanAPI, hsm.SMT, taskInfo, ao.ListFoundFile, taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID); err != nil {
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
@@ -507,17 +385,12 @@ func HandlerMsgFromDB(
 
 				}
 
-				fmt.Printf("func '%v', Section: %v, send to client API ---> (restore task) AFTER\n", funcName, res.MsgSection)
-
-				if (ao.TaskStatus == "complete") || (ao.TaskStatus == "stop") {
-					//для удаления задачи и из storingMemoryTask и storingMemoryQueueTask
-					hsm.SMT.CompleteStoringMemoryTask(res.TaskID)
-
-					fmt.Printf("func '%v', Section: %v, delete task from StoreMemoryTask\n", funcName, res.MsgSection)
-
-					_ = hsm.QTS.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, res.TaskID, "complete")
-
-					fmt.Printf("func '%v', Section: %v, change task status from QueryTaskStorage\n", funcName, res.MsgSection)
+				//запуск автоматической передачи файлов
+				if err := HandlerAutomaticDownloadFiles(res.TaskID, hsm.SMT, hsm.QTS, maxTotalSizeDownloadFiles, outCoreChans.OutCoreChanAPI); err != nil {
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
 				}
 			}
 
