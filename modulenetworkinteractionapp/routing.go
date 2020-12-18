@@ -290,18 +290,6 @@ func RouteWssConnectionResponse(
 					Message:  message,
 				}
 
-				/*				go processresponse.ProcessingReceivedMsgTypeFiltering(processresponse.ParametersProcessingReceivedMsgTypeFiltering{
-								SMT:      smt,
-								Message:  message,
-								SourceID: sourceID,
-								SourceIP: sourceIP,
-								Chans: processresponse.ChansMsgTypeFiltering{
-									CwtRes:     cwtRes,
-									ChanInCore: chanInCore,
-									CwtReq:     cwtReq,
-								},
-							}, saveMessageApp)*/
-
 			case "download files":
 				var mtd configure.MsgTypeDownload
 				if err := json.Unmarshal(*message, &mtd); err != nil {

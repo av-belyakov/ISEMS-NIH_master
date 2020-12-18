@@ -54,11 +54,11 @@ func UpdateInformationAboutTask(
 
 	var ti *configure.TaskDescription
 	var arrayFiles []interface{}
-	var lfdi map[string]*configure.DetailedFilesInformation
+	var lfdi map[string]configure.DetailedFilesInformation
 
 	//очищаем отображение с файлами чтобы предотвратить утечки памяти
 	defer func() {
-		lfdi = map[string]*configure.DetailedFilesInformation{}
+		lfdi = map[string]configure.DetailedFilesInformation{}
 		arrayFiles = []interface{}{}
 		ti = &configure.TaskDescription{}
 	}()

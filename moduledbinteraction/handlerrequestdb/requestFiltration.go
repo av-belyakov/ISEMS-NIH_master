@@ -59,7 +59,7 @@ func CreateNewFiltrationTask(
 	}
 
 	//поиск индексов
-	isFound, index, err := searchIndexFromFiltration("index_filtration", sourceID, tf, qp)
+	isFound, index, err := searchIndexFromFiltration("index_filtration", sourceID, &tf, qp)
 	if err != nil {
 		msgRes.MsgRecipient = "Core module"
 		msgRes.MsgSection = "error notification"
@@ -216,8 +216,8 @@ func UpdateParametersFiltrationTask(
 	}
 
 	//очищаем отображение с файлами чтобы предотвратить утечки памяти
-	defer func(lfdi map[string]*configure.DetailedFilesInformation) {
-		lfdi = make(map[string]*configure.DetailedFilesInformation)
+	defer func(lfdi map[string]configure.DetailedFilesInformation) {
+		lfdi = make(map[string]configure.DetailedFilesInformation)
 	}(lfdi)
 
 	arr := []interface{}{}
@@ -334,7 +334,7 @@ func RestoreParametersFiltrationTask(
 			TaskIDClientAPI: itd.ClientTaskID,
 			AdvancedOptions: configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus{
 				TaskStatus:    taskStatusRecovery,
-				ListFoundFile: map[string]*configure.DetailedFilesInformation{},
+				ListFoundFile: map[string]configure.DetailedFilesInformation{},
 			},
 		}
 	}

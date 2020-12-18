@@ -81,7 +81,7 @@ type chanResponse struct {
 	TaskID, TaskStatus  string
 	SourceID            int
 	CheckingStatusItems StatusItems
-	Settings            *DescriptionParametersReceivedFromUser
+	Settings            DescriptionParametersReceivedFromUser
 	ErrorDescription    error
 }
 
@@ -140,7 +140,7 @@ func NewRepositoryQTS() *QueueTaskStorage {
 					AvailabilityFilesDownload: settings.CheckingStatusItems.AvailabilityFilesDownload,
 				}
 
-				msgRes.Settings = &settings.TaskParameters
+				msgRes.Settings = settings.TaskParameters
 
 				msg.ChanRes <- msgRes
 
@@ -233,6 +233,9 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				msg.ChanRes <- msgRes
 
 			case "change task status":
+
+				fmt.Printf("func 'NewRepositoryQTS', List sourceID: '%v'\n", qts.StorageList)
+
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'change task status'", msg.SourceID)
 
@@ -336,11 +339,10 @@ func (qts QueueTaskStorage) IsExistTaskDownloadQueueTaskStorage(sourceID int) bo
 //SearchTaskForIDQueueTaskStorage поиск информации по ID задачи (внутренний task ID приложения)
 func (qts *QueueTaskStorage) SearchTaskForIDQueueTaskStorage(taskID string) (int, *QueueTaskInformation, error) {
 	var sourceID int
-
 	sourceList := qts.GetAllSourcesQueueTaskStorage()
 
 	if len(sourceList) == 0 {
-		return sourceID, nil, errors.New("error, empty queue of pending tasks")
+		return sourceID, nil, errors.New("error, empty queue of pending tasks (SearchTaskForIDQueueTaskStorage)")
 	}
 
 	chanRes := make(chan chanResponse)
@@ -358,7 +360,7 @@ DONE:
 	}
 
 	if sourceID == 0 {
-		return sourceID, nil, fmt.Errorf("error, task ID %v not found", taskID)
+		return sourceID, nil, fmt.Errorf("error, task ID %v not found (SearchTaskForIDQueueTaskStorage)", taskID)
 	}
 
 	qts.ChannelReq <- chanRequest{
@@ -372,7 +374,7 @@ DONE:
 	qti := QueueTaskInformation{
 		TaskStatus:          msgRes.TaskStatus,
 		CheckingStatusItems: msgRes.CheckingStatusItems,
-		TaskParameters:      *msgRes.Settings,
+		TaskParameters:      msgRes.Settings,
 	}
 	qti.TaskType = msgRes.TaskType
 	qti.IDClientAPI = msgRes.IDClientAPI
@@ -386,7 +388,7 @@ DONE:
 func (qts *QueueTaskStorage) SearchTaskForClientIDQueueTaskStorage(clientTaskID string) (int, string, error) {
 	var sourceID int
 	var taskID string
-	errMsg := fmt.Errorf("error, client task ID %v not found", clientTaskID)
+	errMsg := fmt.Errorf("error, client task ID %v not found (SearchTaskForClientIDQueueTaskStorage)", clientTaskID)
 
 	sourceList := qts.GetAllSourcesQueueTaskStorage()
 
@@ -422,9 +424,9 @@ DONE:
 }
 
 //GetQueueTaskStorage получить информацию по задаче
-func (qts *QueueTaskStorage) GetQueueTaskStorage(sourceID int, taskID string) (*QueueTaskInformation, error) {
+func (qts *QueueTaskStorage) GetQueueTaskStorage(sourceID int, taskID string) (QueueTaskInformation, error) {
 	if !checkTaskID(qts, sourceID, taskID) {
-		return nil, fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID", sourceID)
+		return QueueTaskInformation{}, fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID (GetQueueTaskStorage)", sourceID)
 	}
 
 	chanRes := make(chan chanResponse)
@@ -441,14 +443,14 @@ func (qts *QueueTaskStorage) GetQueueTaskStorage(sourceID int, taskID string) (*
 	qti := QueueTaskInformation{
 		TaskStatus:          msgRes.TaskStatus,
 		CheckingStatusItems: msgRes.CheckingStatusItems,
-		TaskParameters:      *msgRes.Settings,
+		TaskParameters:      msgRes.Settings,
 	}
 	qti.TaskType = msgRes.TaskType
 	qti.IDClientAPI = msgRes.IDClientAPI
 	qti.TaskIDClientAPI = msgRes.TaskIDClientAPI
 	qti.UserName = msgRes.UserName
 
-	return &qti, nil
+	return qti, nil
 }
 
 //AddQueueTaskStorage добавить информацию по задаче
@@ -584,11 +586,21 @@ func (qts *QueueTaskStorage) ChangeAvailabilityFilesDownload(sourceID int, taskI
 }
 
 //AddConfirmedListFiles добавляет проверенный список файлов предназначенных для скачивания и удаляет список переданный клиентом API (если есть)
-func (qts *QueueTaskStorage) AddConfirmedListFiles(sourceID int, taskID string, clf map[string]*DetailedFilesInformation) error {
+func (qts *QueueTaskStorage) AddConfirmedListFiles(sourceID int, taskID string, clf map[string]DetailedFilesInformation) error {
 	chanRes := make(chan chanResponse)
 	defer close(chanRes)
 
-	options := &DescriptionParametersReceivedFromUser{ConfirmedListFiles: clf}
+	lf := make(map[string]*DetailedFilesInformation, len(clf))
+	for f, v := range clf {
+		lf[f] = &DetailedFilesInformation{
+			Hex:          v.Hex,
+			Size:         v.Size,
+			IsLoaded:     v.IsLoaded,
+			TimeDownload: v.TimeDownload,
+		}
+	}
+
+	options := &DescriptionParametersReceivedFromUser{ConfirmedListFiles: lf}
 
 	qts.ChannelReq <- chanRequest{
 		Action:           "add confirmed list of files",

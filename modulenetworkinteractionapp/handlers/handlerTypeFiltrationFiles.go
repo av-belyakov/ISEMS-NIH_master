@@ -52,13 +52,15 @@ func HandlerMessagesReceivedFilesFiltering(
 				PathStorageSource:               resMsg.Info.PathStorageSource,
 			})
 
-			lfdi := make(map[string]*configure.DetailedFilesInformation, len(resMsg.Info.FoundFilesInformation))
+			lfdi := make(map[string]configure.DetailedFilesInformation, len(resMsg.Info.FoundFilesInformation))
 			for n, v := range resMsg.Info.FoundFilesInformation {
-				lfdi[n] = &configure.DetailedFilesInformation{
+				lfdi[n] = configure.DetailedFilesInformation{
 					Size: v.Size,
 					Hex:  v.Hex,
 				}
 			}
+
+			//fmt.Printf("func '%v', ------------ FILTRATION received list files: '%v'\n", funcName, lfdi)
 
 			smt.UpdateListFilesDetailedInformation(resMsg.Info.TaskID, lfdi)
 

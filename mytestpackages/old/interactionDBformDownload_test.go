@@ -330,12 +330,12 @@ var _ = Describe("InteractionDataBaseFromDownloadFiles", func() {
 		//добавляем новую задачу
 		smt.AddStoringMemoryTask(taskID, taskDescription)
 
-		smt.UpdateListFilesDetailedInformation(taskID, map[string]*configure.DetailedFilesInformation{
-			tf1: (&configure.DetailedFilesInformation{IsLoaded: true}),
-			tf2: (&configure.DetailedFilesInformation{IsLoaded: true}),
-			tf3: (&configure.DetailedFilesInformation{}),
-			tf4: (&configure.DetailedFilesInformation{IsLoaded: true}),
-			tf5: (&configure.DetailedFilesInformation{IsLoaded: true}),
+		smt.UpdateListFilesDetailedInformation(taskID, map[string]configure.DetailedFilesInformation{
+			tf1: (configure.DetailedFilesInformation{IsLoaded: true}),
+			tf2: (configure.DetailedFilesInformation{IsLoaded: true}),
+			tf3: (configure.DetailedFilesInformation{}),
+			tf4: (configure.DetailedFilesInformation{IsLoaded: true}),
+			tf5: (configure.DetailedFilesInformation{IsLoaded: true}),
 		})
 
 		ti, ok := smt.GetStoringMemoryTask(taskID)

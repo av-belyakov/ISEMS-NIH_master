@@ -178,15 +178,6 @@ func ControllerReceivingRequestedFiles(
 		Command: "send client API",
 	}
 
-	/*
-
-	   из лога
-
-	   2020-12-17 09:31:09.03540284 [+0300 MSK] - file descriptor with ID 'cc446c8fc7cb597d4a729b421392bde8' not found (function 'processingDownloadFile')
-	   2020-12-17 09:31:09.04517288 [+0300 MSK] - not action 'send data', task ID '2e1c7c351bafa585ce92f28fdc22e1ea' not found (function 'ControllerReceivingRequestedFiles')
-
-	*/
-
 	//обработка ошибки
 	handlerTaskWarning := func(taskID string, msg configure.MsgBetweenCoreAndNI) {
 		chanInCore <- &msg
@@ -279,6 +270,8 @@ func ControllerReceivingRequestedFiles(
 			switch msg.Command {
 			//начало выполнения задачи (запрос из Ядра)
 			case "give my the files":
+
+				fmt.Printf("func '%v', received new request to dofnload file\n", funcName)
 
 				//запуск обработчика задачи по скачиванию файлов
 				channel, chanHandlerStoped, err := processorReceivingFiles(chanInCore, si.IP, msg.TaskID, smt, saveMessageApp, cwtRes)

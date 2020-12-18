@@ -168,6 +168,8 @@ func processorReceivingFiles(
 	   6. Запрос нового файла 'give me the file' (master -> slave) цикл повторяется
 	*/
 
+	fmt.Println("func 'processorReceivingFiles', START...")
+
 	ti, ok := smt.GetStoringMemoryTask(taskID)
 	if !ok {
 		return nil, nil, fmt.Errorf("task with ID %v not found", taskID)
@@ -193,10 +195,25 @@ func processorReceivingFiles(
 		},
 	}
 
-	//проверяем наличие файлов для скачивания
-	if len(ti.TaskParameter.ListFilesDetailedInformation) == 0 {
-		return chanOut, chanDone, fmt.Errorf("the list of files suitable for downloading from the source is empty")
+	lf, ok := smt.GetListFilesDetailedInformation(taskID)
+	if !ok {
+
+		fmt.Printf("task with ID '%v' not found the list of files suitable for downloading from the source is empty", taskID)
+
+		return chanOut, chanDone, fmt.Errorf("task with ID '%v' not found the list of files suitable for downloading from the source is empty", taskID)
 	}
+
+	if len(lf) == 0 {
+
+		fmt.Printf("the list of files suitable for downloading from the source is empty, for task with ID '%v'", taskID)
+
+		return chanOut, chanDone, fmt.Errorf("the list of files suitable for downloading from the source is empty, for task with ID '%v'", taskID)
+	}
+
+	//проверяем наличие файлов для скачивания
+	/*	if len(ti.TaskParameter.ListFilesDetailedInformation) == 0 {
+		return chanOut, chanDone, fmt.Errorf("the list of files suitable for downloading from the source is empty")
+	}*/
 
 	go processingDownloadFile(typeProcessingDownloadFile{
 		sourceID:       sourceID,
@@ -236,9 +253,17 @@ func processingDownloadFile(tpdf typeProcessingDownloadFile) {
 
 	pathDirStorage := tpdf.taskInfo.TaskParameter.DownloadTask.PathDirectoryStorageDownloadedFiles
 
+	/*fmt.Printf("func '%v', READING LIST FILES\n", funcName)
+	for fn, fi := range tpdf.taskInfo.TaskParameter.ListFilesDetailedInformation {
+		fmt.Printf("func '%v', files name: %v, size: '%v', hex: '%v'\n", funcName, fn, fi.Size, fi.Hex)
+	}*/
+
 DONE:
 	//читаем список файлов
 	for fn, fi := range tpdf.taskInfo.TaskParameter.ListFilesDetailedInformation {
+
+		//fmt.Printf("func '%v', first request to downlod file name: '%v'\n", funcName, fn)
+
 		//делаем первый запрос на скачивание файла
 		mtd.Info.Command = "give me the file"
 		mtd.Info.FileOptions = configure.DownloadFileOptions{
@@ -246,6 +271,8 @@ DONE:
 			Size: fi.Size,
 			Hex:  fi.Hex,
 		}
+
+		//fmt.Printf("func '%v', reguest to slave -> : %v\n", funcName, mtd.Info)
 
 		msgJSON, err := json.Marshal(&mtd)
 		if err != nil {
@@ -267,6 +294,17 @@ DONE:
 			//обновляем значение таймера (что бы задача не была удалена по таймауту)
 			tpdf.smt.TimerUpdateStoringMemoryTask(tpdf.taskID)
 
+			//fmt.Printf("func '%v', TimerUpdateStoringMemoryTask to downlod file name: '%v'\n", funcName, fn)
+
+			/*
+				Такое впечатление что задача удаляется по таймауту
+					   из лога
+
+					   2020-12-17 09:31:09.03540284 [+0300 MSK] - file descriptor with ID 'cc446c8fc7cb597d4a729b421392bde8' not found (function 'processingDownloadFile')
+					   2020-12-17 09:31:09.04517288 [+0300 MSK] - not action 'send data', task ID '2e1c7c351bafa585ce92f28fdc22e1ea' not found (function 'ControllerReceivingRequestedFiles')
+
+			*/
+
 			/* текстовый тип сообщения */
 			if msg.MessageType == 1 {
 				msgReq := configure.MsgTypeDownload{
@@ -281,6 +319,9 @@ DONE:
 
 					//остановить скачивание файлов
 					if command == "stop receiving files" {
+
+						//fmt.Printf("func '%v', received messgae 'stop receiving files' file name: '%v'\n", funcName, fn)
+
 						//отмечаем задачу как находящуюся в процессе останова
 						tpdf.smt.IsSlowDownStoringMemoryTask(tpdf.taskID)
 
@@ -305,6 +346,9 @@ DONE:
 
 					//разрыв соединения (остановить загрузку файлов)
 					if command == "to stop the task because of a disconnection" {
+
+						//fmt.Printf("func '%v', received messgae 'to stop the task because of a disconnection' file name: '%v'\n", funcName, fn)
+
 						//отмечаем задачу как находящуюся в процессе останова
 						tpdf.smt.IsSlowDownStoringMemoryTask(tpdf.taskID)
 
@@ -337,7 +381,7 @@ DONE:
 					ti, ok := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
 					if !ok {
 						tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-							Description: fmt.Sprintf("task with ID '%v' not found", tpdf.taskID),
+							Description: fmt.Sprintf("task with ID '%v' not found (processingDownloadFile)", tpdf.taskID),
 							FuncName:    funcName,
 						})
 
@@ -350,10 +394,15 @@ DONE:
 					switch msgRes.Info.Command {
 					//готовность к передаче файла (slave -> master)
 					case "ready for the transfer":
+
+						//fmt.Printf("func '%v', received response 'ready for the transfer' for file name: '%v'\n", funcName, fn)
+
 						//если задача находится в стадии останова игнорировать ответ slave
 						if ti.IsSlowDown {
 							continue
 						}
+
+						//fmt.Printf("func '%v', create file descriptor for file name: '%v'\n", funcName, fn)
 
 						//создаем дескриптор файла для последующей записи в него
 						lfd.addFileDescription(msgRes.Info.FileOptions.Hex, path.Join(pathDirStorage, msgRes.Info.FileOptions.Name))
@@ -398,6 +447,10 @@ DONE:
 
 					//сообщение о невозможности передачи файла (slave -> master)
 					case "file transfer not possible":
+
+						//fmt.Printf("func '%v', received response 'file transfer not possible' for file name: '%v'\n", funcName, fn)
+						//fmt.Printf("func '%v', received response '%v'\n", funcName, msgRes.Info)
+
 						dtp := ti.TaskParameter.DownloadTask
 						dtp.NumberFilesDownloadedError = dtp.NumberFilesDownloadedError + 1
 
@@ -438,6 +491,9 @@ DONE:
 						})
 					}
 				} else {
+
+					//fmt.Printf("func '%v', unknown generator events!!! for file name: '%v'\n", funcName, fn)
+
 					tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: "unknown generator events",
 						FuncName:    funcName,
@@ -460,6 +516,9 @@ DONE:
 				tpdf.saveMessageApp)*/
 
 				if err != nil {
+
+					//fmt.Printf("func '%v', ERROR 111 : '%v'\n", funcName, err)
+
 					tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
 						FuncName:    funcName,
@@ -472,6 +531,9 @@ DONE:
 				}
 
 				if (writeBinaryFileResult.fileIsLoaded || writeBinaryFileResult.fileLoadedError) && !writeBinaryFileResult.fileIsSlowDown {
+
+					//fmt.Printf("func '%v', writeBinaryFileResult.fileIsLoaded: '%v' || writeBinaryFileResult.fileLoadedError: '%v', !writeBinaryFileResult.fileIsSlowDown: '%v'\n", funcName, writeBinaryFileResult.fileIsLoaded, writeBinaryFileResult.fileLoadedError, !writeBinaryFileResult.fileIsSlowDown)
+
 					msgRes := configure.MsgTypeDownload{
 						MsgType: "download files",
 						Info: configure.DetailInfoMsgDownload{
@@ -682,9 +744,7 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile /*, saveMessageApp *save
 		}
 
 		//отмечаем файл как успешно принятый
-		pwbf.SMT.UpdateListFilesDetailedInformationFileIsLoaded(pwbf.TaskID, map[string]*configure.DetailedFilesInformation{
-			fi.Name: &ndfi,
-		})
+		pwbf.SMT.UpdateListFilesDetailedInformationFileIsLoaded(pwbf.TaskID, map[string]configure.DetailedFilesInformation{fi.Name: ndfi})
 
 		pwbf.ChanInCore <- &msgToCore
 		twbfr.fileIsLoaded = true

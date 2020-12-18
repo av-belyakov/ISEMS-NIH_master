@@ -115,7 +115,7 @@ func sendInformationFiltrationTask(
 	chanToAPI chan<- *configure.MsgBetweenCoreAndAPI,
 	smt *configure.StoringMemoryTask,
 	taskInfo *configure.TaskDescription,
-	ldfi map[string]*configure.DetailedFilesInformation,
+	ldfi map[string]configure.DetailedFilesInformation,
 	sourceID int,
 	taskID string) error {
 

@@ -121,17 +121,20 @@ func HandlerAutomaticDownloadFiles(
 		//отмечаем выполняемую задачу как завершенную
 		smt.CompleteStoringMemoryTask(taskID)
 
-		//отмечаем задачу, в списке очередей, как завершенную в списке очередей и предотвращаем запуск автоматического скачивания файлов
+		//отмечаем задачу, в списке очередей, как завершенную и предотвращаем запуск автоматического скачивания файлов
 		if err := qts.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, taskID, "complete"); err != nil {
+
+			fmt.Printf("func '%v', 111 ERROR: '%v'\n", funcName, err)
+
 			return err
 		}
 
 		return nil
 	}
 
-	//fmt.Printf("func '%v' begin automatic download files... \n", funcName)
-
 	sourceID := taskInfo.TaskParameter.FiltrationTask.ID
+
+	//fmt.Printf("func '%v' begin automatic download files from source ID '%v'... \n", funcName, sourceID)
 
 	//получаем параметры фильтрации
 	qti, err := qts.GetQueueTaskStorage(sourceID, taskID)
@@ -145,6 +148,8 @@ func HandlerAutomaticDownloadFiles(
 		return fmt.Errorf("the list of files intended for uploading was not found, task ID '%v' (%v)", taskID, funcName)
 	}
 
+	//fmt.Printf("func '%v', count files for download: '%v'\n", funcName, len(listDetailedFilesInformation))
+
 	//добавляем задачу в очередь
 	qts.AddQueueTaskStorage(taskID, sourceID, configure.CommonTaskInfo{
 		IDClientAPI:     taskInfo.ClientID,
@@ -154,6 +159,70 @@ func HandlerAutomaticDownloadFiles(
 		FilterationParameters:         qti.TaskParameters.FilterationParameters,
 		PathDirectoryForFilteredFiles: taskInfo.TaskParameter.FiltrationTask.PathStorageSource,
 	})
+
+	//устанавливаем проверочный статус источника для данной задачи как подключен
+	if err := qts.ChangeAvailabilityConnectionOnConnection(sourceID, taskID); err != nil {
+		//информационное сообщение о том что задача добавлена в очередь
+		notifications.SendNotificationToClientAPI(
+			outCoreChanAPI,
+			notifications.NotificationSettingsToClientAPI{
+				MsgType: "danger",
+				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   sourceID,
+					TaskType:   "скачивание файлов",
+					TaskAction: "источник не подключен, выполнение скачивания файлов невозможно",
+				}),
+				Sources: []int{sourceID},
+			},
+			taskInfo.ClientTaskID,
+			taskInfo.ClientID)
+
+		return err
+	}
+
+	/*for fn, fi := range listDetailedFilesInformation {
+		fmt.Printf("func '%v', files for download, fileName: '%v', filseSize: '%v'\n", funcName, fn, fi.Size)
+	}*/
+
+	//добавляем подтвержденный список файлов для скачивания
+	if err := qts.AddConfirmedListFiles(sourceID, taskID, listDetailedFilesInformation); err != nil {
+		//информационное сообщение о том что задача добавлена в очередь
+		notifications.SendNotificationToClientAPI(
+			outCoreChanAPI,
+			notifications.NotificationSettingsToClientAPI{
+				MsgType: "danger",
+				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   sourceID,
+					TaskType:   "скачивание файлов",
+					TaskAction: "список файлов пуст, выполнение скачивания файлов невозможно",
+				}),
+				Sources: []int{sourceID},
+			},
+			taskInfo.ClientTaskID,
+			taskInfo.ClientID)
+
+		return err
+	}
+
+	//изменяем статус наличия файлов для скачивания
+	if err := qts.ChangeAvailabilityFilesDownload(sourceID, taskID); err != nil {
+		//информационное сообщение о том что задача добавлена в очередь
+		notifications.SendNotificationToClientAPI(
+			outCoreChanAPI,
+			notifications.NotificationSettingsToClientAPI{
+				MsgType: "danger",
+				MsgDescription: common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   sourceID,
+					TaskType:   "скачивание файлов",
+					TaskAction: "список файлов пуст, выполнение скачивания файлов невозможно",
+				}),
+				Sources: []int{sourceID},
+			},
+			taskInfo.ClientTaskID,
+			taskInfo.ClientID)
+
+		return err
+	}
 
 	//информационное сообщение о том что задача добавлена в очередь
 	notifications.SendNotificationToClientAPI(
@@ -169,21 +238,6 @@ func HandlerAutomaticDownloadFiles(
 		},
 		taskInfo.ClientTaskID,
 		taskInfo.ClientID)
-
-	//устанавливаем проверочный статус источника для данной задачи как подключен
-	if err := qts.ChangeAvailabilityConnectionOnConnection(sourceID, taskID); err != nil {
-		return err
-	}
-
-	//добавляем подтвержденный список файлов для скачивания
-	if err := qts.AddConfirmedListFiles(sourceID, taskID, listDetailedFilesInformation); err != nil {
-		return err
-	}
-
-	//изменяем статус наличия файлов для скачивания
-	if err := qts.ChangeAvailabilityFilesDownload(sourceID, taskID); err != nil {
-		return err
-	}
 
 	return nil
 }
