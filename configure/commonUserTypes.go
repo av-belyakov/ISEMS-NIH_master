@@ -31,7 +31,7 @@ type TypeFiltrationMsgFoundIndex struct {
 // PathStorageSource - директория для хранения файлов
 type TypeFiltrationMsgFoundFileInformationAndTaskStatus struct {
 	TaskStatus                      string
-	ListFoundFile                   map[string]DetailedFilesInformation
+	ListFoundFile                   map[string]*DetailedFilesInformation
 	NumberFilesMeetFilterParameters int
 	NumberProcessedFiles            int
 	NumberFilesFoundResultFiltering int

@@ -334,7 +334,7 @@ func RestoreParametersFiltrationTask(
 			TaskIDClientAPI: itd.ClientTaskID,
 			AdvancedOptions: configure.TypeFiltrationMsgFoundFileInformationAndTaskStatus{
 				TaskStatus:    taskStatusRecovery,
-				ListFoundFile: map[string]configure.DetailedFilesInformation{},
+				ListFoundFile: map[string]*configure.DetailedFilesInformation{},
 			},
 		}
 	}

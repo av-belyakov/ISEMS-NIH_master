@@ -736,7 +736,7 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile /*, saveMessageApp *save
 			return &twbfr, fmt.Errorf("the hash amount for the '%v' file does not match", fi.Name)
 		}
 
-		ndfi := configure.DetailedFilesInformation{
+		ndfi := &configure.DetailedFilesInformation{
 			Hex:          fi.Hex,
 			Size:         fi.FullSizeByte,
 			IsLoaded:     true,
@@ -744,7 +744,7 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile /*, saveMessageApp *save
 		}
 
 		//отмечаем файл как успешно принятый
-		pwbf.SMT.UpdateListFilesDetailedInformationFileIsLoaded(pwbf.TaskID, map[string]configure.DetailedFilesInformation{fi.Name: ndfi})
+		pwbf.SMT.UpdateListFilesDetailedInformationFileIsLoaded(pwbf.TaskID, map[string]*configure.DetailedFilesInformation{fi.Name: ndfi})
 
 		pwbf.ChanInCore <- &msgToCore
 		twbfr.fileIsLoaded = true

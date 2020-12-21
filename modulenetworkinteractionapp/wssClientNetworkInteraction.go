@@ -52,7 +52,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 		c, res, err := d.Dial("wss://"+cs.IP+":"+cs.Port+"/wss", header)
 		if err != nil {
 			cs.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-				Description: fmt.Sprintf("Error: '%v' (ip %v)", err, cs.IP),
+				Description: fmt.Sprintf("Error Dial: '%v', status code: '%v' (ip %v)", err, res.StatusCode, cs.IP),
 				FuncName:    funcName,
 			})
 
@@ -75,7 +75,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 				msgType, message, err := c.ReadMessage()
 				if err != nil {
 					cs.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						Description: fmt.Sprintf("Error: '%v' (ip %v)", err, cs.IP),
+						Description: fmt.Sprintf("Error ReadMessage: '%v', status code: '%v' (ip %v)", err, res.StatusCode, cs.IP),
 						FuncName:    funcName,
 					})
 

@@ -235,9 +235,9 @@ func Routing(trc TypeRoutingCore) {
 					},
 				})
 
-				clf := make(map[string]configure.DetailedFilesInformation, len(qti.TaskParameters.ConfirmedListFiles))
+				clf := make(map[string]*configure.DetailedFilesInformation, len(qti.TaskParameters.ConfirmedListFiles))
 				for f, v := range qti.TaskParameters.ConfirmedListFiles {
-					clf[f] = configure.DetailedFilesInformation{
+					clf[f] = &configure.DetailedFilesInformation{
 						Hex:          v.Hex,
 						Size:         v.Size,
 						IsLoaded:     v.IsLoaded,

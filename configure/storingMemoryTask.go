@@ -160,7 +160,7 @@ type GetTaskStatusStoringMemoryTaskResult struct {
 type ChanStoringMemoryTask struct {
 	ActionType, TaskID       string
 	Description              *TaskDescription
-	DetailedFilesInformation map[string]DetailedFilesInformation
+	DetailedFilesInformation map[string]*DetailedFilesInformation
 	CommonInformation        interface{}
 	ChannelRes               chan channelResSettings
 }
@@ -577,15 +577,15 @@ func (smt *StoringMemoryTask) IncrementNumberFilesDownloadedError(taskID string)
 }
 
 //UpdateListFilesDetailedInformation обновление информации о файлах
-func (smt *StoringMemoryTask) UpdateListFilesDetailedInformation(taskID string, ldfi map[string]DetailedFilesInformation) {
-	chanRes := make(chan channelResSettings)
-	defer close(chanRes)
-
+func (smt *StoringMemoryTask) UpdateListFilesDetailedInformation(taskID string, ldfi map[string]*DetailedFilesInformation) {
 	if len(ldfi) == 0 {
 		return
 	}
 
-	//fmt.Printf("func 'UpdateListFilesDetailedInformation', ldfi: '%v'\n", ldfi)
+	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
+
+	//	fmt.Printf("func 'UpdateListFilesDetailedInformation', ldfi: '%v'\n", ldfi)
 
 	smt.channelReq <- ChanStoringMemoryTask{
 		ActionType:               "update list files detailed information",
@@ -595,18 +595,6 @@ func (smt *StoringMemoryTask) UpdateListFilesDetailedInformation(taskID string, 
 	}
 
 	<-chanRes
-	/*
-		i := 0
-		for fn, fi := range smt.tasks[taskID].TaskParameter.ListFilesDetailedInformation {
-			fmt.Printf("func 'UpdateListFilesDetailedInformation', file_name: '%v', parameters: '%v'\n", fn, fi)
-
-			if i > 3 {
-				return
-			}
-
-			i++
-		}
-	*/
 }
 
 //UpdateTaskFiltrationAllParameters обновление параметров выполнения задачи по фильтрации
@@ -648,7 +636,7 @@ func (smt *StoringMemoryTask) UpdateTaskDownloadAllParameters(taskID string, dtp
 }
 
 //UpdateListFilesDetailedInformationFileIsLoaded обновление информации о файлах
-func (smt *StoringMemoryTask) UpdateListFilesDetailedInformationFileIsLoaded(taskID string, lfdi map[string]DetailedFilesInformation) {
+func (smt *StoringMemoryTask) UpdateListFilesDetailedInformationFileIsLoaded(taskID string, lfdi map[string]*DetailedFilesInformation) {
 	chanRes := make(chan channelResSettings)
 	defer close(chanRes)
 
@@ -692,12 +680,17 @@ func (smt StoringMemoryTask) delStoringMemoryTask(taskID string) {
 }
 
 //updateListFilesDetailedInformation обновляем информацию о файлах (при фильтрации)
-func (smt *StoringMemoryTask) updateListFilesDetailedInformation(taskID string, dfi map[string]DetailedFilesInformation) {
+func (smt *StoringMemoryTask) updateListFilesDetailedInformation(taskID string, dfi map[string]*DetailedFilesInformation) {
 	if _, ok := smt.tasks[taskID]; !ok {
 		return
 	}
 
 	for fn, fi := range dfi {
+		_, ok := smt.tasks[taskID].TaskParameter.ListFilesDetailedInformation[fn]
+		if ok {
+			continue
+		}
+
 		smt.tasks[taskID].TaskParameter.ListFilesDetailedInformation[fn] = &DetailedFilesInformation{
 			Hex:          fi.Hex,
 			Size:         fi.Size,
@@ -708,7 +701,7 @@ func (smt *StoringMemoryTask) updateListFilesDetailedInformation(taskID string, 
 }
 
 //updateListFilesDetailedInformationFileIsLoaded обновляем информацию о файлах (при скачивании)
-func (smt *StoringMemoryTask) updateListFilesDetailedInformationFileIsLoaded(taskID string, dfi map[string]DetailedFilesInformation) {
+func (smt *StoringMemoryTask) updateListFilesDetailedInformationFileIsLoaded(taskID string, dfi map[string]*DetailedFilesInformation) {
 	if _, ok := smt.tasks[taskID]; !ok {
 		return
 	}
