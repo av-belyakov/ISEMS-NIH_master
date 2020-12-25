@@ -42,7 +42,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 		header.Add("User-Agent", "Mozilla/5.0 (ISEMS-NIH_slave)")
 
 		d := websocket.Dialer{
-			HandshakeTimeout:  (time.Duration(1) * time.Second),
+			HandshakeTimeout:  (time.Duration(3) * time.Second),
 			EnableCompression: false,
 			TLSClientConfig:   cs.TLSConf, /*&tls.Config{
 				InsecureSkipVerify: true,
@@ -134,8 +134,8 @@ func WssClientNetworkInteraction(
 
 	client := &http.Client{
 		Transport: &http.Transport{
-			MaxIdleConns:       0,
-			IdleConnTimeout:    30 * time.Second,
+			MaxIdleConns:       20,
+			IdleConnTimeout:    20 * time.Second,
 			DisableCompression: true,
 			TLSClientConfig:    conf,
 		},

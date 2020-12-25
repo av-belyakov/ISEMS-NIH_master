@@ -71,7 +71,7 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 
 			case "send data":
 				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
-					msg.channelErrMsg <- fmt.Errorf("client IP '%v' not found", msg.handlerIP)
+					msg.channelErrMsg <- fmt.Errorf("not action 'send data', client IP '%v' not found", msg.handlerIP)
 
 					continue
 				}
@@ -87,7 +87,7 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 
 			case "del":
 				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
-					msg.channelErrMsg <- fmt.Errorf("client IP '%v' not found", msg.handlerIP)
+					msg.channelErrMsg <- fmt.Errorf("not action 'delete', client IP '%v' not found", msg.handlerIP)
 
 					continue
 				}
@@ -124,7 +124,7 @@ func (thrf *TypeHandlerReceivingFile) SetHendlerReceivingFile(ip, id string, cha
 	return <-chanResErr
 }
 
-//SendChunkReceivingData отправляет через канал яасти принятого файла или информации
+//SendChunkReceivingData отправляет через канал части принятого файла или информации
 func (thrf *TypeHandlerReceivingFile) SendChunkReceivingData(ip, id string, msgSend MsgChannelProcessorReceivingFiles) error {
 	chanResErr := make(chan error)
 	defer close(chanResErr)
@@ -140,7 +140,7 @@ func (thrf *TypeHandlerReceivingFile) SendChunkReceivingData(ip, id string, msgS
 	return <-chanResErr
 }
 
-//DelHendlerReceivingFile закрывает и удаляет канал
+//DelHendlerReceivingFile закрывает и удаляет канал по ID задачи с ний связанной
 func (thrf *TypeHandlerReceivingFile) DelHendlerReceivingFile(ip, id string) error {
 	chanResErr := make(chan error)
 	defer close(chanResErr)
@@ -195,8 +195,7 @@ func ControllerReceivingRequestedFiles(
 	chanIn := make(chan *configure.MsgChannelReceivingFiles)
 	lhrf := NewListHandlerReceivingFile()
 
-	go func(
-		lhrf *TypeHandlerReceivingFile,
+	go func(lhrf *TypeHandlerReceivingFile,
 		clientNotify configure.MsgBetweenCoreAndNI,
 		chanIn <-chan *configure.MsgChannelReceivingFiles) {
 
@@ -213,27 +212,6 @@ func ControllerReceivingRequestedFiles(
 
 			//получаем IP адрес и параметры источника
 			si, ok := isl.GetSourceSetting(msg.SourceID)
-
-			//останов выполнения задачи из-за разрыва соединения (запрос из Ядра)
-			if msg.Command == "to stop the task because of a disconnection" {
-				c := []byte("to stop the task because of a disconnection")
-				if err := lhrf.SendChunkReceivingData(
-					si.IP,
-					msg.TaskID,
-					MsgChannelProcessorReceivingFiles{
-						MessageType:  1,
-						MsgGenerator: "Core module",
-						Message:      &c,
-					}); err != nil {
-					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						Description: fmt.Sprint(err),
-						FuncName:    funcName,
-					})
-				}
-
-				continue
-			}
-
 			if !ok || !si.ConnectionStatus {
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					Description: fmt.Sprintf("it is not possible to send a request to download files, the source with ID %v is not connected", msg.SourceID),
@@ -307,6 +285,22 @@ func ControllerReceivingRequestedFiles(
 			//останов выполнения задачи (запрос из Ядра)
 			case "stop receiving files":
 				c := []byte("stop receiving files")
+				if err := lhrf.SendChunkReceivingData(
+					si.IP,
+					msg.TaskID,
+					MsgChannelProcessorReceivingFiles{
+						MessageType:  1,
+						MsgGenerator: "Core module",
+						Message:      &c,
+					}); err != nil {
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						Description: fmt.Sprint(err),
+						FuncName:    funcName,
+					})
+				}
+
+			case "to stop the task because of a disconnection":
+				c := []byte("to stop the task because of a disconnection")
 				if err := lhrf.SendChunkReceivingData(
 					si.IP,
 					msg.TaskID,

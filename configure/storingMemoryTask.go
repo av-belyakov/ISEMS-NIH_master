@@ -230,6 +230,20 @@ func NewRepositorySMT() *StoringMemoryTask {
 
 				msg.ChannelRes <- mr
 
+			case "get count list files detailed information":
+				mr := channelResSettings{
+					IsExist: false,
+					TaskID:  msg.TaskID,
+				}
+
+				if task, ok := smt.tasks[msg.TaskID]; ok {
+					mr.IsExist = true
+
+					mr.CommonInformation = len((*task).TaskParameter.ListFilesDetailedInformation)
+				}
+
+				msg.ChannelRes <- mr
+
 			case "get task status":
 				var gtssmtr GetTaskStatusStoringMemoryTaskResult
 				mr := channelResSettings{
@@ -546,6 +560,31 @@ func (smt *StoringMemoryTask) GetListFilesDetailedInformation(taskID string) (ma
 	info := <-chanRes
 
 	return info.DetailedFilesInformation, info.IsExist
+}
+
+//GetCountListFilesDetailedInformation получить количество файлов найденных в результате фильтрации
+func (smt *StoringMemoryTask) GetCountListFilesDetailedInformation(taskID string) (int, error) {
+	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
+
+	smt.channelReq <- ChanStoringMemoryTask{
+		ActionType: "get count list files detailed information",
+		TaskID:     taskID,
+		ChannelRes: chanRes,
+	}
+
+	info := <-chanRes
+
+	if !info.IsExist {
+		return 0, fmt.Errorf("task with ID '%v' in StoringMemoryTask not found (func 'GetCountListFilesDetailedInformation')", taskID)
+	}
+
+	countFiles, ok := info.CommonInformation.(int)
+	if !ok {
+		return 0, fmt.Errorf("type conversion error, task ID '%v' (func 'GetCountListFilesDetailedInformation')", taskID)
+	}
+
+	return countFiles, nil
 }
 
 //IncrementNumberFilesDownloaded увеличить кол-во успешно скаченных файлов на 1

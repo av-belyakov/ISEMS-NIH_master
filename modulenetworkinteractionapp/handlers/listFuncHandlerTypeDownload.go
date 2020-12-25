@@ -40,8 +40,16 @@ type listChannels struct {
 
 //ListFileDescription хранит список файловых дескрипторов и канал для доступа к ним
 type ListFileDescription struct {
-	list    map[string]*os.File
+	list    map[string]ListFileDescriptionOptions
 	chanReq chan channelReqSettings
+}
+
+//ListFileDescriptionOptions хранит опции файловых дескрипторов
+// fileIsFullyAccepted - принят ли полностью файл
+// fileDescription - файловый дескриптор
+type ListFileDescriptionOptions struct {
+	fileIsFullyAccepted bool
+	fileDescription     *os.File
 }
 
 type channelReqSettings struct {
@@ -50,8 +58,9 @@ type channelReqSettings struct {
 }
 
 type channelResSettings struct {
-	fd  *os.File
-	err error
+	fileStatus bool
+	fd         *os.File
+	err        error
 }
 
 type typeWriteBinaryFileRes struct {
@@ -62,7 +71,7 @@ type typeWriteBinaryFileRes struct {
 //NewListFileDescription создание нового репозитория со списком дескрипторов файлов
 func NewListFileDescription() *ListFileDescription {
 	lfd := ListFileDescription{}
-	lfd.list = map[string]*os.File{}
+	lfd.list = map[string]ListFileDescriptionOptions{}
 	lfd.chanReq = make(chan channelReqSettings)
 
 	go func() {
@@ -75,7 +84,7 @@ func NewListFileDescription() *ListFileDescription {
 					if err != nil {
 						crs.err = err
 					} else {
-						lfd.list[msg.fileHex] = f
+						lfd.list[msg.fileHex] = ListFileDescriptionOptions{fileDescription: f}
 					}
 				}
 
@@ -85,19 +94,45 @@ func NewListFileDescription() *ListFileDescription {
 				crs := channelResSettings{}
 				fd, ok := lfd.list[msg.fileHex]
 				if !ok {
-					crs.err = fmt.Errorf("file descriptor with ID '%v' not found", msg.fileHex)
+					crs.err = fmt.Errorf("func 'NewListFileDescription', command: 'get', file descriptor with ID '%v' not found", msg.fileHex)
 				} else {
-					crs.fd = fd
+					crs.fd = fd.fileDescription
 				}
 
 				msg.channelRes <- crs
 
+			case "get status accepted":
+				crs := channelResSettings{}
+				fd, ok := lfd.list[msg.fileHex]
+				if !ok {
+					crs.err = fmt.Errorf("func 'NewListFileDescription', command: 'get status accepted', file status accepted with ID '%v' not found", msg.fileHex)
+				} else {
+					crs.fileStatus = fd.fileIsFullyAccepted
+				}
+
+				msg.channelRes <- crs
+
+			case "close":
+				if fd, ok := lfd.list[msg.fileHex]; ok {
+					fd.fileDescription.Close()
+					fd.fileIsFullyAccepted = true
+				}
+
+				msg.channelRes <- channelResSettings{}
+
 			case "del":
-				if fd, ok := lfd.list[msg.fileHex]; !ok {
-					fd.Close()
+				if fd, ok := lfd.list[msg.fileHex]; ok {
+					fd.fileDescription.Close()
 				}
 
 				delete(lfd.list, msg.fileHex)
+
+				msg.channelRes <- channelResSettings{}
+
+			case "del all":
+				for fileHex := range lfd.list {
+					delete(lfd.list, fileHex)
+				}
 
 				msg.channelRes <- channelResSettings{}
 			}
@@ -136,6 +171,34 @@ func (lfd *ListFileDescription) getFileDescription(fh string) (*os.File, error) 
 	return res.fd, res.err
 }
 
+func (lfd *ListFileDescription) getStatusFileFullyAccepted(fh string) (bool, error) {
+	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
+
+	lfd.chanReq <- channelReqSettings{
+		command:    "get status accepted",
+		fileHex:    fh,
+		channelRes: chanRes,
+	}
+
+	res := <-chanRes
+
+	return res.fileStatus, res.err
+}
+
+func (lfd *ListFileDescription) closeFileDescription(fh string) {
+	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
+
+	lfd.chanReq <- channelReqSettings{
+		command:    "close",
+		fileHex:    fh,
+		channelRes: chanRes,
+	}
+
+	<-chanRes
+}
+
 func (lfd *ListFileDescription) delFileDescription(fh string) {
 	chanRes := make(chan channelResSettings)
 	defer close(chanRes)
@@ -143,6 +206,18 @@ func (lfd *ListFileDescription) delFileDescription(fh string) {
 	lfd.chanReq <- channelReqSettings{
 		command:    "del",
 		fileHex:    fh,
+		channelRes: chanRes,
+	}
+
+	<-chanRes
+}
+
+func (lfd *ListFileDescription) delAllFileDescription() {
+	chanRes := make(chan channelResSettings)
+	defer close(chanRes)
+
+	lfd.chanReq <- channelReqSettings{
+		command:    "del all",
 		channelRes: chanRes,
 	}
 
@@ -167,8 +242,6 @@ func processorReceivingFiles(
 	   5. завершением приема файла считается прием последнего части файла
 	   6. Запрос нового файла 'give me the file' (master -> slave) цикл повторяется
 	*/
-
-	fmt.Println("func 'processorReceivingFiles', START...")
 
 	ti, ok := smt.GetStoringMemoryTask(taskID)
 	if !ok {
@@ -195,25 +268,24 @@ func processorReceivingFiles(
 		},
 	}
 
-	lf, ok := smt.GetListFilesDetailedInformation(taskID)
-	if !ok {
+	clf, err := smt.GetCountListFilesDetailedInformation(taskID)
+	if err != nil {
+		saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprint(err),
+			FuncName:    "processorReceivingFiles",
+		})
 
-		fmt.Printf("task with ID '%v' not found the list of files suitable for downloading from the source is empty", taskID)
+		//fmt.Printf("task with ID '%v' not found the list of files suitable for downloading from the source is empty", taskID)
 
 		return chanOut, chanDone, fmt.Errorf("task with ID '%v' not found the list of files suitable for downloading from the source is empty", taskID)
 	}
 
-	if len(lf) == 0 {
+	if clf == 0 {
 
-		fmt.Printf("the list of files suitable for downloading from the source is empty, for task with ID '%v'", taskID)
+		//fmt.Printf("the list of files suitable for downloading from the source is empty, for task with ID '%v'", taskID)
 
 		return chanOut, chanDone, fmt.Errorf("the list of files suitable for downloading from the source is empty, for task with ID '%v'", taskID)
 	}
-
-	//проверяем наличие файлов для скачивания
-	/*	if len(ti.TaskParameter.ListFilesDetailedInformation) == 0 {
-		return chanOut, chanDone, fmt.Errorf("the list of files suitable for downloading from the source is empty")
-	}*/
 
 	go processingDownloadFile(typeProcessingDownloadFile{
 		sourceID:       sourceID,
@@ -235,6 +307,14 @@ func processorReceivingFiles(
 
 func processingDownloadFile(tpdf typeProcessingDownloadFile) {
 	funcName := "processingDownloadFile"
+
+	//задача завершена успешно
+	msgToCore := configure.MsgBetweenCoreAndNI{
+		TaskID:   tpdf.taskID,
+		Section:  "download control",
+		Command:  "task completed",
+		SourceID: tpdf.sourceID,
+	}
 
 	sdf := statusDownloadFile{Status: "success"}
 	lfd := NewListFileDescription()
@@ -258,9 +338,22 @@ func processingDownloadFile(tpdf typeProcessingDownloadFile) {
 		fmt.Printf("func '%v', files name: %v, size: '%v', hex: '%v'\n", funcName, fn, fi.Size, fi.Hex)
 	}*/
 
+	lf, ok := tpdf.smt.GetListFilesDetailedInformation(tpdf.taskID)
+	if !ok {
+		tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			Description: fmt.Sprintf("for the specified task ID '%v', the list of files intended for downloading was not found", tpdf.taskID),
+			FuncName:    funcName,
+		})
+
+		msgToCore.Command = "task stoped error"
+		tpdf.channels.chanDone <- struct{}{}
+
+		return
+	}
+
 DONE:
 	//читаем список файлов
-	for fn, fi := range tpdf.taskInfo.TaskParameter.ListFilesDetailedInformation {
+	for fn, fi := range lf {
 
 		//fmt.Printf("func '%v', first request to downlod file name: '%v'\n", funcName, fn)
 
@@ -353,7 +446,8 @@ DONE:
 						tpdf.smt.IsSlowDownStoringMemoryTask(tpdf.taskID)
 
 						//закрываем дескриптор файла и удаляем файл
-						lfd.delFileDescription(fi.Hex)
+						lfd.closeFileDescription(fi.Hex)
+						//lfd.delFileDescription(fi.Hex)
 						_ = os.Remove(path.Join(pathDirStorage, fn))
 
 						tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
@@ -381,7 +475,7 @@ DONE:
 					ti, ok := tpdf.smt.GetStoringMemoryTask(tpdf.taskID)
 					if !ok {
 						tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-							Description: fmt.Sprintf("task with ID '%v' not found (processingDownloadFile)", tpdf.taskID),
+							Description: fmt.Sprintf("task with ID '%v' not found", tpdf.taskID),
 							FuncName:    funcName,
 						})
 
@@ -405,7 +499,14 @@ DONE:
 						//fmt.Printf("func '%v', create file descriptor for file name: '%v'\n", funcName, fn)
 
 						//создаем дескриптор файла для последующей записи в него
-						lfd.addFileDescription(msgRes.Info.FileOptions.Hex, path.Join(pathDirStorage, msgRes.Info.FileOptions.Name))
+						if err := lfd.addFileDescription(msgRes.Info.FileOptions.Hex, path.Join(pathDirStorage, msgRes.Info.FileOptions.Name)); err != nil {
+							tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+								Description: fmt.Sprint(err),
+								FuncName:    funcName,
+							})
+
+							break NEWFILE
+						}
 
 						dtp := configure.DownloadTaskParameters{
 							Status:                              "wait",
@@ -465,12 +566,18 @@ DONE:
 							SourceID: tpdf.sourceID,
 						}
 
+						tpdf.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+							Description: fmt.Sprintf("message received '%v' from the source %v of the task ID '%v'", msgRes.Info.Command, tpdf.sourceID, tpdf.taskID),
+							FuncName:    funcName,
+						})
+
 						break NEWFILE
 
 					//сообщение об успешном останове передачи файла (slave -> master)
 					case "file transfer stopped successfully":
 						//закрываем дескриптор файла и удаляем файл
-						lfd.delFileDescription(fi.Hex)
+						lfd.closeFileDescription(fi.Hex)
+						//lfd.delFileDescription(fi.Hex)
 						_ = os.Remove(path.Join(pathDirStorage, fn))
 
 						sdf.Status = "task stoped client"
@@ -512,9 +619,7 @@ DONE:
 					LFD:        lfd,
 					SMT:        tpdf.smt,
 					ChanInCore: tpdf.channels.chanInCore,
-				}) /*,
-				tpdf.saveMessageApp)*/
-
+				})
 				if err != nil {
 
 					//fmt.Printf("func '%v', ERROR 111 : '%v'\n", funcName, err)
@@ -524,6 +629,15 @@ DONE:
 						FuncName:    funcName,
 					})
 
+					/*
+
+					   Что если здесь сделать проверку на статус передачи файла
+					   если он передан, то
+					   	break NEWFILE
+					   иначе
+					   	break DONE
+					*/
+
 					sdf.Status = "error"
 					sdf.ErrMsg = err
 
@@ -531,6 +645,7 @@ DONE:
 				}
 
 				if (writeBinaryFileResult.fileIsLoaded || writeBinaryFileResult.fileLoadedError) && !writeBinaryFileResult.fileIsSlowDown {
+					//lfd.delFileDescription(fi.Hex)
 
 					//fmt.Printf("func '%v', writeBinaryFileResult.fileIsLoaded: '%v' || writeBinaryFileResult.fileLoadedError: '%v', !writeBinaryFileResult.fileIsSlowDown: '%v'\n", funcName, writeBinaryFileResult.fileIsLoaded, writeBinaryFileResult.fileLoadedError, !writeBinaryFileResult.fileIsSlowDown)
 
@@ -559,6 +674,9 @@ DONE:
 							FuncName:    funcName,
 						})
 
+						//закрываем дескриптор файла
+						lfd.closeFileDescription(fi.Hex)
+
 						break NEWFILE
 					}
 
@@ -567,18 +685,13 @@ DONE:
 						Data:            &msgJSON,
 					}
 
+					//закрываем дескриптор файла
+					lfd.closeFileDescription(fi.Hex)
+
 					break NEWFILE
 				}
 			}
 		}
-	}
-
-	//задача завершена успешно
-	msgToCore := configure.MsgBetweenCoreAndNI{
-		TaskID:   tpdf.taskID,
-		Section:  "download control",
-		Command:  "task completed",
-		SourceID: tpdf.sourceID,
 	}
 
 	switch sdf.Status {
@@ -596,13 +709,15 @@ DONE:
 
 	}
 
+	//очищаем всю информацию о принятых файлах
+	lfd.delAllFileDescription()
+
 	tpdf.channels.chanInCore <- &msgToCore
 	tpdf.channels.chanDone <- struct{}{}
 }
 
 //writingBinaryFile осуществляет запись бинарного файла
-func writingBinaryFile(pwbf parametersWritingBinaryFile /*, saveMessageApp *savemessageapp.PathDirLocationLogFiles*/) (*typeWriteBinaryFileRes, error) {
-	//funcName := "writingBinaryFile"
+func writingBinaryFile(pwbf parametersWritingBinaryFile) (*typeWriteBinaryFileRes, error) {
 
 	var fileHex string
 	var fi configure.DetailedFileInformation
@@ -617,24 +732,45 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile /*, saveMessageApp *save
 	//получаем хеш принимаемого файла
 	fileHex = string((*pwbf.Data)[35:67])
 
+	sf, err := pwbf.LFD.getStatusFileFullyAccepted(fileHex)
+	if err != nil {
+		return &twbfr, err
+	}
+
+	if sf {
+		twbfr.fileIsLoaded = true
+
+		return &twbfr, nil
+	}
+
 	w, err := pwbf.LFD.getFileDescription(fileHex)
 	if err != nil {
-
-		/*
-				Это только на время отладки, после удалить так как запись в
-				лог файл осуществляется в функции 'processingDownloadFile'
-
-			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-				Description: fmt.Sprint(err),
-				FuncName:    funcName,
-			})*/
-
 		return &twbfr, err
 	}
 
 	//запись принятых байт
 	numWriteByte, err := w.Write((*pwbf.Data)[67:])
 	if err != nil {
+
+		/*
+
+						   Похоже здесь обработка передачи файлов прекращается
+						   так как выполняется попытка записи в закрытый файл.
+						   В результате возникает ошибка которая останавливает весь процесс
+
+				Может быть скорость записи на диск не всегда достаточна, а w.Write((*pwbf.Data)[67:])
+				пишет немного в отложном режиме, я закрываю дескриптор слишком рано
+				по этому и возникает ошибка
+				2020-12-25 16:29:32.608636978 [+0300 MSK] - write /__FLASHLIGHT_DOWNLOAD_DIRECTORY/ISEMS_NIH_master_RAW/1048-Kaluga_PO/
+				2020/December/23/23.12.2020T07:00-23.12.2020T20:00_8bea1cc176b7e8718aad3cde42e230f9/1608747761_2020_12_23____21_22_41_1
+				70.tdp: file already closed (function 'processingDownloadFile')
+				а за ней
+				2020-12-25 16:29:32.623810392 [+0300 MSK] - not action 'send data', task ID '8bea1cc176b7e8718aad3cde42e230f9' not found (function 'ControllerReceivingRequestedFiles')
+
+			илбо происходит сбой при подсчете частей файла
+			так как возникает эта ошибка
+			2020-12-25 16:29:32.623810392 [+0300 MSK] - not action 'send data', task ID '8bea1cc176b7e8718aad3cde42e230f9' not found (function 'ControllerReceivingRequestedFiles')
+		*/
 
 		/*
 				Это только на время отладки, после удалить так как запись в
@@ -650,16 +786,6 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile /*, saveMessageApp *save
 
 	ti, ok := pwbf.SMT.GetStoringMemoryTask(pwbf.TaskID)
 	if !ok {
-
-		/*
-				Это только на время отладки, после удалить так как запись в
-				лог файл осуществляется в функции 'processingDownloadFile'
-
-			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-				Description: fmt.Sprint(err),
-				FuncName:    funcName,
-			})*/
-
 		return &twbfr, fmt.Errorf("task with ID '%v' not found", pwbf.TaskID)
 	}
 
@@ -714,9 +840,6 @@ func writingBinaryFile(pwbf parametersWritingBinaryFile /*, saveMessageApp *save
 
 	//если все кусочки были переданы (то есть файл считается полностью загруженым)
 	if fi.NumChunk == numAcceptedChunk {
-		//закрываем и удаляем дескриптор файла
-		pwbf.LFD.delFileDescription(fi.Hex)
-
 		//увеличиваем количество принятых файлов на 1
 		pwbf.SMT.IncrementNumberFilesDownloaded(pwbf.TaskID)
 

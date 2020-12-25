@@ -10,18 +10,13 @@ import (
 	"ISEMS-NIH_master/moduledbinteraction"
 	"ISEMS-NIH_master/modulenetworkinteractionapp"
 	"ISEMS-NIH_master/savemessageapp"
-	"fmt"
-	"os"
-	"runtime/pprof"
-	"strconv"
-	"time"
 )
 
 //CoreApp запускает все обработчики уровня ядра
 func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConnect, saveMessageApp *savemessageapp.PathDirLocationLogFiles) {
 
 	//------------- ДЕЛАЕМ ДАМП ПАМЯТИ ---------------------
-	ticker := time.NewTicker(time.Duration(3) * time.Second)
+	/*ticker := time.NewTicker(time.Duration(3) * time.Second)
 
 	num := 0
 	go func() {
@@ -40,7 +35,7 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 
 			fl.Close()
 		}
-	}()
+	}()*/
 	//------------------------------------------------------
 
 	//инициализация репозитория для учета выполняемых задач
