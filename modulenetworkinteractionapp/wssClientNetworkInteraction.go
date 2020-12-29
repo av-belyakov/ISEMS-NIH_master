@@ -134,8 +134,8 @@ func WssClientNetworkInteraction(
 
 	client := &http.Client{
 		Transport: &http.Transport{
-			MaxIdleConns:       20,
-			IdleConnTimeout:    20 * time.Second,
+			MaxIdleConns:       0,
+			IdleConnTimeout:    10 * time.Second,
 			DisableCompression: true,
 			TLSClientConfig:    conf,
 		},
@@ -145,7 +145,6 @@ func WssClientNetworkInteraction(
 	ticker := time.NewTicker(time.Duration(appc.TimeReconnectClient) * time.Second)
 	for range ticker.C {
 		sl := isl.GetSourceList()
-
 		if len(*sl) == 0 {
 			continue
 		}

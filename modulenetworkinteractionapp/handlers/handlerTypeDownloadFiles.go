@@ -21,6 +21,7 @@ type MsgChannelProcessorReceivingFiles struct {
 type TypeHandlerReceivingFile struct {
 	ListHandler             listHandlerReceivingFile
 	ChannelCommunicationReq chan typeChannelCommunication
+	ChannelErrorResponse    chan error
 }
 
 type typeChannelCommunication struct {
@@ -28,7 +29,6 @@ type typeChannelCommunication struct {
 	handlerID              string
 	actionType             string
 	msgForChunnelProcessor MsgChannelProcessorReceivingFiles
-	channelErrMsg          chan error
 	channelCommunication   chan MsgChannelProcessorReceivingFiles
 }
 
@@ -53,6 +53,7 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 	thrf := TypeHandlerReceivingFile{
 		ListHandler:             listHandlerReceivingFile{},
 		ChannelCommunicationReq: make(chan typeChannelCommunication),
+		ChannelErrorResponse:    make(chan error),
 	}
 
 	go func() {
@@ -67,40 +68,40 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 					chanToHandler: msg.channelCommunication,
 				}
 
-				msg.channelErrMsg <- nil
+				thrf.ChannelErrorResponse <- nil
 
 			case "send data":
 				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
-					msg.channelErrMsg <- fmt.Errorf("not action 'send data', client IP '%v' not found", msg.handlerIP)
+					thrf.ChannelErrorResponse <- fmt.Errorf("not action 'send data', client IP '%v' not found", msg.handlerIP)
 
 					continue
 				}
 				hrp, ok := thrf.ListHandler[msg.handlerIP][msg.handlerID]
 				if !ok {
-					msg.channelErrMsg <- fmt.Errorf("not action 'send data', task ID '%v' not found", msg.handlerID)
+					thrf.ChannelErrorResponse <- fmt.Errorf("not action 'send data', task ID '%v' not found", msg.handlerID)
 
 					continue
 				}
 
 				hrp.chanToHandler <- msg.msgForChunnelProcessor
-				msg.channelErrMsg <- nil
+				thrf.ChannelErrorResponse <- nil
 
 			case "del":
 				if _, ok := thrf.ListHandler[msg.handlerIP]; !ok {
-					msg.channelErrMsg <- fmt.Errorf("not action 'delete', client IP '%v' not found", msg.handlerIP)
+					thrf.ChannelErrorResponse <- fmt.Errorf("not action 'delete', client IP '%v' not found", msg.handlerIP)
 
 					continue
 				}
 				_, ok := thrf.ListHandler[msg.handlerIP][msg.handlerID]
 				if !ok {
-					msg.channelErrMsg <- fmt.Errorf("not action 'delete', task ID '%v' not found", msg.handlerID)
+					thrf.ChannelErrorResponse <- fmt.Errorf("not action 'delete', task ID '%v' not found", msg.handlerID)
 
 					continue
 				}
 
 				delete(thrf.ListHandler[msg.handlerIP], msg.handlerID)
 
-				msg.channelErrMsg <- nil
+				thrf.ChannelErrorResponse <- nil
 			}
 		}
 	}()
@@ -110,49 +111,37 @@ func NewListHandlerReceivingFile() *TypeHandlerReceivingFile {
 
 //SetHendlerReceivingFile добавляет новый канал взаимодействия
 func (thrf *TypeHandlerReceivingFile) SetHendlerReceivingFile(ip, id string, channel chan MsgChannelProcessorReceivingFiles) error {
-	chanResErr := make(chan error)
-	defer close(chanResErr)
-
 	thrf.ChannelCommunicationReq <- typeChannelCommunication{
 		actionType:           "set",
 		handlerIP:            ip,
 		handlerID:            id,
-		channelErrMsg:        chanResErr,
 		channelCommunication: channel,
 	}
 
-	return <-chanResErr
+	return <-thrf.ChannelErrorResponse
 }
 
 //SendChunkReceivingData отправляет через канал части принятого файла или информации
 func (thrf *TypeHandlerReceivingFile) SendChunkReceivingData(ip, id string, msgSend MsgChannelProcessorReceivingFiles) error {
-	chanResErr := make(chan error)
-	defer close(chanResErr)
-
 	thrf.ChannelCommunicationReq <- typeChannelCommunication{
 		actionType:             "send data",
 		handlerIP:              ip,
 		handlerID:              id,
 		msgForChunnelProcessor: msgSend,
-		channelErrMsg:          chanResErr,
 	}
 
-	return <-chanResErr
+	return <-thrf.ChannelErrorResponse
 }
 
 //DelHendlerReceivingFile закрывает и удаляет канал по ID задачи с ний связанной
 func (thrf *TypeHandlerReceivingFile) DelHendlerReceivingFile(ip, id string) error {
-	chanResErr := make(chan error)
-	defer close(chanResErr)
-
 	thrf.ChannelCommunicationReq <- typeChannelCommunication{
-		actionType:    "del",
-		handlerIP:     ip,
-		handlerID:     id,
-		channelErrMsg: chanResErr,
+		actionType: "del",
+		handlerIP:  ip,
+		handlerID:  id,
 	}
 
-	return <-chanResErr
+	return <-thrf.ChannelErrorResponse
 }
 
 type messageFromCore string

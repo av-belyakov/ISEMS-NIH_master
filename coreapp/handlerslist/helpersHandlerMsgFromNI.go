@@ -89,7 +89,6 @@ func sendChanStatusSourceForAPI(chanToAPI chan<- *configure.MsgBetweenCoreAndAPI
 			SourceList: sl,
 		},
 	}
-
 	msg.MsgType = "information"
 	msg.MsgSection = "source control"
 	msg.MsgInstruction = "change status source"

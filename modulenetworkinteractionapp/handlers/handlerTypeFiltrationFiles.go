@@ -39,6 +39,8 @@ func HandlerMessagesReceivedFilesFiltering(
 				continue
 			}
 
+			//fmt.Printf("func '%v', found files information: '%v'\n", funcName, resMsg.Info.FoundFilesInformation)
+
 			//обновляем информацию о выполняемой задаче в памяти приложения
 			smt.UpdateTaskFiltrationAllParameters(resMsg.Info.TaskID, &configure.FiltrationTaskParameters{
 				Status:                          resMsg.Info.TaskStatus,

@@ -125,7 +125,7 @@ func (sws SettingsWssServer) ServerWss(w http.ResponseWriter, req *http.Request)
 		EnableCompression: false,
 		//ReadBufferSize:    1024,
 		//WriteBufferSize:   100000000,
-		HandshakeTimeout: (time.Duration(1) * time.Second),
+		HandshakeTimeout: (time.Duration(3) * time.Second),
 	}
 
 	c, err := upgrader.Upgrade(w, req, nil)

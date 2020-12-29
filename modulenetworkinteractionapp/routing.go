@@ -118,7 +118,7 @@ func RouteCoreRequest(
 				break
 			}
 
-			sendMsg := configure.MsgBetweenCoreAndNI{
+			chanInCore <- &configure.MsgBetweenCoreAndNI{
 				Section: "source control",
 				Command: "change connection status source",
 				AdvancedOptions: configure.SettingsChangeConnectionStatusSource{
@@ -126,8 +126,6 @@ func RouteCoreRequest(
 					Status: action,
 				},
 			}
-
-			chanInCore <- &sendMsg
 
 			//остановить скачивание файлов если соединение с источником было разорвано
 			if action == "disconnect" {
@@ -175,7 +173,7 @@ func RouteCoreRequest(
 				break
 			}
 
-			sendMsg := configure.MsgBetweenCoreAndNI{
+			chanInCore <- &configure.MsgBetweenCoreAndNI{
 				Section: "source control",
 				Command: "change connection status source",
 				AdvancedOptions: configure.SettingsChangeConnectionStatusSource{
@@ -183,8 +181,6 @@ func RouteCoreRequest(
 					Status: action,
 				},
 			}
-
-			chanInCore <- &sendMsg
 
 			//остановить скачивание файлов если соединение с источником было разорвано
 			if action == "disconnect" {
