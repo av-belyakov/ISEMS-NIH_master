@@ -62,9 +62,10 @@ type typeChanResSetting struct {
 
 //NewRepositorySMAPI создание нового репозитория
 func NewRepositorySMAPI() *StoringMemoryAPI {
-	smapi := StoringMemoryAPI{}
-	smapi.clientSettings = map[string]*ClientSettings{}
-	smapi.chanReqSetting = make(chan typeChanReqSetting)
+	smapi := StoringMemoryAPI{
+		clientSettings: map[string]*ClientSettings{},
+		chanReqSetting: make(chan typeChanReqSetting),
+	}
 
 	go func() {
 		for msg := range smapi.chanReqSetting {

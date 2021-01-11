@@ -32,7 +32,7 @@
     },
     "serverHTTPS_comments": "параметры для запуска сервера к которому подключаются модули ISEMS-NIH_slave",
     "pathRootCA": "keys/rootCA.pem",
-    "timeReconnectClient": 10,
+    "timeReconnectClient": 3,
     "timeReconnectClient_comments": "интервал времени для выполнения попыток соединения с модулями ISEMS-NIH_slave",
     "connectionDB": {
         "socket": false,

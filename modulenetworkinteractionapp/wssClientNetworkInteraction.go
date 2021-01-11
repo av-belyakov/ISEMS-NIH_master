@@ -32,6 +32,11 @@ type clientSetting struct {
 	CwtReq         chan<- configure.MsgWsTransmission
 }
 
+type handlerRequestParameters struct {
+	id, port  int
+	ip, token string
+}
+
 func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request) error {
 	funcName := "redirectPolicyFunc"
 
@@ -52,7 +57,7 @@ func (cs clientSetting) redirectPolicyFunc(req *http.Request, rl []*http.Request
 		c, res, err := d.Dial("wss://"+cs.IP+":"+cs.Port+"/wss", header)
 		if err != nil {
 			cs.saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-				Description: fmt.Sprintf("Error Dial: '%v', status code: '%v' (ip %v)", err, res.StatusCode, cs.IP),
+				Description: fmt.Sprintf("Error Dial: '%v' (ip %v)", err, cs.IP),
 				FuncName:    funcName,
 			})
 
@@ -141,6 +146,93 @@ func WssClientNetworkInteraction(
 		},
 	}
 
+	isCycleProcessing := "non-blocking"
+	cycleProcessing := func(l *map[int]configure.SourceSetting) {
+		var count, countGoroutine int
+		chanDone := make(chan struct{})
+
+		handlerRequest := func(chanDone chan<- struct{}, hrp *handlerRequestParameters) {
+			fmt.Printf("func 'cycleProcessing', source id: '%v' (time %v)\n", hrp.id, time.Now().String())
+
+			port := strconv.Itoa(hrp.port)
+
+			cs := clientSetting{
+				ID:             hrp.id,
+				IP:             hrp.ip,
+				Port:           port,
+				InfoSourceList: isl,
+				TLSConf:        conf,
+				saveMessageApp: saveMessageApp,
+				COut:           cOut,
+				CwtReq:         cwt,
+			}
+			client.CheckRedirect = cs.redirectPolicyFunc
+
+			req, err := http.NewRequest("GET", "https://"+hrp.ip+":"+port+"/", nil)
+			if err != nil {
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					TypeMessage: "info",
+					Description: fmt.Sprint(err),
+					FuncName:    funcName,
+				})
+
+				chanDone <- struct{}{}
+
+				return
+			}
+
+			/*
+
+				вроде сделал параллельные запросы, надо поткстить на боевом сервере
+
+			*/
+
+			req.Header.Add("Content-Type", "text/plain;charset=utf-8")
+			req.Header.Add("Accept-Language", "en")
+			req.Header.Add("User-Agent", "Mozilla/5.0 (ISEMS-NIH_slave)")
+			req.Header.Add("Token", hrp.token)
+
+			_, err = client.Do(req)
+			if err != nil {
+				strErr := fmt.Sprint(err)
+				if !strings.Contains(strErr, "stop redirect") {
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						TypeMessage: "info",
+						Description: strErr,
+						FuncName:    funcName,
+					})
+				}
+			}
+
+			chanDone <- struct{}{}
+		}
+
+		for id, s := range *l {
+			if s.AsServer && !s.ConnectionStatus {
+				go handlerRequest(chanDone, &handlerRequestParameters{
+					id:    id,
+					ip:    s.IP,
+					port:  s.Settings.IfAsServerThenPort,
+					token: s.Token,
+				})
+
+				countGoroutine++
+			}
+		}
+
+		for {
+			<-chanDone
+
+			count++
+
+			if count == countGoroutine {
+				break
+			}
+		}
+
+		isCycleProcessing = "non-blocking"
+	}
+
 	//цикличные попытки установления соединения в режиме клиент
 	ticker := time.NewTicker(time.Duration(appc.TimeReconnectClient) * time.Second)
 	for range ticker.C {
@@ -149,52 +241,12 @@ func WssClientNetworkInteraction(
 			continue
 		}
 
-		for id, s := range *sl {
-			if s.AsServer && !s.ConnectionStatus {
-				port := strconv.Itoa(s.Settings.IfAsServerThenPort)
-
-				cs := clientSetting{
-					ID:             id,
-					IP:             s.IP,
-					Port:           port,
-					InfoSourceList: isl,
-					TLSConf:        conf,
-					saveMessageApp: saveMessageApp,
-					COut:           cOut,
-					CwtReq:         cwt,
-				}
-				client.CheckRedirect = cs.redirectPolicyFunc
-
-				req, err := http.NewRequest("GET", "https://"+cs.IP+":"+cs.Port+"/", nil)
-				if err != nil {
-					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						TypeMessage: "info",
-						Description: fmt.Sprint(err),
-						FuncName:    funcName,
-					})
-
-					continue
-				}
-
-				req.Header.Add("Content-Type", "text/plain;charset=utf-8")
-				req.Header.Add("Accept-Language", "en")
-				req.Header.Add("User-Agent", "Mozilla/5.0 (ISEMS-NIH_slave)")
-				req.Header.Add("Token", s.Token)
-
-				_, err = client.Do(req)
-				if err != nil {
-					strErr := fmt.Sprint(err)
-					if !strings.Contains(strErr, "stop redirect") {
-						saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-							TypeMessage: "info",
-							Description: strErr,
-							FuncName:    funcName,
-						})
-					}
-
-					continue
-				}
-			}
+		if isCycleProcessing == "blocking" {
+			continue
 		}
+
+		isCycleProcessing = "blocking"
+
+		go cycleProcessing(sl)
 	}
 }

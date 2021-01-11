@@ -333,6 +333,88 @@ func (isl *InformationSourcesList) GetSourceSetting(id int) (*sourceSetting, boo
 	return resMsg.setting, true
 }
 
+func testNextTickAndCycle() bool {
+
+	fmt.Println("func 'testNextTickAndCycle', START...")
+
+	list := make([]int, 15, 15)
+	isCycleProcessing := "non-blocking"
+
+	var count, countGoroutine int
+	chanDone := make(chan struct{})
+
+	handlerRequest := func(chanDone chan<- struct{}, key int) {
+		fmt.Printf("func 'handlerRequest', START for key '%v'...\n", key)
+
+		chanDone <- struct{}{}
+	}
+
+	cycleProcessing := func(icp *string, l *[]int) {
+		fmt.Println("func 'isCycleProcessing', START")
+
+		if len(*l) == 0 {
+
+			fmt.Println("func 'isCycleProcessing', STOP, list = 0")
+
+			return
+		}
+
+		isCycleProcessing = "blocking"
+
+		//time.Sleep(2000 * time.Millisecond)
+
+		var i int
+
+		for k := range *l {
+			if k < 3 {
+				fmt.Printf("func 'isCycleProcessing', key: '%v'\n", k)
+			}
+
+			i = i * k
+
+			go handlerRequest(chanDone, k)
+
+			countGoroutine++
+		}
+
+		for {
+			<-chanDone
+
+			count++
+
+			if count == countGoroutine {
+				break
+			}
+		}
+
+		fmt.Println("func 'isCycleProcessing', STOP")
+
+		isCycleProcessing = "non-blocking"
+	}
+
+	num := 0
+
+	ticker := time.NewTicker(time.Duration(1) * time.Second)
+	for range ticker.C {
+		if isCycleProcessing == "blocking" {
+
+			fmt.Printf("ticker STOP, ---- num: %v\n", num)
+
+			continue
+		}
+
+		if num == 3 {
+			break
+		}
+
+		go cycleProcessing(&isCycleProcessing, &list)
+
+		num++
+	}
+
+	return true
+}
+
 var _ = Describe("Testcycle", func() {
 
 	nrISL := NewRepositoryISL()
@@ -385,6 +467,12 @@ var _ = Describe("Testcycle", func() {
 
 			Expect(ok).Should(BeTrue())
 			Expect(ss.IP).Should(Equal("45.10.23.6"))
+		})
+	})
+
+	Context("Тест 4: проверяем цикл с блокировкой", func() {
+		It("have to all OK", func() {
+			Expect(testNextTickAndCycle()).Should(BeTrue())
 		})
 	})
 })
