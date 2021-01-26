@@ -272,14 +272,19 @@ func getSourceListToStoreDB(trustedSoures []int, l *[]configure.DetailedListSour
 
 //performActionSelectedSources выполняет действия только с заданными источниками
 func performActionSelectedSources(
+	cwt chan<- configure.MsgWsTransmission,
 	isl *configure.InformationSourcesList,
 	qts *configure.QueueTaskStorage,
 	l *[]configure.DetailedListSources,
 	clientName string,
 	mcpf int8) (*[]configure.ActionTypeListSources, *[]int, error) {
 
+	//fmt.Println("func 'performActionSelectedSources', START...")
+
 	listTrustedSources, listInvalidSource := validateUserData(l, mcpf)
 	listActionIsExecuted := make([]configure.ActionTypeListSources, 0, len(*l))
+
+	//fmt.Printf("func 'performActionSelectedSources', listTrustedSources: '%v', listInvalidSource: '%v'\n", listTrustedSources, listInvalidSource)
 
 	if len(*listTrustedSources) == 0 {
 		return &listActionIsExecuted, &listInvalidSource, errors.New("parameters of all sources passed by the user have incorrect values, the action on any source will not be performed")
@@ -364,6 +369,9 @@ func performActionSelectedSources(
 		}
 
 		if actionType == "update" || actionType == "delete" {
+
+			//fmt.Println("func 'performActionSelectedSources', actionType = 'update' or 'delete'")
+
 			//проверяем имеет ли право клиент делать какие либо изменения с информацией по источнику
 			if (clientName != sourceInfo.ClientName) && (clientName != "root token") {
 				aie.IsSuccess = false
@@ -379,8 +387,13 @@ func performActionSelectedSources(
 				continue
 			}
 
+			//fmt.Println("func 'performActionSelectedSources', check processing anybody task___")
+
 			//проверяем ожидает или выполняется на источнике какая либо задача
 			if listSourceTask, ok := qts.GetAllTaskQueueTaskStorage(ts.SourceID); ok {
+
+				//fmt.Printf("func 'performActionSelectedSources', listSourceTask: '%v'\n", listSourceTask)
+
 				if len(listSourceTask) > 0 {
 					aie.IsSuccess = false
 					aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
@@ -403,15 +416,14 @@ func performActionSelectedSources(
 			changeAsServer := (sourceInfo.AsServer != ts.AsServer)
 			changeEnTelemetry := (sourceInfo.Settings.EnableTelemetry != ts.Settings.EnableTelemetry)
 
-			//проверяем параметры подключения
-			if changeToken || changeIP || changeAsServer || changeEnTelemetry {
-				//закрываем соединение и удаляем дискриптор
-				if cl, isExist := isl.GetLinkWebsocketConnect(sourceInfo.IP); isExist {
-					cl.Link.Close()
+			//fmt.Println("func 'performActionSelectedSources', actionType: 'update', check parameters connection")
+			//fmt.Printf("func 'performActionSelectedSources', changeToken: '%v', changeIP: '%v', changeAsServer: '%v', changeEnTelemetry: '%v'\n", changeToken, changeIP, changeAsServer, changeEnTelemetry)
 
-					isl.DelLinkWebsocketConnection(sourceInfo.IP)
-				}
-			}
+			/*
+				var informationSource *configure.SourceSetting
+				informationSource, _ = isl.GetSourceSetting(ts.SourceID)
+				fmt.Printf("func 'performActionSelectedSources', ___update, information about task (BEFORE): '%v'\n", informationSource)
+			*/
 
 			isl.AddSourceSettings(ts.SourceID, configure.SourceSetting{
 				ShortName:  ts.ShortName,
@@ -427,6 +439,32 @@ func performActionSelectedSources(
 					TypeAreaNetwork:           ts.Settings.TypeAreaNetwork,
 				},
 			})
+
+			/*
+				informationSource, _ = isl.GetSourceSetting(ts.SourceID)
+				fmt.Printf("func 'performActionSelectedSources', ___update, information about task (AFTER): '%v'\n", informationSource)
+			*/
+
+			if cl, isExist := isl.GetLinkWebsocketConnect(sourceInfo.IP); isExist {
+				if changeToken || changeIP || changeAsServer || changeEnTelemetry {
+					cl.Link.Close()
+
+					isl.DelLinkWebsocketConnection(sourceInfo.IP)
+				} else {
+					//отправляем источнику новые параметры (список директорий и тип сетевого канала)
+					_ = SendPing(sourceInfo.IP, ts.SourceID, isl, cwt)
+				}
+			}
+
+			//проверяем параметры подключения
+			/*if changeToken || changeIP || changeAsServer || changeEnTelemetry {
+				//закрываем соединение и удаляем дискриптор
+				if cl, isExist := isl.GetLinkWebsocketConnect(sourceInfo.IP); isExist {
+					cl.Link.Close()
+
+					isl.DelLinkWebsocketConnection(sourceInfo.IP)
+				}
+			}*/
 
 			aie.IsSuccess = true
 			aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
@@ -508,6 +546,7 @@ func performActionSelectedSources(
 			listActionIsExecuted = append(listActionIsExecuted, aie)
 		}
 	}
+
 	return &listActionIsExecuted, &listInvalidSource, nil
 }
 

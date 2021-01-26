@@ -233,9 +233,6 @@ func NewRepositoryQTS() *QueueTaskStorage {
 				msg.ChanRes <- msgRes
 
 			case "change task status":
-
-				fmt.Printf("func 'NewRepositoryQTS', List sourceID: '%v'\n", qts.StorageList)
-
 				if !checkTaskID(&qts, msg.SourceID, msg.TaskID) {
 					msgRes.ErrorDescription = fmt.Errorf("problem with ID %v not found, not correct sourceID or taskID, 'change task status'", msg.SourceID)
 

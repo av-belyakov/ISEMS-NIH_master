@@ -157,6 +157,9 @@ func HandlerMsgFromAPI(
 
 			//выполнить какие либо действия над источниками
 			if msgc.MsgInstruction == "performing an action" {
+
+				//fmt.Println("func 'handlerMsgFromAPI', type: Command, instruction: performing an action")
+
 				var scmo configure.SourceControlMsgOptions
 				if err := json.Unmarshal(msgJSON, &scmo); err != nil {
 					notifications.SendNotificationToClientAPI(outCoreChans.OutCoreChanAPI, nsErrMsg, msgc.ClientTaskID, msg.IDClientAPI)
@@ -169,6 +172,8 @@ func HandlerMsgFromAPI(
 				}
 
 				taskID := common.GetUniqIDFormatMD5(msg.IDClientAPI + "_" + msgc.ClientTaskID)
+
+				//fmt.Printf("func 'handlerMsgFromAPI', message: %v\n", scmo)
 
 				//добавляем новую задачу
 				hsm.SMT.AddStoringMemoryTask(taskID, configure.TaskDescription{

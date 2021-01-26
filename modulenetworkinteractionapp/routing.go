@@ -6,30 +6,8 @@ import (
 
 	"ISEMS-NIH_master/configure"
 	"ISEMS-NIH_master/modulenetworkinteractionapp/handlers"
-	"ISEMS-NIH_master/modulenetworkinteractionapp/processrequest"
 	"ISEMS-NIH_master/savemessageapp"
 )
-
-func sendPing(
-	sourceIP string,
-	sourceID int,
-	isl *configure.InformationSourcesList,
-	cwt chan<- configure.MsgWsTransmission) error {
-
-	ss, _ := isl.GetSourceSetting(sourceID)
-	formatJSON, err := processrequest.SendMsgPing(ss)
-	if err != nil {
-		return err
-	}
-
-	//отправляем источнику запрос типа Ping
-	cwt <- configure.MsgWsTransmission{
-		DestinationHost: sourceIP,
-		Data:            &formatJSON,
-	}
-
-	return nil
-}
 
 //sendNIStopTask сообщение NI module с целью остановить выполнение задачи
 // из-за разрыва соединения
@@ -133,7 +111,7 @@ func RouteCoreRequest(
 			}
 
 			if action == "connect" {
-				err := sendPing(sourceIP, sourceID, isl, cwt)
+				err := handlers.SendPing(sourceIP, sourceID, isl, cwt)
 				if err != nil {
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),
@@ -188,7 +166,7 @@ func RouteCoreRequest(
 			}
 
 			if action == "connect" {
-				err := sendPing(sourceIP, sourceID, isl, cwt)
+				err := handlers.SendPing(sourceIP, sourceID, isl, cwt)
 				if err != nil {
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						Description: fmt.Sprint(err),

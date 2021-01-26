@@ -168,6 +168,9 @@ func HandlerMsgFromCore(
 		}
 
 		if msg.Command == "perform actions on sources" {
+
+			//fmt.Println("func 'handlerMsgFromCore', section: 'source control', command: 'perform actions on sources'")
+
 			ado, ok := msg.AdvancedOptions.(configure.SourceControlMsgOptions)
 			if !ok {
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
@@ -184,6 +187,8 @@ func HandlerMsgFromCore(
 
 				return
 			}
+
+			//fmt.Printf("func 'handlerMsgFromCore', msg options: %v\n", ado)
 
 			//проверяем прислал ли пользователь данные по источникам
 			if len(ado.MsgOptions.SourceList) == 0 {
@@ -207,8 +212,11 @@ func HandlerMsgFromCore(
 				return
 			}
 
-			listActionType, listInvalidSource, err := performActionSelectedSources(isl, qts, &ado.MsgOptions.SourceList, msg.ClientName, mcpf)
+			listActionType, listInvalidSource, err := performActionSelectedSources(cwt, isl, qts, &ado.MsgOptions.SourceList, msg.ClientName, mcpf)
 			if err != nil {
+
+				//fmt.Printf("func 'handlerMsgFromCore', ERROR: '%v'\n", err)
+
 				strSourceID := createStringFromSourceList(*listInvalidSource)
 				strSource := "источником"
 
@@ -233,13 +241,18 @@ func HandlerMsgFromCore(
 					Section: "monitoring task performance",
 					Command: "complete task",
 				}
+
 				return
 			}
+
+			//fmt.Printf("func 'handlerMsgFromCore', listActionType: '%v', listInvalidSource: '%v'\n", listActionType, listInvalidSource)
 
 			// получаем ID источников по которым нужно обновить информацию
 			// в БД, к ним относятся источники для которых выполненно действие
 			// la - add, lu - update, ld - delete
 			la, lu, ld := getSourceListsForWriteToDB(&ado.MsgOptions.SourceList, listActionType, msg.ClientName, mcpf)
+
+			//fmt.Printf("func 'handlerMsgFromCore', list source add: '%v', list source update: '%v', list source delete: '%v'\n", la, lu, ld)
 
 			//актуализируем информацию в БД
 			if len(*la) > 0 {

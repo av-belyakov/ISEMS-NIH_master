@@ -123,9 +123,6 @@ func HandlerAutomaticDownloadFiles(
 
 		//отмечаем задачу, в списке очередей, как завершенную и предотвращаем запуск автоматического скачивания файлов
 		if err := qts.ChangeTaskStatusQueueTask(taskInfo.TaskParameter.FiltrationTask.ID, taskID, "complete"); err != nil {
-
-			fmt.Printf("func '%v', 111 ERROR: '%v'\n", funcName, err)
-
 			return err
 		}
 

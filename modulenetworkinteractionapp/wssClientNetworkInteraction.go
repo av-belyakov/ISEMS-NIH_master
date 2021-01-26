@@ -137,23 +137,12 @@ func WssClientNetworkInteraction(
 	}
 	conf.BuildNameToCertificate()
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			MaxIdleConns:       0,
-			IdleConnTimeout:    10 * time.Second,
-			DisableCompression: true,
-			TLSClientConfig:    conf,
-		},
-	}
-
 	isCycleProcessing := "non-blocking"
 	cycleProcessing := func(l *map[int]configure.SourceSetting) {
-		var count, countGoroutine int
+		var countGoroutine int
 		chanDone := make(chan struct{})
 
 		handlerRequest := func(chanDone chan<- struct{}, hrp *handlerRequestParameters) {
-			fmt.Printf("func 'cycleProcessing', source id: '%v' (time %v)\n", hrp.id, time.Now().String())
-
 			port := strconv.Itoa(hrp.port)
 
 			cs := clientSetting{
@@ -166,7 +155,16 @@ func WssClientNetworkInteraction(
 				COut:           cOut,
 				CwtReq:         cwt,
 			}
-			client.CheckRedirect = cs.redirectPolicyFunc
+
+			client := &http.Client{
+				Transport: &http.Transport{
+					MaxIdleConns:       0,
+					IdleConnTimeout:    10 * time.Second,
+					DisableCompression: true,
+					TLSClientConfig:    conf,
+				},
+				CheckRedirect: cs.redirectPolicyFunc,
+			}
 
 			req, err := http.NewRequest("GET", "https://"+hrp.ip+":"+port+"/", nil)
 			if err != nil {
@@ -180,12 +178,6 @@ func WssClientNetworkInteraction(
 
 				return
 			}
-
-			/*
-
-				вроде сделал параллельные запросы, надо поткстить на боевом сервере
-
-			*/
 
 			req.Header.Add("Content-Type", "text/plain;charset=utf-8")
 			req.Header.Add("Accept-Language", "en")
@@ -223,9 +215,9 @@ func WssClientNetworkInteraction(
 		for {
 			<-chanDone
 
-			count++
+			countGoroutine--
 
-			if count == countGoroutine {
+			if countGoroutine == 0 {
 				break
 			}
 		}

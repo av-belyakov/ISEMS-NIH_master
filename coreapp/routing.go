@@ -166,8 +166,6 @@ func Routing(trc TypeRoutingCore) {
 			if qti.TaskType == "download control" {
 				emt.Section = "download control"
 
-				fmt.Print("func 'routing Core modules', add download control QueryStoringMemory --> StoringMemoryTasks")
-
 				npfp := directorypathshaper.NecessaryParametersFiltrationProblem{
 					SourceID:         msg.SourceID,
 					SourceShortName:  si.ShortName,
@@ -207,8 +205,6 @@ func Routing(trc TypeRoutingCore) {
 					continue
 				}
 
-				fmt.Println("func 'routing Core modules', add task to StoringMemoryTask")
-
 				//добавляем задачу в 'StoringMemoryTask'
 				trc.SMT.AddStoringMemoryTask(msg.TaskID, configure.TaskDescription{
 					ClientID:                        qti.IDClientAPI,
@@ -244,9 +240,6 @@ func Routing(trc TypeRoutingCore) {
 						TimeDownload: v.TimeDownload,
 					}
 				}
-
-				fmt.Println("func 'routing Core modules', add list file to DOWNLOAD")
-				fmt.Printf("func 'routing Core modules', all count list files: '%v'\n", len(clf))
 
 				//добавляем список файлов которые необходимо выгрузить
 				trc.SMT.UpdateListFilesDetailedInformation(msg.TaskID, clf)
