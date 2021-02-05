@@ -230,6 +230,18 @@ func NewRepositoryISL() *InformationSourcesList {
 
 				msg.chanRes <- chanResSetting{setting: &SourceSetting{AccessIsAllowed: aia}}
 
+			case "get link ws connection":
+				conn, ok := isl.sourcesListConnection[msg.setting.IP]
+				if !ok {
+					msg.chanRes <- chanResSetting{
+						err: fmt.Errorf("source with IP %v not found", msg.setting.IP),
+					}
+
+					continue
+				}
+
+				msg.chanRes <- chanResSetting{additionalInformation: &conn}
+
 			case "set access is allowed":
 				if s, ok := isl.sourcesListSetting[msg.id]; ok {
 					s.AccessIsAllowed = true
@@ -448,11 +460,6 @@ func (wssc *WssConnection) SendWsMessage(t int, v []byte) error {
 	return wssc.Link.WriteMessage(t, v)
 }
 
-//GetSourcesListConnection возвращает список всех соединений
-func (isl *InformationSourcesList) GetSourcesListConnection() map[string]WssConnection {
-	return isl.sourcesListConnection
-}
-
 //AddLinkWebsocketConnect добавляет линк соединения по websocket
 func (isl *InformationSourcesList) AddLinkWebsocketConnect(ip string, lwsc *websocket.Conn) {
 	chanRes := make(chan chanResSetting)
@@ -484,8 +491,23 @@ func (isl *InformationSourcesList) DelLinkWebsocketConnection(ip string) {
 
 //GetLinkWebsocketConnect возвращает линк соединения по websocket
 func (isl *InformationSourcesList) GetLinkWebsocketConnect(ip string) (*WssConnection, bool) {
-	if conn, ok := isl.sourcesListConnection[ip]; ok {
-		return &conn, true
+	chanRes := make(chan chanResSetting)
+	defer close(chanRes)
+
+	isl.chanReq <- chanReqSetting{
+		actionType: "get link ws connection",
+		setting:    SourceSetting{IP: ip},
+		chanRes:    chanRes,
+	}
+
+	resMsg := <-chanRes
+
+	if resMsg.err != nil {
+		return nil, false
+	}
+
+	if conn, ok := resMsg.additionalInformation.(*WssConnection); ok {
+		return conn, true
 	}
 
 	return nil, false

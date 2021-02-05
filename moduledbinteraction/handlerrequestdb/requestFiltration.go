@@ -177,7 +177,7 @@ func UpdateParametersFiltrationTask(
 				}}})
 		}
 
-		return fmt.Errorf("task with ID '%v', (%v)", req.TaskID, funcName)
+		return fmt.Errorf("task with ID '%v', %v (%v)", req.TaskID, fmt.Sprint(err), funcName)
 	}
 
 	if (ts.Status == "execute") && ((time.Now().Unix() - ts.TimeLastUpdate) < 31) {
@@ -186,7 +186,7 @@ func UpdateParametersFiltrationTask(
 
 	taskInfo, ok := smt.GetStoringMemoryTask(req.TaskID)
 	if !ok {
-		return fmt.Errorf("task with ID '%v', (%v)", req.TaskID, funcName)
+		return fmt.Errorf("task with ID '%v' in StoringMemoryTask not found (%v)", req.TaskID, funcName)
 	}
 
 	ti := taskInfo.TaskParameter.FiltrationTask

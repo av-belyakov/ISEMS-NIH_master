@@ -269,40 +269,6 @@ type ResourceRecordDescriptionDNS struct {
 	TTL           int    `json:"ttl" bson:"ttl"`
 }
 
-/*
-{"rn": {"type": "string",
-                                            "title": "response name",
-                                            "description": "DNS name"
-                                           },
-
-                                     "rc": {"type": "integer",
-                                            "title": "return code.",
-                                            "description": "The status code returned by the DNS server (0=no problem, other=error)."
-                                           },
-
-                                     "rr": {"type": "array",
-                                            "title": "response record.",
-                                            "description": "A DNS record.",
-                                            "items": {"type": "object",
-                                                      "title": "DNS record.",
-                                                      "description": "A record returned by the DNS server.",
-                                                      "properties": {"a": {"type": "string",
-                                                                           "title": "address.",
-                                                                           "description": "The IP address corresponding to the DNS name."
-                                                                          },
-
-                                                                     "ttl": {"type": "integer",
-                                                                             "title": "TTL",
-                                                                             "description": "Time To Live (TTL); the number of seconds that the address/name correspondence is to be considered valid."
-                                                                            }
-		                                                    }
-                                                     }
-                                           },
-
-                                     "required": []
-                                    }
-*/
-
 //DetailedPacketsSSH детальное описание SSH пакета
 type DetailedPacketsSSH struct {
 }
