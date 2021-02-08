@@ -196,7 +196,7 @@ func handlerInformationSearchControlTypeSearchCommanInformation(
 	siatr.MsgOption.InstalledFilteringOption.DateTime.Start = siatr.MsgOption.InstalledFilteringOption.DateTime.Start / 1000
 	siatr.MsgOption.InstalledFilteringOption.DateTime.End = siatr.MsgOption.InstalledFilteringOption.DateTime.End / 1000
 
-	//добавляем информацию о задаче в кеширующем модуле
+	//добавляем информацию о задаче в кеширующий модуль
 	taskID, _, err := hsm.TSSQ.CreateNewSearchTask(clientID, &configure.SearchParameters{
 		SearchRequestIsGeneratedAutomatically: siatr.MsgOption.SearchRequestIsGeneratedAutomatically,
 		JustCountNumber:                       siatr.MsgOption.JustCountNumber,

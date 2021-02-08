@@ -31,6 +31,21 @@ func (qp *QueryParameters) InsertData(list []interface{}) (bool, error) {
 		return false, err
 	}
 
+	if qp.CollectionName != "task_list" {
+		return true, nil
+	}
+
+	if _, err := collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "task_id", Value: 1},
+			{Key: "filtering_option.date_time_interval.start", Value: 1},
+			{Key: "filtering_option.date_time_interval.end", Value: 1},
+			{Key: "detailed_information_on_filtering.time_interval_task_execution.start", Value: 1},
+		},
+	}); err != nil {
+		return false, err
+	}
+
 	return true, nil
 }
 
@@ -87,7 +102,7 @@ func (qp *QueryParameters) UpdateOneArrayFilters(filter, update interface{}, uo 
 //Find найти всю информацию по заданному элементу
 func (qp QueryParameters) Find(elem interface{}) (*mongo.Cursor, error) {
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
-	options := options.Find().SetSort(bson.D{{Key: "detailed_information_on_filtering.time_interval_task_execution.start", Value: -1}})
+	options := options.Find().SetAllowDiskUse(true).SetSort(bson.D{{Key: "detailed_information_on_filtering.time_interval_task_execution.start", Value: -1}})
 
 	return collection.Find(context.TODO(), elem, options)
 }
@@ -103,7 +118,7 @@ func (qp QueryParameters) FindOne(elem interface{}) *mongo.SingleResult {
 //FindAlltoCollection найти всю информацию в коллекции
 func (qp QueryParameters) FindAlltoCollection() (*mongo.Cursor, error) {
 	collection := qp.ConnectDB.Database(qp.NameDB).Collection(qp.CollectionName)
-	options := options.Find()
+	options := options.Find().SetAllowDiskUse(true)
 
 	return collection.Find(context.TODO(), bson.D{{}}, options)
 }
