@@ -87,7 +87,7 @@ func New() (*PathDirLocationLogFiles, error) {
 		}()
 
 		for msg := range pdllf.chanWriteMessage {
-			pdllf.writeMessgae(msg.typeLogMessage)
+			pdllf.writeMessage(msg.typeLogMessage)
 
 			fi, _ := pdllf.fileDescriptor[msg.typeLogMessage.TypeMessage].Stat()
 			if fi.Size() > pdllf.logFileSize {
@@ -131,7 +131,7 @@ func (pdllf *PathDirLocationLogFiles) LogMessage(tlm TypeLogMessage) {
 	}
 }
 
-func (pdllf *PathDirLocationLogFiles) writeMessgae(tlm *TypeLogMessage) {
+func (pdllf *PathDirLocationLogFiles) writeMessage(tlm *TypeLogMessage) {
 	var err error
 
 	timeNowString := time.Now().String()
