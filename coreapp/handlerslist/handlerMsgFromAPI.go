@@ -687,7 +687,7 @@ func HandlerMsgFromAPI(
 					}
 
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						Description: fmt.Sprintf("invalid task ID '%v' accepted%v", ribtid.MsgOption.RequestTaskID, funcName),
+						Description: fmt.Sprintf("invalid task ID '%v' accepted", ribtid.MsgOption.RequestTaskID),
 						FuncName:    funcName,
 					})
 
@@ -746,7 +746,7 @@ func HandlerMsgFromAPI(
 					}
 
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						Description: fmt.Sprintf("invalid task ID '%v' accepted%v", glffr.MsgOption.RequestTaskID, funcName),
+						Description: fmt.Sprintf("invalid task ID '%v' accepted", glffr.MsgOption.RequestTaskID),
 						FuncName:    funcName,
 					})
 
@@ -994,6 +994,7 @@ func HandlerMsgFromAPI(
 				}
 			}
 
+			//получить общую аналитическую информацию о задаче
 			if msgc.MsgInstruction == "get common analytics information about task ID" {
 				var caiatr configure.CommonAnalyticsInformationAboutTaskRequest
 
@@ -1034,7 +1035,7 @@ func HandlerMsgFromAPI(
 					}
 
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						Description: fmt.Sprintf("invalid task ID '%v' accepted%v", caiatr.MsgOption.RequestTaskID, funcName),
+						Description: fmt.Sprintf("invalid task ID '%v' accepted", caiatr.MsgOption.RequestTaskID),
 						FuncName:    funcName,
 					})
 
