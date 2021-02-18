@@ -2,9 +2,11 @@ package mytestpackages
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"path"
 
@@ -17,7 +19,7 @@ import (
 
 var _ = Describe("PacketDecoder", func() {
 	var file *os.File
-	fileName := "1502870565_2017_08_16____11_02_45_283.tdp"
+	fileName := "test.pcap"
 	filePath := "/home/miastr/tmp"
 
 	file, err := os.Open(path.Join(filePath, fileName))
@@ -81,30 +83,32 @@ var _ = Describe("PacketDecoder", func() {
 			var tcp layers.TCP
 			var udp layers.UDP
 			var dns layers.DNS
+			var ntp layers.NTP
+			var tls layers.TLS
 			decoded := []gopacket.LayerType{}
-			parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4, &ip6, &tcp, &udp, &dns)
-			/*err = parser.DecodeLayers(data, &decoded)
-			Expect(err).ShouldNot(HaveOccurred())
+			parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4, &ip6, &tcp, &udp, &dns, &ntp, &tls)
 
-			for _, layerType := range decoded {
-				fmt.Println(layerType)
+			/*listForEach := func(list []interface{}) string {
+				var result string
 
-				switch layerType {
-				case layers.LayerTypeIPv6:
-					fmt.Printf("    IP6 src:'%v', dst:'%v'\n", ip6.SrcIP, ip6.DstIP)
-				case layers.LayerTypeIPv4:
-					fmt.Printf("    IP4 src:'%v', dst:'%v'\n", ip4.SrcIP, ip4.DstIP)
-				case layers.LayerTypeTCP:
-					fmt.Printf("    TCP src port:'%v', dst port:'%v'\n", tcp.SrcPort, tcp.DstPort)
-					fmt.Println("    Flags:")
-					fmt.Printf("    	FIN: '%v'\n", tcp.FIN)
-					fmt.Printf("    	SYN: '%v'\n", tcp.SYN)
-					fmt.Printf("    	RST: '%v'\n", tcp.RST)
-					fmt.Printf("    	PSH: '%v'\n", tcp.PSH)
-					fmt.Printf("    	ACK: '%v'\n", tcp.ACK)
-					fmt.Printf("    	URG: '%v'\n", tcp.URG)
+				for _, l := range list {
+					switch element := l.(type) {
+					case layers.DNSQuestion:
+						result += fmt.Sprintf(" %v ", element.Name)
+					case layers.DNSResourceRecord:
+						result += fmt.Sprintf(" %v ", element.Name)
+					}
 				}
+
+				return result
 			}*/
+
+			boolToInt8 := func(v bool) int8 {
+				if v {
+					return 1
+				}
+				return 0
+			}
 
 			for {
 				data, ci, err := r.ReadPacketData()
@@ -114,50 +118,70 @@ var _ = Describe("PacketDecoder", func() {
 					}
 				}
 
-				_, err = writer.WriteString(fmt.Sprintf("reading packets length: %v\n", ci.CaptureLength))
+				_, err = writer.WriteString(fmt.Sprintf("timestamp: %v,reading packets length: %v\n", ci.Timestamp, ci.CaptureLength))
 				err = parser.DecodeLayers(data, &decoded)
 				for _, layerType := range decoded {
-					fmt.Println(layerType)
+					//fmt.Println(layerType)
 
 					switch layerType {
 					case layers.LayerTypeIPv6:
-						//fmt.Printf("    IP6 src:'%v', dst:'%v'\n", ip6.SrcIP, ip6.DstIP)
 						_, err = writer.WriteString(fmt.Sprintf("    IP6 src:'%v', dst:'%v'\n", ip6.SrcIP, ip6.DstIP))
 					case layers.LayerTypeIPv4:
-						//fmt.Printf("    IP4 src:'%v', dst:'%v'\n", ip4.SrcIP, ip4.DstIP)
 						_, err = writer.WriteString(fmt.Sprintf("    IP4 src:'%v', dst:'%v'\n", ip4.SrcIP, ip4.DstIP))
 					case layers.LayerTypeTCP:
-						/*fmt.Printf("    TCP src port:'%v', dst port:'%v'\n", tcp.SrcPort, tcp.DstPort)
-						fmt.Println("    Flags:")
-						fmt.Printf("    	FIN: '%v'\n", tcp.FIN)
-						fmt.Printf("    	SYN: '%v'\n", tcp.SYN)
-						fmt.Printf("    	RST: '%v'\n", tcp.RST)
-						fmt.Printf("    	PSH: '%v'\n", tcp.PSH)
-						fmt.Printf("    	ACK: '%v'\n", tcp.ACK)
-						fmt.Printf("    	URG: '%v'\n", tcp.URG)*/
 						_, err = writer.WriteString(fmt.Sprintf("    TCP src port:'%v', dst port:'%v'\n", tcp.SrcPort, tcp.DstPort))
-						_, err = writer.WriteString(fmt.Sprintf("    	Flags:\n	FIN: '%v'\n    	SYN: '%v'\n    	RST: '%v'\n    	PSH: '%v'\n    	ACK: '%v'\n    	URG: '%v'\n", tcp.FIN, tcp.SYN, tcp.RST, tcp.PSH, tcp.ACK, tcp.URG))
+
+						fin := boolToInt8(tcp.FIN)
+						syn := boolToInt8(tcp.SYN)
+						rst := boolToInt8(tcp.RST)
+						psh := boolToInt8(tcp.PSH)
+						ack := boolToInt8(tcp.ACK)
+						urg := boolToInt8(tcp.URG)
+
+						_, err = writer.WriteString(fmt.Sprintf("    	Flags	(FIN:'%v' SYN:'%v' RST:'%v' PSH:'%v' ACK:'%v' URG:'%v')\n", fin, syn, rst, psh, ack, urg))
+						if len(tcp.Payload) != 0 {
+							reader := bufio.NewReader(bytes.NewReader(tcp.Payload))
+
+							httpReq, err := http.ReadRequest(reader)
+							if err == nil {
+								proto := httpReq.Proto
+								method := httpReq.Method
+								//url := httpReq.URL //содержит целый тип, не только значение httpReq.RequestURI но и методы для парсинга запроса
+								host := httpReq.Host
+								reqURI := httpReq.RequestURI
+								userAgent := httpReq.Header.Get("User-Agent")
+								//_, err = writer.WriteString(fmt.Sprintf("%v\n", httpReq.Header))
+								_, err = writer.WriteString(fmt.Sprintf("    %v %v %v\n	Host:%v\n	User-Agent:%v\n", proto, method, reqURI, host, userAgent))
+							}
+
+							httpRes, err := http.ReadResponse(reader, httpReq)
+							if err == nil {
+								_, err = writer.WriteString(fmt.Sprintf("    StatusCode:%v\n", httpRes.Status))
+							}
+						}
 					case layers.LayerTypeUDP:
 						_, err = writer.WriteString(fmt.Sprintf("    UDP src port:'%v', dst port:'%v'\n", udp.SrcPort, udp.DstPort))
 					case layers.LayerTypeDNS:
-						_, err = writer.WriteString(fmt.Sprintf("    Questions:'%v', Answers:'%v'\n", dns.Questions, dns.Answers))
+						var resultDNSQuestions, resultDNSAnswers string
+
+						for _, e := range dns.Questions {
+							resultDNSQuestions += string(e.Name)
+						}
+
+						for _, e := range dns.Answers {
+							resultDNSAnswers += fmt.Sprintf("%v (%v), %v\n", string(e.Name), e.IP, e.CNAME)
+						}
+
+						_, err = writer.WriteString(fmt.Sprintf("    Questions:'%v', Answers:'%v'\n", resultDNSQuestions, resultDNSAnswers))
+						//						_, err = writer.WriteString(fmt.Sprintf("    Questions:'%v', Answers:'%v'\n", dns.Questions, dns.Answers))
+					case layers.LayerTypeNTP:
+						_, err = writer.WriteString(fmt.Sprintf("    Version:'%v'\n", ntp.Version))
+					case layers.LayerTypeTLS:
+						_, err = writer.WriteString(fmt.Sprintf("    %v\n", tls.Handshake))
 
 					}
 				}
 			}
-
-			/*
-				packet := gopacket.NewPacket(data, layers.LayerTypeIPv4, gopacket.Default)
-				//ip4 := packet.Layer(layers.LayerTypeIPv4)
-				//fmt.Println(ip4)
-
-				app := packet.ApplicationLayer()
-
-				fmt.Println(app)
-
-				/*for d, b := range layers {
-					fmt.Printf("num: %v, byte: %v\n", d, b)
-				}*/
 
 			Expect("ddd").ShouldNot(BeNil())
 		})
