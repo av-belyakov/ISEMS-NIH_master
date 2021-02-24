@@ -653,7 +653,7 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 	}
 
 	et := executionTasks{
-		filtrationTask: make([]string, 0, 5),
+		filtrationTask: make([]string, 0, 10),
 		downloadTask:   make([]string, 0, 1),
 	}
 
@@ -662,8 +662,13 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 	handlerTaskInfo := func(maxProcessFiltration, sourceID int, taskID string, taskInfo *QueueTaskInformation) {
 		//если соединение с источником было разорвано очищаем кеш
 		// и переводим задачу в режим ожидания
-		if (taskInfo.TaskStatus == "pause") && (taskInfo.TaskType == "download control") {
-			et.downloadTask = []string{}
+		/*if (taskInfo.TaskStatus == "pause") && (taskInfo.TaskType == "download control") {
+			et.downloadTask = make([]string, 0, 1)
+			qts.ChangeTaskStatusQueueTask(sourceID, taskID, "wait")
+		}*/
+
+		if (taskInfo.TaskType == "download control") && (!taskInfo.CheckingStatusItems.AvailabilityConnection) {
+			et.downloadTask = make([]string, 0, 1)
 			qts.ChangeTaskStatusQueueTask(sourceID, taskID, "wait")
 		}
 
@@ -674,7 +679,7 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 
 			//удаляем задачу из списка отслеживания кол-ва выполняемых задач
 			if taskInfo.TaskType == "download control" {
-				et.downloadTask = []string{}
+				et.downloadTask = make([]string, 0, 1)
 			}
 
 			for key, tID := range et.filtrationTask {
