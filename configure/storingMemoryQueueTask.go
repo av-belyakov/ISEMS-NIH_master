@@ -804,7 +804,7 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 					/*** Временное логирование событий ***/
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						TypeMessage: "info",
-						Description: fmt.Sprintf("TEST Message: ЗАПУСКАЕМ ВЫПОЛНЕНИЕ ЗАДАЧ ДЛЯ ИСТОЧНИКА '%d'", sourceID),
+						Description: fmt.Sprintf("TEST Message: ЗАПУСКАЕМ ВЫПОЛНЕНИЕ ЗАДАЧИ ПО ФИЛЬТРАЦИИ, ДЛЯ ИСТОЧНИКА '%d'", sourceID),
 						FuncName:    "NewRepositoryQTS",
 					})
 
@@ -861,11 +861,11 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 			}
 
 			/*** Временное логирование событий ***/
-			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+			/*saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				TypeMessage: "info",
 				Description: fmt.Sprintf("TEST Message: выполняем поиск информации о всех задачах выполняемых на источнике '%d'", sourceID),
 				FuncName:    "NewRepositoryQTS",
-			})
+			})*/
 
 			//получаем максимальное количество одновременно запущенных задач по фильтрации
 			sourceSettings, sourceIsExist := isl.GetSourceSetting(sourceID)
@@ -884,7 +884,7 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 			maxProcessFiltration := int(sourceSettings.Settings.MaxCountProcessFiltration)
 
 			for taskID, taskInfo := range tasks {
-				go handlerTaskInfo(maxProcessFiltration, sourceID, taskID, taskInfo)
+				handlerTaskInfo(maxProcessFiltration, sourceID, taskID, taskInfo)
 			}
 		}
 	}
@@ -898,11 +898,11 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 			if len(storageList) == 0 {
 
 				/*** Временное логирование событий ***/
-				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				/*saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					TypeMessage: "info",
 					Description: "TEST Message: отсутствует список источников",
 					FuncName:    "NewRepositoryQTS",
-				})
+				})*/
 
 				continue
 			}
