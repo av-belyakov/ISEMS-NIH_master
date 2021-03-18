@@ -118,6 +118,13 @@ func Routing(trc TypeRoutingCore) {
 			if qti.TaskType == "filtration control" {
 				emt.Section = "filtration control"
 
+				/*** Временное логирование событий ***/
+				trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					TypeMessage: "info",
+					Description: fmt.Sprintf("TEST Message: добавляем задачу в 'StoringMemoryTask', задача для источника '%d'", msg.SourceID),
+					FuncName:    "NewRepositoryQTS",
+				})
+
 				//добавляем задачу в 'StoringMemoryTask'
 				trc.SMT.AddStoringMemoryTask(msg.TaskID, configure.TaskDescription{
 					ClientID:                        qti.IDClientAPI,
@@ -139,6 +146,13 @@ func Routing(trc TypeRoutingCore) {
 						DownloadTask:                 &configure.DownloadTaskParameters{},
 						ListFilesDetailedInformation: map[string]*configure.DetailedFilesInformation{},
 					},
+				})
+
+				/*** Временное логирование событий ***/
+				trc.SaveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					TypeMessage: "info",
+					Description: fmt.Sprintf("TEST Message: сохраняем параметры задачи в БД, задача для источника '%d'", msg.SourceID),
+					FuncName:    "NewRepositoryQTS",
 				})
 
 				//сохраняем параметры задачи в БД
