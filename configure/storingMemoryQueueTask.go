@@ -845,6 +845,14 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 	searchForTasksPerform := func(storageList map[int]map[string]*QueueTaskInformation) {
 		for sourceID, tasks := range storageList {
 			if len(tasks) == 0 {
+
+				/*** Временное логирование событий ***/
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					TypeMessage: "info",
+					Description: fmt.Sprintf("TEST Message: никаких задач для источника с ID '%d' не обнаружено", sourceID),
+					FuncName:    "NewRepositoryQTS",
+				})
+
 				continue
 			}
 
@@ -882,6 +890,14 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 		for range ticker.C {
 			//весь список источников
 			storageList := qts.GetAllSourcesQueueTaskStorage()
+
+			/*** Временное логирование событий ***/
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				TypeMessage: "info",
+				Description: fmt.Sprintf("TEST Message: список источников storageList: '%v'", storageList),
+				FuncName:    "NewRepositoryQTS",
+			})
+
 			if len(storageList) == 0 {
 
 				/*** Временное логирование событий ***/
