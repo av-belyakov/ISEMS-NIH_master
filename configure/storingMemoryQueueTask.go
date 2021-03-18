@@ -261,6 +261,10 @@ func NewRepositoryQTS(saveMessageApp *savemessageapp.PathDirLocationLogFiles) *Q
 					msgRes.ErrorDescription = fmt.Errorf("deleting is not possible, the task with ID %v is in progress", msg.SourceID)
 				} else {
 					delete(qts.StorageList[msg.SourceID], msg.TaskID)
+
+					if len(qts.StorageList[msg.SourceID]) == 0 {
+						delete(qts.StorageList, msg.SourceID)
+					}
 				}
 
 				msg.ChanRes <- msgRes
@@ -890,13 +894,6 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 		for range ticker.C {
 			//весь список источников
 			storageList := qts.GetAllSourcesQueueTaskStorage()
-
-			/*** Временное логирование событий ***/
-			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-				TypeMessage: "info",
-				Description: fmt.Sprintf("TEST Message: список источников storageList: '%v'", storageList),
-				FuncName:    "NewRepositoryQTS",
-			})
 
 			if len(storageList) == 0 {
 
