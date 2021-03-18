@@ -42,7 +42,7 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	smt := configure.NewRepositorySMT()
 
 	//инициализация репозитория для хранения очередей задач
-	qts := configure.NewRepositoryQTS()
+	qts := configure.NewRepositoryQTS(saveMessageApp)
 
 	//инициализация репозитория для хранения информации по источникам
 	isl := configure.NewRepositoryISL()
@@ -60,7 +60,7 @@ func CoreApp(appConf *configure.AppConfig, linkConnection *configure.MongoDBConn
 	chanCheckTask := smt.CheckTimeUpdateStoringMemoryTask(55)
 
 	//инициализация отслеживания очередности выполнения задач
-	chanMsgInfoQueueTaskStorage := qts.CheckTimeQueueTaskStorage(isl, 1)
+	chanMsgInfoQueueTaskStorage := qts.CheckTimeQueueTaskStorage(isl, 1, saveMessageApp)
 
 	//инициализация модуля для взаимодействия с БД
 	chanOutCoreDB, chanInCoreDB := moduledbinteraction.MainDBInteraction(appConf.ConnectionDB.NameDB, linkConnection, smt, qts, tssq, saveMessageApp)

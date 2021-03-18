@@ -394,11 +394,7 @@ func (isl *InformationSourcesList) ChangeSourceConnectionStatus(id int, status b
 		chanRes:    chanRes,
 	}
 
-	if (<-chanRes).err != nil {
-		return false
-	}
-
-	return true
+	return (<-chanRes).err != nil
 }
 
 //GetAccessIsAllowed возвращает значение подтверждающее или отклоняющее права доступа источника
