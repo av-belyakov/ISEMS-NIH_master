@@ -113,11 +113,6 @@ func WssClientNetworkInteraction(
 
 	funcName := "WssClientNetworkInteraction"
 
-	saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-		Description: fmt.Sprintf("PathRootCA = '%s'\n", appc.PathRootCA),
-		FuncName:    funcName,
-	})
-
 	//читаем сертификат CA для того что бы наш клиент доверял сертификату переданному сервером
 	rootCA, err := ioutil.ReadFile(appc.PathRootCA)
 	if err != nil {
