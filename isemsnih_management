@@ -1,0 +1,64 @@
+#!/bin/bash
+
+echo '';
+echo -e ' _____  _____  _____ ___  ___ _____          _   _  _____  _   _ 
+|_   _|/  ___||  ___||  \/  |/  ___|        | \ | ||_   _|| | | |
+  | |  \ `--. | |__  | .  . |\ `--.  ______ |  \| |  | |  | |_| |
+  | |   `--. \|  __| | |\/| | `--. \|______|| . ` |  | |  |  _  |
+ _| |_ /\__/ /| |___ | |  | |/\__/ /        | |\  | _| |_ | | | |
+ \___/ \____/ \____/ \_|  |_/\____/         \_| \_/ \___/ \_| |_/';
+echo '';
+echo -e "	 \033[0;31m 1. \033[0m \033[0;32mЗапуск ISEMS-NIH-master\033[0m ";
+echo -e "	 \033[0;31m 2. \033[0m \033[0;32mПЕРЕЗАПУСК ISEMS-NIH-master\033[0m ";
+echo -e "	 \033[0;31m 3. \033[0m \033[1;31mОстанов ISEMS-NIH-master\033[0m ";
+echo -e "	 \033[0;31m 4. \033[0m \033[0;32mЗапуск ISEMS-NIH-slave\033[0m ";
+echo -e "	 \033[0;31m 5. \033[0m \033[0;32mПЕРЕЗАПУСК ISEMS-NIH-slave\033[0m ";
+echo -e "	 \033[0;31m 6. \033[0m \033[1;31mОстанов ISEMS-NIH-slave\033[0m ";
+echo -e "	 \033[0;31m 7. \033[0m \033[0;37mЗапуск ISEMS-NIH-master и ISEMS-NIH-slave\033[0m ";
+echo -e "	 \033[0;31m 8. \033[0m \033[1;31mОстанов ISEMS-NIH-master и ISEMS-NIH-slave\033[0m ";
+echo -e "	 \033[0;31m 9. \033[0m Список запущенных процессов ";
+echo -e "	 \033[0;31m 10. \033[0m Мониторинг запущенных процессов ";
+echo '';
+
+read NUM;
+
+case $NUM in
+  1) 
+    cd /opt/ISEMS-NIH_master_prod && pm2 start ISEMS-NIH_master -e /var/log/isems-nih_master_errors.log --name isemsnih_master_app;
+  ;;
+
+  2)
+    pm2 stop isemsnih_master_app && cd /opt/ISEMS-NIH_master_prod && pm2 start ISEMS-NIH_master -e /var/log/isems-nih_master_errors.log --name isemsnih_master_app;
+  ;;
+
+  3)
+    pm2 delete isemsnih_master_app;
+  ;;
+
+  4) 
+    cd /opt/ISEMS-NIH_slave_prod && pm2 start ISEMS-NIH_slave -e /var/log/isems-nih_slave_errors.log --name isemsnih_slave_app;
+  ;;
+
+  5)
+    pm2 stop isemsnih_slave_app && cd /opt/ISEMS-NIH_slave_prod && pm2 start ISEMS-NIH_slave -e /var/log/isems-nih_slave_errors.log --name isemsnih_slave_app;
+  ;;
+
+  6)
+    pm2 delete isemsnih_slave_app;
+  ;;
+
+  7)
+    cd /opt/ISEMS-NIH_master_prod && pm2 start ISEMS-NIH_master -e /var/log/isems-nih_master_errors.log --name isemsnih_master_app && cd /opt/ISEMS-NIH_slave_prod && pm2 start ISEMS-NIH_slave -e /var/log/isems-nih_slave_errors.log --name isemsnih_slave_app;
+  ;;
+
+  8)
+    pm2 stop isemsnih_master_app && pm2 stop isemsnih_slave_app;
+  ;;
+
+  9)
+    pm2 list
+  ;;
+  10)
+    pm2 monit
+  ;;
+esac
