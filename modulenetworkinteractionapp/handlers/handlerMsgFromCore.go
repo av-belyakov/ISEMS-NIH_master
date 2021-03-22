@@ -293,6 +293,9 @@ func HandlerMsgFromCore(
 				AdvancedOptions: listActionType,
 			}
 
+			fmt.Printf("func 'handlerMsgFromCore', MESSAGE to USER, list actions: %v\n", listActionType)
+			fmt.Println("___________________________________________________________________")
+
 			//снимаем отслеживание выполнения задачи
 			chanInCore <- &configure.MsgBetweenCoreAndNI{
 				TaskID:  msg.TaskID,
