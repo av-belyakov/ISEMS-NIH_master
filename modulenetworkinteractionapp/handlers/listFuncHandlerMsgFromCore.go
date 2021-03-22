@@ -305,40 +305,43 @@ func performActionSelectedSources(
 			}
 		}
 
-		aie := configure.ActionTypeListSources{
-			ID:         ts.SourceID,
-			Status:     "disconnect",
-			ActionType: actionType,
-		}
+		sourceInfo, ok = isl.GetSourceSetting(ts.SourceID)
+		if !ok && actionType == "add" {
+			isl.AddSourceSettings(ts.SourceID, configure.SourceSetting{
+				ShortName:  ts.ShortName,
+				IP:         ts.IP,
+				Token:      ts.Token,
+				ClientName: clientName,
+				AsServer:   ts.AsServer,
+				Settings: configure.InfoServiceSettings{
+					IfAsServerThenPort:        ts.Settings.IfAsServerThenPort,
+					EnableTelemetry:           ts.Settings.EnableTelemetry,
+					MaxCountProcessFiltration: ts.Settings.MaxCountProcessFiltration,
+					StorageFolders:            ts.Settings.StorageFolders,
+					TypeAreaNetwork:           ts.Settings.TypeAreaNetwork,
+				},
+			})
 
-		if sourceInfo, ok = isl.GetSourceSetting(ts.SourceID); !ok {
-			if actionType == "add" {
-				isl.AddSourceSettings(ts.SourceID, configure.SourceSetting{
-					ShortName:  ts.ShortName,
-					IP:         ts.IP,
-					Token:      ts.Token,
-					ClientName: clientName,
-					AsServer:   ts.AsServer,
-					Settings: configure.InfoServiceSettings{
-						IfAsServerThenPort:        ts.Settings.IfAsServerThenPort,
-						EnableTelemetry:           ts.Settings.EnableTelemetry,
-						MaxCountProcessFiltration: ts.Settings.MaxCountProcessFiltration,
-						StorageFolders:            ts.Settings.StorageFolders,
-						TypeAreaNetwork:           ts.Settings.TypeAreaNetwork,
-					},
-				})
-
-				aie.IsSuccess = true
-				aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
+			listActionIsExecuted = append(listActionIsExecuted, configure.ActionTypeListSources{
+				IsSuccess:  true,
+				ID:         ts.SourceID,
+				Status:     "disconnect",
+				ActionType: actionType,
+				MessageFailure: common.PatternUserMessage(&common.TypePatternUserMessage{
 					SourceID:   ts.SourceID,
 					TaskType:   "управление источниками",
 					TaskAction: "задача выполнена",
 					Message:    "источник был успешно добавлен в базу данных",
-				})
-			}
-			listActionIsExecuted = append(listActionIsExecuted, aie)
+				}),
+			})
 
 			continue
+		}
+
+		aie := configure.ActionTypeListSources{
+			ID:         ts.SourceID,
+			Status:     "disconnect",
+			ActionType: actionType,
 		}
 
 		if sourceInfo.ConnectionStatus {
