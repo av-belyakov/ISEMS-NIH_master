@@ -428,11 +428,12 @@ func performActionSelectedSources(
 			fmt.Printf("func 'performActionSelectedSources', ___update, information about task (BEFORE): '%v'\n", informationSource)
 
 			isl.AddSourceSettings(ts.SourceID, configure.SourceSetting{
-				ShortName:  ts.ShortName,
-				IP:         ts.IP,
-				Token:      ts.Token,
-				ClientName: clientName,
-				AsServer:   ts.AsServer,
+				ConnectionStatus: informationSource.ConnectionStatus,
+				ShortName:        ts.ShortName,
+				IP:               ts.IP,
+				Token:            ts.Token,
+				ClientName:       clientName,
+				AsServer:         ts.AsServer,
 				Settings: configure.InfoServiceSettings{
 					IfAsServerThenPort:        ts.Settings.IfAsServerThenPort,
 					EnableTelemetry:           ts.Settings.EnableTelemetry,
@@ -458,16 +459,6 @@ func performActionSelectedSources(
 					_ = SendPing(sourceInfo.IP, ts.SourceID, isl, cwt)
 				}
 			}
-
-			//проверяем параметры подключения
-			/*if changeToken || changeIP || changeAsServer || changeEnTelemetry {
-				//закрываем соединение и удаляем дискриптор
-				if cl, isExist := isl.GetLinkWebsocketConnect(sourceInfo.IP); isExist {
-					cl.Link.Close()
-
-					isl.DelLinkWebsocketConnection(sourceInfo.IP)
-				}
-			}*/
 
 			aie.IsSuccess = true
 			aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
