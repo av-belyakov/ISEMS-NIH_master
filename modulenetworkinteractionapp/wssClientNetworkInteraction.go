@@ -201,7 +201,9 @@ func WssClientNetworkInteraction(
 
 		for id, s := range *l {
 
-			fmt.Printf("func 'wssClientNetworkInterface', --- ID '%d'\n", id)
+			if id == 1000 {
+				fmt.Printf("func 'wssClientNetworkInterface', --- ID '%d', STATUS: '%v'\n", id, s.ConnectionStatus)
+			}
 
 			if s.AsServer && !s.ConnectionStatus {
 
