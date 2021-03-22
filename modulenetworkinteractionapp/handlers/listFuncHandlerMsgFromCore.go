@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -416,14 +417,12 @@ func performActionSelectedSources(
 			changeAsServer := (sourceInfo.AsServer != ts.AsServer)
 			changeEnTelemetry := (sourceInfo.Settings.EnableTelemetry != ts.Settings.EnableTelemetry)
 
-			//fmt.Println("func 'performActionSelectedSources', actionType: 'update', check parameters connection")
-			//fmt.Printf("func 'performActionSelectedSources', changeToken: '%v', changeIP: '%v', changeAsServer: '%v', changeEnTelemetry: '%v'\n", changeToken, changeIP, changeAsServer, changeEnTelemetry)
+			fmt.Println("func 'performActionSelectedSources', actionType: 'update', check parameters connection")
+			fmt.Printf("func 'performActionSelectedSources', changeToken: '%v', changeIP: '%v', changeAsServer: '%v', changeEnTelemetry: '%v'\n", changeToken, changeIP, changeAsServer, changeEnTelemetry)
 
-			/*
-				var informationSource *configure.SourceSetting
-				informationSource, _ = isl.GetSourceSetting(ts.SourceID)
-				fmt.Printf("func 'performActionSelectedSources', ___update, information about task (BEFORE): '%v'\n", informationSource)
-			*/
+			var informationSource *configure.SourceSetting
+			informationSource, _ = isl.GetSourceSetting(ts.SourceID)
+			fmt.Printf("func 'performActionSelectedSources', ___update, information about task (BEFORE): '%v'\n", informationSource)
 
 			isl.AddSourceSettings(ts.SourceID, configure.SourceSetting{
 				ShortName:  ts.ShortName,
@@ -440,10 +439,8 @@ func performActionSelectedSources(
 				},
 			})
 
-			/*
-				informationSource, _ = isl.GetSourceSetting(ts.SourceID)
-				fmt.Printf("func 'performActionSelectedSources', ___update, information about task (AFTER): '%v'\n", informationSource)
-			*/
+			informationSource, _ = isl.GetSourceSetting(ts.SourceID)
+			fmt.Printf("func 'performActionSelectedSources', ___update, information about task (AFTER): '%v'\n", informationSource)
 
 			if cl, isExist := isl.GetLinkWebsocketConnect(sourceInfo.IP); isExist {
 				if changeToken || changeIP || changeAsServer || changeEnTelemetry {
