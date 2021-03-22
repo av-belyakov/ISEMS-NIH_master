@@ -296,6 +296,7 @@ func performActionSelectedSources(
 
 	for _, ts := range *listTrustedSources {
 		var actionType string
+		var connStatus string = "disconnect"
 
 		for _, s := range *l {
 			if ts.SourceID == s.ID {
@@ -338,36 +339,36 @@ func performActionSelectedSources(
 			continue
 		}
 
-		aie := configure.ActionTypeListSources{
-			ID:         ts.SourceID,
-			Status:     "disconnect",
-			ActionType: actionType,
-		}
-
 		if sourceInfo.ConnectionStatus {
-			aie.Status = "connect"
+			connStatus = "connect"
 		}
 
 		//обработка запроса статуса соединений
 		if actionType == "status request" {
-			aie.IsSuccess = true
-
-			listActionIsExecuted = append(listActionIsExecuted, aie)
+			listActionIsExecuted = append(listActionIsExecuted, configure.ActionTypeListSources{
+				IsSuccess:  true,
+				ID:         ts.SourceID,
+				Status:     connStatus,
+				ActionType: actionType,
+			})
 
 			continue
 		}
 
 		//если источник найден
 		if actionType == "add" {
-			aie.IsSuccess = false
-			aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-				SourceID:   ts.SourceID,
-				TaskType:   "управление источниками",
-				TaskAction: "задача отклонена",
-				Message:    "невозможно добавить источник, источник с таким ID уже существует",
+			listActionIsExecuted = append(listActionIsExecuted, configure.ActionTypeListSources{
+				IsSuccess:  false,
+				ID:         ts.SourceID,
+				Status:     connStatus,
+				ActionType: actionType,
+				MessageFailure: common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   ts.SourceID,
+					TaskType:   "управление источниками",
+					TaskAction: "задача отклонена",
+					Message:    "невозможно добавить источник, источник с таким ID уже существует",
+				}),
 			})
-
-			listActionIsExecuted = append(listActionIsExecuted, aie)
 
 			continue
 		}
@@ -378,15 +379,18 @@ func performActionSelectedSources(
 
 			//проверяем имеет ли право клиент делать какие либо изменения с информацией по источнику
 			if (clientName != sourceInfo.ClientName) && (clientName != "root token") {
-				aie.IsSuccess = false
-				aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-					SourceID:   ts.SourceID,
-					TaskType:   "управление источниками",
-					TaskAction: "задача отклонена",
-					Message:    "недостаточно прав для выполнения действий с источником, возможно он был добавлен другим клиентом",
+				listActionIsExecuted = append(listActionIsExecuted, configure.ActionTypeListSources{
+					IsSuccess:  false,
+					ID:         ts.SourceID,
+					Status:     connStatus,
+					ActionType: actionType,
+					MessageFailure: common.PatternUserMessage(&common.TypePatternUserMessage{
+						SourceID:   ts.SourceID,
+						TaskType:   "управление источниками",
+						TaskAction: "задача отклонена",
+						Message:    "недостаточно прав для выполнения действий с источником, возможно он был добавлен другим клиентом",
+					}),
 				})
-
-				listActionIsExecuted = append(listActionIsExecuted, aie)
 
 				continue
 			}
@@ -399,15 +403,18 @@ func performActionSelectedSources(
 				//fmt.Printf("func 'performActionSelectedSources', listSourceTask: '%v'\n", listSourceTask)
 
 				if len(listSourceTask) > 0 {
-					aie.IsSuccess = false
-					aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-						SourceID:   ts.SourceID,
-						TaskType:   "управление источниками",
-						TaskAction: "задача отклонена",
-						Message:    "невозможно выполнить действия на источнике, так как в настоящее время на данном сенсоре ожидает выполнения или уже выполняется какая либо задача",
+					listActionIsExecuted = append(listActionIsExecuted, configure.ActionTypeListSources{
+						IsSuccess:  false,
+						ID:         ts.SourceID,
+						Status:     connStatus,
+						ActionType: actionType,
+						MessageFailure: common.PatternUserMessage(&common.TypePatternUserMessage{
+							SourceID:   ts.SourceID,
+							TaskType:   "управление источниками",
+							TaskAction: "задача отклонена",
+							Message:    "невозможно выполнить действия на источнике, так как в настоящее время на данном сенсоре ожидает выполнения или уже выполняется какая либо задача",
+						}),
 					})
-
-					listActionIsExecuted = append(listActionIsExecuted, aie)
 
 					continue
 				}
@@ -423,12 +430,14 @@ func performActionSelectedSources(
 			fmt.Println("func 'performActionSelectedSources', actionType: 'update', check parameters connection")
 			fmt.Printf("func 'performActionSelectedSources', changeToken: '%v', changeIP: '%v', changeAsServer: '%v', changeEnTelemetry: '%v'\n", changeToken, changeIP, changeAsServer, changeEnTelemetry)
 
+			/* ---- этот кусочек временный ----  */
 			var informationSource *configure.SourceSetting
 			informationSource, _ = isl.GetSourceSetting(ts.SourceID)
 			fmt.Printf("func 'performActionSelectedSources', ___update, information about task (BEFORE): '%v'\n", informationSource)
+			/* ------------- */
 
 			isl.AddSourceSettings(ts.SourceID, configure.SourceSetting{
-				ConnectionStatus: informationSource.ConnectionStatus,
+				ConnectionStatus: sourceInfo.ConnectionStatus,
 				ShortName:        ts.ShortName,
 				IP:               ts.IP,
 				Token:            ts.Token,
@@ -444,6 +453,7 @@ func performActionSelectedSources(
 			})
 
 			informationSource, _ = isl.GetSourceSetting(ts.SourceID)
+
 			fmt.Printf("func 'performActionSelectedSources', ___update, information about task (AFTER): '%v'\n", informationSource)
 
 			if cl, isExist := isl.GetLinkWebsocketConnect(sourceInfo.IP); isExist {
@@ -452,7 +462,7 @@ func performActionSelectedSources(
 
 					isl.DelLinkWebsocketConnection(sourceInfo.IP)
 
-					fmt.Printf("func 'performActionSelectedSources', connection CLOSE with ID '%d', IP: '%s'\n", ts.SourceID, sourceInfo.IP)
+					fmt.Printf("func 'performActionSelectedSources', 1111 connection CLOSE with ID '%d', IP: '%s'\n", ts.SourceID, sourceInfo.IP)
 
 				} else {
 					//отправляем источнику новые параметры (список директорий и тип сетевого канала)
@@ -460,15 +470,18 @@ func performActionSelectedSources(
 				}
 			}
 
-			aie.IsSuccess = true
-			aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-				SourceID:   ts.SourceID,
-				TaskType:   "управление источниками",
-				TaskAction: "задача выполнена",
-				Message:    "информация по источнику была успешно обновлена",
+			listActionIsExecuted = append(listActionIsExecuted, configure.ActionTypeListSources{
+				IsSuccess:  true,
+				ID:         ts.SourceID,
+				Status:     connStatus,
+				ActionType: actionType,
+				MessageFailure: common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   ts.SourceID,
+					TaskType:   "управление источниками",
+					TaskAction: "задача выполнена",
+					Message:    "информация по источнику была успешно обновлена",
+				}),
 			})
-
-			listActionIsExecuted = append(listActionIsExecuted, aie)
 
 			continue
 		}
@@ -484,15 +497,18 @@ func performActionSelectedSources(
 			//удаление всей информации об источнике
 			isl.DelSourceSettings(ts.SourceID)
 
-			aie.IsSuccess = true
-			aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-				SourceID:   ts.SourceID,
-				TaskType:   "управление источниками",
-				TaskAction: "задача выполнена",
-				Message:    "информация по источнику была успешно удалена",
+			listActionIsExecuted = append(listActionIsExecuted, configure.ActionTypeListSources{
+				IsSuccess:  true,
+				ID:         ts.SourceID,
+				Status:     "disconnect",
+				ActionType: actionType,
+				MessageFailure: common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   ts.SourceID,
+					TaskType:   "управление источниками",
+					TaskAction: "задача выполнена",
+					Message:    "информация по источнику была успешно удалена",
+				}),
 			})
-
-			listActionIsExecuted = append(listActionIsExecuted, aie)
 
 			continue
 		}
@@ -503,30 +519,36 @@ func performActionSelectedSources(
 			fmt.Println("func 'performActionSelectedSources', RECONNECT")
 
 			if !sourceInfo.ConnectionStatus {
-				aie.IsSuccess = false
-				aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-					SourceID:   ts.SourceID,
-					TaskType:   "управление источниками",
-					TaskAction: "задача отклонена",
-					Message:    "невозможно выполнить переподключение, источник не подключен",
+				listActionIsExecuted = append(listActionIsExecuted, configure.ActionTypeListSources{
+					IsSuccess:  false,
+					ID:         ts.SourceID,
+					Status:     "disconnect",
+					ActionType: actionType,
+					MessageFailure: common.PatternUserMessage(&common.TypePatternUserMessage{
+						SourceID:   ts.SourceID,
+						TaskType:   "управление источниками",
+						TaskAction: "задача отклонена",
+						Message:    "невозможно выполнить переподключение, источник не подключен",
+					}),
 				})
-
-				listActionIsExecuted = append(listActionIsExecuted, aie)
 
 				continue
 			}
 
 			//проверяем не ожидает ли или выполняется скачивание файлов с источника
 			if qts.IsExistTaskDownloadQueueTaskStorage(ts.SourceID) {
-				aie.IsSuccess = false
-				aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
-					SourceID:   ts.SourceID,
-					TaskType:   "управление источниками",
-					TaskAction: "задача отклонена",
-					Message:    "невозможно выполнить переподключение, с источника осуществляется скачивание файлов",
+				listActionIsExecuted = append(listActionIsExecuted, configure.ActionTypeListSources{
+					IsSuccess:  false,
+					ID:         ts.SourceID,
+					Status:     connStatus,
+					ActionType: actionType,
+					MessageFailure: common.PatternUserMessage(&common.TypePatternUserMessage{
+						SourceID:   ts.SourceID,
+						TaskType:   "управление источниками",
+						TaskAction: "задача отклонена",
+						Message:    "невозможно выполнить переподключение, с источника осуществляется скачивание файлов",
+					}),
 				})
-
-				listActionIsExecuted = append(listActionIsExecuted, aie)
 
 				continue
 			}
@@ -535,12 +557,23 @@ func performActionSelectedSources(
 			if cl, isExist := isl.GetLinkWebsocketConnect(sourceInfo.IP); isExist {
 				cl.Link.Close()
 
+				fmt.Printf("func 'performActionSelectedSources', 2222 connection CLOSE with ID '%d', IP: '%s'\n", ts.SourceID, sourceInfo.IP)
+
 				isl.DelLinkWebsocketConnection(sourceInfo.IP)
 			}
 
-			aie.IsSuccess = true
-
-			listActionIsExecuted = append(listActionIsExecuted, aie)
+			listActionIsExecuted = append(listActionIsExecuted, configure.ActionTypeListSources{
+				IsSuccess:  true,
+				ID:         ts.SourceID,
+				Status:     "disconnect",
+				ActionType: actionType,
+				MessageFailure: common.PatternUserMessage(&common.TypePatternUserMessage{
+					SourceID:   ts.SourceID,
+					TaskType:   "управление источниками",
+					TaskAction: "задача отклонена",
+					Message:    "невозможно выполнить переподключение, с источника осуществляется скачивание файлов",
+				}),
+			})
 		}
 	}
 

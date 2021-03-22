@@ -101,7 +101,13 @@ func NewRepositoryISL() *InformationSourcesList {
 				msg.chanRes <- chanResSetting{}
 
 			case "del link ws connection":
+
+				fmt.Println("func 'NewRepositoryISL', action type: 'del link ws connection'")
+				fmt.Printf("func 'NewRepositoryISL', action type: 'del link ws connection', BEFORE: '%v'\n", isl.sourcesListConnection)
+
 				delete(isl.sourcesListConnection, msg.setting.IP)
+
+				fmt.Printf("func 'NewRepositoryISL', action type: 'del link ws connection', AFTER: '%v'\n", isl.sourcesListConnection)
 
 				msg.chanRes <- chanResSetting{}
 
