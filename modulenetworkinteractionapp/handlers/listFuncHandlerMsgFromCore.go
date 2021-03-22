@@ -280,12 +280,12 @@ func performActionSelectedSources(
 	clientName string,
 	mcpf int8) (*[]configure.ActionTypeListSources, *[]int, error) {
 
-	//fmt.Println("func 'performActionSelectedSources', START...")
+	fmt.Println("func 'performActionSelectedSources', START...")
 
 	listTrustedSources, listInvalidSource := validateUserData(l, mcpf)
 	listActionIsExecuted := make([]configure.ActionTypeListSources, 0, len(*l))
 
-	//fmt.Printf("func 'performActionSelectedSources', listTrustedSources: '%v', listInvalidSource: '%v'\n", listTrustedSources, listInvalidSource)
+	fmt.Printf("func 'performActionSelectedSources', listTrustedSources: '%v', listInvalidSource: '%v'\n", listTrustedSources, listInvalidSource)
 
 	if len(*listTrustedSources) == 0 {
 		return &listActionIsExecuted, &listInvalidSource, errors.New("parameters of all sources passed by the user have incorrect values, the action on any source will not be performed")
