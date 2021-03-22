@@ -450,6 +450,9 @@ func performActionSelectedSources(
 					cl.Link.Close()
 
 					isl.DelLinkWebsocketConnection(sourceInfo.IP)
+
+					fmt.Printf("func 'performActionSelectedSources', connection CLOSE with ID '%d', IP: '%s'\n", ts.SourceID, sourceInfo.IP)
+
 				} else {
 					//отправляем источнику новые параметры (список директорий и тип сетевого канала)
 					_ = SendPing(sourceInfo.IP, ts.SourceID, isl, cwt)
