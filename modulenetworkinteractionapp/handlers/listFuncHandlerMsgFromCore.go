@@ -502,6 +502,9 @@ func performActionSelectedSources(
 
 		//при переподключении
 		if actionType == "reconnect" {
+
+			fmt.Println("func 'performActionSelectedSources', RECONNECT")
+
 			if !sourceInfo.ConnectionStatus {
 				aie.IsSuccess = false
 				aie.MessageFailure = common.PatternUserMessage(&common.TypePatternUserMessage{
