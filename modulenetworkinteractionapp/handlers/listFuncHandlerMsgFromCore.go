@@ -92,8 +92,8 @@ func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]validat
 			typeAreaNetwork = s.Argument.Settings.TypeAreaNetwork
 		}
 
-		fmt.Printf("func 'validateUserData', sourece ID: '%d'\n", s.ID)
-		fmt.Printf("func 'validateUserData', item: '%d', s.Argument.Settings.TypeAreaNetwork: '%s' = typeAreaNetwork: '%s'\n", item, s.Argument.Settings.TypeAreaNetwork, typeAreaNetwork)
+		//fmt.Printf("func 'validateUserData', sourece ID: '%d'\n", s.ID)
+		//fmt.Printf("func 'validateUserData', item: '%d', s.Argument.Settings.TypeAreaNetwork: '%s' = typeAreaNetwork: '%s'\n", item, s.Argument.Settings.TypeAreaNetwork, typeAreaNetwork)
 
 		/*
 			typeAreaNetwork := "ip"
@@ -602,7 +602,6 @@ func getSourceListsForWriteToDB(
 	mcpf int8) (*[]configure.InformationAboutSource, *[]configure.InformationAboutSource, *[]int) {
 
 	listTypeAreaNetwork := []string{"ip", "pppoe", "pppoe/vlan", "vlan/pppoe"}
-
 	var listAdd, listUpdate []configure.InformationAboutSource
 	listDel := []int{}
 
@@ -626,7 +625,7 @@ func getSourceListsForWriteToDB(
 				typeAreaNetwork = s.Argument.Settings.TypeAreaNetwork
 			}
 
-			fmt.Printf("func 'getSourceListsForWriteToDB', item: '%d', typeAreaNetwork = %s\n", item, typeAreaNetwork)
+			fmt.Printf("func 'getSourceListsForWriteToDB', item: '%d', typeAreaNetwork = %s, s.Argument.Settings.TypeAreaNetwork = %s\n", item, typeAreaNetwork, s.Argument.Settings.TypeAreaNetwork)
 
 			//проверяем максимальное кол-во одновременно запущеных задач фильтрации
 			if s.Argument.Settings.MaxCountProcessFiltration > 1 && 10 > s.Argument.Settings.MaxCountProcessFiltration {
