@@ -622,6 +622,9 @@ func getSourceListsForWriteToDB(
 				return listTypeAreaNetwork[i] == s.Argument.Settings.TypeAreaNetwork
 			})
 			if item < len(listTypeAreaNetwork) && listTypeAreaNetwork[item] == s.Argument.Settings.TypeAreaNetwork {
+
+				fmt.Println("----_____======+++++")
+
 				typeAreaNetwork = s.Argument.Settings.TypeAreaNetwork
 			}
 
