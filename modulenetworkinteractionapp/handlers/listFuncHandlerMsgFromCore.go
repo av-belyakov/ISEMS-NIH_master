@@ -60,6 +60,7 @@ func createSourceList(isl *configure.InformationSourcesList, l []configure.Infor
 func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]validateUserDataSourceSettings, []int) {
 	listTrastedSources := make([]validateUserDataSourceSettings, 0, len(*l))
 	listInvalidSource := []int{}
+	listTypeAreaNetwork := []string{"ip", "pppoe", "pppoe/vlan", "vlan/pppoe"}
 
 	for _, s := range *l {
 		if s.ActionType == "add" || s.ActionType == "update" {
@@ -84,9 +85,18 @@ func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]validat
 		}
 
 		typeAreaNetwork := "ip"
-		if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe" {
-			typeAreaNetwork = "pppoe"
+		item := sort.Search(len(listTypeAreaNetwork), func(i int) bool {
+			return listTypeAreaNetwork[i] == s.Argument.Settings.TypeAreaNetwork
+		})
+		if item < len(listTypeAreaNetwork) && listTypeAreaNetwork[item] == s.Argument.Settings.TypeAreaNetwork {
+			typeAreaNetwork = s.Argument.Settings.TypeAreaNetwork
 		}
+
+		/*
+			typeAreaNetwork := "ip"
+			if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe" {
+				typeAreaNetwork = "pppoe"
+			}*/
 
 		listTrastedSources = append(listTrastedSources, validateUserDataSourceSettings{
 			SourceID:  s.ID,
