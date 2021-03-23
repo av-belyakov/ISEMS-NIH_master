@@ -20,6 +20,16 @@ type validateUserDataSourceSettings struct {
 	Settings  configure.InfoServiceSettings
 }
 
+func searchStringInList(list []string, str string) bool {
+	for item := range list {
+		if list[item] == str {
+			return true
+		}
+	}
+
+	return false
+}
+
 func createStringFromSourceList(l []int) string {
 	var strSourceID string
 
@@ -85,10 +95,7 @@ func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]validat
 		}
 
 		typeAreaNetwork := "ip"
-		item := sort.Search(len(listTypeAreaNetwork), func(i int) bool {
-			return listTypeAreaNetwork[i] == s.Argument.Settings.TypeAreaNetwork
-		})
-		if item < len(listTypeAreaNetwork) && listTypeAreaNetwork[item] == s.Argument.Settings.TypeAreaNetwork {
+		if searchStringInList(listTypeAreaNetwork, s.Argument.Settings.TypeAreaNetwork) {
 			typeAreaNetwork = s.Argument.Settings.TypeAreaNetwork
 		}
 
@@ -618,13 +625,7 @@ func getSourceListsForWriteToDB(
 
 		for _, s := range *ml {
 			typeAreaNetwork := "ip"
-			item := sort.Search(len(listTypeAreaNetwork), func(i int) bool {
-				return listTypeAreaNetwork[i] == s.Argument.Settings.TypeAreaNetwork
-			})
-			if item < len(listTypeAreaNetwork) && listTypeAreaNetwork[item] == s.Argument.Settings.TypeAreaNetwork {
-
-				fmt.Println("----_____======+++++")
-
+			if searchStringInList(listTypeAreaNetwork, s.Argument.Settings.TypeAreaNetwork) {
 				typeAreaNetwork = s.Argument.Settings.TypeAreaNetwork
 			}
 
