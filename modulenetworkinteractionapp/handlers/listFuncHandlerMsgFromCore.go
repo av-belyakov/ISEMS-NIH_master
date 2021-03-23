@@ -92,8 +92,8 @@ func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]validat
 			typeAreaNetwork = s.Argument.Settings.TypeAreaNetwork
 		}
 
-		//fmt.Printf("func 'validateUserData', sourece ID: '%d'\n", s.ID)
-		//fmt.Printf("func 'validateUserData', item: '%d', s.Argument.Settings.TypeAreaNetwork: '%s' = typeAreaNetwork: '%s'\n", item, s.Argument.Settings.TypeAreaNetwork, typeAreaNetwork)
+		fmt.Printf("func 'validateUserData', sourece ID: '%d'\n", s.ID)
+		fmt.Printf("func 'validateUserData', item: '%d', s.Argument.Settings.TypeAreaNetwork: '%s' = typeAreaNetwork: '%s'\n", item, s.Argument.Settings.TypeAreaNetwork, typeAreaNetwork)
 
 		/*
 			typeAreaNetwork := "ip"

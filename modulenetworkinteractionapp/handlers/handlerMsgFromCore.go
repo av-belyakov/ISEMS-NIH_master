@@ -276,6 +276,9 @@ func HandlerMsgFromCore(
 			}
 
 			if len(*lu) > 0 {
+
+				fmt.Printf("func 'HandlerMsgFromCore', lu: '%v'\n", lu)
+
 				//обновить
 				chanInCore <- &configure.MsgBetweenCoreAndNI{
 					TaskID:          msg.TaskID,
