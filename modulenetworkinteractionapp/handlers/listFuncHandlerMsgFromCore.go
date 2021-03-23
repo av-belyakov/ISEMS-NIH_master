@@ -589,6 +589,7 @@ func getSourceListsForWriteToDB(
 	mcpf int8) (*[]configure.InformationAboutSource, *[]configure.InformationAboutSource, *[]int) {
 
 	typeAreaNetwork := "ip"
+	listTypeAreaNetwork := []string{"ip", "pppoe", "pppoe/vlan", "vlan/pppoe"}
 
 	var listAdd, listUpdate []configure.InformationAboutSource
 	listDel := []int{}
@@ -605,16 +606,11 @@ func getSourceListsForWriteToDB(
 		}
 
 		for _, s := range *ml {
-			if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe" {
-				typeAreaNetwork = "pppoe"
-			}
-
-			if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "vlan + pppoe" {
-				typeAreaNetwork = "vlan + pppoe"
-			}
-
-			if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe + vlan" {
-				typeAreaNetwork = "pppoe + vlan"
+			item := sort.Search(len(listTypeAreaNetwork), func(i int) bool {
+				return listTypeAreaNetwork[i] == s.Argument.Settings.TypeAreaNetwork
+			})
+			if item < len(listTypeAreaNetwork) && listTypeAreaNetwork[item] == s.Argument.Settings.TypeAreaNetwork {
+				typeAreaNetwork = s.Argument.Settings.TypeAreaNetwork
 			}
 
 			//проверяем максимальное кол-во одновременно запущеных задач фильтрации
