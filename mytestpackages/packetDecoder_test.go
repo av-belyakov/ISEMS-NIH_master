@@ -5,54 +5,136 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/pcapgo"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("PacketDecoder", func() {
-	var file *os.File
-	fileName := "test.pcap"
-	filePath := "/home/miastr/tmp"
+	var (
+		file            *os.File
+		errOpenFile     error
+		fd              *os.File
+		errFd           error
+		handleOnlyIP    *pcap.Handle
+		errOnlyIP       error
+		errBPFIP        error
+		wfOnlyIP        *os.File
+		errwfOnlyIP     error
+		nwfOnlyIP       *pcapgo.Writer
+		handleOnlyPPPoE *pcap.Handle
+		errOnlyPPPoE    error
+		errBPFPPPoE     error
+		wfOnlyPPPoE     *os.File
+		errwfOnlyPPPoE  error
+		nwfOnlyPPPoE    *pcapgo.Writer
+	)
 
-	file, err := os.Open(path.Join(filePath, fileName))
-	if err != nil {
-		log.Println(fmt.Sprintln(err))
+	fileNameOnlyIP := "1616398942_2021_03_22____10_42_22_21.tdp"
+	filePathOnlyIP := "/Users/user/pcap_test_files/ip"
 
-		return
-	}
-	//	defer file.Close()
+	fileNameOnlyPPPoE := "1616149545_2021_03_19____13_25_45_3596.tdp"
+	filePathOnlyPPPoE := "/Users/user/pcap_test_files/pppoe"
 
-	Context("Тест №1. Читаем pcap файл.", func() {
+	var _ = BeforeSuite(func() {
+		//удаляем файлы результатов обработки
+		func() {
+			if err := os.Remove("/Users/user/pcap_test_files/pcapinfoFileOnlyIP.txt"); err != nil {
+				fmt.Println(err)
+			}
+			if err := os.Remove("/Users/user/pcap_test_files/pcapinfoFileOnlyIP.pcap"); err != nil {
+				fmt.Println(err)
+			}
+			if err := os.Remove("/Users/user/pcap_test_files/pcapinfoFileOnlyPPPoE.pcap"); err != nil {
+				fmt.Println(err)
+			}
+		}()
+
+		/* для файла по которому выполняется декодирование пакетов */
+		file, errOpenFile = os.Open(path.Join(filePathOnlyIP, fileNameOnlyIP))
+
+		/* для файла в который выполняется запись информации полученной в результате декодирования */
+		fd, errFd = os.OpenFile("/Users/user/pcap_test_files/pcapinfoFileOnlyIP.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+
+		/* для сет. трафика содержащего только IP */
+		handleOnlyIP, errOnlyIP = pcap.OpenOffline(path.Join(filePathOnlyIP, fileNameOnlyIP))
+		errBPFIP = handleOnlyIP.SetBPFFilter("tcp && host 77.241.31.37")
+
+		wfOnlyIP, errwfOnlyIP = os.OpenFile("/Users/user/pcap_test_files/pcapinfoFileOnlyIP.pcap", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		nwfOnlyIP = pcapgo.NewWriter(wfOnlyIP)
+		if err := nwfOnlyIP.WriteFileHeader(1600, layers.LinkTypeEthernet); err != nil {
+			fmt.Println(err)
+		}
+
+		/* для сет. трафика содержащего только PPPoE */
+		handleOnlyPPPoE, errOnlyPPPoE = pcap.OpenOffline(path.Join(filePathOnlyPPPoE, fileNameOnlyPPPoE))
+		errBPFPPPoE = handleOnlyPPPoE.SetBPFFilter("(pppoes && ip) && host 77.88.21.119")
+
+		wfOnlyPPPoE, errwfOnlyPPPoE = os.OpenFile("/Users/user/pcap_test_files/pcapinfoFileOnlyPPPoE.pcap", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		nwfOnlyPPPoE = pcapgo.NewWriter(wfOnlyPPPoE)
+		if err := nwfOnlyPPPoE.WriteFileHeader(1600, layers.LinkTypeEthernet); err != nil {
+			fmt.Println(err)
+		}
+
+	})
+
+	var _ = AfterSuite(func() {
+		file.Close()
+		fd.Close()
+		handleOnlyIP.Close()
+		wfOnlyIP.Close()
+		handleOnlyPPPoE.Close()
+		wfOnlyPPPoE.Close()
+	})
+
+	Context("Тест №1. Открытие или создание файлов", func() {
+		It("При открытии файла, для выполнения его дальнейшего декодирования, ошибок быть недолжно", func() {
+			Expect(errOpenFile).ShouldNot(HaveOccurred())
+		})
+
+		It("При открытии файла, для записи информации о результатах декодирования, ошибок быть недолжно", func() {
+			Expect(errFd).ShouldNot(HaveOccurred())
+		})
+
+		It("При открытии файла содержащего только IP, ошибок быть недолжно", func() {
+			Expect(errOnlyIP).ShouldNot(HaveOccurred())
+		})
+
+		It("При формировании BPF для поиска только по IP, ошибок быть недолжно", func() {
+			Expect(errBPFIP).ShouldNot(HaveOccurred())
+		})
+
+		It("При создании pcap файла в который выполняется запись отфильтрованных, только по IP данных, ошибки быть не должно", func() {
+			Expect(errwfOnlyIP).ShouldNot(HaveOccurred())
+		})
+
+		It("При открытии файла содержащего только PPPoE ошибок быть недолжно", func() {
+			Expect(errOnlyPPPoE).ShouldNot(HaveOccurred())
+		})
+
+		It("При формировании BPF для поиска только по PPPoE, ошибок быть недолжно", func() {
+			Expect(errBPFPPPoE).ShouldNot(HaveOccurred())
+		})
+
+		It("При создании pcap файла в который выполняется запись отфильтрованных, только по PPPoE данных, ошибки быть не должно", func() {
+			Expect(errwfOnlyPPPoE).ShouldNot(HaveOccurred())
+		})
+	})
+
+	Context("Тест №2. Читаем и декодируем файл сетевого трафика содержащий только ip.", func() {
 		It("При чтении файла не должно быть ошибок", func() {
+			foip := path.Join(filePathOnlyIP, fileNameOnlyIP)
 
-			fmt.Printf("Read file: '%v'\n", fileName)
-
-			/*
-				for pcap with libpcap
-
-								handle, err := pcap.OpenOffline(path.Join(filePath, fileName))
-								defer handle.Close()
-
-
-								packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-								for packet := range packetSource.Packets() {
-									fmt.Println(packet)
-								}
-			*/
+			fmt.Printf("Read file: '%v'\n", foip)
 
 			var err error
-
-			fd, err := os.OpenFile("/home/miastr/tmp/pcapinfo.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-			defer fd.Close()
-			Expect(err).ShouldNot(HaveOccurred())
 
 			r, err := pcapgo.NewReader(file)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -67,7 +149,7 @@ var _ = Describe("PacketDecoder", func() {
 				}
 			}()
 
-			_, err = writer.WriteString(fmt.Sprintf("Decoding file name: %v\n", fileName))
+			_, err = writer.WriteString(fmt.Sprintf("Decoding file name: %v\n", foip))
 			Expect(err).ShouldNot(HaveOccurred())
 
 			/*			fmt.Println("+++++++++++++")
@@ -183,7 +265,45 @@ var _ = Describe("PacketDecoder", func() {
 				}
 			}
 
-			Expect("ddd").ShouldNot(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+	})
+
+	Context("Тест №3. Читаем и выполняем поиск с использованием BPF, файла, содержащего только ip", func() {
+		It("При записи результатов фильтрации в файл, ошибок быть не должно", func() {
+			packetSource := gopacket.NewPacketSource(handleOnlyIP, handleOnlyIP.LinkType())
+			for packet := range packetSource.Packets() {
+				if err := nwfOnlyIP.WritePacket(gopacket.CaptureInfo{
+					Timestamp:      packet.Metadata().Timestamp,
+					CaptureLength:  packet.Metadata().CaptureLength,
+					Length:         packet.Metadata().Length,
+					InterfaceIndex: packet.Metadata().InterfaceIndex,
+					AncillaryData:  packet.Metadata().AncillaryData,
+				}, packet.Data()); err != nil {
+					fmt.Println(err)
+				}
+			}
+
+			Expect(true).Should(BeTrue())
+		})
+	})
+
+	Context("Тест №4. Читаем и выполняем поиск с использованием BPF, файла, содержащего только PPPoE", func() {
+		It("При записи результатов фильтрации в файл, ошибок быть не должно", func() {
+			packetSource := gopacket.NewPacketSource(handleOnlyPPPoE, handleOnlyPPPoE.LinkType())
+			for packet := range packetSource.Packets() {
+				if err := nwfOnlyPPPoE.WritePacket(gopacket.CaptureInfo{
+					Timestamp:      packet.Metadata().Timestamp,
+					CaptureLength:  packet.Metadata().CaptureLength,
+					Length:         packet.Metadata().Length,
+					InterfaceIndex: packet.Metadata().InterfaceIndex,
+					AncillaryData:  packet.Metadata().AncillaryData,
+				}, packet.Data()); err != nil {
+					fmt.Println(err)
+				}
+			}
+
+			Expect(true).Should(BeTrue())
 		})
 	})
 
@@ -204,3 +324,16 @@ var _ = Describe("PacketDecoder", func() {
 		})
 	})*/
 })
+
+/*
+	for pcap with libpcap
+
+					handle, err := pcap.OpenOffline(path.Join(filePath, fileName))
+					defer handle.Close()
+
+
+					packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+					for packet := range packetSource.Packets() {
+						fmt.Println(packet)
+					}
+*/
