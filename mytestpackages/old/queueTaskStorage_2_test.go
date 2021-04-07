@@ -8,11 +8,13 @@ import (
 
 	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
+	"ISEMS-NIH_master/savemessageapp"
 	//. "ISEMS-NIH_master/mytestpackages"
 )
 
 var _ = Describe("QueueTaskStorage", func() {
-	qts := configure.NewRepositoryQTS()
+	saveMessageApp, _ := savemessageapp.New()
+	qts := configure.NewRepositoryQTS(saveMessageApp)
 
 	clientID := "mifw77g6f63g"
 	var clientTaskID string

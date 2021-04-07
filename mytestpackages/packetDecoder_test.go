@@ -1,4 +1,4 @@
-package mytestpackages
+package mytestpackages_test
 
 import (
 	"bufio"
@@ -30,21 +30,34 @@ var _ = Describe("PacketDecoder", func() {
 			if err := os.Remove("/Users/user/pcap_test_files/pcapinfoFileOnlyPPPoE.pcap"); err != nil {
 				fmt.Printf("ERROR: %v\n", err)
 			}
+			if err := os.Remove("/Users/user/pcap_test_files/pcapinfoFileOnlyVLAN.pcap"); err != nil {
+				fmt.Printf("ERROR: %v\n", err)
+			}
+			if err := os.Remove("/Users/user/pcap_test_files/pcapinfoFileOnlyVLAN_IP.pcap"); err != nil {
+				fmt.Printf("ERROR: %v\n", err)
+			}
+			if err := os.Remove("/Users/user/pcap_test_files/pcapinfoFileOnlyVLAN_PPPoE.pcap"); err != nil {
+				fmt.Printf("ERROR: %v\n", err)
+			}
 		}()
 	})
 
-	Context("Тест №1. Читаем и декодируем файл сетевого трафика содержащий только ip.", func() {
-		It("При выполнении декодирования файла сет. трафика ошибок быть не должно", func() {
-			err := networkTrafficDecoder(networkTrafficFileSettingsType{
-				filePathIn:  "/Users/user/pcap_test_files/ip",
-				fileNameIn:  "1616398942_2021_03_22____10_42_22_21.tdp",
-				filePathOut: "/Users/user/pcap_test_files",
-				fileNameOut: "pcapinfoFileOnlyIP.txt",
-			})
+	/*Context("Тест №1. Читаем и декодируем файл сетевого трафика содержащий только ip.", func() {
+			It("При выполнении декодирования файла сет. трафика ошибок быть не должно", func() {
+				err := networkTrafficDecoder(networkTrafficFileSettingsType{
+					filePathIn:  "/Users/user/pcap_test_files/ip",
+					fileNameIn:  "1616398942_2021_03_22____10_42_22_21.tdp",
+					filePathOut: "/Users/user/pcap_test_files",
+					fileNameOut: "pcapinfoFileOnlyIP.txt",
+				})
 
-			Expect(err).ShouldNot(HaveOccurred())
-		})
-	})
+	//временно закоментирован
+	//ТЕСТ проходит успешно, для декодирования файлов сет. трафика содержащих ТОЛЬКО IP все выполняется хорошо
+	// тесты на файлах которые содержат PPPoE или VLAN пока не проводил (НАДО ПОПРОБОВАТЬ!!!)
+
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+		})*/
 
 	/*
 		   For filteration only VLAN
@@ -55,14 +68,33 @@ var _ = Describe("PacketDecoder", func() {
 						   Для такого шаблона поиск по IP или же VLAN работает полностью
 	*/
 
-	Context("Тест №2. Читаем и выполняем поиск с использованием BPF, файла, содержащего только ip", func() {
+	Context("Тест №2. Читаем и выполняем поиск с использованием BPF, файла, содержащего только IP", func() {
 		It("При выполнении фильтрации файла содержащего только IP, ошибок быть не должно", func() {
 			err := networkTrafficFilter(networkTrafficFileSettingsType{
 				filePathIn:  "/Users/user/pcap_test_files/ip",
 				fileNameIn:  "1616398942_2021_03_22____10_42_22_21.tdp",
 				filePathOut: "/Users/user/pcap_test_files",
 				fileNameOut: "pcapinfoFileOnlyIP.pcap",
-			}, "(( (host 77.241.31.37))) || (vlan && (( (host 77.241.31.37))))")
+			}, /*"(( (host 77.241.31.37))) || (vlan && (( (host 77.241.31.37))))")*/
+				createPatternScript(FiltrationTasks{
+					Protocol: "tcp",
+					Filters: FiltrationControlParametersNetworkFilters{
+						IP: FiltrationControlIPorNetorPortParameters{
+							Any: []string{"77.241.31.37"},
+							Src: []string{},
+							Dst: []string{},
+						},
+						Port: FiltrationControlIPorNetorPortParameters{
+							Any: []string{},
+							Src: []string{},
+							Dst: []string{},
+						},
+						Network: FiltrationControlIPorNetorPortParameters{
+							Any: []string{},
+							Src: []string{},
+							Dst: []string{},
+						},
+					}}, "ip"))
 
 			Expect(err).ShouldNot(HaveOccurred())
 		})
@@ -80,11 +112,119 @@ var _ = Describe("PacketDecoder", func() {
 				fileNameIn:  "1616149545_2021_03_19____13_25_45_3596.tdp",
 				filePathOut: "/Users/user/pcap_test_files",
 				fileNameOut: "pcapinfoFileOnlyPPPoE.pcap",
-			}, "(pppoes && ip) && (( (host 77.88.21.119)))")
+			}, /*"(host 77.88.21.119 || 10.15.128.47) || ((pppoes && ip) && (( (host 77.88.21.119 || 10.15.128.47))))")*/
+				createPatternScript(FiltrationTasks{
+					Protocol: "tcp",
+					Filters: FiltrationControlParametersNetworkFilters{
+						IP: FiltrationControlIPorNetorPortParameters{
+							Any: []string{"77.88.21.119", "10.15.128.47"},
+							Src: []string{},
+							Dst: []string{},
+						},
+						Port: FiltrationControlIPorNetorPortParameters{
+							Any: []string{"443", "51832"},
+							Src: []string{},
+							Dst: []string{},
+						},
+						Network: FiltrationControlIPorNetorPortParameters{
+							Any: []string{},
+							Src: []string{},
+							Dst: []string{},
+						},
+					}}, "pppoe"))
+
+			//   "(host 77.88.21.119 || 10.15.128.47) || ((pppoes && ip) && (( (host 77.88.21.119 || 10.15.128.47))))"
+			//   с таким фильтром выполняется фильтрация как просто по IP (10.15.128.47), так и по PPPoE+IP (77.88.21.119)
 
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 	})
+
+	Context("Тест №4. Читаем и выполняем поиск с использованием BPF, файла, содержащего только VLAN и IP", func() {
+		It("При выполнении фильтрации файла содержащего только VLAN и IP, ошибок быть не должно", func() {
+			err := networkTrafficFilter(networkTrafficFileSettingsType{
+				filePathIn:  "/Users/user/pcap_test_files/vlan_ip",
+				fileNameIn:  "1617693945_2021_04_06____11_25_45_538.tdp",
+				filePathOut: "/Users/user/pcap_test_files",
+				fileNameOut: "pcapinfoFileOnlyVLAN_IP.pcap",
+			}, //"(host 194.50.141.29 || 37.9.96.23) || ((vlan && ip) && (( (host 194.50.141.29 || 37.9.96.23))))")
+				//"(( (host 194.50.141.29 || 37.9.96.23))) || ((pppoes && ip) && (( (host 194.50.141.29 || 37.9.96.23))))")
+				createPatternScript(FiltrationTasks{
+					Protocol: "tcp",
+					Filters: FiltrationControlParametersNetworkFilters{
+						IP: FiltrationControlIPorNetorPortParameters{
+							Any: []string{"194.50.141.29", "37.9.96.23"},
+							Src: []string{},
+							Dst: []string{},
+						},
+						Port: FiltrationControlIPorNetorPortParameters{
+							Any: []string{},
+							Src: []string{},
+							Dst: []string{},
+						},
+						Network: FiltrationControlIPorNetorPortParameters{
+							Any: []string{},
+							Src: []string{},
+							Dst: []string{},
+						},
+					}}, "pppoe"))
+
+			// "(host 194.50.141.29 || 37.9.96.23) || ((vlan && ip) && (( (host 194.50.141.29 || 37.9.96.23))))"
+			// с таким фильтром выполняется фильтрация как просто по IP (194.50.141.29), так и по VLAN+IP (37.9.96.23)
+
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+	})
+
+	Context("Тест №5. Читаем и выполняем поиск с использованием BPF, файла, содержащего только VLAN, PPPoE и IP", func() {
+		It("При выполнении фильтрации файла содержащего только VLAN, PPPoE и IP, ошибок быть не должно", func() {
+			err := networkTrafficFilter(networkTrafficFileSettingsType{
+				filePathIn:  "/Users/user/pcap_test_files/vlan_and_pppoe",
+				fileNameIn:  "1616398304_2021_03_22____10_31_44_3872.tdp",
+				filePathOut: "/Users/user/pcap_test_files",
+				fileNameOut: "pcapinfoFileOnlyVLAN_PPPoE.pcap",
+			}, //"(host 213.155.193.7 || 37.9.96.23) || ((vlan && pppoes && ip) && (( (host 213.155.193.7 || 37.9.96.23))))")
+				createPatternScript(FiltrationTasks{
+					Protocol: "tcp",
+					Filters: FiltrationControlParametersNetworkFilters{
+						IP: FiltrationControlIPorNetorPortParameters{
+							Any: []string{"213.155.193.7", "37.9.96.23"},
+							Src: []string{},
+							Dst: []string{},
+						},
+						Port: FiltrationControlIPorNetorPortParameters{
+							Any: []string{},
+							Src: []string{},
+							Dst: []string{},
+						},
+						Network: FiltrationControlIPorNetorPortParameters{
+							Any: []string{},
+							Src: []string{},
+							Dst: []string{},
+						},
+					}}, "vlan/pppoe"))
+
+			// "(host 213.155.193.7 || 37.9.96.23) || ((vlan && pppoes && ip) && (( (host 213.155.193.7 || 37.9.96.23))))"
+			// с таким фильтром выполняется фильтрация как просто по IP (194.50.141.29), так и по VLAN+IP (37.9.96.23)
+
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+	})
+
+	/*Context("Тест №6. Читаем и выполняем поиск с использованием BPF, файла, содержащего первую связку IP, а за ней вторую связку IP", func() {
+		It("При выполнении фильтрации файла содержащего первую связку IP, а за ней вторую связку IP, ошибок быть не должно", func() {
+			err := networkTrafficFilter(networkTrafficFileSettingsType{
+				filePathIn:  "/Users/user/pcap_test_files/ip_and_ip",
+				fileNameIn:  "1616155490_2021_03_19____15_04_50_149.tdp",
+				filePathOut: "/Users/user/pcap_test_files",
+				fileNameOut: "pcapinfoFileOnlyIP_IP.pcap",
+			}, "(ether host 87.250.251.15 || 37.9.96.23)")
+
+			// с двумя парами IP адресов в одном ethernet пакете пока не понятно
+
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+	})*/
 
 	/*
 	   '(pppoes && ip) && (( (host 87.250.250.192))) || (vlan && (( (host 87.250.250.192))))'

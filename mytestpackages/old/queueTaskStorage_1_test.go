@@ -10,7 +10,7 @@ import (
 
 	"ISEMS-NIH_master/common"
 	"ISEMS-NIH_master/configure"
-	//. "ISEMS-NIH_master/mytestpackages"
+	"ISEMS-NIH_master/savemessageapp"
 )
 
 func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) (map[string]configure.DetailedFilesInformation, error) {
@@ -91,7 +91,8 @@ func checkFileNameMatches(lfdb []*configure.FilesInformation, lfqst []string) (m
 }*/
 
 var _ = Describe("QueueTaskStorage", func() {
-	qts := configure.NewRepositoryQTS()
+	saveMessageApp, _ := savemessageapp.New()
+	qts := configure.NewRepositoryQTS(saveMessageApp)
 
 	sourceID := 100
 	clientID := "mifw77g6f63g"

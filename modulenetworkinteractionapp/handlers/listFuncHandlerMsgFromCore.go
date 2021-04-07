@@ -70,7 +70,7 @@ func createSourceList(isl *configure.InformationSourcesList, l []configure.Infor
 func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]validateUserDataSourceSettings, []int) {
 	listTrastedSources := make([]validateUserDataSourceSettings, 0, len(*l))
 	listInvalidSource := []int{}
-	listTypeAreaNetwork := []string{"ip", "pppoe", "pppoe/vlan", "vlan/pppoe"}
+	listTypeAreaNetwork := []string{"ip", "pppoe", "vlan/pppoe"}
 
 	for _, s := range *l {
 		if s.ActionType == "add" || s.ActionType == "update" {
