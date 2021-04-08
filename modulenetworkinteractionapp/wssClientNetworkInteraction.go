@@ -177,6 +177,7 @@ func WssClientNetworkInteraction(
 					FuncName:    funcName,
 				})
 
+				isCycleProcessing = "non-blocking"
 				chanDone <- struct{}{}
 
 				return
@@ -246,6 +247,9 @@ func WssClientNetworkInteraction(
 		}
 
 		if isCycleProcessing == "blocking" {
+
+			fmt.Println("isCycleProcessing == 'blocking'")
+
 			continue
 		}
 
