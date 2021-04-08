@@ -228,14 +228,21 @@ func WssClientNetworkInteraction(
 		for {
 			<-chanDone
 
-			fmt.Printf("func 'handlerRequest', minus groutine, count go:'%v'\n", countGoroutine)
+			fmt.Printf("func 'handlerRequest', Before: minus groutine, count go:'%v'\n", countGoroutine)
 
 			countGoroutine--
 
+			fmt.Printf("func 'handlerRequest', Before: minus groutine, count go:'%v'\n", countGoroutine)
+
 			if countGoroutine == 0 {
+
+				fmt.Println("func 'handlerRequest', countGoroutine = 00000000")
+
 				break
 			}
 		}
+
+		fmt.Println("func 'handlerRequest', END")
 
 		isCycleProcessing = "non-blocking"
 	}
