@@ -202,6 +202,7 @@ func WssClientNetworkInteraction(
 			chanDone <- struct{}{}
 		}
 
+		var processHandlerRequest bool
 		for id, s := range *l {
 			if id == 1000 {
 				fmt.Printf("func 'wssClientNetworkInterface', --- ID '%d', STATUS: '%v'\n", id, s.ConnectionStatus)
@@ -213,19 +214,24 @@ func WssClientNetworkInteraction(
 					fmt.Printf("func 'wssClientNetworkInterface', --- CONNECTION to ID '%d', IP '%s'\n", id, s.IP)
 				}
 
-				countGoroutine++
-
 				go handlerRequest(chanDone, &handlerRequestParameters{
 					id:    id,
 					ip:    s.IP,
 					port:  s.Settings.IfAsServerThenPort,
 					token: s.Token,
 				})
-			} else {
-				countGoroutine++
 
-				chanDone <- struct{}{}
+				processHandlerRequest = true
+				countGoroutine++
 			}
+		}
+
+		if !processHandlerRequest {
+			isCycleProcessing = "non-blocking"
+
+			fmt.Printf("func 'handlerRequest' processHandlerRequest: '%v'\n", processHandlerRequest)
+
+			return
 		}
 
 		for {
