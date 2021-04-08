@@ -228,6 +228,8 @@ func WssClientNetworkInteraction(
 		for {
 			<-chanDone
 
+			fmt.Printf("func 'handlerRequest', minus groutine, count go:'%v'\n", countGoroutine)
+
 			countGoroutine--
 
 			if countGoroutine == 0 {
