@@ -207,7 +207,9 @@ func WssClientNetworkInteraction(
 
 			if s.AsServer && !s.ConnectionStatus {
 
-				fmt.Printf("func 'wssClientNetworkInterface', --- CONNECTION to ID '%d', IP '%s'\n", id, s.IP)
+				if id == 1000 {
+					fmt.Printf("func 'wssClientNetworkInterface', --- CONNECTION to ID '%d', IP '%s'\n", id, s.IP)
+				}
 
 				go handlerRequest(chanDone, &handlerRequestParameters{
 					id:    id,
