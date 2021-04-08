@@ -139,6 +139,9 @@ func WssClientNetworkInteraction(
 
 	isCycleProcessing := "non-blocking"
 	cycleProcessing := func(l *map[int]configure.SourceSetting) {
+
+		fmt.Println("func 'cycleProcessing'......")
+
 		var countGoroutine int
 		chanDone := make(chan struct{})
 
@@ -200,9 +203,6 @@ func WssClientNetworkInteraction(
 		}
 
 		for id, s := range *l {
-
-			fmt.Printf("func 'cycleProcessing', ID:%d\n", id)
-
 			if id == 1000 {
 				fmt.Printf("func 'wssClientNetworkInterface', --- ID '%d', STATUS: '%v'\n", id, s.ConnectionStatus)
 			}
