@@ -139,9 +139,6 @@ func WssClientNetworkInteraction(
 
 	isCycleProcessing := "non-blocking"
 	cycleProcessing := func(l *map[int]configure.SourceSetting) {
-
-		fmt.Println("func 'cycleProcessing'......")
-
 		var countGoroutine int
 		chanDone := make(chan struct{})
 
@@ -204,16 +201,7 @@ func WssClientNetworkInteraction(
 
 		var processHandlerRequest bool
 		for id, s := range *l {
-			if id == 1000 {
-				fmt.Printf("func 'wssClientNetworkInterface', --- ID '%d', STATUS: '%v'\n", id, s.ConnectionStatus)
-			}
-
 			if s.AsServer && !s.ConnectionStatus {
-
-				if id == 1000 {
-					fmt.Printf("func 'wssClientNetworkInterface', --- CONNECTION to ID '%d', IP '%s'\n", id, s.IP)
-				}
-
 				go handlerRequest(chanDone, &handlerRequestParameters{
 					id:    id,
 					ip:    s.IP,
@@ -229,29 +217,18 @@ func WssClientNetworkInteraction(
 		if !processHandlerRequest {
 			isCycleProcessing = "non-blocking"
 
-			fmt.Printf("func 'handlerRequest' processHandlerRequest: '%v'\n", processHandlerRequest)
-
 			return
 		}
 
 		for {
 			<-chanDone
 
-			fmt.Printf("func 'handlerRequest', Before: minus groutine, count go:'%v'\n", countGoroutine)
-
 			countGoroutine--
 
-			fmt.Printf("func 'handlerRequest', After: minus groutine, count go:'%v'\n", countGoroutine)
-
 			if countGoroutine == 0 {
-
-				fmt.Println("func 'handlerRequest', countGoroutine = 00000000")
-
 				break
 			}
 		}
-
-		fmt.Println("func 'handlerRequest', END")
 
 		isCycleProcessing = "non-blocking"
 	}
@@ -265,9 +242,6 @@ func WssClientNetworkInteraction(
 		}
 
 		if isCycleProcessing == "blocking" {
-
-			fmt.Println("isCycleProcessing == 'blocking'")
-
 			continue
 		}
 
