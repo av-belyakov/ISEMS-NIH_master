@@ -177,7 +177,6 @@ func WssClientNetworkInteraction(
 					FuncName:    funcName,
 				})
 
-				isCycleProcessing = "non-blocking"
 				chanDone <- struct{}{}
 
 				return
@@ -214,14 +213,18 @@ func WssClientNetworkInteraction(
 					fmt.Printf("func 'wssClientNetworkInterface', --- CONNECTION to ID '%d', IP '%s'\n", id, s.IP)
 				}
 
+				countGoroutine++
+
 				go handlerRequest(chanDone, &handlerRequestParameters{
 					id:    id,
 					ip:    s.IP,
 					port:  s.Settings.IfAsServerThenPort,
 					token: s.Token,
 				})
-
+			} else {
 				countGoroutine++
+
+				chanDone <- struct{}{}
 			}
 		}
 
@@ -232,7 +235,7 @@ func WssClientNetworkInteraction(
 
 			countGoroutine--
 
-			fmt.Printf("func 'handlerRequest', Before: minus groutine, count go:'%v'\n", countGoroutine)
+			fmt.Printf("func 'handlerRequest', After: minus groutine, count go:'%v'\n", countGoroutine)
 
 			if countGoroutine == 0 {
 
