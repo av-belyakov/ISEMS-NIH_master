@@ -99,15 +99,6 @@ func validateUserData(l *[]configure.DetailedListSources, mcpf int8) (*[]validat
 			typeAreaNetwork = s.Argument.Settings.TypeAreaNetwork
 		}
 
-		fmt.Printf("func 'validateUserData', sourece ID: '%d'\n", s.ID)
-		fmt.Printf("func 'validateUserData', s.Argument.Settings.TypeAreaNetwork: '%s' = typeAreaNetwork: '%s'\n", s.Argument.Settings.TypeAreaNetwork, typeAreaNetwork)
-
-		/*
-			typeAreaNetwork := "ip"
-			if strings.ToLower(s.Argument.Settings.TypeAreaNetwork) == "pppoe" {
-				typeAreaNetwork = "pppoe"
-			}*/
-
 		listTrastedSources = append(listTrastedSources, validateUserDataSourceSettings{
 			SourceID:  s.ID,
 			ShortName: s.Argument.ShortName,
