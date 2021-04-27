@@ -152,7 +152,7 @@ func NewRepositoryQTS(saveMessageApp *savemessageapp.PathDirLocationLogFiles) *Q
 				/*** Временное логирование событий ***/
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					TypeMessage: "info",
-					Description: "TEST Message: добавлям информацию о задаче в хранилище очередей задач",
+					Description: fmt.Sprintf("TEST Message: добавляем информацию о задаче ID '%s', типа: '%s' для источника: '%d' в хранилище очередей задач", msg.TaskID, msg.TaskType, msg.SourceID),
 					FuncName:    "NewRepositoryQTS",
 				})
 
@@ -187,14 +187,7 @@ func NewRepositoryQTS(saveMessageApp *savemessageapp.PathDirLocationLogFiles) *Q
 					/*** Временное логирование событий ***/
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						TypeMessage: "info",
-						Description: "TEST Message: выполненно добавление задачи по фильтрации",
-						FuncName:    "NewRepositoryQTS",
-					})
-
-					/*** Временное логирование событий ***/
-					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						TypeMessage: "info",
-						Description: fmt.Sprintf("TEST Message: %v", qts.StorageList[msg.SourceID][msg.TaskID]),
+						Description: fmt.Sprintf("TEST Message: выполненно добавление задачи по фильтрации, список задач: %v", qts.StorageList[msg.SourceID][msg.TaskID]),
 						FuncName:    "NewRepositoryQTS",
 					})
 
@@ -256,6 +249,13 @@ func NewRepositoryQTS(saveMessageApp *savemessageapp.PathDirLocationLogFiles) *Q
 					continue
 				}
 
+				/*** Временное логирование событий ***/
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					TypeMessage: "info",
+					Description: fmt.Sprintf("TEST Message: выполнение удаление задачи ID: '%s', ТИП: '%s' для источика SourceID: '%d', список задач ДО: %v", msg.TaskID, msg.TaskType, msg.SourceID, qts.StorageList[msg.SourceID][msg.TaskID]),
+					FuncName:    "NewRepositoryQTS",
+				})
+
 				//удаляеть можно только в том случае если задача в состоянии 'wait' или 'complete'
 				if qts.StorageList[msg.SourceID][msg.TaskID].TaskStatus == "execution" {
 					msgRes.ErrorDescription = fmt.Errorf("deleting is not possible, the task with ID %v is in progress", msg.SourceID)
@@ -266,6 +266,13 @@ func NewRepositoryQTS(saveMessageApp *savemessageapp.PathDirLocationLogFiles) *Q
 						delete(qts.StorageList, msg.SourceID)
 					}
 				}
+
+				/*** Временное логирование событий ***/
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					TypeMessage: "info",
+					Description: fmt.Sprintf("TEST Message: выполненно удаление задачи ID: '%s', ТИП: '%s' для источика SourceID: '%d', список задач ПОСЛЕ: %v", msg.TaskID, msg.TaskType, msg.SourceID, qts.StorageList[msg.SourceID][msg.TaskID]),
+					FuncName:    "NewRepositoryQTS",
+				})
 
 				msg.ChanRes <- msgRes
 
@@ -280,6 +287,13 @@ func NewRepositoryQTS(saveMessageApp *savemessageapp.PathDirLocationLogFiles) *Q
 
 				qts.StorageList[msg.SourceID][msg.TaskID].TaskStatus = msg.NewStatus
 				qts.StorageList[msg.SourceID][msg.TaskID].TimeUpdate = time.Now().Unix()
+
+				/*** Временное логирование событий ***/
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					TypeMessage: "info",
+					Description: fmt.Sprintf("TEST Message: изменение статуса '%s' для задачи ID: '%s', ТИП: '%s' для источика SourceID: '%d'", msg.NewStatus, msg.TaskID, msg.TaskType, msg.SourceID),
+					FuncName:    "NewRepositoryQTS",
+				})
 
 				msg.ChanRes <- msgRes
 
@@ -697,19 +711,13 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 	chanMsgInfoQueueTaskStorage := make(chan MessageInformationQueueTaskStorage)
 
 	handlerTaskInfo := func(maxProcessFiltration, sourceID int, taskID string, taskInfo *QueueTaskInformation) {
-		//если соединение с источником было разорвано очищаем кеш
-		// и переводим задачу в режим ожидания
-		/*if (taskInfo.TaskStatus == "pause") && (taskInfo.TaskType == "download control") {
-			et.downloadTask = make([]string, 0, 1)
-			qts.ChangeTaskStatusQueueTask(sourceID, taskID, "wait")
-		}*/
-
 		if (taskInfo.TaskType == "download control") && (!taskInfo.CheckingStatusItems.AvailabilityConnection) {
 			et.downloadTask = make([]string, 0, 1)
+
 			qts.ChangeTaskStatusQueueTask(sourceID, taskID, "wait")
 		}
 
-		//если задача помечена как выполненная удаляем ее
+		/* удалаем задачи которые были успешно выполненны */
 		if taskInfo.TaskStatus == "complete" {
 
 			/*** Временное логирование событий ***/
@@ -719,77 +727,95 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 				FuncName:    "NewRepositoryQTS",
 			})
 
-			/*&& (time.Now().Unix() > (taskInfo.TimeUpdate + 30))*/
 			_ = qts.delQueueTaskStorage(sourceID, taskID)
 
 			//удаляем задачу из списка отслеживания кол-ва выполняемых задач
 			if taskInfo.TaskType == "download control" {
 				et.downloadTask = make([]string, 0, 1)
+
+				/*** Временное логирование событий ***/
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					TypeMessage: "info",
+					Description: fmt.Sprintf("TEST Message: удаляем задачу '%s', типа '%s', для источника '%d' из списка отслеживания кол-ва выполняемых задач по скачиванию файлов", taskID, taskInfo.TaskType, sourceID),
+					FuncName:    "NewRepositoryQTS",
+				})
 			}
 
 			for key, tID := range et.filtrationTask {
-				if tID == taskID {
-
-					/*** Временное логирование событий ***/
-					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						TypeMessage: "info",
-						Description: fmt.Sprintf("TEST Message: удаляем задачу по фильтрации с ID '%s' из et.filtrationTask", taskID),
-						FuncName:    "NewRepositoryQTS",
-					})
-
-					/*** Временное логирование событий ***/
-					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						TypeMessage: "info",
-						Description: fmt.Sprintf("TEST Message: список задач et.filtrationTask ДО удаления: '%v'", et.filtrationTask),
-						FuncName:    "NewRepositoryQTS",
-					})
-
-					et.filtrationTask = append(et.filtrationTask[:key], et.filtrationTask[key+1:]...)
-
-					/*** Временное логирование событий ***/
-					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-						TypeMessage: "info",
-						Description: fmt.Sprintf("TEST Message: список задач et.filtrationTask ПОСЛЕ удаления: '%v'", et.filtrationTask),
-						FuncName:    "NewRepositoryQTS",
-					})
-
-					break
+				if tID != taskID {
+					continue
 				}
+
+				/*** Временное логирование событий ***/
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					TypeMessage: "info",
+					Description: fmt.Sprintf("TEST Message: удаляем задачу по фильтрации с ID '%s' из et.filtrationTask, список задач по фильтрации et.filtrationTask ДО удаления: '%v'", taskID, et.filtrationTask),
+					FuncName:    "NewRepositoryQTS",
+				})
+
+				et.filtrationTask = append(et.filtrationTask[:key], et.filtrationTask[key+1:]...)
+
+				/*** Временное логирование событий ***/
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					TypeMessage: "info",
+					Description: fmt.Sprintf("TEST Message: список задач по фильтрации et.filtrationTask ПОСЛЕ удаления: '%v'", et.filtrationTask),
+					FuncName:    "NewRepositoryQTS",
+				})
 			}
 		}
 
-		//удаляем задачу находящуюся в очереди более суток
-		if (taskInfo.TaskStatus == "wait") && (time.Now().Unix() > (taskInfo.TimeUpdate + 86400)) {
+		/* удаляем 'старые' или 'подвисшие' задачи */
+
+		//удаляем задачу по ФИЛЬТРАЦИИ, находящуюся в очереди более ПОЛУТРА ЧАСОВ
+		if (taskInfo.TaskType == "filtration control") && (taskInfo.TaskStatus == "wait") && (time.Now().Unix() > (taskInfo.TimeUpdate + 54000)) {
 
 			/*** Временное логирование событий ***/
 			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 				TypeMessage: "info",
-				Description: "TEST Message: удаляем задачу находящуюся в очереди более суток",
+				Description: "TEST Message: удаляем задачу по ФИЛЬТРАЦИИ, находящуюся в очереди более полутра часов",
 				FuncName:    "NewRepositoryQTS",
 			})
 
 			_ = qts.delQueueTaskStorage(sourceID, taskID)
+
+			for key, tID := range et.filtrationTask {
+				if tID != taskID {
+					continue
+				}
+
+				et.filtrationTask = append(et.filtrationTask[:key], et.filtrationTask[key+1:]...)
+			}
 		}
 
-		/*
-		   Для фильтрации файлов
-		*/
+		//удаляем задачу по СКАЧИВАНИЮ, находящуюся в очереди более ТРЕХ МИНУТ
+		if (taskInfo.TaskType == "download control") && (taskInfo.TaskStatus == "wait") && (time.Now().Unix() > (taskInfo.TimeUpdate + 180)) {
+
+			/*** Временное логирование событий ***/
+			saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+				TypeMessage: "info",
+				Description: "TEST Message: удаляем задачу по СКАЧИВАНИЮ, находящуюся в очереди более 3 минут",
+				FuncName:    "NewRepositoryQTS",
+			})
+
+			_ = qts.delQueueTaskStorage(sourceID, taskID)
+
+			et.downloadTask = make([]string, 0, 1)
+		}
+
+		/* ОБРАБОТКА задач по фильтрации файлов */
 		if taskInfo.TaskType == "filtration control" {
 			if len(et.filtrationTask) == maxProcessFiltration {
 
 				/*** Временное логирование событий ***/
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					TypeMessage: "info",
-					Description: "TEST Message: колличество задач по фильтрации достигло максимального значения, пропускаем задачу",
+					Description: fmt.Sprintf("TEST Message: колличество задач по фильтрации достигло максимального значения, пропускаем задачу '%s', для источника SourceID '%d'", taskID, sourceID),
 					FuncName:    "NewRepositoryQTS",
 				})
 
-				return
 			}
 
-			//если задача не выполнялась и источник подключен
-			if (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection {
-
+			if (len(et.filtrationTask) <= maxProcessFiltration) && (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection {
 				/*** Временное логирование событий ***/
 				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 					TypeMessage: "info",
@@ -804,7 +830,7 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 					/*** Временное логирование событий ***/
 					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
 						TypeMessage: "info",
-						Description: fmt.Sprintf("TEST Message: ЗАПУСКАЕМ ВЫПОЛНЕНИЕ ЗАДАЧИ ПО ФИЛЬТРАЦИИ, ДЛЯ ИСТОЧНИКА '%d'", sourceID),
+						Description: fmt.Sprintf("TEST Message: ЗАПУСКАЕМ ВЫПОЛНЕНИЕ ЗАДАЧИ ID '%s' ПО ФИЛЬТРАЦИИ, ДЛЯ ИСТОЧНИКА '%d'", taskID, sourceID),
 						FuncName:    "NewRepositoryQTS",
 					})
 
@@ -817,32 +843,50 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 			}
 		}
 
-		/*
-		   Для скачивания файлов
-		*/
+		/* ОБРАБОТКА задач по скачиванию файлов */
 		if taskInfo.TaskType == "download control" {
 			//выполняется ли задача
 			if len(et.downloadTask) > 0 {
+
+				/*** Временное логирование событий ***/
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					TypeMessage: "info",
+					Description: fmt.Sprintf("TEST Message: НЕВОЗМОЖНО запустить задачу ID '%s' по скачиванию файлов для источника '%d', список выполняемых задач не пуст '%v'", taskID, sourceID, et.downloadTask),
+					FuncName:    "NewRepositoryQTS",
+				})
+
 				return
 			}
 
 			//если задача не выполнялась, источник подключен и есть файлы для скачивания
 			if (taskInfo.TaskStatus == "wait") && taskInfo.CheckingStatusItems.AvailabilityConnection && taskInfo.CheckingStatusItems.AvailabilityFilesDownload {
-				if err := qts.ChangeTaskStatusQueueTask(sourceID, taskID, "execution"); err == nil {
-					//добавляем в массив выполняющихся задач
-					listTask := et.downloadTask
-					listTask = append(listTask, taskID)
-					et.downloadTask = listTask
+				if err := qts.ChangeTaskStatusQueueTask(sourceID, taskID, "execution"); err != nil {
+					saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+						TypeMessage: "error",
+						Description: fmt.Sprint(err),
+						FuncName:    "NewRepositoryQTS",
+					})
+				}
 
-					//запускаем выполнение задачи
-					chanMsgInfoQueueTaskStorage <- MessageInformationQueueTaskStorage{
-						SourceID: sourceID,
-						TaskID:   taskID,
-					}
+				//добавляем в массив выполняющихся задач
+				listTask := et.downloadTask
+				listTask = append(listTask, taskID)
+				et.downloadTask = listTask
+
+				/*** Временное логирование событий ***/
+				saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
+					TypeMessage: "info",
+					Description: fmt.Sprintf("TEST Message: ЗАПУСКАЕМ ВЫПОЛНЕНИЕ ЗАДАЧИ ID '%s' ПО СКАЧИВАНИЮ, ДЛЯ ИСТОЧНИКА '%d'", taskID, sourceID),
+					FuncName:    "NewRepositoryQTS",
+				})
+
+				//запускаем выполнение задачи
+				chanMsgInfoQueueTaskStorage <- MessageInformationQueueTaskStorage{
+					SourceID: sourceID,
+					TaskID:   taskID,
 				}
 			}
 		}
-
 	}
 
 	//поиск и контроль количества задач на выполнение
@@ -859,13 +903,6 @@ func (qts *QueueTaskStorage) CheckTimeQueueTaskStorage(isl *InformationSourcesLi
 
 				continue
 			}
-
-			/*** Временное логирование событий ***/
-			/*saveMessageApp.LogMessage(savemessageapp.TypeLogMessage{
-				TypeMessage: "info",
-				Description: fmt.Sprintf("TEST Message: выполняем поиск информации о всех задачах выполняемых на источнике '%d'", sourceID),
-				FuncName:    "NewRepositoryQTS",
-			})*/
 
 			//получаем максимальное количество одновременно запущенных задач по фильтрации
 			sourceSettings, sourceIsExist := isl.GetSourceSetting(sourceID)

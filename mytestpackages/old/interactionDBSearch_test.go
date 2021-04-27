@@ -347,9 +347,6 @@ func getShortInformation(qp QueryParameters, sp *configure.SearchParameters) ([]
 
 	if isContainsValueIP && !isContainsValueNetwork {
 		queryNetworkParametersIPNet, _ = getQueryTmpNetParamsTest(sp.InstalledFilteringOption.NetworkFilters, "ip")
-
-		fmt.Println("---=== IP address ===---")
-		fmt.Println(queryNetworkParametersIPNet)
 	}
 
 	if isContainsValueNetwork && !isContainsValueIP {

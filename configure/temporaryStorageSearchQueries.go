@@ -13,13 +13,11 @@ import (
 //TemporaryStorageSearchQueries временное хранилище задач поиска информации в БД
 // tasks - список задач поиска
 // tickerSec - интервал обработки информации в кэше
-// maxCacheSize - максимальный размер кэша
 // timeExpiration - время устаревания кэша
 // channelReq - канал для передачи информации о запросе внутри хранилища
 type TemporaryStorageSearchQueries struct {
 	tasks          map[string]*SearchTaskDescription
 	tickerSec      int
-	maxCacheSize   int
 	timeExpiration int
 	channelReq     chan SearchChannelRequest
 }
@@ -82,8 +80,8 @@ type TemporaryStorageSearcher interface {
 	GetInformationAboutSearchTask(string) (*SearchTaskDescription, error)
 }
 
+/*
 type listTask []listTaskInfo
-
 type listTaskInfo struct {
 	time         int64
 	id           string
@@ -101,6 +99,7 @@ func (lt listTask) Swap(i, j int) {
 func (lt listTask) Less(i, j int) bool {
 	return lt[i].time < lt[j].time
 }
+*/
 
 //CreateTmpStorageID генерирует идентификатор задачи поиска в БД по заданным параметрам
 func CreateTmpStorageID(clientID string, sp *SearchParameters) string {
@@ -154,7 +153,6 @@ func CreateTmpStorageID(clientID string, sp *SearchParameters) string {
 //TypeRepositoryTSSQ описание типа для NewRepositoryTSSQ
 // TickerSec - интервал обработки информации в кэше
 // TimeExpiration - через какое количество секунд кэша будет считаться устаревшим
-// MaxCacheSize - максимальный размер кэша
 type TypeRepositoryTSSQ struct {
 	TickerSec      int
 	TimeExpiration int
